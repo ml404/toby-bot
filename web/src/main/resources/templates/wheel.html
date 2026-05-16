@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Wheel of Fortune', '/css/wheel.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice},
+               data-slot-count=${slotCount}">
+
+    <div class="wheel-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🎡 Wheel of Fortune • ' + ${guildName}">🎡 Wheel of Fortune</h1>
+        <p class="muted">Pick a multiplier, spin the wheel. Land on your pick to win
+            <strong>multiplier × stake</strong>. Per-pick RTPs cluster around 0.88
+            (rarer picks pay bigger). Bet
+            <span th:text="${minStake}">10</span>-<span th:text="${maxStake}">500</span> credits.</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <!--
+        The wheel reuses the jackpot-wheel-* SVG + CSS surface (brass rim,
+        spoked rotor, golden pointer, peg ring) that's already loaded via
+        base.css. Only the container positioning is bespoke; the wheel
+        itself looks visually identical to the jackpot payout wheel.
+
+        Spoke wedges and labels are rendered by wheel.js into `.wheel-rotor`
+        — server is authoritative for the landed multiplier; the JS just
+        animates the wheel landing on the matching wedge.
+
+        Inline JSON blob `__wofWheelWeights` carries the weight-per-
+        multiplier map so the renderer matches what the server spun.
+    -->
+    <section class="wheel-table casino-felt">
+        <div class="wheel-stage">
+            <svg class="wheel-svg" viewBox="-120 -120 240 240" aria-hidden="true">
+                <defs>
+                    <linearGradient id="wof-wheel-rim-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#f7d46a"/>
+                        <stop offset="50%" stop-color="#b07d1f"/>
+                        <stop offset="100%" stop-color="#f7d46a"/>
+                    </linearGradient>
+                    <radialGradient id="wof-wheel-vignette" cx="0.5" cy="0.5" r="0.5">
+                        <stop offset="60%" stop-color="rgba(0,0,0,0)"/>
+                        <stop offset="100%" stop-color="rgba(0,0,0,0.55)"/>
+                    </radialGradient>
+                    <linearGradient id="wof-wheel-hub-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="55%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </linearGradient>
+                    <linearGradient id="wof-wheel-pointer-grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="60%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </linearGradient>
+                    <filter id="wof-wheel-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.55)"/>
+                    </filter>
+                </defs>
+                <circle cx="0" cy="0" r="106" class="wheel-rim-outer"/>
+                <circle cx="0" cy="0" r="101" class="wheel-rim-inner"/>
+                <g class="wheel-rotor" id="wheel-rotor"></g>
+                <circle cx="0" cy="0" r="100" fill="url(#wof-wheel-vignette)" pointer-events="none"/>
+                <circle cx="0" cy="0" r="18" class="wheel-hub-outer"/>
+                <circle cx="0" cy="0" r="13" class="wheel-hub-inner"/>
+                <path class="wheel-pointer-arrow"
+                      d="M 0 -94 L -9 -116 L 9 -116 Z"
+                      filter="url(#wof-wheel-shadow)"/>
+            </svg>
+            <div class="wheel-status" id="wheel-status">Pick a multiplier and press Spin.</div>
+        </div>
+
+        <div class="wheel-result" id="wheel-result" hidden></div>
+
+        <form class="wheel-bet" id="wheel-bet" autocomplete="off">
+            <div class="wheel-pick-picker" role="radiogroup" aria-label="Pick a multiplier">
+                <label class="wheel-pick" th:each="m, iter : ${picks}">
+                    <input type="radio" name="pick" th:value="${m}" th:checked="${iter.index == 0}">
+                    <span th:text="${m} + '×'" th:attr="data-multiplier=${m}">2×</span>
+                </label>
+            </div>
+            <label for="wheel-stake" class="wheel-stake-label">Stake (credits)</label>
+            <input id="wheel-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="wheel-spin" class="btn-primary">Spin</button>
+            <button type="submit" id="wheel-spin-toby" class="btn-secondary casino-bet-toby" hidden
+                    title="Sells just enough TOBY at the live market price to cover the shortfall, then spins.">
+                Spin (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+            </button>
+        </form>
+
+        <div class="wheel-balance">
+            Balance: <strong id="wheel-balance" th:text="${balance}">0</strong> credits
+        </div>
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+    </section>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // [{multiplier: Long, slots: Int}], sorted by multiplier ascending.
+        // Renderer uses this to lay out spokes proportional to weight so
+        // the player sees the actual probabilities they're betting against.
+        window.__wofWheelWeights = /*[[${wheelWeights}]]*/ [];
+        /*]]>*/
+    </script>
+
+    <section class="wheel-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Pick one of <span th:text="${#strings.listJoin(picks, '×, ')}">2, 3, 5, 10</span>× and set a stake.</li>
+            <li>The wheel has <span th:text="${slotCount}">100</span> slots; bigger multipliers occupy fewer slots.</li>
+            <li>Win <strong>multiplier × stake</strong> only if the landed slot matches your pick.</li>
+            <li>Lose your full stake on any other landing.</li>
+            <li>Wins roll for the jackpot pool; losses tribute 10% of the stake into it.</li>
+        </ul>
+    </section>
+
+    <section class="wheel-weights">
+        <h2>Wheel composition</h2>
+        <!--
+            Two-line headers with explicit <span> wrapping so the column
+            label wraps cleanly on narrow viewports (otherwise "Hit chance"
+            and "Per-pick RTP" split awkwardly mid-word).
+        -->
+        <div class="wheel-weights-table-wrap">
+            <table class="wheel-weights-table">
+                <thead>
+                <tr>
+                    <th><span>Multiplier</span></th>
+                    <th><span>Slots</span></th>
+                    <th><span>Hit chance</span></th>
+                    <th><span>Per-pick RTP</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="w : ${wheelWeights}">
+                    <td th:text="${w.multiplier} + '×'">2×</td>
+                    <td th:text="${w.slots}">44</td>
+                    <td th:text="${#numbers.formatDecimal(w.slots * 100.0 / slotCount, 1, 1)} + '%'">44.0%</td>
+                    <td th:text="${#numbers.formatDecimal(w.slots * w.multiplier * 1.0 / slotCount, 1, 2)}">0.88</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
+<script th:src="@{/js/wheel.js}"></script>
+</body>
+</html>

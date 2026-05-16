@@ -1,0 +1,259 @@
+@import url("./casino-table.css");
+
+.wheel-header { margin-bottom: var(--space-5); }
+.wheel-header h1 { margin: var(--space-2) 0; }
+.wheel-header strong { color: #fff; }
+
+.wheel-table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-4);
+}
+
+/* SVG wheel reuses the brass-rim/hub/pointer/peg aesthetic from
+   `.jackpot-wheel-*` in base.css. The classes here are scoped so this
+   wheel can sit inline on the page while the jackpot wheel keeps its
+   overlay-only positioning. Visual styling is intentionally a clone. */
+.wheel-stage {
+    position: relative;
+    width: clamp(260px, 78vw, 360px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+}
+.wheel-svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.45));
+}
+.wheel-rotor {
+    transform-origin: 0 0;
+    /* CSS owns the transition so the browser registers a stable
+       starting state for every animate. JS only overrides it with
+       inline `transition: none` for the per-spin snap-back to 0deg. */
+    transition: transform 2200ms cubic-bezier(0.18, 0.6, 0.18, 1);
+}
+.wheel-rim-outer {
+    fill: url(#wof-wheel-rim-grad);
+    stroke: rgba(0, 0, 0, 0.6);
+    stroke-width: 1;
+}
+.wheel-rim-inner {
+    fill: #0a1a12;
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.5;
+}
+.wheel-hub-outer {
+    fill: url(#wof-wheel-hub-grad);
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 1;
+}
+.wheel-hub-inner {
+    fill: #b07d1f;
+    stroke: rgba(255, 240, 180, 0.45);
+    stroke-width: 0.5;
+}
+.wheel-pointer-arrow {
+    fill: url(#wof-wheel-pointer-grad);
+    stroke: rgba(0, 0, 0, 0.5);
+    stroke-width: 0.75;
+    stroke-linejoin: round;
+}
+.wheel-peg {
+    fill: url(#wof-wheel-hub-grad);
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.4;
+}
+.wheel-segment {
+    stroke: rgba(0, 0, 0, 0.55);
+    stroke-width: 0.75;
+}
+.wheel-segment-label {
+    fill: #fff8e1;
+    font-family: "Cambria", "Georgia", serif;
+    font-size: 10px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.7);
+    stroke-width: 0.5;
+    pointer-events: none;
+}
+
+.wheel-status {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
+    min-height: 1.4em;
+}
+
+.wheel-result {
+    min-height: 1.5em;
+    font-size: 1.05rem;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+.wheel-result-win { color: #57F287; }
+.wheel-result-lose { color: #a0a0b0; }
+
+.wheel-bet {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    max-width: 360px;
+}
+
+.wheel-pick-picker {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2);
+    width: 100%;
+}
+.wheel-pick {
+    cursor: pointer;
+    user-select: none;
+}
+.wheel-pick input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.wheel-pick span {
+    /* `--wheel-pick-tint` is set per-chip by wheel.js to the matching
+       wedge colour, so the player sees which wedges they're betting on. */
+    --wheel-pick-tint: var(--casino-gold);
+    display: block;
+    text-align: center;
+    padding: 12px 0;
+    background: rgba(0, 0, 0, 0.35);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    font-weight: 700;
+    font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.2s, color 0.2s, background 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+.wheel-pick span::before {
+    content: '';
+    position: absolute;
+    inset: 4px auto 4px 6px;
+    width: 6px;
+    border-radius: 2px;
+    background: var(--wheel-pick-tint);
+    opacity: 0.85;
+}
+.wheel-pick input[type="radio"]:checked + span {
+    border-color: var(--wheel-pick-tint);
+    color: #fff;
+    background: var(--casino-active-tile-bg);
+    box-shadow: 0 0 12px var(--wheel-pick-tint, var(--casino-gold));
+}
+.wheel-pick input[type="radio"]:focus-visible + span {
+    outline: 2px solid #5865F2;
+    outline-offset: 2px;
+}
+
+.wheel-stake-label {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    align-self: flex-start;
+}
+.wheel-bet input[type="number"] {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f1830;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+    font-variant-numeric: tabular-nums;
+}
+.wheel-bet button[type="submit"] { width: 100%; }
+
+.wheel-balance {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.wheel-balance strong { color: #fff; }
+
+.wheel-rules, .wheel-weights {
+    margin-top: var(--space-5);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: var(--space-4);
+}
+.wheel-rules h2, .wheel-weights h2 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-3);
+}
+.wheel-rules ul {
+    list-style: disc;
+    padding-left: 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.7;
+}
+.wheel-rules strong { color: #fff; }
+.wheel-weights-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.wheel-weights-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+}
+.wheel-weights-table th,
+.wheel-weights-table td {
+    padding: 6px 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+}
+.wheel-weights-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    vertical-align: bottom;
+}
+/* Allow long header labels ("Hit chance", "Per-pick RTP") to wrap onto
+   two lines on narrow viewports without overflowing the cell. */
+.wheel-weights-table th > span {
+    display: inline-block;
+    line-height: 1.2;
+    word-break: keep-all;
+    hyphens: none;
+}
+
+@media (max-width: 480px) {
+    .wheel-weights-table {
+        font-size: 0.82rem;
+    }
+    .wheel-weights-table th,
+    .wheel-weights-table td {
+        padding: 6px 4px;
+    }
+    .wheel-weights-table th {
+        font-size: 0.72rem;
+        letter-spacing: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel-rotor { transition: none !important; }
+}

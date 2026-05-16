@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Plinko', '/css/plinko.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice},
+               data-rows=${rows}, data-buckets=${buckets}">
+
+    <div class="plinko-header">
+        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <h1 th:text="'🟢 Plinko • ' + ${guildName}">🟢 Plinko</h1>
+        <p class="muted">Drop a ball through
+            <span th:text="${rows}">8</span> peg rows; it lands in one of
+            <span th:text="${buckets}">9</span> buckets. Pick a risk profile —
+            higher risk swings the outer multipliers up and adds bust buckets
+            in the middle. Bet <span th:text="${minStake}">10</span> to
+            <span th:text="${maxStake}">500</span> credits.</p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <!--
+        SVG-based board: pegs are real circles laid out in the classic
+        Galton triangle (row k has k+1 pegs), buckets are wedges across
+        the bottom. The ball is an SVG <circle> whose translate transform
+        is driven by plinko.js — each row's decision picks a mid-row
+        bounce X, ending in the exact center of the landing bucket. This
+        keeps the animation aligned with the bucket the server picked.
+
+        Per-risk payout tables are stashed in `__plinkoTables` so the
+        client can render the bucket labels and tint the landing bucket
+        without round-tripping to the server.
+    -->
+    <section class="plinko-table casino-felt">
+        <div class="plinko-stage">
+            <svg class="plinko-board-svg" id="plinko-board"
+                 viewBox="-100 0 200 220"
+                 preserveAspectRatio="xMidYMid meet"
+                 aria-live="polite">
+                <defs>
+                    <radialGradient id="plinko-ball-grad" cx="0.35" cy="0.35" r="0.7">
+                        <stop offset="0%" stop-color="#fff1b0"/>
+                        <stop offset="55%" stop-color="#e0a93a"/>
+                        <stop offset="100%" stop-color="#7a4f10"/>
+                    </radialGradient>
+                    <radialGradient id="plinko-peg-grad" cx="0.4" cy="0.4" r="0.7">
+                        <stop offset="0%" stop-color="#fff8d8"/>
+                        <stop offset="60%" stop-color="#c9a04a"/>
+                        <stop offset="100%" stop-color="#5e3c0b"/>
+                    </radialGradient>
+                    <filter id="plinko-ball-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="1.5" stdDeviation="1.2" flood-color="rgba(0,0,0,0.55)"/>
+                    </filter>
+                </defs>
+                <g class="plinko-pegs" id="plinko-pegs"></g>
+                <g class="plinko-buckets-svg" id="plinko-buckets"></g>
+                <circle id="plinko-ball" class="plinko-ball" r="5" cx="0" cy="8"
+                        filter="url(#plinko-ball-shadow)"/>
+            </svg>
+        </div>
+
+        <div class="plinko-result" id="plinko-result" hidden></div>
+
+        <form class="plinko-bet" id="plinko-bet" autocomplete="off">
+            <div class="plinko-risk-picker" role="radiogroup" aria-label="Risk profile">
+                <label class="plinko-risk" th:each="r, iter : ${risks}">
+                    <input type="radio" name="risk" th:value="${r}" th:checked="${iter.index == 0}">
+                    <span th:text="${r}">LOW</span>
+                </label>
+            </div>
+            <label for="plinko-stake" class="plinko-stake-label">Stake (credits)</label>
+            <input id="plinko-stake"
+                   name="stake"
+                   type="number"
+                   th:attr="min=${minStake}, max=${maxStake}"
+                   th:value="${minStake}"
+                   step="1">
+            <button type="submit" id="plinko-drop" class="btn-primary">Drop</button>
+            <button type="submit" id="plinko-drop-toby" class="btn-secondary casino-bet-toby" hidden
+                    title="Sells just enough TOBY at the live market price to cover the shortfall, then drops.">
+                Drop (sell <span class="casino-bet-toby-coins">0</span> TOBY)
+            </button>
+        </form>
+
+        <div class="plinko-balance">
+            Balance: <strong id="plinko-balance" th:text="${balance}">0</strong> credits
+        </div>
+        <div th:replace="~{fragments/casino :: jackpotBanner}"></div>
+    </section>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        // {LOW: [1.9,1.4,...], MEDIUM: [...], HIGH: [...]} — payout tables
+        // per risk profile, indexed by bucket. plinko.js paints the bucket
+        // labels and tints the active risk's row of the payout table.
+        window.__plinkoTables = /*[[${payoutTables}]]*/ {};
+        window.__plinkoRows = /*[[${rows}]]*/ 8;
+        window.__plinkoBuckets = /*[[${buckets}]]*/ 9;
+        /*]]>*/
+    </script>
+
+    <section class="plinko-payouts">
+        <h2>Payout tables (× stake)</h2>
+        <!--
+            Transposed: rows are buckets, columns are risk profiles.
+            On mobile that's 4 columns instead of 10, and the active risk's
+            column is highlighted by plinko.js (data-risk + .plinko-payout-active)
+            so the player can compare profiles at a glance.
+        -->
+        <div class="plinko-payouts-table-wrap">
+            <table class="plinko-payouts-table">
+                <thead>
+                <tr>
+                    <th>Bucket</th>
+                    <th th:each="r : ${risks}" th:text="${r}" th:attr="data-risk=${r}">LOW</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i : ${#numbers.sequence(0, buckets - 1)}">
+                    <td th:text="${i}">0</td>
+                    <td th:each="r : ${risks}"
+                        th:text="${payoutTables.get(r)[i]}"
+                        th:attr="data-risk=${r}">1.9</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <p class="muted">All three profiles target ~0.90 RTP. Outer buckets pay big;
+            center buckets refund (×1), partially lose (×0.4–0.7), or bust (×0).</p>
+    </section>
+
+    <section class="plinko-rules">
+        <h2>Rules</h2>
+        <ul>
+            <li>Pick a risk profile (LOW / MEDIUM / HIGH) and a stake.</li>
+            <li>Each of the <span th:text="${rows}">8</span> rows flips a fair coin to nudge the ball left or right.</li>
+            <li>The ball settles into one of <span th:text="${buckets}">9</span> buckets; that bucket's multiplier is your payout.</li>
+            <li>Multiplier &gt; 1 = win, = 1 = refund, &lt; 1 = partial or full loss.</li>
+            <li>Wins roll for the jackpot pool; losses tribute the lost portion of the stake.</li>
+        </ul>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<th:block th:replace="~{fragments/casinoMinigame :: scripts}"></th:block>
+<script th:src="@{/js/plinko.js}"></script>
+</body>
+</html>

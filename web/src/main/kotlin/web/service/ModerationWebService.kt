@@ -886,6 +886,8 @@ class ModerationWebService(
             ConfigDto.Configurations.ROULETTE_MIN_STAKE,
             ConfigDto.Configurations.HOLDEM_MIN_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
+            ConfigDto.Configurations.PLINKO_MIN_STAKE,
+            ConfigDto.Configurations.WHEEL_OF_FORTUNE_MIN_STAKE,
             ConfigDto.Configurations.JACKPOT_STAKE_ANCHOR -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
@@ -905,7 +907,9 @@ class ModerationWebService(
             ConfigDto.Configurations.SCRATCH_MAX_STAKE,
             ConfigDto.Configurations.ROULETTE_MAX_STAKE,
             ConfigDto.Configurations.HOLDEM_MAX_STAKE,
-            ConfigDto.Configurations.DUEL_MAX_STAKE -> {
+            ConfigDto.Configurations.DUEL_MAX_STAKE,
+            ConfigDto.Configurations.PLINKO_MAX_STAKE,
+            ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 0L) return "Value must be 0 (unlimited) or a positive number of credits."
@@ -985,7 +989,9 @@ class ModerationWebService(
             }
             ConfigDto.Configurations.COINFLIP_BOT_EDGE_MAX_PCT,
             ConfigDto.Configurations.DICE_BOT_EDGE_MAX_PCT,
-            ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT -> {
+            ConfigDto.Configurations.SLOTS_BOT_EDGE_MAX_PCT,
+            ConfigDto.Configurations.PLINKO_BOT_EDGE_MAX_PCT,
+            ConfigDto.Configurations.WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT -> {
                 val n = rawValue.trim().toIntOrNull()
                     ?: return "Value must be a whole number percentage (0-50; 0 disables)."
                 if (n !in 0..50) return "Value must be between 0 and 50."

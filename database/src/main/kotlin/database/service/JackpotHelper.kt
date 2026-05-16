@@ -65,7 +65,9 @@ enum class JackpotGame(val rtp: Double, val eligibleForJackpot: Boolean = true) 
     HOLDEM(0.97),      // Casino Hold'em vs dealer; ~2-3% edge industry-wide.
     HIGHLOW(0.923, eligibleForJackpot = false), // Honest 12/13 RTP but ~85 % win rate at extreme anchors farms rolls; loss-tribute only.
     KENO(0.92),        // 0.83-0.92 band; pin to the top so the gate is honest.
+    PLINKO(0.89),      // ~11% edge across LOW/MEDIUM/HIGH profiles; pinned by PlinkoTest.
     SLOTS(0.890),      // ~11% house edge; closed-form pinned by SlotMachineTest.
+    WHEEL_OF_FORTUNE(0.88), // Per-pick RTP cluster 0.87-0.90; pinned by WheelOfFortuneTest.
     SCRATCH(0.875),    // ~12.5% edge; pinned by ScratchCard.expectedRtp().
     DICE(0.833),       // 5/6 — 5× payout at 1/6 odds.
 }
