@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Authenticate HTTPS CONNECT to YouTube proxy",
+    "summary": "Intro preview was logging `YouTube Data API preview returned HTTP 407` on every URL pre-flight when the YouTube proxy was configured with auth. Root cause: `IntroWebService.openYouTubeDataApiConnection` set `Proxy-Authorization` via `HttpURLConnection.setRequestProperty`. That header is only attached to the inner HTTP request inside an established CONNECT tunnel — it isn't sent on the CONNECT itself. So for HTTPS targets like `googleapis.com`, the proxy 407s the tunnel bef…",
+    "emoji": "🎵",
+    "prNumber": 464
+  },
+  {
+    "date": "May 2026",
     "title": "Swap per-horse odds label when Win/Place/Show changes",
     "summary": "The horse cards always rendered the WIN multiplier regardless of which bet type was selected, so the favourite looked like \"3.1× win\" even when Place was active (where it actually pays 1.7×). Server-render all three multipliers as `data-{win|place|show}-mult` attributes on each `.hr-horse` card. New `updateHorseOdds(cards, betType)` helper rewrites the visible label when the bet radio changes. IIFE listens for `change` events on every `input[name=\"bet\"]` radio and primes t…",
     "emoji": "🎰",
