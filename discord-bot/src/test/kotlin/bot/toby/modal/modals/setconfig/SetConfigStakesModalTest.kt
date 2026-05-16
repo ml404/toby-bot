@@ -42,10 +42,9 @@ class SetConfigStakesModalTest {
             every { id } returns guildId
         }
         every { event.hook } returns hook
-        ctx = mockk {
-            every { this@mockk.event } returns this@SetConfigStakesModalTest.event
-            every { this@mockk.guild } returns guild
-        }
+        ctx = mockk(relaxed = true)
+        every { ctx.event } returns event
+        every { ctx.guild } returns guild
         @Suppress("UNCHECKED_CAST")
         val send = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
         every { hook.sendMessage(capture(messageSlot)) } returns send

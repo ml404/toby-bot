@@ -267,14 +267,18 @@ internal class SetConfigCommandTest : CommandTest {
         every { event.subcommandName } returns SetConfigCommand.SUB_GENERAL
         val builtModal = mockk<Modal>(relaxed = true) { every { id } returns SetConfigGeneralModal.MODAL_NAME }
         every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, capture(readerSlot)) } returns builtModal
-        every {
-            configService.getConfigByName(Configurations.VOLUME.configValue, guild.id)
-        } returns ConfigDto(Configurations.VOLUME.configValue, "75", guild.id)
+        // Use any() because a relaxed-mock ConfigService returns a default
+        // ConfigDto (value="") for unstubbed calls — the literal-arg stub
+        // matcher fights that default.
+        every { configService.getConfigByName(any(), any()) } returns
+            ConfigDto(Configurations.VOLUME.configValue, "75", "1")
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         assertNotNull(readerSlot.captured)
         assertEquals("75", readerSlot.captured(Configurations.VOLUME))
+        // Verify the reader actually reached the service with the right key/guild.
+        verify { configService.getConfigByName(Configurations.VOLUME.configValue, "1") }
     }
 
     // ---- helper ----
