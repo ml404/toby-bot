@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Add ban/timeout/purge/lock/slowmode tools + Actions UI tab",
+    "summary": "Replaces `/shh` and `/talk` (and their voice-tab Shh/Talk buttons) with a proper moderation toolkit. Every new action is reachable both as a Discord slash command and from a new **Actions** tab on the moderation dashboard. ### New slash commands (`discord-bot`) | Command | What it does | |---|---| | `/ban` | Ban one or more mentioned members (optional reason + 0-7 days message delete) | | `/unban` | Unban a user by Discord ID | | `/timeout` | Discord-native timeout, 1-4032…",
+    "emoji": "🛡️",
+    "prNumber": 468
+  },
+  {
+    "date": "May 2026",
     "title": "Mobile-friendly pass, breakpoint refactor, responsive tests",
     "summary": "Full mobile-friendliness sweep across the dashboard. An audit found ~25 concrete mobile bugs across 15 casino games + admin/marketing pages, inconsistent breakpoints (480 / 600 / 640 / 380 px scattered across 31 CSS files), and the same `repeat(N, 1fr) → 1fr` reflow pattern duplicated dozens of times in casino game CSS. This pass standardises the breakpoint set, extracts shared utilities, fixes the bugs, and pins the contract with tests so future regressions surface in CI.…",
     "emoji": "🎲",
