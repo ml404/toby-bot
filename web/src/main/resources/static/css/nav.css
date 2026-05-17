@@ -82,7 +82,9 @@ nav {
 .nav-dropdown-toggle:hover,
 .nav-dropdown.open > .nav-dropdown-toggle { color: #fff; }
 .nav-dropdown-caret { font-size: 0.75em; transition: transform 0.2s; }
-.nav-dropdown:hover .nav-dropdown-caret,
+@media (hover: hover) and (pointer: fine) {
+    .nav-dropdown:hover .nav-dropdown-caret { transform: rotate(180deg); }
+}
 .nav-dropdown.open .nav-dropdown-caret { transform: rotate(180deg); }
 .nav-dropdown-menu {
     display: none;
@@ -99,7 +101,9 @@ nav {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     flex-direction: column;
 }
-.nav-dropdown:hover .nav-dropdown-menu,
+@media (hover: hover) and (pointer: fine) {
+    .nav-dropdown:hover .nav-dropdown-menu { display: flex; }
+}
 .nav-dropdown.open .nav-dropdown-menu { display: flex; }
 .nav-dropdown-menu a,
 .nav-dropdown-menu .nav-dropdown-coming-soon {
@@ -125,15 +129,16 @@ nav {
     .nav-links a, .nav-user { padding: 10px 4px; min-height: 40px; display: flex; align-items: center; }
     .nav-links .btn-discord, .nav-links .btn-logout { align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; }
 
-    /* On mobile, dropdown items render inline under the trigger so the
-       whole menu is one vertical scroll — no second tap required. The
-       desktop hover-bridge padding is also neutralised so it doesn't
-       push items apart. */
+    /* On mobile, dropdown items inline under the trigger and toggle
+       open/closed via the .open class set by toggleDropdown() — each
+       section starts collapsed so the menu isn't one giant scroll.
+       Hover is deliberately not a trigger on touch; see the
+       @media (hover: hover) guard above. The desktop hover-bridge
+       padding is also neutralised so it doesn't push items apart. */
     .nav-dropdown { width: 100%; padding-bottom: 0; margin-bottom: 0; }
     .nav-dropdown-toggle { padding: 10px 4px; min-height: 40px; width: 100%; justify-content: flex-start; }
     .nav-dropdown-menu {
         position: static;
-        display: flex;
         margin-top: 0;
         border: none;
         padding: 0 0 0 16px;

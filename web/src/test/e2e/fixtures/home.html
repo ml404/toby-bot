@@ -13,11 +13,38 @@
     <a class="brand" href="#">TobyBot</a>
     <button class="nav-toggle" aria-expanded="false" aria-controls="nav-menu" type="button">☰</button>
     <div class="nav-links" id="nav-menu">
-        <a href="#">Commands</a>
-        <a href="#">Casino</a>
-        <a href="#">Leaderboard</a>
-        <a href="#">Moderation</a>
         <a href="#">Profile</a>
+        <a href="#">Leaderboards</a>
+        <div class="nav-dropdown">
+            <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">Play <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="#" role="menuitem">Slots</a>
+                <a href="#" role="menuitem">Coinflip</a>
+                <a href="#" role="menuitem">Blackjack</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">Economy <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="#" role="menuitem">Market</a>
+                <a href="#" role="menuitem">Titles</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">Social <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="#" role="menuitem">Music</a>
+                <a href="#" role="menuitem">Teams</a>
+            </div>
+        </div>
+        <div class="nav-dropdown">
+            <button type="button" class="nav-dropdown-toggle" aria-haspopup="true" aria-expanded="false">Tools <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+            <div class="nav-dropdown-menu" role="menu">
+                <a href="#" role="menuitem">Utils</a>
+                <a href="#" role="menuitem">Commands</a>
+            </div>
+        </div>
+        <a href="#">Admin</a>
         <a class="btn-logout" href="#">Logout</a>
     </div>
 </nav>
