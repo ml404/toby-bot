@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Resume preempted audio after intro plays",
+    "summary": "Today, when a member joins voice while the bot is already playing audio, their intro is enqueued **behind** the currently-playing track and only plays after that track finishes — defeating the point of an intro. This PR makes the intro preempt the currently-playing audio and resume it (from the same position) once the intro finishes.",
+    "emoji": "🎵",
+    "prNumber": 476
+  },
+  {
+    "date": "May 2026",
     "title": "In-browser preview of search results and queue items",
     "summary": "The /music-player dashboard's search panel lists up to 10 results per query, but the only way to find out which \"Linkin Park — Numb\" is the right one is to queue it and let the bot play. Same gap on items already queued — title/author visible, no way to sanity-check before they reach the front. This PR adds a small **▶ Preview** button next to each search result and each queue item that plays the source's own ~30s clip directly in the browser via a single shared `<audio>`…",
     "emoji": "🎵",
