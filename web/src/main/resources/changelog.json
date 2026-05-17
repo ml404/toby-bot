@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Derive homepage game counts from a single GameCatalog",
+    "summary": "The homepage was rendering three different game counts because the stats strip, hero paragraph, and casino feature card each held their own hardcoded literal: | Location | Before | |---|---| | Stats strip (`home.html` line 39, `homeStats.gameCount`) | `12` (from `HomeStatsService.GAME_COUNT`) | | Hero meta description + paragraph (`home.html` lines 5, 16) | `13`-game casino | | Casino feature card body (line 64) | `12` quick-play minigames | | Casino feature card tag (line…",
+    "emoji": "🔨",
+    "prNumber": 474
+  },
+  {
+    "date": "May 2026",
     "title": "Add Ko-fi link across web, README and Discord bot",
     "summary": "Surfaces a single Ko-fi link (`https://ko-fi.com/fratlayton`) in one spot per user-facing channel so supporters can find it without making the bot feel like a paywall: **Web footer** (`fragments/footer.html`) — appears on every marketing page (home, commands, terms, privacy, changelog). **Home page final CTA** — small `hero-aside` link under the existing Invite / Browse buttons. **README.md** — new \"Support the Project\" section above Acknowledgments. **`/help` no-args repl…",
     "emoji": "✨",
