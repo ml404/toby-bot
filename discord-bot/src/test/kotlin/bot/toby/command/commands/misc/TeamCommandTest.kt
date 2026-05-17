@@ -5,15 +5,21 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
-import io.mockk.*
+import bot.toby.modal.modals.TeamSplitModal
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import net.dv8tion.jda.api.entities.Member
-import net.dv8tion.jda.api.entities.Mentions
-import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
-import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
-import net.dv8tion.jda.api.interactions.commands.OptionMapping
-import net.dv8tion.jda.api.requests.RestAction
-import net.dv8tion.jda.api.requests.restaction.ChannelAction
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
+import net.dv8tion.jda.api.modals.Modal
+import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
+import net.dv8tion.jda.api.requests.restaction.interactions.ModalCallbackAction
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -22,7 +28,7 @@ internal class TeamCommandTest : CommandTest {
 
     @BeforeEach
     fun beforeEach() {
-        setUpCommonMocks() // Initialize the mocks
+        setUpCommonMocks()
         teamCommand = TeamCommand()
     }
 
@@ -32,83 +38,58 @@ internal class TeamCommandTest : CommandTest {
     }
 
     @Test
-    fun testHandle_WithNoArgs() {
-        // Set up your test scenario here, including mocking event and UserDto
-        val deleteDelay = 0
-
-        // Create a CommandContext
+    fun `split subcommand opens the team-split modal as the first response`() {
         val ctx = DefaultCommandContext(event)
+        val modalCallback = mockk<ModalCallbackAction>(relaxed = true)
+        val captured = slot<Modal>()
+        every { event.subcommandName } returns TeamCommand.SUB_SPLIT
+        every { event.getOption("members") } returns null
+        every { event.replyModal(capture(captured)) } returns modalCallback
+        every { modalCallback.queue() } just Runs
 
-        // Test the handle method
-        teamCommand.handle(ctx, requestingUserDto, deleteDelay)
+        teamCommand.handle(ctx, requestingUserDto, 0)
 
-        verify(exactly = 1) { event.deferReply() }
-        verify {
-            event.hook.sendMessage("Return X teams from a list of tagged users.")
-        }
+        // The modal must be the FIRST reply — Discord rejects replyModal
+        // after deferReply.
+        verify(exactly = 0) { event.deferReply() }
+        verify { event.replyModal(any<Modal>()) }
+        assertEquals(TeamSplitModal.MODAL_NAME, captured.captured.id)
     }
 
     @Test
-    fun testHandle_WithArgs() {
-        // Set up your test scenario here, including mocking event and UserDto
-        val membersOption = mockk<OptionMapping>()
-        val cleanupOption = mockk<OptionMapping>()
-        every { event.getOption("members") } returns membersOption
-        every { event.getOption("cleanup") } returns cleanupOption
-        every { membersOption.asString } returns "user1, user2"
-        every { cleanupOption.asBoolean } returns false
-
-        val sizeOption = mockk<OptionMapping>()
-        every { event.getOption("size") } returns sizeOption
-        every { sizeOption.asInt } returns 2
-
-        every { event.options } returns listOf(membersOption, sizeOption)
-
-        val createdVoiceChannel = mockk<VoiceChannel>()
-        val voiceChannelCreation = mockk<ChannelAction<VoiceChannel>>()
-        every { guild.createVoiceChannel(any()) } returns voiceChannelCreation
-
-        val voiceChannelModification = mockk<ChannelAction<VoiceChannel>>()
-        every { voiceChannelCreation.setBitrate(any()) } returns voiceChannelModification
-
-        every { voiceChannelModification.hint(VoiceChannel::class).complete() } returns createdVoiceChannel
-        every { createdVoiceChannel.name } returns "channelName"
-
-        val deleteDelay = 0
-
-        // Mock the guild.moveVoiceMember() method
-        val mentions = mockk<Mentions>()
-        every { event.getOption("members")?.mentions } returns mentions
-
-        val mockMember1 = mockk<Member>()
-        val mockMember2 = mockk<Member>()
-        val memberList = arrayListOf(mockMember1, mockMember2)
-        every { mockMember1.effectiveName } returns "Name 1"
-        every { mockMember2.effectiveName } returns "Name 2"
-        every { mentions.members } returns memberList
-
-        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember1)
-        guildMoveVoiceMemberMocking(createdVoiceChannel, mockMember2)
-
-        // Create a CommandContext
+    fun `cleanup subcommand deletes only matching team channels`() {
         val ctx = DefaultCommandContext(event)
+        val teamChannel: GuildChannel = mockk(relaxed = true) {
+            every { name } returns "Team 1"
+        }
+        val unrelatedChannel: GuildChannel = mockk(relaxed = true) {
+            every { name } returns "general"
+        }
+        val deleteAction = mockk<AuditableRestAction<Void>>(relaxed = true)
+        every { teamChannel.delete() } returns deleteAction
+        every { deleteAction.queue() } just Runs
 
-        // Test the handle method
-        teamCommand.handle(ctx, requestingUserDto, deleteDelay)
+        every { event.subcommandName } returns TeamCommand.SUB_CLEANUP
+        every { guild.channels } returns listOf(teamChannel, unrelatedChannel)
 
-        verify(exactly = 1) { event.deferReply() }
-        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
+        teamCommand.handle(ctx, requestingUserDto, 0)
+
+        verify(exactly = 1) { teamChannel.delete() }
+        verify(exactly = 0) { unrelatedChannel.delete() }
+        verify { event.deferReply() }
     }
 
-    companion object {
-        private fun guildMoveVoiceMemberMocking(createdVoiceChannel: VoiceChannel, member: Member) {
-            val restAction = mockk<RestAction<Void>>()
-            every {
-                guild.moveVoiceMember(member, createdVoiceChannel as AudioChannel)
-            } returns restAction
-
-            every { restAction.queue() } just Runs
-
-        }
+    @Test
+    fun `split helper distributes remainder across the first teams instead of dropping members`() {
+        val members = (1..7).map { mockk<Member>(relaxed = true) }
+        val groups = TeamCommand.split(members, 3)
+        // 7 members, 3 teams — expect group sizes 3, 2, 2 (no member dropped).
+        val sizes = groups.map { it.size }.sortedDescending()
+        assertEquals(listOf(3, 2, 2), sizes)
+        val total = groups.sumOf { it.size }
+        assertEquals(7, total)
+        // All inputs must appear in the output exactly once.
+        val flat = groups.flatten()
+        assertTrue(members.all { it in flat })
     }
 }

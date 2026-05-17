@@ -1,0 +1,239 @@
+package bot.toby.modal.modals
+
+import core.modal.ModalContext
+import database.dto.TeamPresetDto
+import database.dto.TeamSplitSessionDto
+import database.service.TeamPresetService
+import database.service.TeamSplitSessionService
+import io.mockk.Runs
+import io.mockk.every
+import io.mockk.just
+import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.entities.User
+import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import java.util.UUID
+
+class TeamSplitModalTest {
+
+    private lateinit var teamPresetService: TeamPresetService
+    private lateinit var teamSplitSessionService: TeamSplitSessionService
+    private lateinit var modal: TeamSplitModal
+    private lateinit var ctx: ModalContext
+    private lateinit var event: ModalInteractionEvent
+    private lateinit var hook: InteractionHook
+    private lateinit var guild: Guild
+    private val errorSlot = slot<String>()
+
+    @BeforeEach
+    fun setup() {
+        teamPresetService = mockk(relaxed = true)
+        teamSplitSessionService = mockk(relaxed = true)
+        modal = TeamSplitModal(teamPresetService, teamSplitSessionService)
+        hook = mockk(relaxed = true)
+        event = mockk(relaxed = true)
+        guild = mockk(relaxed = true) {
+            every { idLong } returns 100L
+            every { maxBitrate } returns 96000
+        }
+
+        val user = mockk<User>(relaxed = true) {
+            every { idLong } returns 42L
+        }
+        every { event.user } returns user
+        every { event.hook } returns hook
+
+        ctx = mockk {
+            every { this@mockk.event } returns this@TeamSplitModalTest.event
+            every { this@mockk.guild } returns this@TeamSplitModalTest.guild
+        }
+
+        // JDA's fluent chain returns a self-type (R from MessageCreateRequest<R>)
+        // that's erased at runtime. mockk's relaxed mode then makes the chain
+        // return the erased supertype, and the next call (`addComponents`)
+        // explodes with a ClassCastException. Stub each step to return the
+        // same typed mock so the chain holds together.
+        @Suppress("UNCHECKED_CAST")
+        val sendAction = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
+        every { hook.sendMessage(capture(errorSlot)) } returns sendAction
+        every { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns sendAction
+        every { sendAction.setEphemeral(any()) } returns sendAction
+        every { sendAction.addComponents(*anyVararg<MessageTopLevelComponent>()) } returns sendAction
+        every { sendAction.queue() } just Runs
+
+        // Default: empty modal values; individual tests override the ones they need.
+        every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns null
+        every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns null
+        every { event.getValue(TeamSplitModal.FIELD_TEAM_COUNT) } returns mockk { every { asString } returns "2" }
+        every { event.getValue(TeamSplitModal.FIELD_NAME_STRATEGY) } returns mockk { every { asString } returns "prefix" }
+        every { event.getValue(TeamSplitModal.FIELD_NAMES) } returns mockk { every { asString } returns "Team" }
+    }
+
+    @Test
+    fun `name is team_split`() {
+        assertEquals("team_split", modal.name)
+    }
+
+    @Test
+    fun `errors when no members provided and no preset named`() {
+        modal.handle(ctx, 0)
+        assertTrue(errorSlot.captured.contains("at least 2 members"))
+    }
+
+    @Test
+    fun `errors when preset name is unknown`() {
+        every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns mockk { every { asString } returns "ghosts" }
+        every { teamPresetService.getByName(100L, "ghosts") } returns null
+
+        modal.handle(ctx, 0)
+
+        assertTrue(errorSlot.captured.contains("No preset named 'ghosts'"))
+    }
+
+    @Test
+    fun `parseMemberIds extracts mentions and bare snowflakes and dedupes`() {
+        val ids = TeamSplitModal.parseMemberIds("<@111111111111111111> <@!222222222222222222> 111111111111111111 333333333333333333")
+        assertEquals(listOf(111111111111111111L, 222222222222222222L, 333333333333333333L), ids)
+    }
+
+    @Test
+    fun `parseMemberIds tolerates decorative names from the prefill format`() {
+        // /team split pre-fills the modal as `Name (<@id>), Name (<@id>), …` so
+        // typos and wrong people are easier to spot. The parser must still
+        // ignore the names and pick up only the <@id> tokens.
+        val ids = TeamSplitModal.parseMemberIds(
+            "Alice (<@111111111111111111>), Bob (<@!222222222222222222>), Charlie (<@333333333333333333>)"
+        )
+        assertEquals(listOf(111111111111111111L, 222222222222222222L, 333333333333333333L), ids)
+    }
+
+    @Test
+    fun `parseMemberIds yields empty on blank input`() {
+        assertTrue(TeamSplitModal.parseMemberIds("").isEmpty())
+        assertTrue(TeamSplitModal.parseMemberIds("   ").isEmpty())
+    }
+
+    @Test
+    fun `errors when team count exceeds resolved member count`() {
+        val members = listOf(memberMock(ID_A, "A"), memberMock(ID_B, "B"))
+        every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
+            every { asString } returns "<@$ID_A> <@$ID_B>"
+        }
+        every { event.getValue(TeamSplitModal.FIELD_TEAM_COUNT) } returns mockk { every { asString } returns "5" }
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
+
+        modal.handle(ctx, 0)
+
+        assertTrue(errorSlot.captured.contains("larger than the member count"))
+    }
+
+    @Test
+    fun `errors when list-strategy name count mismatches team count`() {
+        val members = listOf(memberMock(ID_A, "A"), memberMock(ID_B, "B"))
+        every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
+            every { asString } returns "<@$ID_A> <@$ID_B>"
+        }
+        every { event.getValue(TeamSplitModal.FIELD_NAME_STRATEGY) } returns mockk { every { asString } returns "list" }
+        every { event.getValue(TeamSplitModal.FIELD_NAMES) } returns mockk { every { asString } returns "Red,Blue,Green" }
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
+
+        modal.handle(ctx, 0)
+
+        assertTrue(errorSlot.captured.contains("wrong number of entries"))
+    }
+
+    @Test
+    fun `persists session before sending preview embed`() {
+        val members = listOf(memberMock(ID_A, "Alice"), memberMock(ID_B, "Bob"))
+        every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
+            every { asString } returns "<@$ID_A> <@$ID_B>"
+        }
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
+        val sessionId = UUID.randomUUID()
+        every {
+            teamSplitSessionService.createSession(
+                guildId = 100L, requesterDiscordId = 42L,
+                memberIds = any(), teamCount = 2,
+                assignments = any(), teamNames = any(),
+            )
+        } returns TeamSplitSessionDto(id = sessionId, guildId = 100L, requesterDiscordId = 42L, teamCount = 2)
+
+        modal.handle(ctx, 0)
+
+        verify {
+            teamSplitSessionService.createSession(
+                guildId = 100L, requesterDiscordId = 42L,
+                memberIds = match { it.size == 2 && it.containsAll(listOf(ID_A, ID_B)) },
+                teamCount = 2,
+                assignments = any(),
+                teamNames = match { it == listOf("Team 1", "Team 2") },
+            )
+        }
+        verify { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `unions preset members with pasted members and dedupes`() {
+        val preset = TeamPresetDto(id = 1L, guildId = 100L, name = "core", createdByDiscordId = 42L).apply {
+            memberIdList = listOf(ID_A, ID_B)
+        }
+        every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns mockk { every { asString } returns "core" }
+        every { teamPresetService.getByName(100L, "core") } returns preset
+        every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
+            // ID_B overlaps with preset; ID_C is new
+            every { asString } returns "<@$ID_B> <@$ID_C>"
+        }
+        every { guild.getMemberById(ID_A) } returns memberMock(ID_A, "A")
+        every { guild.getMemberById(ID_B) } returns memberMock(ID_B, "B")
+        every { guild.getMemberById(ID_C) } returns memberMock(ID_C, "C")
+        val captured = slot<List<Long>>()
+        every {
+            teamSplitSessionService.createSession(
+                guildId = any(), requesterDiscordId = any(),
+                memberIds = capture(captured), teamCount = any(),
+                assignments = any(), teamNames = any(),
+            )
+        } returns TeamSplitSessionDto(guildId = 100L)
+
+        modal.handle(ctx, 0)
+
+        assertNotNull(captured.captured)
+        assertEquals(listOf(ID_A, ID_B, ID_C).sorted(), captured.captured.sorted())
+    }
+
+    private fun memberMock(id: Long, displayName: String): Member {
+        val u = mockk<User>(relaxed = true) {
+            every { isBot } returns false
+        }
+        return mockk(relaxed = true) {
+            every { idLong } returns id
+            every { user } returns u
+            every { effectiveName } returns displayName
+        }
+    }
+
+    companion object {
+        // Real Discord snowflakes are 17-20 digits; the modal's mention regex
+        // enforces 15-20 to reject obvious typos. Use realistic ids in the tests
+        // so the regex actually matches.
+        private const val ID_A = 111111111111111111L
+        private const val ID_B = 222222222222222222L
+        private const val ID_C = 333333333333333333L
+    }
+}

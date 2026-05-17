@@ -23,6 +23,7 @@ open class TestCachingConfig {
                 ConcurrentMapCache("users"),
                 ConcurrentMapCache("music"),
                 ConcurrentMapCache("excuses"),
+                ConcurrentMapCache("team-presets"),
                 ConcurrentMapCache("tobyCoinMarkets")
             )
         )

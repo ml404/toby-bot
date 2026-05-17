@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Teams', '/css/excuses.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Teams</h1>
+    <p class="muted mb-5">Servers where both you and TobyBot are present. Pick one to manage saved team rosters.</p>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="search-row" th:if="${not #lists.isEmpty(guilds)}">
+        <input type="search" id="guildSearch" placeholder="Search servers…"
+               aria-label="Search servers" autocomplete="off">
+        <span class="muted" th:text="${#lists.size(guilds)} + ' server' + (${#lists.size(guilds)} == 1 ? '' : 's')">0 servers</span>
+    </div>
+
+    <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}" id="guildGrid">
+        <a class="guild-card"
+           th:each="guild : ${guilds}"
+           th:href="@{/teams/{id}(id=${guild.id})}"
+           th:attr="data-guild-name=${#strings.toLowerCase(guild.name)}">
+            <img th:if="${guild.iconUrl != null}"
+                 th:src="${guild.iconUrl}"
+                 th:alt="${guild.name} + ' icon'"
+                 class="guild-icon"
+                 onerror="this.style.display='none'">
+            <div th:unless="${guild.iconUrl != null}"
+                 class="guild-icon-placeholder"
+                 aria-hidden="true"
+                 th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
+            <div class="guild-name" th:text="${guild.name}" th:title="${guild.name}">Guild Name</div>
+        </a>
+    </div>
+
+    <p id="noResults" class="no-results">No servers match your search.</p>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">📭</span>
+        <h2>TobyBot isn't in any of your servers yet</h2>
+        <p class="mb-5">Invite the bot to get started.</p>
+        <a th:href="${inviteUrl}" class="btn" target="_blank" rel="noopener">Invite TobyBot</a>
+    </div>
+</main>
+
+<script>
+    (function () {
+        const search = document.getElementById('guildSearch');
+        const grid = document.getElementById('guildGrid');
+        const noResults = document.getElementById('noResults');
+        if (!search || !grid) return;
+        search.addEventListener('input', function () {
+            const q = search.value.trim().toLowerCase();
+            let visible = 0;
+            grid.querySelectorAll('.guild-card').forEach(card => {
+                const name = card.dataset.guildName || '';
+                const match = !q || name.indexOf(q) !== -1;
+                card.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+            noResults.style.display = visible === 0 ? 'block' : 'none';
+        });
+    })();
+</script>
+<script th:src="@{/js/home.js}"></script>
+</body>
+</html>
