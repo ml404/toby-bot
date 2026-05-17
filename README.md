@@ -87,6 +87,10 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 - Invite your Toby Bot to your Discord server and grant the required permissions.
 - Interact with the bot using the commands and features provided by the project.
 
+## Support the Project
+
+TobyBot is free and open source. If you'd like to help cover hosting costs or just say thanks, you can support development on [Ko-fi](https://ko-fi.com/fratlayton).
+
 ## Acknowledgments
 
 Special thanks to the creators and maintainers of Spring Boot, JDA, JPA, Hibernate, and Spring Web for their contributions to this project.
