@@ -676,8 +676,6 @@ class ModerationWebServiceTest {
     @Test
     fun `purgeMessages error when channel not found`() {
         mockMember(ownerId, isOwner = true)
-        val actor = mockk<Member>(relaxed = true)
-        every { guild.getMemberById(ownerId) } returns actor
         every { guild.getTextChannelById(333L) } returns null
         val result = service.purgeMessages(ownerId, guildId, 333L, 10, null)
         assertEquals("Text channel not found.", result.error)
