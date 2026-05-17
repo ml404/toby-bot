@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Redesign section tabs as segmented cards with counts",
+    "summary": "The Members / TobyCoin / Games tab strip shipped in #470 cloned the `.lb-sort` pill aesthetic (designed for a secondary inline switcher) and read as small + left-aligned + visually lost between the prominent podium above and the prominent tables below. This PR redesigns the section nav as a full-width row of equal-flex segmented cards echoing the existing `.lb-stat` / `.lb-podium-card` aesthetic — `bg-elevated` + border + `radius-lg`, with the accent fill on the active tab…",
+    "emoji": "🧹",
+    "prNumber": 471
+  },
+  {
+    "date": "May 2026",
     "title": "Tabbed sections, month nav, hover contributors, deltas, sparklines",
     "summary": "The leaderboard page used to stack three full sections vertically (credit standings, TobyCoin wallets, Top Games) and the Top Games list collapsed each game to a single number. This PR reshapes the page into three tabs and gives the Games panel real depth. ### What changed **Tabs** above the fold: **Members · TobyCoin · Games**. The podium stays as the page hero above the tab strip. Tab choice is persisted per guild in `localStorage` (matches the existing collapse-state me…",
     "emoji": "✨",
