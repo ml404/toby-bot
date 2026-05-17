@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -49,7 +50,7 @@ class TeamCancelButtonTest {
         val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
         every { hook.editOriginal(any<String>()) } returns editAction
         every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
-        every { editAction.setComponents(*anyVararg<net.dv8tion.jda.api.components.MessageTopLevelComponent>()) } returns editAction
+        every { editAction.setComponents(*anyVararg<MessageTopLevelComponent>()) } returns editAction
         every { editAction.queue() } just Runs
     }
 

@@ -11,6 +11,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
@@ -70,7 +71,7 @@ class TeamSplitModalTest {
         every { hook.sendMessage(capture(errorSlot)) } returns sendAction
         every { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns sendAction
         every { sendAction.setEphemeral(any()) } returns sendAction
-        every { sendAction.addComponents(*anyVararg<net.dv8tion.jda.api.components.MessageTopLevelComponent>()) } returns sendAction
+        every { sendAction.addComponents(*anyVararg<MessageTopLevelComponent>()) } returns sendAction
         every { sendAction.queue() } just Runs
 
         // Default: empty modal values; individual tests override the ones they need.
