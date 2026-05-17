@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Blackjack (fixture)</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/blackjack.css">
+</head>
+<body>
+<nav>
+    <a class="brand" href="#">TobyBot</a>
+    <button class="nav-toggle" type="button">☰</button>
+    <div class="nav-links" id="nav-menu">
+        <a href="#">Casino</a>
+        <a href="#">Profile</a>
+    </div>
+</nav>
+<main class="container">
+    <div class="bj-header">
+        <h1>Blackjack</h1>
+    </div>
+    <div class="bj-card">
+        <h2>Place your bet</h2>
+        <form>
+            <label for="bj-ante">Ante</label>
+            <input id="bj-ante" type="number" min="1" value="50">
+            <div class="bj-actions">
+                <button class="btn-primary" type="submit">Deal</button>
+                <button class="btn-secondary" type="button">Cancel</button>
+            </div>
+        </form>
+    </div>
+    <section class="bj-table casino-felt">
+        <div class="bj-row">
+            <h3>Dealer</h3>
+            <div class="bj-cards">
+                <span class="casino-card-glyph">A</span>
+                <span class="casino-card-glyph">?</span>
+            </div>
+        </div>
+        <div class="bj-row">
+            <h3>You</h3>
+            <div class="bj-cards">
+                <span class="casino-card-glyph">10</span>
+                <span class="casino-card-glyph">7</span>
+            </div>
+        </div>
+        <div class="bj-info">
+            <span>Total: <strong>17</strong></span>
+            <span>Bet: <strong>50</strong></span>
+        </div>
+        <div class="bj-actions">
+            <button class="btn-primary" type="button">Hit</button>
+            <button class="btn-secondary" type="button">Stand</button>
+            <button class="btn-secondary" type="button">Double</button>
+            <button class="btn-secondary" type="button">Split</button>
+        </div>
+    </section>
+</main>
+</body>
+</html>

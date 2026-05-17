@@ -405,14 +405,29 @@
 @media (max-width: 600px) {
     .stats-strip { gap: 24px; padding: 16px 12px; }
     .stat-value { font-size: 1.6rem; }
+    .section { padding: 44px 20px; }
+    .section h2 { font-size: 1.4rem; }
 }
 @media (max-width: 480px) {
     .hero { padding: 48px 16px 32px; }
+    .hero p { font-size: 1rem; }
     .hero-actions { flex-direction: column; align-items: stretch; gap: 10px; }
     .hero-actions a { width: 100%; text-align: center; }
+    .stats-strip { gap: 12px; padding: 14px 12px; }
+    .stat { min-width: 80px; flex: 1 1 40%; }
+    .stat-value { font-size: 1.4rem; }
     .section { padding: 36px 16px; }
-    .feature-grid { gap: 16px; }
+    .feature-grid { gap: 12px; }
     .feature-card { padding: 20px 16px; }
     .final-cta { padding: 36px 16px 56px; }
     .site-footer { padding: 24px 16px; }
+    .login-card { padding: 32px 20px; }
+    .login-card h1 { font-size: 1.5rem; }
+    .changelog-page { padding: 0 16px 48px; }
+    .changelog-timeline { padding-left: 8px; }
+}
+@media (max-width: 380px) {
+    .stats-strip { gap: 8px; }
+    .stat-value { font-size: 1.2rem; }
+    .stat-label { font-size: 0.72rem; }
 }

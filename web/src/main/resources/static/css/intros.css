@@ -418,7 +418,7 @@
     background: #000;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .url-preview { grid-template-columns: 1fr; }
     .url-preview img { width: 100%; height: 140px; }
     .form-row-split { grid-template-columns: 1fr; }

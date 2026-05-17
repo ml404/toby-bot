@@ -330,7 +330,16 @@
     .roulette-bet-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
+@media (max-width: 480px) {
+    .roulette-bet-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+    .roulette-chip { padding: 8px 10px; font-size: 0.9rem; min-height: 44px; }
+}
+
 @media (max-width: 380px) {
     .roulette-wheel-stage { width: 200px; height: 200px; }
     .roulette-payouts { font-size: 0.85rem; }
+    .roulette-bet-grid { grid-template-columns: minmax(0, 1fr); }
+    .roulette-bet-fieldset { padding: var(--space-2); }
+    .roulette-straight-picker { flex-wrap: wrap; }
+    .roulette-straight-picker input[type="number"] { width: 100%; }
 }

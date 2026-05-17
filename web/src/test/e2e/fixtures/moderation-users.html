@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moderation (fixture)</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/moderation.css">
+</head>
+<body>
+<nav>
+    <a class="brand" href="#">TobyBot</a>
+    <button class="nav-toggle" type="button">☰</button>
+    <div class="nav-links" id="nav-menu">
+        <a href="#">Casino</a>
+        <a href="#">Leaderboard</a>
+        <a href="#">Moderation</a>
+        <a href="#">Profile</a>
+    </div>
+</nav>
+<main class="container-wide">
+    <div class="page-header">
+        <h1>Moderation — Toby Test Server</h1>
+        <p class="lede">Manage members, voice, polls, casino, and per-guild config.</p>
+    </div>
+    <nav class="mod-subnav" aria-label="Moderation sections">
+        <a class="mod-subnav-link active" href="#">Users</a>
+        <a class="mod-subnav-link" href="#">Voice</a>
+        <a class="mod-subnav-link" href="#">Poll</a>
+        <a class="mod-subnav-link" href="#">Casino</a>
+        <a class="mod-subnav-link" href="#">Settings</a>
+    </nav>
+    <div class="mod-search">
+        <input class="mod-search-input" type="search" placeholder="Filter members…">
+        <span class="mod-search-count">12 members</span>
+    </div>
+    <div class="mod-table-wrap">
+        <table class="mod-table">
+            <thead>
+                <tr><th>Member</th><th>Roles</th><th>Joined</th><th>Toggle</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="Member">
+                        <div class="member-cell">
+                            <div class="avatar" aria-hidden="true"></div>
+                            <span class="lb-name">Alice McLongname Of The Test Realm</span>
+                        </div>
+                    </td>
+                    <td data-label="Roles">Moderator, Premium</td>
+                    <td data-label="Joined">2024-03-12</td>
+                    <td data-label="Toggle"><button class="toggle-btn on" type="button">ON</button></td>
+                    <td data-label="Action"><button class="btn-danger" type="button">Kick</button></td>
+                </tr>
+                <tr>
+                    <td data-label="Member">
+                        <div class="member-cell">
+                            <div class="avatar" aria-hidden="true"></div>
+                            <span class="lb-name">Bob</span>
+                            <span class="badge owner">Owner</span>
+                        </div>
+                    </td>
+                    <td data-label="Roles">Owner</td>
+                    <td data-label="Joined">2023-08-04</td>
+                    <td data-label="Toggle"><button class="toggle-btn" type="button">OFF</button></td>
+                    <td data-label="Action"><button class="btn-danger" disabled type="button">Kick</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

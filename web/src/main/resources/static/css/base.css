@@ -31,6 +31,24 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
+
+    /* Canonical breakpoints. `var()` doesn't resolve inside `@media`
+       queries, so these aren't usable in media rules directly — they're
+       documented here so authors stick to the same four thresholds:
+           --bp-tablet: 768px  — tablet / small-desktop
+           --bp-mobile: 600px  — small tablet / large phone (nav collapses)
+           --bp-small:  480px  — phones
+           --bp-tiny:   380px  — small phones (iPhone SE etc.)
+       Stylelint enforces the allowlist (see .stylelintrc.json). */
+    --bp-tablet: 768px;
+    --bp-mobile: 600px;
+    --bp-small: 480px;
+    --bp-tiny: 380px;
+
+    /* Minimum touch-target dimension. Consumed by .btn, .nav-link, etc.
+       under (hover: none) / (pointer: coarse) so phone/tablet hits are
+       finger-friendly without ballooning desktop chrome. */
+    --tap-min: 44px;
 }
 
 /* ---- Reset ---- */
@@ -84,31 +102,11 @@ p  { color: var(--text); }
 a { color: var(--accent); text-decoration: none; }
 a:hover { color: var(--accent-hover); }
 
-/* ---- Buttons ---- */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-2);
-    background: var(--accent);
-    color: #fff;
-    border: 1px solid transparent;
-    padding: 10px 20px;
-    border-radius: var(--radius-md);
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
-    text-decoration: none;
-    font-family: inherit;
-}
-.btn:hover:not(:disabled) { background: var(--accent-hover); }
-.btn:active:not(:disabled) { transform: translateY(1px); }
-.btn:disabled { opacity: 0.55; cursor: not-allowed; }
-
-/* `.btn-primary` is the semantic alias for `.btn` — game templates have
-   long used `class="btn-primary"` for action buttons (Deal, Hit, Bet).
-   Same visual + interaction as `.btn`. */
+/* ---- Buttons ----
+   `.btn-primary` is a semantic alias for `.btn` — game templates have
+   long used `class="btn-primary"` standalone (Deal, Hit, Bet). The two
+   share the same ruleset rather than redeclaring it. */
+.btn,
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -126,8 +124,11 @@ a:hover { color: var(--accent-hover); }
     text-decoration: none;
     font-family: inherit;
 }
+.btn:hover:not(:disabled),
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn:active:not(:disabled),
 .btn-primary:active:not(:disabled) { transform: translateY(1px); }
+.btn:disabled,
 .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .btn-secondary {
@@ -526,8 +527,75 @@ td { font-size: 0.95rem; }
     clip: rect(0,0,0,0); white-space: nowrap; border: 0;
 }
 
+/* ---- Shared responsive grid utilities ----
+   Casino game CSS files repeated the same "N-column grid, collapse to
+   1 on phone" pattern ~30 times. These utilities consolidate that so
+   per-page CSS can drop the boilerplate by adding one class. Each
+   utility respects the canonical breakpoints (600 / 480 / 380).
+
+   `.grid-auto`     — autofill cards with a 15rem floor (e.g. .voice-grid)
+   `.grid-2-mobile` — 2 cols on desktop, 1 col at --bp-small
+   `.grid-3-mobile` — 3 cols → 2 at --bp-mobile → 1 at --bp-small
+   `.grid-4-mobile` — 4 cols → 2 at --bp-mobile → 1 at --bp-tiny
+   `.stack-mobile`  — flex row that flips to column at --bp-small */
+.grid-auto {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+.grid-2-mobile {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid-3-mobile {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-4-mobile {
+    display: grid;
+    gap: var(--space-3);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.stack-mobile {
+    display: flex;
+    gap: var(--space-3);
+    flex-direction: row;
+    align-items: center;
+}
+
+@media (max-width: 600px) {
+    .grid-3-mobile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-4-mobile { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+    .grid-2-mobile,
+    .grid-3-mobile { grid-template-columns: minmax(0, 1fr); }
+    .stack-mobile {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+@media (max-width: 380px) {
+    .grid-4-mobile { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Mobile data-label fallback ----
+   The .mod-table card transform (lines below) uses `attr(data-label)` to
+   render the column heading next to each value. If a future template
+   forgets the attribute, the cell would render unlabeled. This rule
+   falls back to `data-col` (and is silent if neither is present),
+   keeping the card readable while the missing attribute is flagged by
+   the Java template test. */
+@media (max-width: 600px) {
+    .mod-table td:not([data-label])[data-col]::before {
+        content: attr(data-col);
+    }
+}
+
 /* ---- Responsive ---- */
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .container, .container-wide { margin: 20px auto; padding: 0 var(--space-4); }
     h1 { font-size: 1.35rem; }
     .card { padding: var(--space-5); }
@@ -775,10 +843,19 @@ td { font-size: 0.95rem; }
 /* Grow tap targets on any touch device without ballooning desktop buttons */
 @media (hover: none) and (pointer: coarse) {
     .btn-sm { padding: 8px 14px; min-height: 40px; }
-    .btn-icon { width: 40px; height: 40px; }
-    .btn { min-height: 44px; }
+    .btn-icon { width: var(--tap-min); height: var(--tap-min); }
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-success,
+    .btn-danger { min-height: var(--tap-min); }
     input[type=text], input[type=url], input[type=number], input[type=search],
     input[type=email], input[type=password], select { min-height: 40px; }
+    /* Toggle pills (.toggle-btn) and segmented controls need finger room
+       too — they're the primary affordance on the moderation Users tab
+       and the leaderboard period switcher. */
+    .toggle-btn { min-height: 36px; min-width: 56px; }
+    .segmented button { min-height: 40px; }
 }
 
 /* ============================================================
@@ -891,7 +968,7 @@ td { font-size: 0.95rem; }
    Other mod-table consumers don't carry those labels so the grid
    override never fires for them.
    ============================================================ */
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .lb-standings-table.mod-table tr {
         display: grid;
         grid-template-columns: auto 1fr auto;
@@ -1020,7 +1097,7 @@ td { font-size: 0.95rem; }
     border-radius: var(--radius-sm);
     padding: 2px var(--space-2);
     font-size: 0.85rem;
-    max-width: 220px;
+    max-width: min(220px, 100%);
 }
 .user-picker__chip > span:first-child {
     overflow: hidden;

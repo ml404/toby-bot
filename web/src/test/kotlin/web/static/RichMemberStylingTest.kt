@@ -52,7 +52,7 @@ class RichMemberStylingTest {
      * standings cards got their mobile redesign — moving them out of
      * leaderboard.css means a future page that wants a coloured
      * value pill can reuse them without re-importing leaderboard.css,
-     * AND the mobile shrink in the 640px standings-grid block always
+     * AND the mobile shrink in the 600px standings-grid block always
      * lines up with the right rule.
      */
     private val sharedPrimitives = listOf(
@@ -137,15 +137,15 @@ class RichMemberStylingTest {
     fun `standings table mobile redesign is centralised in base css`() {
         // The standings cards used to render at 6 stacked label/value
         // rows per row at desktop font sizes — bulky and visually
-        // disconnected on a phone. The 640px override re-lays each
+        // disconnected on a phone. The 600px override re-lays each
         // card as a 2-row grid (rank/member/title on top, three
         // metrics on the bottom). The user explicitly asked for the
         // fix to live in a shared/central location, not as a
         // leaderboard.css one-off.
-        val mobileBlocks = extractAllMediaBlocks(baseCss, "max-width: 640px")
+        val mobileBlocks = extractAllMediaBlocks(baseCss, "max-width: 600px")
         assertTrue(
             mobileBlocks.isNotEmpty(),
-            "base.css must contain a `@media (max-width: 640px)` block " +
+            "base.css must contain a `@media (max-width: 600px)` block " +
                 "carrying the standings 2-row grid override."
         )
         val combined = mobileBlocks.joinToString("\n")
@@ -153,7 +153,7 @@ class RichMemberStylingTest {
             combined.contains(".lb-standings-table.mod-table tr") &&
                 combined.contains("display: grid") &&
                 combined.contains("grid-template-areas"),
-            "base.css 640px block must declare a CSS-grid layout for " +
+            "base.css 600px block must declare a CSS-grid layout for " +
                 "`.lb-standings-table.mod-table tr` so the standings cards " +
                 "show member info on top + metrics on the bottom — not a " +
                 "tower of stacked label/value strips."
@@ -171,7 +171,7 @@ class RichMemberStylingTest {
         ).forEach { selector ->
             assertTrue(
                 combined.contains(selector),
-                "base.css 640px standings grid must map `$selector` to a " +
+                "base.css 600px standings grid must map `$selector` to a " +
                     "grid area; otherwise the metric collapses out of the " +
                     "two-row layout when the data-label changes."
             )

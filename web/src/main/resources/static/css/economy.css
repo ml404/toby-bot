@@ -231,7 +231,7 @@
     margin-left: 4px;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .economy-header { flex-direction: column; align-items: stretch; }
     .economy-price { text-align: left; }
     .economy-price-value { font-size: 1.8rem; }

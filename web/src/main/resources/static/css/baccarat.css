@@ -207,6 +207,17 @@
         font-size: 1.4rem;
     }
     .bac-side-picker {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+    .bac-side {
+        padding: 0.5rem;
+    }
+    .bac-side-name {
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .bac-side-picker { grid-template-columns: minmax(0, 1fr); }
+    .bac-cards { min-height: 3.5rem; }
 }
