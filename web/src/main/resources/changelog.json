@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Mobile-friendly pass, breakpoint refactor, responsive tests",
+    "summary": "Full mobile-friendliness sweep across the dashboard. An audit found ~25 concrete mobile bugs across 15 casino games + admin/marketing pages, inconsistent breakpoints (480 / 600 / 640 / 380 px scattered across 31 CSS files), and the same `repeat(N, 1fr) → 1fr` reflow pattern duplicated dozens of times in casino game CSS. This pass standardises the breakpoint set, extracts shared utilities, fixes the bugs, and pins the contract with tests so future regressions surface in CI.…",
+    "emoji": "🎲",
+    "prNumber": 466
+  },
+  {
+    "date": "May 2026",
     "title": "Align admin poll page with /poll modal (4 options, 1 min)",
     "summary": "`/poll` was reworked into a Discord modal (`PollModal.kt`) that — bound by Discord's 5-component modal cap — accepts a paragraph question (1–500 chars) plus up to **4** single-line options, with only option 1 required. The admin web page at `/moderation/{guildId}/poll` was still built for the old shape (max 10 options, 2 required, 256-char single-line question), so it was visibly out of sync and could submit polls that needed shapes the new emoji list couldn't represent. T…",
     "emoji": "🛡️",
