@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Teams · ' + ${guildName}, '/css/excuses.css')}"></head>
+<body th:attr="data-guild-id=${guildId}">
+
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<!-- Flash messages rendered invisibly; toasts.js picks them up on load -->
+<div th:if="${success}" data-flash="success" class="sr-only" th:text="${success}"></div>
+<div th:if="${error}" data-flash="error" class="sr-only" th:text="${error}"></div>
+
+<main id="main" class="container">
+
+    <div class="excuse-header">
+        <h1>Teams — <span th:text="${guildName}">Server</span></h1>
+        <span class="excuse-count"
+              th:text="${#lists.size(presets)} + ' preset' + (${#lists.size(presets)} == 1 ? '' : 's')">0 presets</span>
+    </div>
+
+    <p class="muted">Save reusable rosters here, then load them in Discord via <code>/team split</code>.</p>
+
+    <!-- Existing presets -->
+    <section class="excuse-list" aria-labelledby="presets-h">
+        <h2 id="presets-h">Saved presets</h2>
+
+        <div th:if="${#lists.isEmpty(presets)}" class="empty-hero">
+            <span class="emoji" aria-hidden="true">📋</span>
+            <p>No presets yet — create one below.</p>
+        </div>
+
+        <ul th:unless="${#lists.isEmpty(presets)}" class="excuse-cards">
+            <li th:each="p : ${presets}"
+                class="excuse-card approved"
+                th:attr="data-preset-id=${p.id}">
+                <div class="excuse-text"><strong th:text="${p.name}">Preset</strong></div>
+                <div class="excuse-meta">
+                    <span class="excuse-author" th:text="${p.memberCount} + ' member' + (${p.memberCount} == 1 ? '' : 's')">0 members</span>
+                </div>
+                <ul class="muted" style="margin: 0.4em 0 0.8em 1.2em;">
+                    <li th:each="m : ${p.members}" th:text="${m.name}">Member</li>
+                </ul>
+                <div class="excuse-actions">
+                    <button type="button" class="btn btn-sm btn-danger"
+                            th:attr="data-action='delete-preset',
+                                     data-id=${p.id},
+                                     data-name=${p.name},
+                                     data-url=@{/teams/{gid}/presets/{id}/delete(gid=${guildId},id=${p.id})}">
+                        🗑 Delete
+                    </button>
+                </div>
+            </li>
+        </ul>
+    </section>
+
+    <!-- Create / replace preset -->
+    <section class="maker-card" aria-labelledby="new-preset-h">
+        <h2 id="new-preset-h">New preset</h2>
+        <p class="muted">Names are case-insensitive within a server. Submitting the same name overwrites the existing preset's roster.</p>
+        <form method="post" th:action="@{/teams/{gid}/presets(gid=${guildId})}" class="maker-form">
+
+            <div class="form-group">
+                <label for="presetName">Name</label>
+                <input id="presetName" name="name" type="text" required
+                       th:maxlength="${maxNameLength}"
+                       placeholder="e.g. Friday Night Crew">
+            </div>
+
+            <div class="form-group">
+                <label for="memberSelect">Members</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='memberIds',
+                        id='memberSelect',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='Pick members…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=true,
+                        showSocialCredit=false)}"></div>
+            </div>
+
+            <button type="submit" class="btn">Save preset</button>
+        </form>
+    </section>
+
+    <!-- Recent splits -->
+    <section class="excuse-list" aria-labelledby="recent-h" th:if="${not #lists.isEmpty(recentSplits)}">
+        <h2 id="recent-h">Recent splits</h2>
+        <ul class="excuse-cards">
+            <li th:each="s : ${recentSplits}" class="excuse-card"
+                th:classappend="${s.status == 'confirmed'} ? ' approved' : ' pending'">
+                <div class="excuse-meta">
+                    <span class="excuse-author" th:text="${s.requester}">Requester</span>
+                    <span class="excuse-state" th:text="${s.status}">status</span>
+                </div>
+                <ul style="margin: 0.4em 0 0.4em 1.2em;">
+                    <li th:each="t : ${s.teams}">
+                        <strong th:text="${t.name}">Team</strong>:
+                        <span th:text="${#strings.listJoin(t.members, ', ')}">members</span>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
+<script>
+    // Wire up the delete-preset buttons via the shared api.js postJson helper.
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-action="delete-preset"]').forEach(function (btn) {
+            btn.addEventListener('click', async function () {
+                const name = btn.dataset.name || 'this preset';
+                if (!confirm("Delete '" + name + "'?")) return;
+                btn.disabled = true;
+                try {
+                    const res = await fetch(btn.dataset.url, {
+                        method: 'POST',
+                        headers: (function () {
+                            const h = { 'Accept': 'application/json' };
+                            const tokenMeta = document.querySelector('meta[name="_csrf"]');
+                            const headerMeta = document.querySelector('meta[name="_csrf_header"]');
+                            if (tokenMeta && headerMeta) {
+                                h[headerMeta.getAttribute('content')] = tokenMeta.getAttribute('content');
+                            }
+                            return h;
+                        })(),
+                    });
+                    const body = await res.json().catch(() => ({}));
+                    if (res.ok && body.ok) {
+                        const card = btn.closest('[data-preset-id]');
+                        if (card) card.remove();
+                    } else {
+                        alert(body.error || 'Failed to delete preset.');
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    alert('Network error.');
+                    btn.disabled = false;
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>
