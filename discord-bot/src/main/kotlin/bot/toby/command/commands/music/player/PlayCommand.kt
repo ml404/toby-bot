@@ -3,8 +3,8 @@ package bot.toby.command.commands.music.player
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.lavaplayer.SearchPrefixResolver
 import bot.toby.util.adjustTrackPlayingTimes
-import bot.toby.util.isUrl
 import core.command.CommandContext
 import database.dto.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -42,10 +42,7 @@ class PlayCommand : MusicCommand {
             )
 
             "link" -> {
-                var link = event.getOption(LINK)?.asString ?: ""
-                if (link.contains("youtube") && isUrl(link).isEmpty()) {
-                    link = "ytsearch:$link"
-                }
+                val link = SearchPrefixResolver.resolve(event.getOption(LINK)?.asString.orEmpty())
                 instance.loadAndPlay(guild, event, link, true, deleteDelay, startPosition, volume)
             }
 

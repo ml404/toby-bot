@@ -46,7 +46,7 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
         every { event.getOption("link") } returns linkOptionalMapping
         every { event.getOption("volume") } returns volumeOptionalMapping
         every { event.getOption("start") } returns mockk(relaxed = true)
-        every { linkOptionalMapping.asString } returns "www.testlink.com"
+        every { linkOptionalMapping.asString } returns "https://www.testlink.com"
         every { volumeOptionalMapping.asInt } returns 20
         every { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) } just Runs
 
@@ -78,7 +78,106 @@ internal class NowDigOnThisCommandTest : MusicCommandTest {
             playerManager.loadAndPlay(
                 guild,
                 event,
-                "www.testlink.com",
+                "https://www.testlink.com",
+                false,
+                0,
+                0L,
+                20
+            )
+        }
+    }
+
+    @Test
+    fun test_nowDigOnThisCommand_plainQueryGetsYtsearchPrefix() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+        every { playerManager.getMusicManager(guild) } returns musicManager
+
+        val linkOptionalMapping = mockk<OptionMapping>()
+        val volumeOptionalMapping = mockk<OptionMapping>()
+        every { event.getOption("link") } returns linkOptionalMapping
+        every { event.getOption("volume") } returns volumeOptionalMapping
+        every { event.getOption("start") } returns mockk(relaxed = true)
+        every { linkOptionalMapping.asString } returns "linkin park in the end"
+        every { volumeOptionalMapping.asInt } returns 20
+        every { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) } just Runs
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                guild,
+                event,
+                "ytsearch:linkin park in the end",
+                false,
+                0,
+                0L,
+                20
+            )
+        }
+    }
+
+    @Test
+    fun test_nowDigOnThisCommand_explicitPrefixPassthrough() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+        every { playerManager.getMusicManager(guild) } returns musicManager
+
+        val linkOptionalMapping = mockk<OptionMapping>()
+        val volumeOptionalMapping = mockk<OptionMapping>()
+        every { event.getOption("link") } returns linkOptionalMapping
+        every { event.getOption("volume") } returns volumeOptionalMapping
+        every { event.getOption("start") } returns mockk(relaxed = true)
+        every { linkOptionalMapping.asString } returns "scsearch:lofi beats"
+        every { volumeOptionalMapping.asInt } returns 20
+        every { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) } just Runs
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                guild,
+                event,
+                "scsearch:lofi beats",
+                false,
+                0,
+                0L,
+                20
+            )
+        }
+    }
+
+    @Test
+    fun test_nowDigOnThisCommand_spotifyUrlPassthrough() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+        every { playerManager.getMusicManager(guild) } returns musicManager
+
+        val linkOptionalMapping = mockk<OptionMapping>()
+        val volumeOptionalMapping = mockk<OptionMapping>()
+        every { event.getOption("link") } returns linkOptionalMapping
+        every { event.getOption("volume") } returns volumeOptionalMapping
+        every { event.getOption("start") } returns mockk(relaxed = true)
+        every { linkOptionalMapping.asString } returns "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh"
+        every { volumeOptionalMapping.asInt } returns 20
+        every { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) } just Runs
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        nowDigOnThisCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                guild,
+                event,
+                "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh",
                 false,
                 0,
                 0L,

@@ -213,4 +213,107 @@ class TrackSchedulerTest {
         }
         assertEquals(100, scheduler.queue.size)
     }
+
+    @Test
+    fun `moveQueueItem moves item from one position to another`() {
+        every { player.startTrack(any(), true) } returns false
+        val t1 = mockTrack("T1")
+        val t2 = mockTrack("T2")
+        val t3 = mockTrack("T3")
+        scheduler.queue(t1, 0L, 50)
+        scheduler.queue(t2, 0L, 50)
+        scheduler.queue(t3, 0L, 50)
+
+        assertTrue(scheduler.moveQueueItem(0, 2))
+
+        val ordered = scheduler.queue.toList()
+        assertEquals(3, ordered.size)
+        assertSame(t2, ordered[0])
+        assertSame(t3, ordered[1])
+        assertSame(t1, ordered[2])
+    }
+
+    @Test
+    fun `moveQueueItem with fromIndex equal toIndex is a no-op true`() {
+        every { player.startTrack(any(), true) } returns false
+        val t1 = mockTrack("T1")
+        scheduler.queue(t1, 0L, 50)
+        assertTrue(scheduler.moveQueueItem(0, 0))
+        assertSame(t1, scheduler.queue.peek())
+    }
+
+    @Test
+    fun `moveQueueItem with negative fromIndex returns false`() {
+        assertFalse(scheduler.moveQueueItem(-1, 0))
+    }
+
+    @Test
+    fun `moveQueueItem with out-of-range toIndex returns false`() {
+        every { player.startTrack(any(), true) } returns false
+        scheduler.queue(mockTrack("T1"), 0L, 50)
+        assertFalse(scheduler.moveQueueItem(0, 99))
+    }
+
+    @Test
+    fun `removeQueueItem removes correct item by index`() {
+        every { player.startTrack(any(), true) } returns false
+        val t1 = mockTrack("T1")
+        val t2 = mockTrack("T2")
+        val t3 = mockTrack("T3")
+        scheduler.queue(t1, 0L, 50)
+        scheduler.queue(t2, 0L, 50)
+        scheduler.queue(t3, 0L, 50)
+
+        val removed = scheduler.removeQueueItem(1)
+        assertSame(t2, removed)
+        assertEquals(2, scheduler.queue.size)
+        val remaining = scheduler.queue.toList()
+        assertSame(t1, remaining[0])
+        assertSame(t3, remaining[1])
+    }
+
+    @Test
+    fun `removeQueueItem out-of-bounds returns null`() {
+        every { player.startTrack(any(), true) } returns false
+        scheduler.queue(mockTrack("T1"), 0L, 50)
+        assertNull(scheduler.removeQueueItem(-1))
+        assertNull(scheduler.removeQueueItem(99))
+    }
+
+    @Test
+    fun `getRequesterId returns null when not set`() {
+        val track = mockTrack()
+        assertNull(scheduler.getRequesterId(track))
+    }
+
+    @Test
+    fun `queue records requester id when provided`() {
+        val track = mockTrack()
+        every { player.startTrack(track, true) } returns false
+        scheduler.queue(track, 0L, null, 50, requesterId = 12345L)
+        assertEquals(12345L, scheduler.getRequesterId(track))
+    }
+
+    @Test
+    fun `onTrackEnd clears requester id`() {
+        val track = mockTrack()
+        every { player.startTrack(track, true) } returns false
+        scheduler.queue(track, 0L, null, 50, requesterId = 12345L)
+        scheduler.onTrackEnd(player, track, AudioTrackEndReason.STOPPED)
+        assertNull(scheduler.getRequesterId(track))
+    }
+
+    @Test
+    fun `SchedulerEvents publisher being null does not crash event-emitting paths`() {
+        // Ensure publisher is null (default in tests).
+        SchedulerEvents.publisher = null
+        val track = mockTrack()
+        every { player.startTrack(track, true) } returns false
+        // Should not throw.
+        scheduler.queue(track, 0L, 50)
+        scheduler.onTrackStart(player, track)
+        scheduler.onTrackEnd(player, track, AudioTrackEndReason.FINISHED)
+        scheduler.onPlayerPause(player)
+        scheduler.onPlayerResume(player)
+    }
 }

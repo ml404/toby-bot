@@ -1,8 +1,8 @@
 package bot.toby.command.commands.music.player
 
 import bot.toby.command.commands.music.MusicCommand
-import bot.toby.helpers.URLHelper
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.lavaplayer.SearchPrefixResolver
 import bot.toby.util.adjustTrackPlayingTimes
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
@@ -46,10 +46,7 @@ class NowDigOnThisCommand : MusicCommand {
 
         if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
 
-        var link = linkOption
-        if (link.contains("youtube") && !URLHelper.isValidURL(link)) {
-            link = "ytsearch:$link"
-        }
+        val link = SearchPrefixResolver.resolve(linkOption)
 
         val startPosition = adjustTrackPlayingTimes(event.getOption(START_POSITION)?.asLong ?: 0L)
         val musicManager = instance.getMusicManager(ctx.guild)

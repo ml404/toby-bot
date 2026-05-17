@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Music', '/css/music-player.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <header class="music-header">
+        <h1>🎵 Music</h1>
+    </header>
+    <p class="muted mb-5">Pick a server to open its player — see what's playing, queue tracks, manage the room.</p>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="music-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
+        <article class="music-guild-card" th:each="g : ${guilds}">
+            <header class="music-guild-card-head">
+                <img class="music-guild-icon"
+                     th:if="${g.iconUrl != null}"
+                     th:src="${g.iconUrl}"
+                     th:alt="${g.name}">
+                <div class="music-guild-icon" th:unless="${g.iconUrl != null}" aria-hidden="true"
+                     style="display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🎵</div>
+                <h2 class="music-guild-name" th:text="${g.name}">Server</h2>
+            </header>
+
+            <div class="music-guild-status"
+                 th:classappend="${g.nowPlayingTitle != null} ? 'is-playing' : ''">
+                <span class="music-guild-status-icon" aria-hidden="true"
+                      th:text="${g.nowPlayingTitle != null} ? '🎶' : '💤'">💤</span>
+                <span class="music-guild-status-text"
+                      th:text="${g.nowPlayingTitle != null} ? ('Now playing: ' + g.nowPlayingTitle) : 'Idle'">Idle</span>
+            </div>
+
+            <div class="music-guild-actions">
+                <a class="btn-primary" th:href="@{/music-player/{id}(id=${g.id})}">🎶 Open player</a>
+            </div>
+        </article>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">
+        <span class="emoji" aria-hidden="true">🎵</span>
+        <h2>No servers yet</h2>
+        <p class="mb-5">You need to share a server with TobyBot to control its music.</p>
+    </div>
+</main>
+</body>
+</html>
