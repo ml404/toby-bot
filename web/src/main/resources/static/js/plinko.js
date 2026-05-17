@@ -218,12 +218,38 @@ function renderPlinkoResult(resultEl, body) {
         const startedAt = performance.now();
 
         return new Promise(resolve => {
+            // `done` guards against the rAF path and the safety timeout
+            // both firing: whichever lands first wins, the other becomes
+            // a no-op. Without this, a slow last-frame rAF could double-
+            // paint the final transform AFTER the timeout already snapped
+            // to the bucket (visually fine, but the resolve would fire
+            // twice — Promise dedupes that, but the extra setAttribute
+            // call is wasted work).
+            let done = false;
+            function settle() {
+                if (done) return;
+                done = true;
+                const end = waypoints[waypoints.length - 1];
+                ball.setAttribute('transform', 'translate(' + end.x + ',' + end.y + ')');
+                resolve();
+            }
+            // Safety net for the case where rAF never ticks enough to
+            // hit `elapsed >= DROP_MS` — backgrounded tab, browser
+            // throttling, or a stalled compositor on mobile. setTimeout
+            // throttles less aggressively and (crucially) ALWAYS fires
+            // once the page is foregrounded, so the Promise can't hang
+            // forever and the casino-game.js lock-release always runs.
+            // Buffer of 500ms past DROP_MS lets the rAF path win on the
+            // happy path; the timeout only kicks in if rAF actually
+            // stalled.
+            const safetyMs = DROP_MS + 500;
+            const safetyTimer = setTimeout(settle, safetyMs);
             function tick(now) {
+                if (done) return;
                 const elapsed = now - startedAt;
                 if (elapsed >= DROP_MS) {
-                    const end = waypoints[waypoints.length - 1];
-                    ball.setAttribute('transform', 'translate(' + end.x + ',' + end.y + ')');
-                    resolve();
+                    clearTimeout(safetyTimer);
+                    settle();
                     return;
                 }
                 const segIdx = Math.min(Math.floor(elapsed / segMs), waypoints.length - 2);
@@ -257,10 +283,22 @@ function renderPlinkoResult(resultEl, body) {
     function startAnimation() {
         clearLandedHighlight();
         if (window.CasinoSounds) window.CasinoSounds.play('deal');
-        // The drop animation runs in renderResult so it kicks off the
-        // moment the response lands (not after a minSettleMs wait). We
-        // just clear stale state here so the previous bucket highlight
-        // goes away the instant the player presses Drop again.
+        // Snap the ball to the top of the board the instant Drop is
+        // clicked — before the fetch, before animateDrop. The previous
+        // round left the ball at the bottom (in its bucket); without an
+        // immediate snap, a slow fetch leaves the player staring at a
+        // disabled button + a motionless ball at the previous bucket and
+        // reading the round as "broken". The snap is the visual proof the
+        // click was accepted.
+        //
+        // animateDrop re-applies the same three attributes on entry, so
+        // this is also a defence-in-depth idempotent setup — if the fetch
+        // is fast enough that animateDrop runs in the same frame, the
+        // attributes match and the only observable behaviour is the snap.
+        const START_Y = BALL_R + 4;
+        ball.setAttribute('cx', '0');
+        ball.setAttribute('cy', '0');
+        ball.setAttribute('transform', 'translate(0,' + START_Y + ')');
         return null;
     }
 

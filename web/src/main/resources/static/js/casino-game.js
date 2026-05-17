@@ -205,17 +205,31 @@
                             // (slots/coinflip/dice) return undefined and
                             // settle immediately as before.
                             const settle = renderResult(body);
+                            // `busy = false; setDisabled(false)` MUST always run, even
+                            // if a downstream callback throws — without the finally,
+                            // a throw inside applyBalance / applyTobyDelta /
+                            // applyWinSettle / releasePoolBanner would leave the
+                            // button permanently disabled (Promise.then(finishSettle,
+                            // finishSettle) silently swallows the rejection). Console
+                            // logs the throw so a regression is visible during dev.
                             const finishSettle = function () {
-                                if (autoApplyBalance) {
-                                    applyBalance(body.newBalance);
-                                    applyTobyDelta(body);
+                                try {
+                                    if (autoApplyBalance) {
+                                        applyBalance(body.newBalance);
+                                        applyTobyDelta(body);
+                                    }
+                                    if (autoWinSettle) {
+                                        applyWinSettle(body);
+                                    }
+                                    if (jackpot) jackpot.releasePoolBanner();
+                                } catch (e) {
+                                    if (typeof console !== 'undefined' && console.error) {
+                                        console.error('TobyCasinoGame.finishSettle threw:', e);
+                                    }
+                                } finally {
+                                    busy = false;
+                                    setDisabled(false);
                                 }
-                                if (autoWinSettle) {
-                                    applyWinSettle(body);
-                                }
-                                if (jackpot) jackpot.releasePoolBanner();
-                                busy = false;
-                                setDisabled(false);
                             };
                             if (settle && typeof settle.then === 'function') {
                                 settle.then(finishSettle, finishSettle);
