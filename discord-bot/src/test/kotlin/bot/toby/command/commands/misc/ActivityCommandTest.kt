@@ -37,6 +37,12 @@ internal class ActivityCommandTest : CommandTest {
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
+        // setEphemeral returns `R` (self-type), which mockk(relaxed = true) defaults
+        // to a generic MessageCreateRequest proxy — not assignable to
+        // WebhookMessageCreateAction. Pin it to the typed mock so the
+        // `.addComponents(...)` call downstream resolves correctly.
+        every { CommandTest.webhookMessageCreateAction.setEphemeral(any()) } returns
+            CommandTest.webhookMessageCreateAction
         rollupService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         activityTrackingService = mockk(relaxed = true)
