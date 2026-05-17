@@ -565,19 +565,19 @@ class ModerationWebServiceTest {
     // ---- createPoll ----
 
     @Test
-    fun `createPoll rejects fewer than 2 options`() {
+    fun `createPoll rejects empty options`() {
         mockMember(ownerId, isOwner = true)
-        val err = service.createPoll(ownerId, guildId, 333L, "Yes?", listOf("only one"))
-        assertEquals("Provide at least 2 options.", err)
+        val err = service.createPoll(ownerId, guildId, 333L, "Yes?", emptyList())
+        assertEquals("Provide at least 1 option.", err)
     }
 
     @Test
-    fun `createPoll rejects more than 10 options`() {
+    fun `createPoll rejects more than 4 options`() {
         mockMember(ownerId, isOwner = true)
-        val options = (1..11).map { "opt$it" }
+        val options = (1..5).map { "opt$it" }
         val err = service.createPoll(ownerId, guildId, 333L, "Q?", options)
         assertNotNull(err)
-        assertTrue(err!!.contains("10"))
+        assertTrue(err!!.contains("4"))
     }
 
     @Test

@@ -16,8 +16,8 @@
         const options = Array.from(pollForm.querySelectorAll('.poll-option'))
             .map(i => i.value.trim())
             .filter(v => v.length > 0);
-        if (!channelId || !question || options.length < 2) {
-            toast('Need a channel, a question, and at least 2 options.', 'error');
+        if (!channelId || !question || options.length < 1) {
+            toast('Need a channel, a question, and at least 1 option.', 'error');
             return;
         }
         const submitBtn = pollForm.querySelector('button[type="submit"]');
