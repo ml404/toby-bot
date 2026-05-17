@@ -21,9 +21,18 @@ const runScript = () => {
 const baseFixture = `
     <main data-guild-id="42">
       <nav class="lb-section-tabs">
-        <button data-tab="members" class="lb-sort-option active" aria-selected="true">Members</button>
-        <button data-tab="tobycoins" class="lb-sort-option" aria-selected="false">TobyCoin</button>
-        <button data-tab="topgames" class="lb-sort-option" aria-selected="false">Games</button>
+        <button data-tab="members" class="lb-sort-option active" aria-selected="true">
+          <span class="lb-section-tab-label">Members</span>
+          <span class="lb-section-tab-count">23 members</span>
+        </button>
+        <button data-tab="tobycoins" class="lb-sort-option" aria-selected="false">
+          <span class="lb-section-tab-label">TobyCoin</span>
+          <span class="lb-section-tab-count">10 holders</span>
+        </button>
+        <button data-tab="topgames" class="lb-sort-option" aria-selected="false">
+          <span class="lb-section-tab-label">Games</span>
+          <span class="lb-section-tab-count">10 games</span>
+        </button>
       </nav>
       <div class="lb-tab-panel" data-tab-panel="members">members content</div>
       <div class="lb-tab-panel" data-tab-panel="tobycoins" hidden>tobycoin content</div>
@@ -39,6 +48,25 @@ const baseFixture = `
           </tr>
         </table>
       </div>
+    </main>
+`;
+
+// Same shape as baseFixture but without the TobyCoin tab — covers the
+// live template's `th:if` branch that hides it when there are no holders.
+const twoTabFixture = `
+    <main data-guild-id="42">
+      <nav class="lb-section-tabs">
+        <button data-tab="members" class="lb-sort-option active" aria-selected="true">
+          <span class="lb-section-tab-label">Members</span>
+          <span class="lb-section-tab-count">5 members</span>
+        </button>
+        <button data-tab="topgames" class="lb-sort-option" aria-selected="false">
+          <span class="lb-section-tab-label">Games</span>
+          <span class="lb-section-tab-count">3 games</span>
+        </button>
+      </nav>
+      <div class="lb-tab-panel" data-tab-panel="members">members content</div>
+      <div class="lb-tab-panel" data-tab-panel="topgames" hidden>games content</div>
     </main>
 `;
 
@@ -91,6 +119,67 @@ describe('leaderboard.js — section tabs', () => {
         document.querySelector('[data-tab="tobycoins"]').click();
         expect(document.querySelector('[data-tab="members"]').getAttribute('aria-selected')).toBe('false');
         expect(document.querySelector('[data-tab="tobycoins"]').getAttribute('aria-selected')).toBe('true');
+    });
+
+    test('clicks on inner spans still toggle the outer button via bubbling', () => {
+        runScript();
+        // Clicks on .lb-section-tab-label / .lb-section-tab-count should bubble
+        // to the parent <button> the click handler is bound to. Guards against
+        // a future refactor that moves the listener to the inner spans.
+        const innerLabel = document.querySelector('[data-tab="topgames"] .lb-section-tab-label');
+        innerLabel.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        expect(document.querySelector('[data-tab-panel="topgames"]').hidden).toBe(false);
+        expect(document.querySelector('[data-tab="topgames"]').classList.contains('active')).toBe(true);
+    });
+
+    test('active class is toggled on the outer <button>, not the inner spans', () => {
+        runScript();
+        document.querySelector('[data-tab="topgames"]').click();
+        const btn = document.querySelector('[data-tab="topgames"]');
+        const label = btn.querySelector('.lb-section-tab-label');
+        const count = btn.querySelector('.lb-section-tab-count');
+        expect(btn.classList.contains('active')).toBe(true);
+        expect(label.classList.contains('active')).toBe(false);
+        expect(count.classList.contains('active')).toBe(false);
+    });
+
+    test('count badge text survives tab switching (JS does not clobber it)', () => {
+        runScript();
+        const beforeCount = document
+            .querySelector('[data-tab="topgames"] .lb-section-tab-count')
+            .textContent;
+        document.querySelector('[data-tab="topgames"]').click();
+        document.querySelector('[data-tab="members"]').click();
+        const afterCount = document
+            .querySelector('[data-tab="topgames"] .lb-section-tab-count')
+            .textContent;
+        expect(afterCount).toBe(beforeCount);
+        expect(afterCount).toContain('games');
+    });
+
+    test('works when TobyCoin tab is conditionally hidden (2-tab layout)', () => {
+        setFixture(twoTabFixture);
+        window.localStorage.clear();
+        runScript();
+        // Only Members + Games. Click Games — its panel shows, Members hides.
+        document.querySelector('[data-tab="topgames"]').click();
+        expect(document.querySelector('[data-tab-panel="topgames"]').hidden).toBe(false);
+        expect(document.querySelector('[data-tab-panel="members"]').hidden).toBe(true);
+        expect(window.localStorage.getItem('lb-tab:42')).toBe('topgames');
+        // Click back to Members.
+        document.querySelector('[data-tab="members"]').click();
+        expect(document.querySelector('[data-tab-panel="members"]').hidden).toBe(false);
+        expect(window.localStorage.getItem('lb-tab:42')).toBe('members');
+    });
+
+    test('stored value pointing at the hidden TobyCoin tab is ignored in 2-tab layout', () => {
+        // A user who last visited a guild with TobyCoin holders returns to a
+        // guild that no longer has any. Their stored "tobycoins" preference
+        // must not blow up — fall back to members.
+        window.localStorage.setItem('lb-tab:42', 'tobycoins');
+        setFixture(twoTabFixture);
+        runScript();
+        expect(document.querySelector('[data-tab-panel="members"]').hidden).toBe(false);
     });
 });
 
