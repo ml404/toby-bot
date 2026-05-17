@@ -22,6 +22,7 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -67,8 +68,19 @@ class TeamRerollButtonTest {
 
     @Test
     fun `updates assignments and edits embed in place keeping the same buttons`() {
-        val members = listOf(111L, 222L, 333L, 444L).map { memberMock(it) }
-        members.forEach { every { guild.getMemberById(it.idLong) } returns it }
+        // Hard-code the ids on both sides — calling `member.idLong` *inside* an
+        // `every {}` block confuses mockk's call recorder (it can sometimes
+        // capture the nested invocation rather than just the arg value, so
+        // production gets 0L back from idLong and updateAssignments captures
+        // [0, 0, 0, 0]). Compute the lookup keys outside the recording block.
+        val m111 = memberMock(111L)
+        val m222 = memberMock(222L)
+        val m333 = memberMock(333L)
+        val m444 = memberMock(444L)
+        every { guild.getMemberById(111L) } returns m111
+        every { guild.getMemberById(222L) } returns m222
+        every { guild.getMemberById(333L) } returns m333
+        every { guild.getMemberById(444L) } returns m444
 
         val sessionDto = TeamSplitSessionDto(
             id = sessionId, guildId = 100L, requesterDiscordId = 42L,
@@ -86,9 +98,9 @@ class TeamRerollButtonTest {
 
         // New assignments must still total 4 members across 2 teams.
         val flat = captured.captured.flatten()
-        assert(flat.size == 4)
-        assert(flat.toSet() == setOf(111L, 222L, 333L, 444L))
-        assert(captured.captured.size == 2)
+        assertEquals(4, flat.size)
+        assertEquals(setOf(111L, 222L, 333L, 444L), flat.toSet())
+        assertEquals(2, captured.captured.size)
     }
 
     @Test
