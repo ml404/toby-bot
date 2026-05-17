@@ -49,8 +49,7 @@ class TeamCancelButtonTest {
         val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
         every { hook.editOriginal(any<String>()) } returns editAction
         every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
-        every { editAction.setComponents(*anyVararg()) } returns editAction
-        every { editAction.setComponents(any<Collection<*>>()) } returns editAction
+        every { editAction.setComponents(*anyVararg<net.dv8tion.jda.api.components.MessageTopLevelComponent>()) } returns editAction
         every { editAction.queue() } just Runs
     }
 

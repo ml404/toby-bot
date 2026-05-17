@@ -69,10 +69,8 @@ class TeamSplitModalTest {
         val sendAction = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
         every { hook.sendMessage(capture(errorSlot)) } returns sendAction
         every { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns sendAction
-        every { hook.sendMessageEmbeds(any<Collection<MessageEmbed>>()) } returns sendAction
         every { sendAction.setEphemeral(any()) } returns sendAction
-        every { sendAction.addComponents(*anyVararg()) } returns sendAction
-        every { sendAction.addComponents(any<Collection<*>>()) } returns sendAction
+        every { sendAction.addComponents(*anyVararg<net.dv8tion.jda.api.components.MessageTopLevelComponent>()) } returns sendAction
         every { sendAction.queue() } just Runs
 
         // Default: empty modal values; individual tests override the ones they need.

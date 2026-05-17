@@ -65,14 +65,16 @@ class TeamConfirmButtonTest {
         // relaxed mode returns the base supertype's mock and the subsequent
         // `.setComponents` / `.queue` calls explode with a ClassCastException.
         // Stubbing each step to return the same typed mock fixes the chain.
+        // Production only exercises the vararg overload of setComponents (it
+        // passes a single ActionRow), so we stub just that — Kotlin can't
+        // resolve `Collection<*>` against the typed `Collection<out
+        // MessageTopLevelComponent>` overload anyway.
         @Suppress("UNCHECKED_CAST")
         val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
         every { hook.editOriginal(any<String>()) } returns editAction
         every { hook.editOriginalEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns editAction
-        every { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
         every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
-        every { editAction.setComponents(*anyVararg()) } returns editAction
-        every { editAction.setComponents(any<Collection<*>>()) } returns editAction
+        every { editAction.setComponents(*anyVararg<net.dv8tion.jda.api.components.MessageTopLevelComponent>()) } returns editAction
         every { editAction.queue() } just Runs
     }
 
