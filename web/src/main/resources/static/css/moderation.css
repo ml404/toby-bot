@@ -778,6 +778,15 @@ details.config-section.is-hidden { display: none; }
 .mod-action-form button {
     align-self: flex-start;
 }
+/* The page-level .btn-danger override (smaller padding) is intended for
+   inline table-row buttons (e.g. the per-row Kick); inside an action
+   form it sits next to .btn submit buttons, so restore the base size
+   from base.css so the two button styles match. */
+.mod-action-form .btn-danger {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+}
 .lock-actions {
     display: flex;
     gap: var(--space-2);
