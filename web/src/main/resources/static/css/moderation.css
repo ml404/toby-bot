@@ -819,3 +819,79 @@ details.config-section.is-hidden { display: none; }
     line-height: 1.5;
     max-width: 70ch;
 }
+
+/* ==============================================================
+   Leveling moderation tab.
+   ============================================================== */
+.leveling-admin-card {
+    gap: var(--space-3);
+}
+
+.leveling-rewards-table,
+.leveling-titles-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: var(--space-3);
+}
+.leveling-rewards-table th,
+.leveling-titles-table th {
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border);
+}
+.leveling-rewards-table td,
+.leveling-titles-table td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.leveling-rewards-table tr:last-of-type td,
+.leveling-titles-table tr:last-of-type td {
+    border-bottom: 0;
+}
+
+.leveling-reward-add {
+    display: flex;
+    gap: var(--space-3);
+    align-items: end;
+    padding: var(--space-3);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    flex-wrap: wrap;
+}
+.leveling-reward-add label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    min-width: 120px;
+}
+.leveling-reward-add label > span {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+}
+.leveling-reward-add input,
+.leveling-reward-add select {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+}
+
+.leveling-title-level-input {
+    width: 80px;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-strong);
+    background: var(--bg);
+    color: var(--text);
+}

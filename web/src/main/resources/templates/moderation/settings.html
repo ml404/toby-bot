@@ -166,37 +166,6 @@
                            th:disabled="${!isOwner}">
                     <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                 </div>
-                <div class="config-row" data-key="DAILY_XP_CAP">
-                    <label>Daily XP cap (per-user ceiling for engagement XP; default 1000)</label>
-                    <input type="number" min="0" max="100000"
-                           th:value="${overview.config['DAILY_XP_CAP']}"
-                           placeholder="1000"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="DAILY_CAP_PER_LEVEL_BONUS">
-                    <label>Daily credit cap bonus per level (default +10/level; 0 disables the perk)</label>
-                    <input type="number" min="0" max="1000"
-                           th:value="${overview.config['DAILY_CAP_PER_LEVEL_BONUS']}"
-                           placeholder="10"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="UBI_PER_LEVEL_BONUS">
-                    <label>UBI bonus per level (extra credits per level on each daily UBI grant; 0 disables)</label>
-                    <input type="number" min="0" max="1000"
-                           th:value="${overview.config['UBI_PER_LEVEL_BONUS']}"
-                           placeholder="5"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="LEVEL_UP_CHANNEL">
-                    <label>Level-up announcement channel id (optional override; defaults to message/command channel)</label>
-                    <input type="text" th:value="${overview.config['LEVEL_UP_CHANNEL']}"
-                           placeholder="(channel id)"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
                 <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
                     <label>Toby Coin BUY fee (% per leg, routed to jackpot pool)</label>
                     <span class="config-input-group">

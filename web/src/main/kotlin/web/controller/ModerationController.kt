@@ -10,6 +10,7 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -116,6 +117,33 @@ class ModerationController(
         model: Model,
         ra: RedirectAttributes
     ): String = renderSubPage(guildId, user, model, ra, "moderation/lottery")
+
+    @GetMapping("/{guildId}/leveling")
+    fun levelingPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/moderation/guilds",
+        check = moderationWebService::canModerate,
+        deniedMessage = "You are not allowed to moderate that server.",
+    ) { discordId ->
+        val overview = moderationWebService.getGuildOverview(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireForPage "redirect:/moderation/guilds"
+        }
+        val leveling = moderationWebService.getLevelingOverview(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireForPage "redirect:/moderation/guilds"
+        }
+        model.addAttribute("overview", overview)
+        model.addAttribute("leveling", leveling)
+        model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("actorDiscordId", discordId.toString())
+        "moderation/leveling"
+    }
 
     /**
      * Shared resolver for every per-tab sub-page: runs the same access
@@ -515,6 +543,63 @@ class ModerationController(
         }
     }
 
+    /**
+     * Upsert a level → role-reward binding. Owner-only. Triggered by
+     * the "Add reward" form on the leveling moderation tab.
+     */
+    @PostMapping("/{guildId}/level-reward", consumes = ["application/json"])
+    @ResponseBody
+    fun upsertLevelReward(
+        @PathVariable guildId: Long,
+        @RequestBody body: LevelRewardRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val roleId = body.roleId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid role id."))
+        val error = moderationWebService.upsertLevelReward(actor, guildId, body.level, roleId)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    /**
+     * Drop a level → role-reward binding. Owner-only. Triggered by the
+     * per-row Delete button on the leveling moderation tab.
+     */
+    @DeleteMapping("/{guildId}/level-reward/{level}")
+    @ResponseBody
+    fun deleteLevelReward(
+        @PathVariable guildId: Long,
+        @PathVariable level: Int,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val error = moderationWebService.deleteLevelReward(actor, guildId, level)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    /**
+     * Set required_level on a title. Owner-only. Triggered by the
+     * per-title Save button on the leveling moderation tab.
+     */
+    @PostMapping("/{guildId}/title/{titleId}/required-level", consumes = ["application/json"])
+    @ResponseBody
+    fun setTitleRequiredLevel(
+        @PathVariable guildId: Long,
+        @PathVariable titleId: Long,
+        @RequestBody body: RequiredLevelRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val error = moderationWebService.setTitleRequiredLevel(actor, guildId, titleId, body.requiredLevel)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
     @PostMapping("/{guildId}/poll", consumes = ["application/json"])
     @ResponseBody
     fun createPoll(
@@ -559,6 +644,8 @@ data class LockRequest(val lock: Boolean = true)
 data class SlowmodeRequest(val seconds: Int = 0)
 data class MoveRequest(val targetChannelId: String = "", val memberIds: List<String> = emptyList())
 data class PollRequest(val channelId: String = "", val question: String = "", val options: List<String> = emptyList())
+data class LevelRewardRequest(val level: Int = 0, val roleId: String = "")
+data class RequiredLevelRequest(val requiredLevel: Int = 0)
 
 data class PurgeResponse(
     val ok: Boolean,

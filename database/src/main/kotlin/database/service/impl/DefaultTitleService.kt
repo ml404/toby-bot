@@ -27,4 +27,10 @@ class DefaultTitleService @Autowired constructor(
         )
         return persistence.recordPurchase(owned)
     }
+
+    override fun updateRequiredLevel(titleId: Long, requiredLevel: Int): TitleDto? {
+        val existing = persistence.getById(titleId) ?: return null
+        existing.requiredLevel = requiredLevel
+        return persistence.update(existing)
+    }
 }
