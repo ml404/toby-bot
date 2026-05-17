@@ -109,13 +109,13 @@ class TeamSplitModalTest {
 
     @Test
     fun `errors when team count exceeds resolved member count`() {
-        val members = listOf(memberMock(111L, "A"), memberMock(222L, "B"))
+        val members = listOf(memberMock(ID_A, "A"), memberMock(ID_B, "B"))
         every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
-            every { asString } returns "<@111> <@222>"
+            every { asString } returns "<@$ID_A> <@$ID_B>"
         }
         every { event.getValue(TeamSplitModal.FIELD_TEAM_COUNT) } returns mockk { every { asString } returns "5" }
-        every { guild.getMemberById(111L) } returns members[0]
-        every { guild.getMemberById(222L) } returns members[1]
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
 
         modal.handle(ctx, 0)
 
@@ -124,14 +124,14 @@ class TeamSplitModalTest {
 
     @Test
     fun `errors when list-strategy name count mismatches team count`() {
-        val members = listOf(memberMock(111L, "A"), memberMock(222L, "B"))
+        val members = listOf(memberMock(ID_A, "A"), memberMock(ID_B, "B"))
         every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
-            every { asString } returns "<@111> <@222>"
+            every { asString } returns "<@$ID_A> <@$ID_B>"
         }
         every { event.getValue(TeamSplitModal.FIELD_NAME_STRATEGY) } returns mockk { every { asString } returns "list" }
         every { event.getValue(TeamSplitModal.FIELD_NAMES) } returns mockk { every { asString } returns "Red,Blue,Green" }
-        every { guild.getMemberById(111L) } returns members[0]
-        every { guild.getMemberById(222L) } returns members[1]
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
 
         modal.handle(ctx, 0)
 
@@ -140,12 +140,12 @@ class TeamSplitModalTest {
 
     @Test
     fun `persists session before sending preview embed`() {
-        val members = listOf(memberMock(111L, "Alice"), memberMock(222L, "Bob"))
+        val members = listOf(memberMock(ID_A, "Alice"), memberMock(ID_B, "Bob"))
         every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
-            every { asString } returns "<@111> <@222>"
+            every { asString } returns "<@$ID_A> <@$ID_B>"
         }
-        every { guild.getMemberById(111L) } returns members[0]
-        every { guild.getMemberById(222L) } returns members[1]
+        every { guild.getMemberById(ID_A) } returns members[0]
+        every { guild.getMemberById(ID_B) } returns members[1]
         val sessionId = UUID.randomUUID()
         every {
             teamSplitSessionService.createSession(
@@ -160,7 +160,7 @@ class TeamSplitModalTest {
         verify {
             teamSplitSessionService.createSession(
                 guildId = 100L, requesterDiscordId = 42L,
-                memberIds = match { it.size == 2 && it.containsAll(listOf(111L, 222L)) },
+                memberIds = match { it.size == 2 && it.containsAll(listOf(ID_A, ID_B)) },
                 teamCount = 2,
                 assignments = any(),
                 teamNames = match { it == listOf("Team 1", "Team 2") },
@@ -172,17 +172,17 @@ class TeamSplitModalTest {
     @Test
     fun `unions preset members with pasted members and dedupes`() {
         val preset = TeamPresetDto(id = 1L, guildId = 100L, name = "core", createdByDiscordId = 42L).apply {
-            memberIdList = listOf(111L, 222L)
+            memberIdList = listOf(ID_A, ID_B)
         }
         every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns mockk { every { asString } returns "core" }
         every { teamPresetService.getByName(100L, "core") } returns preset
         every { event.getValue(TeamSplitModal.FIELD_MEMBERS) } returns mockk {
-            // 222 overlaps with preset; 333 is new
-            every { asString } returns "<@222> <@333>"
+            // ID_B overlaps with preset; ID_C is new
+            every { asString } returns "<@$ID_B> <@$ID_C>"
         }
-        every { guild.getMemberById(111L) } returns memberMock(111L, "A")
-        every { guild.getMemberById(222L) } returns memberMock(222L, "B")
-        every { guild.getMemberById(333L) } returns memberMock(333L, "C")
+        every { guild.getMemberById(ID_A) } returns memberMock(ID_A, "A")
+        every { guild.getMemberById(ID_B) } returns memberMock(ID_B, "B")
+        every { guild.getMemberById(ID_C) } returns memberMock(ID_C, "C")
         val captured = slot<List<Long>>()
         every {
             teamSplitSessionService.createSession(
@@ -195,7 +195,7 @@ class TeamSplitModalTest {
         modal.handle(ctx, 0)
 
         assertNotNull(captured.captured)
-        assertEquals(listOf(111L, 222L, 333L).sorted(), captured.captured.sorted())
+        assertEquals(listOf(ID_A, ID_B, ID_C).sorted(), captured.captured.sorted())
     }
 
     private fun memberMock(id: Long, displayName: String): Member {
@@ -207,5 +207,14 @@ class TeamSplitModalTest {
             every { user } returns u
             every { effectiveName } returns displayName
         }
+    }
+
+    companion object {
+        // Real Discord snowflakes are 17-20 digits; the modal's mention regex
+        // enforces 15-20 to reject obvious typos. Use realistic ids in the tests
+        // so the regex actually matches.
+        private const val ID_A = 111111111111111111L
+        private const val ID_B = 222222222222222222L
+        private const val ID_C = 333333333333333333L
     }
 }
