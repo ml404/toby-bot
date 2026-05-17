@@ -45,11 +45,15 @@ internal class LockCommandTest : CommandTest {
     @Test
     fun test_LockRejectsMissingMemberPermission() {
         val ctx = DefaultCommandContext(event)
-        val textChannel = mockk<TextChannel>(relaxed = true)
-        every { textChannel.type } returns ChannelType.TEXT
-        every { event.channel } returns textChannel
-        every { member.hasPermission(textChannel, Permission.MANAGE_PERMISSIONS) } returns false
-        every { botMember.hasPermission(textChannel, Permission.MANAGE_PERMISSIONS) } returns true
+        val channelUnion = mockk<MessageChannelUnion>(
+            relaxed = true,
+            moreInterfaces = arrayOf(TextChannel::class)
+        )
+        every { channelUnion.type } returns ChannelType.TEXT
+        every { event.channel } returns channelUnion
+        val asText = channelUnion as TextChannel
+        every { member.hasPermission(asText, Permission.MANAGE_PERMISSIONS) } returns false
+        every { botMember.hasPermission(asText, Permission.MANAGE_PERMISSIONS) } returns true
 
         lockCommand.handle(ctx, requestingUserDto, 0)
 

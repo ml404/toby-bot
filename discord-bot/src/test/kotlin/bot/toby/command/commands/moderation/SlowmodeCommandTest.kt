@@ -47,16 +47,20 @@ internal class SlowmodeCommandTest : CommandTest {
     @Test
     fun test_SlowmodeAppliesSeconds() {
         val ctx = DefaultCommandContext(event)
-        val textChannel = mockk<TextChannel>(relaxed = true)
-        every { textChannel.type } returns ChannelType.TEXT
-        every { event.channel } returns textChannel
-        every { member.hasPermission(textChannel, Permission.MANAGE_CHANNEL) } returns true
-        every { botMember.hasPermission(textChannel, Permission.MANAGE_CHANNEL) } returns true
+        val channelUnion = mockk<MessageChannelUnion>(
+            relaxed = true,
+            moreInterfaces = arrayOf(TextChannel::class)
+        )
+        every { channelUnion.type } returns ChannelType.TEXT
+        every { event.channel } returns channelUnion
+        val asText = channelUnion as TextChannel
+        every { member.hasPermission(asText, Permission.MANAGE_CHANNEL) } returns true
+        every { botMember.hasPermission(asText, Permission.MANAGE_CHANNEL) } returns true
         val secondsOpt = mockk<OptionMapping>()
         every { event.getOption("seconds") } returns secondsOpt
         every { secondsOpt.asLong } returns 30L
         val manager = mockk<TextChannelManager>(relaxed = true)
-        every { textChannel.manager } returns manager
+        every { asText.manager } returns manager
         every { manager.setSlowmode(30) } returns manager
         every { manager.reason(any()) } returns manager
         every { manager.queue(any(), any()) } just Runs

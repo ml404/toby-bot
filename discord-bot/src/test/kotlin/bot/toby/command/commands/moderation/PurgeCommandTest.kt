@@ -46,11 +46,15 @@ internal class PurgeCommandTest : CommandTest {
     @Test
     fun test_PurgeRejectsMissingMemberPermission() {
         val ctx = DefaultCommandContext(event)
-        val textChannel = mockk<TextChannel>(relaxed = true)
-        every { textChannel.type } returns ChannelType.TEXT
-        every { event.channel } returns textChannel
-        every { member.hasPermission(textChannel, Permission.MESSAGE_MANAGE) } returns false
-        every { botMember.hasPermission(textChannel, Permission.MESSAGE_MANAGE) } returns true
+        val channelUnion = mockk<MessageChannelUnion>(
+            relaxed = true,
+            moreInterfaces = arrayOf(TextChannel::class)
+        )
+        every { channelUnion.type } returns ChannelType.TEXT
+        every { event.channel } returns channelUnion
+        val asText = channelUnion as TextChannel
+        every { member.hasPermission(asText, Permission.MESSAGE_MANAGE) } returns false
+        every { botMember.hasPermission(asText, Permission.MESSAGE_MANAGE) } returns true
 
         purgeCommand.handle(ctx, requestingUserDto, 0)
 
@@ -60,11 +64,15 @@ internal class PurgeCommandTest : CommandTest {
     @Test
     fun test_PurgeRejectsCountOutOfRange() {
         val ctx = DefaultCommandContext(event)
-        val textChannel = mockk<TextChannel>(relaxed = true)
-        every { textChannel.type } returns ChannelType.TEXT
-        every { event.channel } returns textChannel
-        every { member.hasPermission(textChannel, Permission.MESSAGE_MANAGE) } returns true
-        every { botMember.hasPermission(textChannel, Permission.MESSAGE_MANAGE) } returns true
+        val channelUnion = mockk<MessageChannelUnion>(
+            relaxed = true,
+            moreInterfaces = arrayOf(TextChannel::class)
+        )
+        every { channelUnion.type } returns ChannelType.TEXT
+        every { event.channel } returns channelUnion
+        val asText = channelUnion as TextChannel
+        every { member.hasPermission(asText, Permission.MESSAGE_MANAGE) } returns true
+        every { botMember.hasPermission(asText, Permission.MESSAGE_MANAGE) } returns true
         val countOpt = mockk<OptionMapping>()
         every { event.getOption("count") } returns countOpt
         every { countOpt.asLong } returns 500L
