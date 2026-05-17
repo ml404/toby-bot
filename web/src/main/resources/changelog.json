@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "In-browser preview of search results and queue items",
+    "summary": "The /music-player dashboard's search panel lists up to 10 results per query, but the only way to find out which \"Linkin Park — Numb\" is the right one is to queue it and let the bot play. Same gap on items already queued — title/author visible, no way to sanity-check before they reach the front. This PR adds a small **▶ Preview** button next to each search result and each queue item that plays the source's own ~30s clip directly in the browser via a single shared `<audio>`…",
+    "emoji": "🎵",
+    "prNumber": 475
+  },
+  {
+    "date": "May 2026",
     "title": "Expand Lavaplayer sources + polish embed + web dashboard",
     "summary": "Three connected pieces shipped together: ### A — Expanded audio sources Registers **SoundCloud, Bandcamp, Vimeo, Niconico** (built-in Lavaplayer) and **Spotify, Apple Music, Deezer, Yandex Music** (via the LavaSrc 4.8.2 plugin) alongside the existing YouTube/Twitch/HTTP/Local sources. Each LavaSrc source is gated on its env-var credentials (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`, `APPLE_MUSIC_MEDIA_API_TOKEN`, `DEEZER_MASTER_KEY`/`DEEZER_ARL`, `YANDEX_ACCESS_TOKEN`);…",
     "emoji": "🎵",
