@@ -111,8 +111,14 @@
             postJson('/moderation/' + guildId + '/purge', { channelId, count, filterUserId })
                 .then(r => {
                     disableSubmit(form, false);
-                    if (r && r.ok) toast('Deleted ' + r.deleted + ' message(s).', 'success');
-                    else toast(r?.error || 'Failed.', 'error');
+                    if (r && r.ok) {
+                        toast('Deleted ' + r.deleted + ' message(s).', 'success');
+                        if (r.skipped > 0) {
+                            toast('Skipped ' + r.skipped + ' message(s) older than 14 days.', 'info');
+                        }
+                    } else {
+                        toast(r?.error || 'Failed.', 'error');
+                    }
                 })
                 .catch(() => { disableSubmit(form, false); toast('Network error.', 'error'); });
         });

@@ -292,9 +292,9 @@ class ModerationController(
         val filterUserId = body.filterUserId?.takeIf { it.isNotBlank() }?.toLongOrNull()
         val result = moderationWebService.purgeMessages(actor, guildId, channelId, body.count, filterUserId)
         if (result.error != null) {
-            ResponseEntity.badRequest().body(PurgeResponse(false, result.error, result.deleted))
+            ResponseEntity.badRequest().body(PurgeResponse(false, result.error, result.deleted, result.skipped))
         } else {
-            ResponseEntity.ok(PurgeResponse(true, null, result.deleted))
+            ResponseEntity.ok(PurgeResponse(true, null, result.deleted, result.skipped))
         }
     }
 
@@ -564,6 +564,7 @@ data class PurgeResponse(
     val ok: Boolean,
     val error: String?,
     val deleted: Int = 0,
+    val skipped: Int = 0,
 )
 
 data class MoveResponse(

@@ -23,8 +23,10 @@ import net.dv8tion.jda.api.entities.emoji.Emoji
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import java.util.EnumSet
 import java.util.concurrent.TimeUnit
 
@@ -1243,16 +1245,22 @@ class ModerationWebService(
 
         return try {
             val history = channel.history.retrievePast(count).complete()
-            val targets = if (filterUserId != null) {
+            val matching = if (filterUserId != null) {
                 history.filter { it.author.idLong == filterUserId }
             } else history
-            if (targets.isEmpty()) return PurgeResult(deleted = 0)
-            if (targets.size == 1) {
-                targets[0].delete().reason("Purged via web moderation UI.").complete()
+            // Discord rejects bulk-deletes for any message older than 14
+            // days, so filter those out up-front and report them as skipped
+            // rather than letting the request error mid-purge.
+            val cutoff = Instant.now().minus(14, ChronoUnit.DAYS)
+            val recent = matching.filter { it.timeCreated.toInstant().isAfter(cutoff) }
+            val skipped = matching.size - recent.size
+            if (recent.isEmpty()) return PurgeResult(deleted = 0, skipped = skipped)
+            if (recent.size == 1) {
+                recent[0].delete().reason("Purged via web moderation UI.").complete()
             } else {
-                channel.deleteMessages(targets).complete()
+                channel.deleteMessages(recent).complete()
             }
-            PurgeResult(deleted = targets.size)
+            PurgeResult(deleted = recent.size, skipped = skipped)
         } catch (e: Exception) {
             PurgeResult(error = "Could not purge: ${e.message}")
         }
@@ -1482,5 +1490,6 @@ data class MoveResult(
 
 data class PurgeResult(
     val deleted: Int = 0,
+    val skipped: Int = 0,
     val error: String? = null
 )

@@ -9,6 +9,8 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @Component
 class PurgeCommand : ModerationCommand {
@@ -50,21 +52,31 @@ class PurgeCommand : ModerationCommand {
         val filterUserId = event.getOption(USER)?.asUser?.idLong
 
         textChannel.history.retrievePast(count.toInt()).queue({ history ->
-            val toDelete = if (filterUserId != null) {
+            val matching = if (filterUserId != null) {
                 history.filter { it.author.idLong == filterUserId }
             } else history
-            if (toDelete.isEmpty()) {
-                event.hook.replyAndDelete("No matching messages found.", deleteDelay)
+            // Discord rejects bulk-deletes for any message older than 14 days,
+            // so split early — recent ones get the bulk endpoint, anything
+            // older is skipped (deleting them one-by-one would burn rate
+            // limits with no real win for a "purge" command).
+            val cutoff = Instant.now().minus(14, ChronoUnit.DAYS)
+            val recent = matching.filter { it.timeCreated.toInstant().isAfter(cutoff) }
+            val skipped = matching.size - recent.size
+            val skipSuffix = if (skipped > 0) " ($skipped older than 14 days skipped)" else ""
+            if (recent.isEmpty()) {
+                val msg = if (skipped > 0) "No deletable messages — $skipped older than 14 days."
+                else "No matching messages found."
+                event.hook.replyAndDelete(msg, deleteDelay)
                 return@queue
             }
-            if (toDelete.size == 1) {
-                toDelete[0].delete().reason("Purged via /purge.").queue(
-                    { event.hook.replyAndDelete("Deleted 1 message.", deleteDelay) },
+            if (recent.size == 1) {
+                recent[0].delete().reason("Purged via /purge.").queue(
+                    { event.hook.replyAndDelete("Deleted 1 message$skipSuffix.", deleteDelay) },
                     { error -> event.hook.replyAndDelete("Could not purge: ${error.message}", deleteDelay) }
                 )
             } else {
-                textChannel.deleteMessages(toDelete).queue(
-                    { event.hook.replyAndDelete("Deleted ${toDelete.size} messages.", deleteDelay) },
+                textChannel.deleteMessages(recent).queue(
+                    { event.hook.replyAndDelete("Deleted ${recent.size} messages$skipSuffix.", deleteDelay) },
                     { error -> event.hook.replyAndDelete("Could not purge: ${error.message}", deleteDelay) }
                 )
             }

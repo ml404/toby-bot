@@ -563,11 +563,43 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `banMember denied when actor lacks BAN_MEMBERS`() {
+        val actor = mockMember(ownerId, isOwner = true)
+        val target = mockMember(targetUserId)
+        val bot = mockk<SelfMember>(relaxed = true)
+        every { guild.selfMember } returns bot
+        every { actor.canInteract(target) } returns true
+        every { actor.hasPermission(Permission.BAN_MEMBERS) } returns false
+
+        val err = service.banMember(ownerId, guildId, targetUserId, null, 0)
+        assertNotNull(err)
+    }
+
+    @Test
+    fun `banMember error when target not in guild`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getMemberById(targetUserId) } returns null
+        val err = service.banMember(ownerId, guildId, targetUserId, null, 0)
+        assertEquals("Target is not a member of that server.", err)
+    }
+
+    @Test
     fun `unbanUser denied for non-moderator`() {
         mockMember(plainUserId)
         every { introWebService.isSuperUser(plainUserId, guildId) } returns false
         val err = service.unbanUser(plainUserId, guildId, targetUserId)
         assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `unbanUser denied when actor lacks BAN_MEMBERS`() {
+        val actor = mockMember(ownerId, isOwner = true)
+        val bot = mockk<SelfMember>(relaxed = true)
+        every { guild.selfMember } returns bot
+        every { actor.hasPermission(Permission.BAN_MEMBERS) } returns false
+
+        val err = service.unbanUser(ownerId, guildId, targetUserId)
+        assertEquals("You need the Ban Members permission.", err)
     }
 
     @Test
@@ -585,6 +617,28 @@ class ModerationWebServiceTest {
         val err = service.timeoutMember(ownerId, guildId, targetUserId, 0L, null)
         assertNotNull(err)
         assertTrue(err!!.contains("1"))
+    }
+
+    @Test
+    fun `timeoutMember rejects duration above 28 days`() {
+        mockMember(ownerId, isOwner = true)
+        mockMember(targetUserId)
+        val tooLong = 28L * 24L * 60L + 1L
+        val err = service.timeoutMember(ownerId, guildId, targetUserId, tooLong, null)
+        assertNotNull(err)
+    }
+
+    @Test
+    fun `timeoutMember denied when actor lacks MODERATE_MEMBERS`() {
+        val actor = mockMember(ownerId, isOwner = true)
+        val target = mockMember(targetUserId)
+        val bot = mockk<SelfMember>(relaxed = true)
+        every { guild.selfMember } returns bot
+        every { actor.canInteract(target) } returns true
+        every { actor.hasPermission(Permission.MODERATE_MEMBERS) } returns false
+
+        val err = service.timeoutMember(ownerId, guildId, targetUserId, 5L, null)
+        assertNotNull(err)
     }
 
     @Test
@@ -613,6 +667,23 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `purgeMessages rejects count below 1`() {
+        mockMember(ownerId, isOwner = true)
+        val result = service.purgeMessages(ownerId, guildId, 333L, 0, null)
+        assertEquals("Count must be between 1 and 100.", result.error)
+    }
+
+    @Test
+    fun `purgeMessages error when channel not found`() {
+        mockMember(ownerId, isOwner = true)
+        val actor = mockk<Member>(relaxed = true)
+        every { guild.getMemberById(ownerId) } returns actor
+        every { guild.getTextChannelById(333L) } returns null
+        val result = service.purgeMessages(ownerId, guildId, 333L, 10, null)
+        assertEquals("Text channel not found.", result.error)
+    }
+
+    @Test
     fun `lockChannel denied for non-moderator`() {
         mockMember(plainUserId)
         every { introWebService.isSuperUser(plainUserId, guildId) } returns false
@@ -634,6 +705,22 @@ class ModerationWebServiceTest {
         every { guild.getTextChannelById(333L) } returns mockk(relaxed = true)
         val err = service.setSlowmode(ownerId, guildId, 333L, 99999)
         assertEquals("Seconds must be between 0 and 21600.", err)
+    }
+
+    @Test
+    fun `setSlowmode rejects negative seconds`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getTextChannelById(333L) } returns mockk(relaxed = true)
+        val err = service.setSlowmode(ownerId, guildId, 333L, -1)
+        assertEquals("Seconds must be between 0 and 21600.", err)
+    }
+
+    @Test
+    fun `lockChannel error when channel not found`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getTextChannelById(333L) } returns null
+        val err = service.lockChannel(ownerId, guildId, 333L, true)
+        assertEquals("Text channel not found.", err)
     }
 
     // ---- createPoll ----
