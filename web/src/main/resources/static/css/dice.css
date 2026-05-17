@@ -62,7 +62,7 @@
 
 .dice-prediction-picker {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: var(--space-2);
     width: 100%;
 }
@@ -151,7 +151,11 @@
 @media (max-width: 600px) {
     .dice-die { width: 96px; height: 96px; }
     .dice-die-face { font-size: 4rem; }
-    .dice-prediction-picker { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 480px) {
+    .dice-prediction-picker { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .dice-prediction span { padding: 10px 0; font-size: 1rem; min-height: 44px; }
 }
 
 /* Compact phone — die shrinks again, prediction grid keeps 3 cols

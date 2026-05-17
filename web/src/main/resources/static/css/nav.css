@@ -8,7 +8,7 @@ nav {
     flex-wrap: wrap;
     gap: 12px;
 }
-.brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; }
+.brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nav-links { display: flex; align-items: center; gap: 20px; }
 .nav-links a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
 .nav-links a:hover { color: #fff; }
@@ -45,6 +45,14 @@ nav {
     padding: 4px 10px;
     border-radius: 6px;
     cursor: pointer;
+}
+
+/* Intermediate breakpoint — between desktop (full nav) and 600px
+   (hamburger). Tighten the inter-link gap so a 7-link nav doesn't
+   wrap onto multiple rows or get clipped on iPad-portrait widths. */
+@media (max-width: 768px) {
+    nav { padding: 12px 16px; }
+    .nav-links { gap: 12px; }
 }
 
 /* Dropdown menus (Economy, Casino, ...). Trigger looks like a regular nav

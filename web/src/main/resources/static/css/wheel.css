@@ -17,7 +17,7 @@
    overlay-only positioning. Visual styling is intentionally a clone. */
 .wheel-stage {
     position: relative;
-    width: clamp(260px, 78vw, 360px);
+    width: clamp(220px, 82vw, 360px);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -113,9 +113,12 @@
 
 .wheel-pick-picker {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-2);
     width: 100%;
+}
+@media (max-width: 480px) {
+    .wheel-pick-picker { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .wheel-pick {
     cursor: pointer;

@@ -227,9 +227,23 @@
 @media (max-width: 600px) {
     .keno-cell { font-size: 0.85rem; }
     .keno-payouts table { font-size: 0.82rem; }
+    .keno-bet { padding: var(--space-4); }
+}
+
+@media (max-width: 480px) {
+    .keno-bet input[type="number"] { max-width: none; }
+    .keno-actions { gap: 6px; }
+    .keno-actions .btn,
+    .keno-actions .btn-primary,
+    .keno-actions .btn-secondary { flex: 1 1 calc(50% - 6px); justify-content: center; }
 }
 
 @media (max-width: 380px) {
     .keno-grid { gap: 0.3rem; }
     .keno-cell { font-size: 0.75rem; }
+    .keno-bet { padding: var(--space-3); }
+    .keno-payouts { padding: var(--space-3); }
+    .keno-payouts table { min-width: 30rem; font-size: 0.75rem; }
+    .keno-payouts th,
+    .keno-payouts td { padding: 4px 5px; }
 }

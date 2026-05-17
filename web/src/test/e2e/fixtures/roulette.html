@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Roulette (fixture)</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/roulette.css">
+</head>
+<body>
+<nav>
+    <a class="brand" href="#">TobyBot</a>
+    <button class="nav-toggle" type="button">☰</button>
+    <div class="nav-links" id="nav-menu">
+        <a href="#">Casino</a>
+    </div>
+</nav>
+<main class="container">
+    <div class="roulette-header"><h1>Roulette</h1></div>
+    <section class="roulette-table casino-felt">
+        <div class="roulette-wheel-stage">
+            <div class="roulette-landed">
+                <span class="roulette-landed-label">Last</span>
+                <span class="roulette-landed-pocket color-red">7</span>
+            </div>
+        </div>
+        <form class="roulette-bet">
+            <fieldset class="roulette-bet-fieldset">
+                <legend>Bet</legend>
+                <div class="roulette-bet-grid">
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">Red</span>
+                        <span class="roulette-chip-odds">1:1</span>
+                    </button>
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">Black</span>
+                        <span class="roulette-chip-odds">1:1</span>
+                    </button>
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">Odd</span>
+                        <span class="roulette-chip-odds">1:1</span>
+                    </button>
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">Even</span>
+                        <span class="roulette-chip-odds">1:1</span>
+                    </button>
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">1-12</span>
+                        <span class="roulette-chip-odds">2:1</span>
+                    </button>
+                    <button class="roulette-chip" type="button">
+                        <span class="roulette-chip-label">13-24</span>
+                        <span class="roulette-chip-odds">2:1</span>
+                    </button>
+                </div>
+            </fieldset>
+            <div class="roulette-stake-row">
+                <label for="r-stake">Stake</label>
+                <input id="r-stake" type="number" min="1" value="100">
+                <button class="btn-primary" type="submit">Spin</button>
+            </div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

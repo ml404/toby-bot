@@ -139,3 +139,21 @@
 .casino-card-glyph.che-card-hidden {
     color: #a0a0b0;
 }
+
+@media (max-width: 600px) {
+    .che-card,
+    .che-rules { padding: 1rem; max-width: 100%; }
+    .che-header h1 { font-size: 1.4rem; }
+    .che-actions { gap: 0.4rem; }
+    .che-actions button {
+        flex: 1 1 calc(50% - 0.4rem);
+        min-height: 2.75rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .che-cards { min-height: 3.5rem; }
+    .che-paytable { font-size: 0.82rem; }
+    .che-paytable th,
+    .che-paytable td { padding: 0.3rem 0.35rem; }
+}

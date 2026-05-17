@@ -11,7 +11,7 @@
 }
 .mod-search-input {
     flex: 1;
-    max-width: 360px;
+    max-width: min(360px, 100%);
     background: var(--bg-input);
     color: var(--text);
     border: 1px solid var(--border-strong);
@@ -97,7 +97,13 @@ details.config-section.is-hidden { display: none; }
 .mod-table {
     width: 100%;
     border-collapse: collapse;
+    /* min-width is desktop-only — the @media (max-width: 600px) block
+       below turns each row into a card, so forcing 720px there would
+       just trigger horizontal scroll inside the wrapper. */
     min-width: 720px;
+}
+@media (max-width: 600px) {
+    .mod-table { min-width: 0; }
 }
 .mod-table th, .mod-table td {
     padding: var(--space-2) var(--space-3);
@@ -278,7 +284,7 @@ details.config-section.is-hidden { display: none; }
 }
 
 /* Narrow / mobile: stack to label-on-top, input+save-below on left. */
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .config-row {
         grid-template-columns: minmax(0, 200px) auto;
         column-gap: var(--space-3);
@@ -317,6 +323,16 @@ details.config-section.is-hidden { display: none; }
     grid-template-columns: 36px minmax(0, 130px) minmax(0, 160px) auto;
     align-items: center;
     column-gap: var(--space-3);
+}
+/* Mobile: stack each editor row's controls vertically. The 4-column
+   grid (label, weight, payout, remove) overflows any phone-width row. */
+@media (max-width: 600px) {
+    .jackpot-wheel-editor-row {
+        grid-template-columns: 36px minmax(0, 1fr) auto;
+        row-gap: var(--space-2);
+    }
+    .jackpot-wheel-editor-row label { grid-column: 2 / -1; }
+    .jackpot-wheel-editor-row .jw-remove { grid-column: 3; }
 }
 .jackpot-wheel-editor-row .jackpot-wheel-row-label {
     color: var(--text-muted);
@@ -413,6 +429,9 @@ details.config-section.is-hidden { display: none; }
     gap: var(--space-3);
     margin-bottom: var(--space-5);
 }
+@media (max-width: 480px) {
+    .voice-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .voice-card {
     background: var(--bg-elevated);
     border: 1px solid var(--border);
@@ -456,6 +475,9 @@ details.config-section.is-hidden { display: none; }
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 8px;
+}
+@media (max-width: 480px) {
+    .poll-options { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Casino tab */
@@ -535,7 +557,7 @@ details.config-section.is-hidden { display: none; }
     font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 600px) {
     .mod-subnav-link { padding: 8px 10px; font-size: 0.9rem; }
 
     .mod-table-wrap {

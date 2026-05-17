@@ -126,4 +126,39 @@ describe('casino-game.js — primary button stays disabled until renderResult se
         expect(renderResult).not.toHaveBeenCalled();
         expect(primaryBtn.disabled).toBe(false);
     });
+
+    // Regression for the latent permanent-lock case: if any callback fired
+    // during finishSettle throws (TobyBalance.update, applyTobyDelta,
+    // applyWinSettle, releasePoolBanner — any of them), the busy lock +
+    // setDisabled(false) MUST still run. Without the try/finally in
+    // casino-game.js's finishSettle, a single throw deep in applyBalance
+    // would permanently brick the Drop button (Promise.then(finishSettle,
+    // finishSettle) swallows the rejection silently).
+    test('finishSettle releases the lock even when a downstream callback throws', async () => {
+        postJsonMock.mockReturnValue(Promise.resolve({ ok: true, newBalance: 100 }));
+        // TobyBalance.update is called by applyBalance — make it throw to
+        // simulate (e.g.) a detached balanceEl or an unexpected body shape
+        // surfaced through the balance write path.
+        const originalBalance = window.TobyBalance;
+        window.TobyBalance = {
+            update: jest.fn(() => { throw new Error('balance write failed'); }),
+        };
+        // Swallow the console.error the finally clause emits so the test
+        // output stays clean.
+        const errSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            bootInit({ renderResult: jest.fn(() => undefined) });
+            form.dispatchEvent(new Event('submit'));
+            await flushMicrotasks();
+            jest.advanceTimersByTime(0);
+            await flushMicrotasks();
+            // The throw escapes applyBalance, but the finally clause must
+            // still release the lock — otherwise the user is stuck.
+            expect(primaryBtn.disabled).toBe(false);
+            expect(errSpy).toHaveBeenCalled();
+        } finally {
+            errSpy.mockRestore();
+            window.TobyBalance = originalBalance;
+        }
+    });
 });

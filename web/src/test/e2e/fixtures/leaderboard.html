@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Leaderboard (fixture)</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/leaderboard.css">
+</head>
+<body>
+<nav>
+    <a class="brand" href="#">TobyBot</a>
+    <button class="nav-toggle" type="button">☰</button>
+    <div class="nav-links" id="nav-menu">
+        <a href="#">Leaderboard</a>
+        <a href="#">Profile</a>
+    </div>
+</nav>
+<main class="container-wide">
+    <div class="page-header">
+        <h1>Leaderboard — Toby Test Server</h1>
+    </div>
+    <div class="mod-table-wrap">
+        <table class="mod-table lb-standings-table">
+            <thead>
+                <tr><th>#</th><th>Member</th><th>Title</th><th>Credits</th><th>This month</th><th>Portfolio</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td data-label="#"><span class="lb-rank lb-rank-1">1</span></td>
+                    <td data-label="Member"><div class="member-cell"><div class="avatar"></div><span class="lb-name">Alice McLongname</span></div></td>
+                    <td data-label="Title"><span class="lb-title-pill">Whale</span></td>
+                    <td data-label="Credits"><span class="lb-value lb-value-credits">12,345</span></td>
+                    <td data-label="This month"><span class="lb-value lb-value-month">+1,200</span></td>
+                    <td data-label="Portfolio"><span class="lb-value lb-value-portfolio">8,432</span></td>
+                </tr>
+                <tr>
+                    <td data-label="#"><span class="lb-rank lb-rank-2">2</span></td>
+                    <td data-label="Member"><div class="member-cell"><div class="avatar"></div><span class="lb-name">Bob</span></div></td>
+                    <td data-label="Title"><span class="lb-title-pill">Regular</span></td>
+                    <td data-label="Credits"><span class="lb-value lb-value-credits">9,800</span></td>
+                    <td data-label="This month"><span class="lb-value lb-value-month-down">-340</span></td>
+                    <td data-label="Portfolio"><span class="lb-value lb-value-portfolio">3,100</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
