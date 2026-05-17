@@ -106,15 +106,15 @@ internal class NowPlayingCommandTest : MusicCommandTest {
             event.hook.sendMessageEmbeds(capture(embedSlot))
         }
 
-        // Verify properties of captured MessageEmbed
+        // The embed surfaces the track title up top and the source author
+        // byline in the description. Streams replace the progress bar with
+        // a LIVE marker.
         val messageEmbed = embedSlot.captured
-        assert(messageEmbed.title == "Now Playing")
-        assert(messageEmbed.description == "**Title**: `Title`\n" +
-                "**Author**: `Author`\n" +
-                "**Stream**: `Live`\n")
-        assert(messageEmbed.fields[0].name == "Volume")
-        assert(messageEmbed.fields[0].value == "0")
-        assert(messageEmbed.url == null)
+        assert(messageEmbed.title == "Title")
+        assert(messageEmbed.description?.contains("By `Author`") == true)
+        assert(messageEmbed.description?.contains("LIVE") == true)
+        assert(messageEmbed.fields.any { it.name == "Volume" })
+        assert(messageEmbed.fields.any { it.name == "Paused" })
     }
 
     @Test
@@ -145,14 +145,12 @@ internal class NowPlayingCommandTest : MusicCommandTest {
             event.hook.sendMessageEmbeds(capture(embedSlot))
         }
 
-        // Verify properties of captured MessageEmbed
+        // Non-stream tracks render `position / duration` and a progress bar.
         val messageEmbed = embedSlot.captured
-        assert(messageEmbed.title == "Now Playing")
-        assert(messageEmbed.description == "**Title**: `Title`\n" +
-                "**Author**: `Author`\n" +
-                "**Progress**: `00:00:01 / 00:00:03`\n")
-        assert(messageEmbed.fields[0].name == "Volume")
-        assert(messageEmbed.fields[0].value == "0")
-        assert(messageEmbed.url == null)
+        assert(messageEmbed.title == "Title")
+        assert(messageEmbed.description?.contains("By `Author`") == true)
+        assert(messageEmbed.description?.contains("00:00:01 / 00:00:03") == true)
+        assert(messageEmbed.fields.any { it.name == "Volume" })
+        assert(messageEmbed.fields.any { it.name == "Paused" })
     }
 }

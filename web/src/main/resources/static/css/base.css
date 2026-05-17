@@ -848,14 +848,41 @@ td { font-size: 0.95rem; }
     .btn-primary,
     .btn-secondary,
     .btn-success,
-    .btn-danger { min-height: var(--tap-min); }
+    .btn-danger,
+    .btn-tertiary { min-height: var(--tap-min); }
     input[type=text], input[type=url], input[type=number], input[type=search],
-    input[type=email], input[type=password], select { min-height: 40px; }
+    input[type=email], input[type=password], select {
+        min-height: 40px;
+        /* iOS auto-zooms any focused input under 16px — pin to 16px so the
+           viewport doesn't jerk on every tap. Applied site-wide so every
+           form behaves the same on phones. */
+        font-size: 16px;
+    }
     /* Toggle pills (.toggle-btn) and segmented controls need finger room
        too — they're the primary affordance on the moderation Users tab
        and the leaderboard period switcher. */
     .toggle-btn { min-height: 36px; min-width: 56px; }
     .segmented button { min-height: 40px; }
+    /* Strip hover-only background flips on touch — every tap is a "hover"
+       on coarse pointers, so they read as accidental state. */
+    a:hover, button:hover { background: inherit; }
+}
+
+/* Shared mobile utility classes — opt in by adding the class. Hoisted
+   here so feature CSS files don't each redefine the same patterns. */
+.touch-target {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    touch-action: manipulation;
+}
+@media (max-width: 480px) {
+    .stack-on-narrow {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .stack-on-narrow > * {
+        width: 100%;
+    }
 }
 
 /* ============================================================

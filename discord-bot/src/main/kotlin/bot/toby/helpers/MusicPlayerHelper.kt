@@ -75,9 +75,12 @@ object MusicPlayerHelper {
 
         if (checkForPlayingTrack(track, hook, deleteDelay)) return
 
-        val embed = nowPlayingManager.buildNowPlayingMessageData(track, audioPlayer, clipStart, clipEnd)
+        val guild = event.guild!!
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            track, audioPlayer, clipStart, clipEnd, musicManager.scheduler, guild,
+        )
         val (pausePlayButton, stopButton) = generateButtons()
-        val guildId = event.guild!!.idLong
+        val guildId = guild.idLong
         val nowPlayingInfo = nowPlayingManager.getLastNowPlayingMessage(guildId)
 
         if (nowPlayingInfo != null) {
@@ -96,7 +99,9 @@ object MusicPlayerHelper {
                     nowPlayingManager.setNowPlayingMessage(guildId, it)
                 }
         }
-        nowPlayingManager.scheduleNowPlayingUpdate(guildId, track, audioPlayer, 0L, 3L, clipStart, clipEnd)
+        nowPlayingManager.scheduleNowPlayingUpdate(
+            guildId, track, audioPlayer, 0L, 3L, clipStart, clipEnd, musicManager.scheduler, guild,
+        )
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int): Boolean {

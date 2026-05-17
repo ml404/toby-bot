@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Music - ' + ${guildName}, '/css/music-player.css')}"></head>
+<body th:attr="data-music-page='1', data-guild-id=${guildId}, data-discord-id=${discordId}">
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container music-dashboard">
+
+    <header class="music-header">
+        <h1>🎵 <span th:text="${guildName}">Server</span></h1>
+        <a class="btn-tertiary" href="/music-player/guilds">← All servers</a>
+    </header>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="music-grid">
+
+        <!-- Now Playing -->
+        <article class="now-playing-card" aria-labelledby="now-playing-heading">
+            <h2 id="now-playing-heading" class="sr-only">Now playing</h2>
+            <div class="now-playing-empty" id="now-playing-empty">
+                <span class="emoji" aria-hidden="true">⏸️</span>
+                <p>Nothing's playing. Add a track below to get started.</p>
+            </div>
+            <div class="now-playing-content" id="now-playing-content" hidden>
+                <img class="now-playing-art" id="now-playing-art" alt="">
+                <div class="now-playing-meta">
+                    <span class="source-badge" id="source-badge">Music</span>
+                    <h3 class="now-playing-title" id="now-playing-title">—</h3>
+                    <p class="now-playing-author" id="now-playing-author">—</p>
+                    <div class="now-playing-requester" id="now-playing-requester" hidden>
+                        <span class="muted now-playing-requester-label">Requested by</span>
+                        <span class="member-cell" id="now-playing-requester-cell"></span>
+                    </div>
+                    <div class="progress-row">
+                        <span class="time-current" id="time-current">0:00</span>
+                        <div class="progress-track" id="progress-track">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <span class="time-total" id="time-total">0:00</span>
+                    </div>
+                </div>
+            </div>
+            <div class="transport-row">
+                <button id="btn-pause" class="btn-transport" type="button" title="Pause / Resume">⏯️</button>
+                <button id="btn-skip" class="btn-transport" type="button" title="Skip">⏭️</button>
+                <button id="btn-stop" class="btn-transport btn-danger" type="button" title="Stop">⏹️</button>
+                <button id="btn-loop" class="btn-transport" type="button" title="Loop" aria-pressed="false">🔁</button>
+                <label class="volume-label">
+                    🔊
+                    <input id="volume-slider" type="range" min="0" max="150" value="100" aria-label="Volume">
+                    <span id="volume-value">100</span>
+                </label>
+            </div>
+        </article>
+
+        <!-- Add Track / Queue -->
+        <article class="queue-card" aria-labelledby="queue-heading">
+            <h2 id="queue-heading">Up next</h2>
+            <form id="add-track-form" class="add-track-form" autocomplete="off">
+                <input id="add-track-input" type="text" placeholder="URL or search term — Spotify / YouTube / SoundCloud / Bandcamp / Apple Music / Deezer" required>
+                <button class="btn-primary" type="submit">Search</button>
+            </form>
+            <p class="add-track-hint muted">
+                Tip — paste a link to queue it directly, or type plain text to see what would play before adding.
+            </p>
+
+            <section id="search-results-section" class="search-results-section" hidden aria-live="polite">
+                <header class="search-results-header">
+                    <h3 class="search-results-title">Results for <span id="search-results-query"></span></h3>
+                    <button type="button" class="btn-tertiary" id="search-results-close" aria-label="Close results">Clear</button>
+                </header>
+                <ol id="search-results-list" class="search-results-list"></ol>
+                <p id="search-results-empty" class="muted" hidden>No results.</p>
+            </section>
+
+            <ol id="queue-list" class="queue-list" aria-live="polite"></ol>
+            <p id="queue-empty" class="muted">Queue is empty.</p>
+        </article>
+
+        <!-- Playlists -->
+        <article class="playlists-card" aria-labelledby="playlists-heading">
+            <h2 id="playlists-heading">Saved playlists</h2>
+            <form id="save-playlist-form" class="save-playlist-form" autocomplete="off">
+                <input id="save-playlist-name" type="text" maxlength="80" placeholder="Name your playlist" required>
+                <button class="btn-secondary" type="submit">💾 Save current queue</button>
+            </form>
+            <ul id="playlist-list" class="playlist-list" aria-live="polite"></ul>
+            <p id="playlists-empty" class="muted">No saved playlists yet.</p>
+        </article>
+
+        <!-- Voice channel members -->
+        <article class="voice-card" aria-labelledby="voice-heading">
+            <h2 id="voice-heading">🔈 In the voice channel</h2>
+            <p id="voice-channel-name" class="voice-channel-name" hidden></p>
+            <p id="voice-channel-empty" class="voice-channel-empty">
+                Bot isn't in a voice channel. Run <code>/join</code> in Discord first.
+            </p>
+            <ul id="voice-member-list" class="voice-member-list" aria-live="polite"></ul>
+        </article>
+
+    </section>
+
+</main>
+
+<script src="/js/api.js" defer></script>
+<script src="/js/music-queue.js" defer></script>
+<script src="/js/music-player.js" defer></script>
+</body>
+</html>

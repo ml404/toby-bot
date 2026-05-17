@@ -51,7 +51,7 @@ internal class PlayCommandTest : MusicCommandTest {
         every { CommandTest.event.getOption("volume") } returns volumeOptionMapping
         every { CommandTest.event.getOption("start") } returns startOptionMapping
 
-        every { linkOptionMapping.asString } returns "www.testlink.com"
+        every { linkOptionMapping.asString } returns "https://www.testlink.com"
         every { volumeOptionMapping.asInt } returns 20
         every { startOptionMapping.asLong } returns 0L
 
@@ -84,7 +84,118 @@ internal class PlayCommandTest : MusicCommandTest {
             playerManager.loadAndPlay(
                 eq(CommandTest.guild),
                 eq(CommandTest.event),
-                eq("www.testlink.com"),
+                eq("https://www.testlink.com"),
+                eq(true),
+                eq(0),
+                eq(0L),
+                eq(20)
+            )
+        }
+    }
+
+    @Test
+    fun test_playCommand_linkSubcommand_plainQueryGetsYtsearchPrefix() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(CommandTest.event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+
+        val linkOptionMapping = mockk<OptionMapping>()
+        val volumeOptionMapping = mockk<OptionMapping>()
+        val startOptionMapping = mockk<OptionMapping>()
+
+        every { CommandTest.event.subcommandName } returns "link"
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { CommandTest.event.getOption("volume") } returns volumeOptionMapping
+        every { CommandTest.event.getOption("start") } returns startOptionMapping
+
+        every { linkOptionMapping.asString } returns "linkin park in the end"
+        every { volumeOptionMapping.asInt } returns 20
+        every { startOptionMapping.asLong } returns 0L
+
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        playCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                eq(CommandTest.guild),
+                eq(CommandTest.event),
+                eq("ytsearch:linkin park in the end"),
+                eq(true),
+                eq(0),
+                eq(0L),
+                eq(20)
+            )
+        }
+    }
+
+    @Test
+    fun test_playCommand_linkSubcommand_explicitPrefixPassthrough() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(CommandTest.event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+
+        val linkOptionMapping = mockk<OptionMapping>()
+        val volumeOptionMapping = mockk<OptionMapping>()
+        val startOptionMapping = mockk<OptionMapping>()
+
+        every { CommandTest.event.subcommandName } returns "link"
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { CommandTest.event.getOption("volume") } returns volumeOptionMapping
+        every { CommandTest.event.getOption("start") } returns startOptionMapping
+
+        every { linkOptionMapping.asString } returns "scsearch:lofi beats"
+        every { volumeOptionMapping.asInt } returns 20
+        every { startOptionMapping.asLong } returns 0L
+
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        playCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                eq(CommandTest.guild),
+                eq(CommandTest.event),
+                eq("scsearch:lofi beats"),
+                eq(true),
+                eq(0),
+                eq(0L),
+                eq(20)
+            )
+        }
+    }
+
+    @Test
+    fun test_playCommand_linkSubcommand_spotifyUrlPassthrough() {
+        setUpAudioChannelsWithBotAndMemberInSameChannel()
+        val commandContext = DefaultCommandContext(CommandTest.event)
+        every { mockAudioPlayer.isPaused } returns false
+        every { playerManager.isCurrentlyStoppable } returns false
+
+        val linkOptionMapping = mockk<OptionMapping>()
+        val volumeOptionMapping = mockk<OptionMapping>()
+        val startOptionMapping = mockk<OptionMapping>()
+
+        every { CommandTest.event.subcommandName } returns "link"
+        every { CommandTest.event.getOption("link") } returns linkOptionMapping
+        every { CommandTest.event.getOption("volume") } returns volumeOptionMapping
+        every { CommandTest.event.getOption("start") } returns startOptionMapping
+
+        every { linkOptionMapping.asString } returns "https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh"
+        every { volumeOptionMapping.asInt } returns 20
+        every { startOptionMapping.asLong } returns 0L
+
+        every { trackScheduler.queue } returns ArrayBlockingQueue(2)
+
+        playCommand.handleMusicCommand(commandContext, playerManager, CommandTest.requestingUserDto, 0)
+
+        verify(exactly = 1) {
+            playerManager.loadAndPlay(
+                eq(CommandTest.guild),
+                eq(CommandTest.event),
+                eq("https://open.spotify.com/track/4iV5W9uYEdYUVa79Axb7Rh"),
                 eq(true),
                 eq(0),
                 eq(0L),

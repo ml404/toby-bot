@@ -44,6 +44,11 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation "dev.lavalink.youtube:common:$youtube_common_version"
+    // LavaSrc adds Spotify/Apple Music/Deezer/Yandex Music sources. The
+    // separate `lavasrc-protocol-jvm` artifact is only needed by Lavalink
+    // plugins for REST wire-format serialisation; direct lavaplayer use
+    // doesn't reference any of those types.
+    implementation "com.github.topi314.lavasrc:lavasrc:$lavasrc_version"
     runtimeOnly "dev.arbjerg:lavaplayer-natives:$lavaplayer_version"
     implementation "moe.kyokobot.libdave:adapter-jda:0.1.0"
     implementation "moe.kyokobot.libdave:impl-jni:0.1.0"

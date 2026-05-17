@@ -1,5 +1,7 @@
 import bot.toby.helpers.MusicPlayerHelper
+import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
@@ -17,6 +19,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.LinkedBlockingQueue
 
 class MusicPlayerHelperTest {
 
@@ -45,16 +48,26 @@ class MusicPlayerHelperTest {
         MockKAnnotations.init(this)
 
         // Mock behavior for PlayerManager and AudioPlayer
-        every { playerManager.getMusicManager(guildMock) } returns mockk()
-        every { playerManager.getMusicManager(guildMock).audioPlayer } returns audioPlayer
+        val musicManager = mockk<GuildMusicManager>()
+        val trackScheduler = mockk<TrackScheduler>(relaxed = true)
+        every { trackScheduler.queue } returns LinkedBlockingQueue()
+        every { trackScheduler.isLooping } returns false
+        every { trackScheduler.getRequesterId(any()) } returns null
+        every { musicManager.audioPlayer } returns audioPlayer
+        every { musicManager.scheduler } returns trackScheduler
+        every { playerManager.getMusicManager(guildMock) } returns musicManager
         every { audioPlayer.playingTrack } returns track
         every { track.info } returns AudioTrackInfo("Title", "Author", 20L, "Identifier", true, "uri")
+        every { track.sourceManager } returns null
+        every { track.duration } returns 20L
+        every { track.position } returns 0L
 
         // Mock guild and interaction hook
         every { replyCallback.guild } returns guildMock
         every { guildMock.idLong } returns guildId
         every { guildMock.id } returns guildId.toString()
         every { guildMock.name } returns "guildName"
+        every { guildMock.getMemberById(any<Long>()) } returns null
         every { replyCallback.hook.interaction } returns mockk {
             every { guild } returns guildMock
             every { channel } returns channelMock
@@ -98,60 +111,71 @@ class MusicPlayerHelperTest {
 
     @Test
     fun `test nowPlaying with no stored nowplaying message sends new message`() {
-        // Mock behavior for AudioTrack and InteractionHook
         every { audioPlayer.volume } returns 50
         every { audioPlayer.isPaused } returns false
 
-        // Mock InteractionHook methods for sending a new message
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
         val message = mockk<Message>(relaxed = true)
         createWebhookMocking(webhookCreateAction, message)
 
-        // Perform nowPlaying action
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
-        // Verify interaction hook behavior for sending a new message
         verify {
             replyCallback.hook.sendMessageEmbeds(match<MessageEmbed> {
-                it.description == "**Title**: `Title`\n" +
-                        "**Author**: `Author`\n" +
-                        "**Stream**: `Live`\n"
+                // Live-stream embed shows the LIVE indicator in the description and
+                // surfaces the author byline.
+                it.title == "Title" &&
+                    it.description?.contains("By `Author`") == true &&
+                    it.description?.contains("LIVE") == true
             })
             webhookCreateAction.queue(any())
         }
     }
 
+    @Test
+    fun `test nowPlaying embed includes volume and paused fields`() {
+        every { audioPlayer.volume } returns 50
+        every { audioPlayer.isPaused } returns true
+
+        val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
+        val message = mockk<Message>(relaxed = true)
+        createWebhookMocking(webhookCreateAction, message)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+
+        verify {
+            replyCallback.hook.sendMessageEmbeds(match<MessageEmbed> {
+                val volumeField = it.fields.firstOrNull { f -> f.name == "Volume" }
+                val pausedField = it.fields.firstOrNull { f -> f.name == "Paused" }
+                volumeField?.value?.contains("50") == true &&
+                    pausedField?.value?.contains("Yes") == true
+            })
+        }
+    }
 
     @Test
     fun `test nowPlaying with stored nowplaying message edits existing message`() {
-        // Mock behavior for AudioTrack and InteractionHook
         every { audioPlayer.volume } returns 50
         every { audioPlayer.isPaused } returns false
 
-        // Mock InteractionHook methods
         val messageEditAction = mockk<MessageEditAction>(relaxed = true)
         val message = mockk<Message>(relaxed = true)
         val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
         createWebhookMocking(webhookCreateAction, message)
         editWebhookMocking(messageEditAction, message)
-        // Clear any existing messages
         MusicPlayerHelper.nowPlayingManager.clear()
 
-        // Perform nowPlaying action
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
-        // Verify that a new message was sent and stored
         assertNotNull(MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId)) {
             "Expected guildLastNowPlayingMessage to contain a message for guildId $guildId"
         }
 
-        // Perform nowPlaying action again to edit the existing message
         MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
 
-        // Verify message behavior
         verify {
             message.editMessageEmbeds(match<MessageEmbed> {
-                it.description?.contains("Title") == true && it.description?.contains("Author") == true
+                it.title == "Title" && it.description?.contains("Author") == true
             })
             messageEditAction.setComponents(any<ActionRow>()).queue()
         }
