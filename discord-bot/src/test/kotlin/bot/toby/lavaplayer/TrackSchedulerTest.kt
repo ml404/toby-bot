@@ -408,6 +408,23 @@ class TrackSchedulerTest {
     }
 
     @Test
+    fun `onTrackEnd does not resume preempted track when intro ends via REPLACED`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 4000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+        // Simulate: something else took over the player (e.g. /play during intro).
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.REPLACED)
+
+        verify(exactly = 0) { player.startTrack(clone, false) }
+    }
+
+    @Test
     fun `onTrackEnd does not resume when ended track is not an intro`() {
         val current = mockTrack("Current")
         val clone = mockTrack("Clone")

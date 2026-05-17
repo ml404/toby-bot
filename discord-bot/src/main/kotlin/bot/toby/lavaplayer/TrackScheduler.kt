@@ -167,18 +167,27 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
+        // An intro just finished and we have a preempted track waiting: restart
+        // it (do NOT advance the regular queue so user-queued tracks added during
+        // the intro stay queued behind the resumed one). We bypass mayStartNext
+        // because clip-end markers stop the intro with STOPPED (mayStartNext is
+        // false), but we still want to resume the music that was playing before.
+        // REPLACED and CLEANUP are excluded: REPLACED means something else
+        // already took over the player; CLEANUP means the player is being
+        // destroyed (e.g. the bot is leaving the guild).
+        val shouldResumeAfterIntro = wasIntro
+                && resumeAfterIntro != null
+                && endReason != AudioTrackEndReason.REPLACED
+                && endReason != AudioTrackEndReason.CLEANUP
+        if (shouldResumeAfterIntro) {
+            val resume = resumeAfterIntro!!
+            resumeAfterIntro = null
+            player.setVolumeToPrevious()
+            logger.info("Resuming preempted track ${resume.info.title} at ${resume.position} ms")
+            player.startTrack(resume, false)
+            return
+        }
         if (endReason.mayStartNext) {
-            // An intro just finished and we have a preempted track waiting:
-            // restart that, do NOT advance the regular queue (so user-queued
-            // tracks added during the intro stay queued behind the resumed one).
-            if (wasIntro && resumeAfterIntro != null) {
-                val resume = resumeAfterIntro!!
-                resumeAfterIntro = null
-                player.setVolumeToPrevious()
-                logger.info("Resuming preempted track ${resume.info.title} at ${resume.position} ms")
-                player.startTrack(resume, false)
-                return
-            }
             handleNextTrack(player, track)
         }
     }
