@@ -112,6 +112,125 @@ test.describe('nav hamburger toggle', () => {
     });
 });
 
+test.describe('nav dropdowns under mobile breakpoint', () => {
+    test('sections start collapsed, toggle open one at a time', async ({
+        page: browserPage,
+    }, testInfo) => {
+        // Dropdown collapse only matters on phone viewports where the
+        // hamburger menu shows. On iPad/desktop the dropdowns sit inline
+        // on the navbar and use the desktop hover/click model.
+        test.skip(
+            !PHONE_PROJECTS.has(testInfo.project.name),
+            'mobile dropdown collapse only applies under --bp-mobile',
+        );
+        await browserPage.goto('/home.html');
+        await browserPage.waitForLoadState('load');
+
+        // Fixture HTML doesn't load home.js, so inline the same handlers
+        // home.js installs in prod (matching the workaround at the
+        // hamburger toggle test above).
+        await browserPage.evaluate(() => {
+            const closeAllDropdowns = () => {
+                document.querySelectorAll('.nav-dropdown.open').forEach((d) => {
+                    d.classList.remove('open');
+                    const t = d.querySelector('.nav-dropdown-toggle');
+                    if (t) t.setAttribute('aria-expanded', 'false');
+                });
+            };
+            window.__closeAllDropdowns = closeAllDropdowns;
+            window.__toggleDropdown = (toggle) => {
+                const dropdown = toggle.closest('.nav-dropdown');
+                if (!dropdown) return false;
+                const willOpen = !dropdown.classList.contains('open');
+                closeAllDropdowns();
+                if (willOpen) {
+                    dropdown.classList.add('open');
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+                return willOpen;
+            };
+            document.querySelectorAll('.nav-dropdown-toggle').forEach((t) => {
+                t.addEventListener('click', () => window.__toggleDropdown(t));
+            });
+            const navToggle = document.querySelector('.nav-toggle');
+            const navMenu = document.getElementById('nav-menu');
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => navMenu.classList.toggle('open'));
+            }
+        });
+
+        // Open the hamburger so the dropdown toggles are part of the
+        // layout and computed-style reads reflect the mobile rules.
+        await browserPage.locator('.nav-toggle').click();
+        await expect(browserPage.locator('#nav-menu')).toHaveClass(/open/);
+
+        const initialDisplays = await browserPage.$$eval(
+            '.nav-dropdown-menu',
+            (els) => els.map((el) => getComputedStyle(el).display),
+        );
+        expect(
+            initialDisplays,
+            'every dropdown menu must start collapsed (display: none) on mobile',
+        ).toEqual(initialDisplays.map(() => 'none'));
+
+        const playToggle = browserPage.locator('.nav-dropdown-toggle', { hasText: 'Play' });
+        const economyToggle = browserPage.locator('.nav-dropdown-toggle', { hasText: 'Economy' });
+
+        // Open Play: its menu becomes visible, its parent gets .open.
+        await playToggle.click();
+        const afterPlay = await browserPage.evaluate(() => {
+            const dropdowns = Array.from(document.querySelectorAll('.nav-dropdown'));
+            return dropdowns.map((d) => {
+                const label = d.querySelector('.nav-dropdown-toggle')?.textContent?.trim() || '';
+                return {
+                    label,
+                    open: d.classList.contains('open'),
+                    display: getComputedStyle(d.querySelector('.nav-dropdown-menu')).display,
+                };
+            });
+        });
+        const play = afterPlay.find((d) => d.label.startsWith('Play'));
+        expect(play.open).toBe(true);
+        expect(play.display).toBe('flex');
+        expect(afterPlay.filter((d) => d.open)).toHaveLength(1);
+
+        // Open Economy: Play must collapse (one-at-a-time contract).
+        await economyToggle.click();
+        const afterEconomy = await browserPage.evaluate(() => {
+            const dropdowns = Array.from(document.querySelectorAll('.nav-dropdown'));
+            return dropdowns.map((d) => {
+                const label = d.querySelector('.nav-dropdown-toggle')?.textContent?.trim() || '';
+                return {
+                    label,
+                    open: d.classList.contains('open'),
+                    display: getComputedStyle(d.querySelector('.nav-dropdown-menu')).display,
+                };
+            });
+        });
+        const economy = afterEconomy.find((d) => d.label.startsWith('Economy'));
+        const playAgain = afterEconomy.find((d) => d.label.startsWith('Play'));
+        expect(economy.open).toBe(true);
+        expect(economy.display).toBe('flex');
+        expect(playAgain.open).toBe(false);
+        expect(playAgain.display).toBe('none');
+        expect(afterEconomy.filter((d) => d.open)).toHaveLength(1);
+
+        // Tap Economy again: it collapses (toggle path).
+        await economyToggle.click();
+        const afterEconomyClose = await browserPage.evaluate(() => {
+            const dropdowns = Array.from(document.querySelectorAll('.nav-dropdown'));
+            return dropdowns.map((d) => ({
+                open: d.classList.contains('open'),
+                display: getComputedStyle(d.querySelector('.nav-dropdown-menu')).display,
+            }));
+        });
+        expect(afterEconomyClose.filter((d) => d.open)).toHaveLength(0);
+        expect(afterEconomyClose.map((d) => d.display)).toEqual(
+            afterEconomyClose.map(() => 'none'),
+        );
+    });
+});
+
 test.describe('mod-table card transform', () => {
     test('rows render as cards on phone with visible data-label headings', async ({
         page: browserPage,
