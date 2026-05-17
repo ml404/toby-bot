@@ -27,7 +27,9 @@ class HomeControllerTest {
     private val sampleStats = HomeStatsService.HomeStats(
         serverCount = 7,
         commandCount = 42,
-        gameCount = 12,
+        gameCount = 15,
+        minigameCount = 12,
+        minigameNames = "slots, dice",
     )
 
     @BeforeEach

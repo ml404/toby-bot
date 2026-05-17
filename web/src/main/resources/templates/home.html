@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head th:replace="~{fragments/head :: headSeo(
         'TobyBot — Your Discord Companion',
-        'A live per-server coin economy, a 13-game casino with a shared jackpot pool, music, polls, monthly leaderboards, and a full web admin — all in one Discord bot.',
+        'A live per-server coin economy, a ' + ${homeStats.gameCount} + '-game casino with a shared jackpot pool, music, polls, monthly leaderboards, and a full web admin — all in one Discord bot.',
         'https://www.toby-bot.co.uk/images/preview.svg',
         '/css/home.css')}"></head>
 <body>
@@ -13,7 +13,7 @@
 <section class="hero">
     <div class="hero-badge">Discord Bot</div>
     <h1>Your server&rsquo;s <span>best companion</span></h1>
-    <p>A live per-server coin economy, a 13-game casino with a shared jackpot pool,
+    <p>A live per-server coin economy, a [[${homeStats.gameCount}]]-game casino with a shared jackpot pool,
         music and intro songs, monthly leaderboards, and a full browser-based admin —
         all in one Discord bot.</p>
     <div class="hero-actions">
@@ -61,8 +61,8 @@
         <a class="feature-card" href="/casino/guilds">
             <div class="feature-icon">&#127920;</div>
             <h3>Casino games</h3>
-            <p>12 quick-play minigames (slots, dice, roulette, scratch, keno, high-low, baccarat, coinflip, plinko, horse racing, wheel, Casino Hold&rsquo;em) plus seated Poker and Blackjack tables.</p>
-            <span class="feature-card-tag">15 games</span>
+            <p>[[${homeStats.minigameCount}]] quick-play minigames ([[${homeStats.minigameNames}]]) plus seated Poker and Blackjack tables.</p>
+            <span class="feature-card-tag">[[${homeStats.gameCount}]] games</span>
         </a>
         <a class="feature-card" href="/lottery/guilds">
             <div class="feature-icon">&#127903;&#65039;</div>
