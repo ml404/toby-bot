@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Align admin poll page with /poll modal (4 options, 1 min)",
+    "summary": "`/poll` was reworked into a Discord modal (`PollModal.kt`) that — bound by Discord's 5-component modal cap — accepts a paragraph question (1–500 chars) plus up to **4** single-line options, with only option 1 required. The admin web page at `/moderation/{guildId}/poll` was still built for the old shape (max 10 options, 2 required, 256-char single-line question), so it was visibly out of sync and could submit polls that needed shapes the new emoji list couldn't represent. T…",
+    "emoji": "🛡️",
+    "prNumber": 467
+  },
+  {
+    "date": "May 2026",
     "title": "Revert YouTube proxy from LavaPlayer + Ktor paths",
     "summary": "LavaPlayer was 407-ing every CONNECT through the YouTube proxy across all configured clients, surfacing in production as: ``` dev.lavalink.youtube.AllClientsFailedException: (yts.version: 1.18.0) All clients failed to load the item. Client [TVHTML5_SIMPLY] failed: Invalid status code for fetch player script (embed): 407 Client [WEB] failed: Invalid status code for client config fetch: 407 Client [ANDROID] failed: Invalid status code for player api response: 407 ``` Every v…",
     "emoji": "🎵",
