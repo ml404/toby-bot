@@ -50,8 +50,8 @@ object MusicPlayerHelper {
                 val clipStart = it.startMs?.toLong() ?: startPosition
                 val clipEnd = it.endMs?.toLong()
                 logger.info { "Url to play is: '$url' (clip ${clipStart}ms -> ${clipEnd ?: "end"})" }
-                instance.loadAndPlay(
-                    guild, event, url, true, deleteDelay, clipStart,
+                instance.loadAndPlayIntro(
+                    guild, event, url, deleteDelay, clipStart,
                     introVolume ?: currentVolume, clipEnd
                 )
             }

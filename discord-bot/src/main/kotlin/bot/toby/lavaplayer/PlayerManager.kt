@@ -169,7 +169,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         audioPlayerManager.loadItemOrdered(
             musicManager,
             trackUrl,
-            getResultHandler(event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay)
+            getResultHandler(event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay, isIntro = false)
         )
     }
 
@@ -186,6 +186,29 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         volume: Int
     ) = loadAndPlay(guild, event, trackUrl, isSkippable, deleteDelay, startPosition, volume, null)
 
+    /**
+     * Load an intro track and preempt whatever is currently playing. The
+     * preempted track is restored automatically once the intro ends.
+     */
+    @Synchronized
+    fun loadAndPlayIntro(
+        guild: Guild,
+        event: SlashCommandInteractionEvent?,
+        trackUrl: String,
+        deleteDelay: Int,
+        startPosition: Long,
+        volume: Int,
+        endPosition: Long?,
+    ) {
+        val musicManager = this.getMusicManager(guild)
+        this.isCurrentlyStoppable = true
+        audioPlayerManager.loadItemOrdered(
+            musicManager,
+            trackUrl,
+            getResultHandler(event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay, isIntro = true)
+        )
+    }
+
     private fun getResultHandler(
         event: SlashCommandInteractionEvent?,
         musicManager: GuildMusicManager,
@@ -193,7 +216,8 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         startPosition: Long,
         endPosition: Long?,
         volume: Int,
-        deleteDelay: Int
+        deleteDelay: Int,
+        isIntro: Boolean = false,
     ): AudioLoadResultHandler {
         return object : AudioLoadResultHandler {
             private val scheduler: TrackScheduler = musicManager.scheduler
@@ -202,7 +226,11 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             override fun trackLoaded(track: AudioTrack) {
                 scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
-                scheduler.queue(track, startPosition, endPosition, volume, requesterId)
+                if (isIntro) {
+                    scheduler.queueIntro(track, startPosition, endPosition, volume, requesterId)
+                } else {
+                    scheduler.queue(track, startPosition, endPosition, volume, requesterId)
+                }
                 scheduler.setPreviousVolume(previousVolume)
             }
 
