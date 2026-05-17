@@ -361,26 +361,74 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
    the metrics read as a set rather than three stacked headlines. */
 
 /* -- Section tabs (Members / TobyCoin / Games) -- */
-/* Visual clone of `.lb-sort` so we don't grow new tab CSS — same
-   pill-strip aesthetic, same accent-on-active, same focus ring. The
-   only behavioural difference is JS-driven panel switching instead of
-   navigation, so the elements are <button> rather than <a>. */
+/* Segmented-card design: a full-width row of equal-flex segments, each
+   echoing the .lb-stat / .lb-podium-card aesthetic (bg-elevated + border +
+   radius-lg). Active tab inverts to the accent fill. `flex: 1 1 0` keeps
+   widths balanced when the TobyCoin tab is conditionally hidden. */
 .lb-section-tabs {
-    display: inline-flex;
-    background: var(--bg-input);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
-    padding: 3px;
-    gap: 2px;
-    margin-bottom: var(--space-4);
-    flex-wrap: wrap;
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    width: 100%;
 }
 .lb-section-tabs .lb-sort-option {
-    background: transparent;
-    border: 0;
-    cursor: pointer;
+    flex: 1 1 0;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3) var(--space-4);
+    min-height: 64px;
+    color: var(--text);
     font: inherit;
-    min-height: 36px;
+    font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.lb-section-tabs .lb-sort-option:hover {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+.lb-section-tabs .lb-sort-option.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+.lb-section-tabs .lb-sort-option:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+.lb-section-tab-label {
+    font-size: 1rem;
+    line-height: 1.1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.lb-section-tab-count {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+}
+.lb-section-tabs .lb-sort-option.active .lb-section-tab-count {
+    color: #ffffffcc;
+}
+
+/* Phone shrink: keep three across, tighten padding and fonts so three
+   short labels + counts fit at the canonical 380px width. */
+@media (max-width: 480px) {
+    .lb-section-tabs { gap: var(--space-2); }
+    .lb-section-tabs .lb-sort-option {
+        padding: var(--space-2);
+        min-height: 56px;
+    }
+    .lb-section-tab-label { font-size: 0.9rem; gap: 4px; }
+    .lb-section-tab-count { font-size: 0.7rem; }
 }
 .lb-tab-panel[hidden] { display: none; }
 
