@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Add Ko-fi link across web, README and Discord bot",
+    "summary": "Surfaces a single Ko-fi link (`https://ko-fi.com/fratlayton`) in one spot per user-facing channel so supporters can find it without making the bot feel like a paywall: **Web footer** (`fragments/footer.html`) — appears on every marketing page (home, commands, terms, privacy, changelog). **Home page final CTA** — small `hero-aside` link under the existing Invite / Browse buttons. **README.md** — new \"Support the Project\" section above Acknowledgments. **`/help` no-args repl…",
+    "emoji": "✨",
+    "prNumber": 473
+  },
+  {
+    "date": "May 2026",
     "title": "Redesign section tabs as segmented cards with counts",
     "summary": "The Members / TobyCoin / Games tab strip shipped in #470 cloned the `.lb-sort` pill aesthetic (designed for a secondary inline switcher) and read as small + left-aligned + visually lost between the prominent podium above and the prominent tables below. This PR redesigns the section nav as a full-width row of equal-flex segmented cards echoing the existing `.lb-stat` / `.lb-podium-card` aesthetic — `bg-elevated` + border + `radius-lg`, with the accent fill on the active tab…",
     "emoji": "🧹",
