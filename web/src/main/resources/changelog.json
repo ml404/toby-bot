@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Tabbed sections, month nav, hover contributors, deltas, sparklines",
+    "summary": "The leaderboard page used to stack three full sections vertically (credit standings, TobyCoin wallets, Top Games) and the Top Games list collapsed each game to a single number. This PR reshapes the page into three tabs and gives the Games panel real depth. ### What changed **Tabs** above the fold: **Members · TobyCoin · Games**. The podium stays as the page hero above the tab strip. Tab choice is persisted per guild in `localStorage` (matches the existing collapse-state me…",
+    "emoji": "✨",
+    "prNumber": 470
+  },
+  {
+    "date": "May 2026",
     "title": "Modal-driven /team split with preview-confirm flow + web presets",
     "summary": "Rebuilds `/team` around a Discord modal, a preview-then-confirm flow, and a `/teams/{guildId}` web UI for saved rosters. Replaces the old one-shot slash command that immediately created voice channels with no chance to review. **Discord flow** `/team split` opens a modal (optional `members:` slash-option pre-fills it) Modal collects: optional preset name, members (paragraph; `@mentions` or raw IDs), team count, naming strategy (`prefix`|`list`), names Submit shows an ephem…",
     "emoji": "✨",
