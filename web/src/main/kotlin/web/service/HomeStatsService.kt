@@ -3,16 +3,16 @@ package web.service
 import core.managers.CommandManager
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
+import web.catalog.GameCatalog
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * Live numbers for the homepage stats strip. Three counts:
+ * Live numbers for the homepage. Counts:
  *  - **servers**: how many guilds the bot is currently in (JDA cache size)
  *  - **commands**: total slash-command count across every category
- *  - **games**: hand-rolled count of standalone game UIs (9 minigames +
- *    Poker + Blackjack + Casino Hold'em). Hardcoded because the games
- *    list rarely changes and bumping a constant here is the cheapest
- *    signal of "we shipped a new game" for a future PR.
+ *  - **games / minigames**: derived from [GameCatalog] so the stats strip,
+ *    hero text, and casino feature card all stay in lockstep when a game
+ *    is added or removed.
  *
  * Memoised for 60 seconds in-process so a homepage refresh storm doesn't
  * touch the JDA cache or sum command lists per request. We deliberately
@@ -30,6 +30,8 @@ class HomeStatsService(
         val serverCount: Int,
         val commandCount: Int,
         val gameCount: Int,
+        val minigameCount: Int,
+        val minigameNames: String,
     )
 
     private data class Cached(val stats: HomeStats, val expiresAtNanos: Long)
@@ -55,14 +57,12 @@ class HomeStatsService(
                 miscCommands.size +
                 fetchCommands.size
         },
-        gameCount = GAME_COUNT,
+        gameCount = GameCatalog.total,
+        minigameCount = GameCatalog.minigameCount,
+        minigameNames = GameCatalog.minigameNames,
     )
 
     companion object {
-        // 9 minigames (slots, coinflip, dice, highlow, scratch, keno,
-        // roulette, baccarat, casino hold'em) + poker + blackjack +
-        // lottery = 12. Keep in sync with the navbar Play menu.
-        private const val GAME_COUNT = 12
         private val TTL_NANOS = 60_000_000_000L
     }
 }
