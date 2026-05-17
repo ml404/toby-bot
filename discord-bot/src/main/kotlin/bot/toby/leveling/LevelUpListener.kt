@@ -1,0 +1,125 @@
+package bot.toby.leveling
+
+import common.events.LevelUpEvent
+import common.logging.DiscordLogger
+import database.dto.ConfigDto.Configurations.LEVEL_UP_CHANNEL
+import database.dto.TitleDto
+import database.service.ConfigService
+import database.service.LevelRoleRewardService
+import database.service.TitleService
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Role
+import net.dv8tion.jda.api.entities.UserSnowflake
+import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Lazy
+import org.springframework.context.event.EventListener
+import org.springframework.stereotype.Service
+
+/**
+ * Consumer of [LevelUpEvent]. On a level-up:
+ *   1. Posts a short congratulatory message in the channel where the XP
+ *      was earned (or [LEVEL_UP_CHANNEL] / system channel for voice-only
+ *      events with no originating channel).
+ *   2. Assigns every configured role reward in `(oldLevel, newLevel]`.
+ *   3. Inserts ownership rows for any titles gated at `required_level`
+ *      values in `(oldLevel, newLevel]` so the user can equip them free.
+ *
+ * All Discord-side work is dispatched non-blockingly via JDA `.queue(...)`,
+ * so the synchronous event delivery doesn't stall the XP-award caller.
+ */
+@Service
+class LevelUpListener @Autowired constructor(
+    @Lazy private val jda: JDA,
+    private val configService: ConfigService,
+    private val levelRoleRewardService: LevelRoleRewardService,
+    private val titleService: TitleService
+) {
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+
+    @EventListener
+    fun onLevelUp(event: LevelUpEvent) {
+        val guild = jda.getGuildById(event.guildId) ?: run {
+            logger.warn("LevelUpEvent for guild ${event.guildId} but JDA has no matching guild; skipping.")
+            return
+        }
+        logger.setGuildContext(guild)
+        logger.info {
+            "User ${event.discordId} levelled up: ${event.oldLevel} -> ${event.newLevel}"
+        }
+        announce(guild, event)
+        assignRoleRewards(guild, event)
+        unlockTitles(event)
+    }
+
+    private fun announce(guild: Guild, event: LevelUpEvent) {
+        val channel = resolveAnnouncementChannel(guild, event.channelId) ?: run {
+            logger.info { "No announcement channel resolved for guild ${guild.idLong}; skipping level-up message." }
+            return
+        }
+        val mention = "<@${event.discordId}>"
+        val body = buildString {
+            append("GG ").append(mention).append(" — you reached **Level ")
+            append(event.newLevel).append("**!")
+        }
+        runCatching {
+            channel.sendMessage(body).queue(null) { err ->
+                logger.warn("Failed to post level-up announcement in #${channel.name}: ${err.message}")
+            }
+        }.onFailure {
+            logger.warn("Level-up announcement dispatch failed: ${it.message}")
+        }
+    }
+
+    private fun resolveAnnouncementChannel(guild: Guild, originId: Long?): TextChannel? {
+        val configured = configService
+            .getConfigByName(LEVEL_UP_CHANNEL.configValue, guild.id)?.value
+            ?.toLongOrNull()
+        configured?.let { id -> guild.getTextChannelById(id)?.let { return it } }
+        originId?.let { id -> guild.getTextChannelById(id)?.let { return it } }
+        return guild.systemChannel
+    }
+
+    private fun assignRoleRewards(guild: Guild, event: LevelUpEvent) {
+        val rewards = levelRoleRewardService.listInRange(
+            guildId = event.guildId,
+            fromExclusive = event.oldLevel,
+            toInclusive = event.newLevel
+        )
+        if (rewards.isEmpty()) return
+        // UserSnowflake lets us issue the add-role REST call without
+        // pre-fetching the member; JDA handles the 404 if they've left.
+        val target = UserSnowflake.fromId(event.discordId)
+        rewards.forEach { reward ->
+            val role: Role? = guild.getRoleById(reward.roleId)
+            if (role == null) {
+                logger.warn("Configured level-${reward.level} role ${reward.roleId} missing in guild ${guild.idLong}.")
+                return@forEach
+            }
+            runCatching {
+                guild.addRoleToMember(target, role).queue(null) { err ->
+                    logger.warn("Failed to assign role ${role.name} to ${event.discordId}: ${err.message}")
+                }
+            }.onFailure {
+                logger.warn("Role assignment dispatch failed for level ${reward.level}: ${it.message}")
+            }
+        }
+    }
+
+    private fun unlockTitles(event: LevelUpEvent) {
+        val titles = titleService.listAll()
+            .filter { it.requiredLevel > event.oldLevel && it.requiredLevel <= event.newLevel }
+        if (titles.isEmpty()) return
+        titles.forEach { title -> unlockOne(event.discordId, title) }
+    }
+
+    private fun unlockOne(discordId: Long, title: TitleDto) {
+        val titleId = title.id ?: return
+        if (titleService.owns(discordId, titleId)) return
+        runCatching { titleService.recordPurchase(discordId, titleId) }
+            .onFailure {
+                logger.warn("Failed to auto-unlock title '${title.label}' for user $discordId: ${it.message}")
+            }
+    }
+}

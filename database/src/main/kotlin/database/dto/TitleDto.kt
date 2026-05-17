@@ -30,5 +30,8 @@ class TitleDto(
     var colorHex: String? = null,
 
     @Column(name = "hoisted", nullable = false)
-    var hoisted: Boolean = false
+    var hoisted: Boolean = false,
+
+    @Column(name = "required_level", nullable = false)
+    var requiredLevel: Int = 0
 ) : Serializable

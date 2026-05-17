@@ -3,6 +3,7 @@ package bot.toby.voice
 import database.dto.VoiceSessionDto
 import database.service.SocialCreditAwardService
 import database.service.VoiceSessionService
+import database.service.XpAwardService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -17,6 +18,7 @@ class VoiceCreditAwardServiceTest {
 
     private lateinit var voiceSessionService: VoiceSessionService
     private lateinit var awardService: SocialCreditAwardService
+    private lateinit var xpAwardService: XpAwardService
     private lateinit var service: VoiceCreditAwardService
 
     private val discordId = 1L
@@ -26,7 +28,8 @@ class VoiceCreditAwardServiceTest {
     fun setup() {
         voiceSessionService = mockk(relaxed = true)
         awardService = mockk(relaxed = true)
-        service = VoiceCreditAwardService(voiceSessionService, awardService)
+        xpAwardService = mockk(relaxed = true)
+        service = VoiceCreditAwardService(voiceSessionService, awardService, xpAwardService)
     }
 
     private fun session(joinedAt: Instant): VoiceSessionDto {

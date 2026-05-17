@@ -115,6 +115,46 @@ class SocialCreditAwardServiceTest {
         assertEquals(SocialCreditAwardService.DEFAULT_DAILY_CAP, granted)
     }
 
+    @Test
+    fun `daily cap gains the per-level bonus by default`() {
+        // 475 XP -> level 3, so default +10/level = +30 -> cap 120.
+        userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L; xp = 475L })
+
+        val granted = service.award(discordId, guildId, amount = 200L, reason = "test", at = now)
+
+        assertEquals(120L, granted)
+        assertEquals(120L, userService.current(discordId, guildId)?.socialCredit)
+    }
+
+    @Test
+    fun `setting DAILY_CAP_PER_LEVEL_BONUS to zero disables the leveling perk`() {
+        userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L; xp = 475L })
+        configService.set(
+            ConfigDto.Configurations.DAILY_CAP_PER_LEVEL_BONUS.configValue,
+            guildId.toString(),
+            "0"
+        )
+
+        val granted = service.award(discordId, guildId, amount = 200L, reason = "test", at = now)
+
+        assertEquals(SocialCreditAwardService.DEFAULT_DAILY_CAP, granted)
+    }
+
+    @Test
+    fun `custom DAILY_CAP_PER_LEVEL_BONUS overrides the default`() {
+        userService.seed(UserDto(discordId, guildId).apply { socialCredit = 0L; xp = 475L }) // level 3
+        configService.set(
+            ConfigDto.Configurations.DAILY_CAP_PER_LEVEL_BONUS.configValue,
+            guildId.toString(),
+            "100"
+        )
+
+        val granted = service.award(discordId, guildId, amount = 5_000L, reason = "test", at = now)
+
+        // 90 base + 100 * 3 = 390
+        assertEquals(390L, granted)
+    }
+
     private class RecordingUserService : UserService {
         private val users = mutableMapOf<Pair<Long, Long>, UserDto>()
         var updateCount: Int = 0

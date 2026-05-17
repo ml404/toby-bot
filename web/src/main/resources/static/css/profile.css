@@ -100,3 +100,15 @@
     background: var(--accent-soft);
     color: var(--accent);
 }
+.profile-progress {
+    margin: var(--space-2) 0;
+    background: var(--border);
+    border-radius: 999px;
+    height: 10px;
+    overflow: hidden;
+}
+.profile-progress-bar {
+    background: var(--accent);
+    height: 100%;
+    transition: width 0.3s ease;
+}

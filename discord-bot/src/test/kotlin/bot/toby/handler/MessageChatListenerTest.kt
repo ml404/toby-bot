@@ -1,6 +1,7 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
+import database.service.XpAwardService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -19,7 +20,8 @@ import io.mockk.junit5.MockKExtension
 @ExtendWith(MockKExtension::class)
 class MessageChatListenerTest {
 
-    private val listener = spyk(MessageChatListener())
+    private val xpAwardService: XpAwardService = mockk(relaxed = true)
+    private val listener = spyk(MessageChatListener(xpAwardService))
 
     @Test
     fun `onMessageReceived should respond correctly to toby message`() {
@@ -37,6 +39,10 @@ class MessageChatListenerTest {
         every { event.member } returns member
         every { author.isBot } returns false
         every { event.isWebhookMessage } returns false
+        every { event.isFromGuild } returns true
+        every { guild.idLong } returns 1L
+        every { author.idLong } returns 2L
+        every { channel.idLong } returns 3L
         every { message.contentRaw } returns "toby"
         every { member.effectiveName } returns "Matt"
 
@@ -72,6 +78,10 @@ class MessageChatListenerTest {
         every { event.member } returns member
         every { author.isBot } returns false
         every { event.isWebhookMessage } returns false
+        every { event.isFromGuild } returns true
+        every { guild.idLong } returns 1L
+        every { author.idLong } returns 2L
+        every { channel.idLong } returns 3L
         every { message.contentRaw } returns "sigh"
         every { member.effectiveName } returns "Matt"
 
@@ -105,6 +115,10 @@ class MessageChatListenerTest {
         every { event.member } returns member
         every { author.isBot } returns false
         every { event.isWebhookMessage } returns false
+        every { event.isFromGuild } returns true
+        every { guild.idLong } returns 1L
+        every { author.idLong } returns 2L
+        every { channel.idLong } returns 3L
         every { message.contentRaw } returns "yeah"
 
         every { channel.sendMessage("YEAH????").queue() } returns mockk()

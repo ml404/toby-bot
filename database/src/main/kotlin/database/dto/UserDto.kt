@@ -45,6 +45,9 @@ class UserDto(
     @Column(name = "social_credit")
     var socialCredit: Long? = 0L,
 
+    @Column(name = "xp", nullable = false)
+    var xp: Long = 0L,
+
     @Column(name = "toby_coins", nullable = false)
     var tobyCoins: Long = 0L,
 

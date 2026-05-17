@@ -46,6 +46,26 @@
         </section>
 
         <section class="profile-card">
+            <h2>Level</h2>
+            <div class="profile-row">
+                <span class="muted">Current level</span>
+                <strong th:text="'Level ' + ${profile.level}">Level 0</strong>
+            </div>
+            <div class="profile-row">
+                <span class="muted">XP this level</span>
+                <span th:text="${profile.xpIntoLevel} + ' / ' + ${profile.xpForNextLevel}">0 / 100</span>
+            </div>
+            <div class="profile-progress">
+                <div class="profile-progress-bar"
+                     th:style="'width: ' + ${profile.xpProgressPercent} + '%'"></div>
+            </div>
+            <div class="profile-row">
+                <span class="muted">Total XP</span>
+                <span th:text="${profile.xp}">0</span>
+            </div>
+        </section>
+
+        <section class="profile-card">
             <h2>Permissions</h2>
             <ul class="profile-perms">
                 <li th:each="p : ${profile.permissions}">

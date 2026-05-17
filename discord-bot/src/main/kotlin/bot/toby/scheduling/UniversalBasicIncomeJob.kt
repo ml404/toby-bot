@@ -1,5 +1,6 @@
 package bot.toby.scheduling
 
+import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UbiDailyDto
@@ -48,8 +49,8 @@ class UniversalBasicIncomeJob @Autowired constructor(
     }
 
     private fun grantForGuild(guild: Guild, today: LocalDate) {
-        val amount = readUbiAmount(guild.id)
-        if (amount <= 0L) {
+        val baseAmount = readUbiAmount(guild.id)
+        if (baseAmount <= 0L) {
             logger.info { "UBI disabled or unset for guild ${guild.idLong}; skipping." }
             return
         }
@@ -60,6 +61,7 @@ class UniversalBasicIncomeJob @Autowired constructor(
             return
         }
 
+        val perLevelBonus = readPerLevelBonus(guild.id)
         var granted = 0
         var skipped = 0
         users.forEach { dto ->
@@ -69,6 +71,8 @@ class UniversalBasicIncomeJob @Autowired constructor(
                 skipped++
                 return@forEach
             }
+            val level = LevelCurve.levelForXp(dto.xp)
+            val amount = baseAmount + perLevelBonus * level
             val awarded = awardService.award(
                 discordId = discordId,
                 guildId = guildId,
@@ -90,7 +94,7 @@ class UniversalBasicIncomeJob @Autowired constructor(
             }
         }
         logger.info {
-            "UBI for guild ${guild.idLong}: granted=$granted alreadyGranted=$skipped amount=$amount"
+            "UBI for guild ${guild.idLong}: granted=$granted alreadyGranted=$skipped base=$baseAmount perLevelBonus=$perLevelBonus"
         }
     }
 
@@ -100,5 +104,18 @@ class UniversalBasicIncomeJob @Autowired constructor(
             guildId
         )?.value
         return raw?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L
+    }
+
+    private fun readPerLevelBonus(guildId: String): Long {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.UBI_PER_LEVEL_BONUS.configValue,
+            guildId
+        )?.value
+        return raw?.toLongOrNull()?.coerceAtLeast(0L) ?: DEFAULT_UBI_PER_LEVEL_BONUS
+    }
+
+    companion object {
+        // Fallback when UBI_PER_LEVEL_BONUS is unset or unparseable.
+        const val DEFAULT_UBI_PER_LEVEL_BONUS: Long = 5L
     }
 }

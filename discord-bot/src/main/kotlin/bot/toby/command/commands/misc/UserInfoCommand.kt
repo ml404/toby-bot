@@ -2,6 +2,7 @@ package bot.toby.command.commands.misc
 
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
+import common.leveling.LevelCurve
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
@@ -52,7 +53,9 @@ class UserInfoCommand @Autowired constructor(private val userDtoHelper: UserDtoH
         val userInfoMessage = userSearched.let {
             logger.info { " Found user '$it' from lookup " }
             val introMessage = produceMusicFileDataStringForPrinting(event.member!!, userSearched)
-            "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $introMessage"
+            val progress = LevelCurve.progress(userSearched.xp)
+            val levelLine = "Level ${progress.level} (${progress.xpIntoLevel}/${progress.xpForNextLevel} XP, total ${userSearched.xp})"
+            "Here are the permissions for '${this.effectiveName}': '${userSearched.getPermissionsAsString()}'. \n $levelLine \n $introMessage"
         }
         event.hook.replyEphemeralAndDelete(userInfoMessage, deleteDelay)
     }

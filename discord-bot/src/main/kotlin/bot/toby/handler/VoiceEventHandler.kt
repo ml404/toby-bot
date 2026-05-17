@@ -14,6 +14,7 @@ import database.dto.ConfigDto.Configurations.DELETE_DELAY
 import database.dto.ConfigDto.Configurations.VOLUME
 import database.service.ConfigService
 import database.service.SocialCreditAwardService
+import database.service.XpAwardService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -35,6 +36,7 @@ class VoiceEventHandler(
     private val voiceSessionLifecycle: VoiceSessionLifecycle,
     private val lastConnectedChannelTracker: LastConnectedChannelTracker,
     private val awardService: SocialCreditAwardService,
+    private val xpAwardService: XpAwardService,
     private val nowPlayingManager: NowPlayingManager,
 ) : ListenerAdapter() {
 
@@ -230,6 +232,12 @@ class VoiceEventHandler(
                 amount = INTRO_PLAY_CREDIT,
                 reason = "intro-play"
             )
+            xpAwardService.award(
+                discordId = requestingUserDto.discordId,
+                guildId = requestingUserDto.guildId,
+                amount = INTRO_PLAY_XP,
+                reason = "intro-play"
+            )
         } else {
             logger.info { "User has no musicDto associated with them, no intro will be played" }
         }
@@ -274,5 +282,10 @@ class VoiceEventHandler(
         // Small, daily-capped reward so joining a channel with an intro set
         // feels like something without becoming farmable via rejoin spam.
         const val INTRO_PLAY_CREDIT: Long = 2L
+
+        // XP grant for the same intro-play event. Slightly larger than the
+        // credit grant since the XP daily cap is much higher; this still
+        // sits well under the cap so a few intro plays in a day stack.
+        const val INTRO_PLAY_XP: Long = 10L
     }
 }
