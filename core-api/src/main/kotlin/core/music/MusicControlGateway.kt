@@ -19,6 +19,12 @@ interface MusicControlGateway {
         // these themselves via TrackScheduler.getRequesterId + Guild.getMemberById.
         val requesterDisplayName: String? = null,
         val requesterAvatarUrl: String? = null,
+        // ~30s clip URL from the source's own metadata (Spotify, Apple Music,
+        // Deezer, Yandex via LavaSrc's ExtendedAudioTrack). Null for sources
+        // that don't publish a preview URL (YouTube, SoundCloud, Bandcamp,
+        // HTTP, Local). The dashboard renders a Preview button only when
+        // this is non-null.
+        val previewUrl: String? = null,
     )
 
     data class VoiceMember(

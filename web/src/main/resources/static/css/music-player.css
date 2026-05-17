@@ -346,6 +346,29 @@
 }
 .queue-remove:hover { color: #f25865; }
 
+/* Preview button — surfaces on search results AND queue items when the
+   source (Spotify / Apple Music / Deezer / Yandex) publishes a clip URL.
+   Distinct from .btn-transport so it can sit inline next to .btn-primary
+   (Queue) and .queue-remove (✕) without inheriting the larger transport
+   sizing. */
+.btn-preview {
+    background: rgba(88, 101, 242, 0.12);
+    color: var(--accent, #5865f2);
+    border: 1px solid rgba(88, 101, 242, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    padding: 0 0.6rem;
+    touch-action: manipulation;
+}
+.btn-preview:hover { background: rgba(88, 101, 242, 0.2); }
+.btn-preview[aria-pressed="true"] {
+    background: var(--accent, #5865f2);
+    color: #fff;
+}
+
 /* Playlists */
 .playlist-list {
     list-style: none;

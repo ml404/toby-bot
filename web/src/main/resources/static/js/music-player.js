@@ -199,10 +199,112 @@
         els.timeCurrent.textContent = formatMs(positionMs);
     }
 
+    // ---- Preview --------------------------------------------------------
+    // One shared <audio> drives every preview button (search results AND
+    // queue items). Clicking a button starts/resumes that track's preview;
+    // clicking it again pauses; clicking a different button stops the
+    // current preview and starts the new one. Reaching the end of the
+    // ~30s clip resets the button automatically. Button glyph always
+    // mirrors the audio element's state (`play` / `pause` / `ended` events).
+    const previewController = (() => {
+        const audio = document.getElementById('preview-audio');
+        let activeBtn = null;
+        let activeKey = null;
+
+        function setBtnPlaying(btn, playing) {
+            btn.textContent = playing ? '⏸' : '▶';
+            btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+            btn.setAttribute('aria-label', playing ? 'Pause preview' : 'Play preview');
+        }
+
+        function reset() {
+            // Stop the audio too — every caller of reset() wants playback
+            // halted (search results being wiped, the previewing track
+            // being removed from the queue, audio finishing / erroring).
+            if (audio && !audio.paused) audio.pause();
+            if (activeBtn) setBtnPlaying(activeBtn, false);
+            activeBtn = null;
+            activeKey = null;
+        }
+
+        if (audio) {
+            audio.addEventListener('play', () => { if (activeBtn) setBtnPlaying(activeBtn, true); });
+            audio.addEventListener('pause', () => { if (activeBtn) setBtnPlaying(activeBtn, false); });
+            audio.addEventListener('ended', reset);
+            audio.addEventListener('error', reset);
+        }
+
+        function trackKey(track) {
+            return track.uri || track.identifier;
+        }
+
+        function toggle(track, btn) {
+            if (!audio || !track || !track.previewUrl) return;
+            if (activeBtn === btn) {
+                if (audio.paused) audio.play().catch(reset);
+                else audio.pause();
+                return;
+            }
+            if (activeBtn) setBtnPlaying(activeBtn, false);
+            audio.src = track.previewUrl;
+            activeBtn = btn;
+            activeKey = trackKey(track);
+            setBtnPlaying(btn, true);
+            audio.play().catch(reset);
+        }
+
+        /**
+         * Called by renderQueue after an SSE queueChanged that removes
+         * tracks. If the currently-previewing track is no longer in the
+         * fresh queue, stop the audio and reset the (now-orphan) button.
+         * Search-results rerenders go through clearSearchResults which
+         * doesn't need this — the button list is wiped wholesale, and the
+         * audio element keeps its src until reused.
+         */
+        function clearIfRemoved(remainingKeys) {
+            if (!activeKey || !audio) return;
+            if (remainingKeys.indexOf(activeKey) === -1) {
+                audio.pause();
+                reset();
+            }
+        }
+
+        /**
+         * True iff the currently-active preview button is a descendant of
+         * [container]. Used by clearSearchResults to decide whether wiping
+         * the results panel should also stop the preview — wipes don't
+         * affect a queue-item preview that's playing.
+         */
+        function isActiveIn(container) {
+            return !!(activeBtn && container && container.contains(activeBtn));
+        }
+
+        return {
+            toggle: toggle,
+            clearIfRemoved: clearIfRemoved,
+            isActiveIn: isActiveIn,
+            reset: reset,
+        };
+    })();
+
+    function makePreviewBtn(track) {
+        if (!track || !track.previewUrl) return null;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn-preview';
+        btn.setAttribute('aria-label', 'Play preview');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.title = 'Preview ~30s clip';
+        btn.textContent = '▶';
+        btn.addEventListener('click', () => previewController.toggle(track, btn));
+        return btn;
+    }
+
     function renderQueue(tracks) {
         els.queueList.innerHTML = '';
         if (!tracks || tracks.length === 0) {
             els.queueEmpty.hidden = false;
+            previewController.clearIfRemoved([]);
             return;
         }
         els.queueEmpty.hidden = true;
@@ -230,6 +332,9 @@
             meta.appendChild(authorEl);
             li.appendChild(meta);
 
+            const previewBtn = makePreviewBtn(track);
+            if (previewBtn) li.appendChild(previewBtn);
+
             const removeBtn = document.createElement('button');
             removeBtn.className = 'queue-remove';
             removeBtn.type = 'button';
@@ -248,6 +353,9 @@
         if (window.TobyMusicQueue && typeof window.TobyMusicQueue.attach === 'function') {
             window.TobyMusicQueue.attach(els.queueList, (from, to) => post('/queue/reorder', { from: from, to: to }));
         }
+
+        // After every queue re-render, drop the preview if its track is gone.
+        previewController.clearIfRemoved(tracks.map((t) => t.uri || t.identifier));
     }
 
     function renderPlaylists(playlists) {
@@ -397,6 +505,10 @@
     }
 
     function clearSearchResults() {
+        // If a preview is currently playing from a result row, stop it
+        // (otherwise the audio would keep playing against an orphaned button
+        // reference). Queue-item previews are left alone.
+        if (previewController.isActiveIn(els.searchList)) previewController.reset();
         els.searchSection.hidden = true;
         els.searchList.innerHTML = '';
         els.searchEmpty.hidden = true;
@@ -429,6 +541,9 @@
             meta.appendChild(title);
             meta.appendChild(author);
             li.appendChild(meta);
+
+            const previewBtn = makePreviewBtn(track);
+            if (previewBtn) li.appendChild(previewBtn);
 
             const queueBtn = document.createElement('button');
             queueBtn.type = 'button';
