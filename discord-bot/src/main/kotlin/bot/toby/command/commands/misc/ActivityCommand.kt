@@ -1,6 +1,9 @@
 package bot.toby.command.commands.misc
 
 import bot.toby.activity.ActivityTrackingService
+import bot.toby.helpers.MenuHelper
+import core.command.Command.Companion.deleteAfter
+import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
@@ -8,7 +11,12 @@ import database.dto.UserDto
 import database.service.ActivityMonthlyRollupService
 import database.service.UserService
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.selections.SelectOption
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -25,9 +33,16 @@ class ActivityCommand @Autowired constructor(
     override val name: String = "activity"
     override val description: String = "Your top games, server activity stats, and per-user tracking preference."
 
+    companion object {
+        const val OPT_MONTH = "month"
+        const val MONTH_DESC = "YYYY-MM, last 12 months only (defaults to current month)"
+    }
+
     override val subCommands: List<SubcommandData> = listOf(
-        SubcommandData("me", "Show your own top games this month and across the last 12 months."),
-        SubcommandData("server", "Show the server's top games this month."),
+        SubcommandData("me", "Show your own top games this month and across the last 12 months.")
+            .addOptions(OptionData(OptionType.STRING, OPT_MONTH, MONTH_DESC, false)),
+        SubcommandData("server", "Show the server's top games for a month.")
+            .addOptions(OptionData(OptionType.STRING, OPT_MONTH, MONTH_DESC, false)),
         SubcommandData("tracking-on", "Opt in to game-activity tracking in this server."),
         SubcommandData("tracking-off", "Opt out of game-activity tracking in this server.")
     )
@@ -66,7 +81,11 @@ class ActivityCommand @Autowired constructor(
         }
 
         val thisMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
-        val monthRows = rollupService.forUserMonth(guildId, userDto.discordId, thisMonth).take(5)
+        val requested = parseMonthOption(event)
+        val selectedMonth = clampMonth(requested, thisMonth) ?: thisMonth
+        val fellBack = requested != null && selectedMonth != requested
+
+        val monthRows = rollupService.forUserMonth(guildId, userDto.discordId, selectedMonth).take(5)
         val allRows = rollupService.forUser(guildId, userDto.discordId)
 
         val lifetimeTotals = allRows
@@ -76,11 +95,12 @@ class ActivityCommand @Autowired constructor(
             .sortedByDescending { it.value }
             .take(5)
 
+        val monthLabel = formatMonth(selectedMonth)
         val embed = EmbedBuilder()
             .setTitle("Your game activity")
             .setDescription(
                 buildString {
-                    append("**This month**\n")
+                    append("**$monthLabel**\n")
                     if (monthRows.isEmpty()) {
                         append("_Nothing recorded yet._\n")
                     } else {
@@ -94,6 +114,9 @@ class ActivityCommand @Autowired constructor(
                     }
                 }
             )
+            .apply {
+                if (fellBack) setFooter("Requested month is outside the last 12 months — showing current month instead.")
+            }
             .build()
         event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
     }
@@ -104,13 +127,17 @@ class ActivityCommand @Autowired constructor(
             return
         }
         val thisMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val requested = parseMonthOption(event)
+        val selectedMonth = clampMonth(requested, thisMonth) ?: thisMonth
+        val fellBack = requested != null && selectedMonth != requested
+
         val optedOut = userService.listGuildUsers(guildId)
             .filterNotNull()
             .filter { it.activityTrackingOptOut }
             .map { it.discordId }
             .toSet()
 
-        val rows = rollupService.forGuildMonth(guildId, thisMonth)
+        val rows = rollupService.forGuildMonth(guildId, selectedMonth)
             .filter { it.discordId !in optedOut }
             .groupBy { it.activityName }
             .mapValues { (_, rows) -> rows.sumOf { it.seconds } }
@@ -118,18 +145,63 @@ class ActivityCommand @Autowired constructor(
             .sortedByDescending { it.value }
             .take(10)
 
+        val monthLabel = formatMonth(selectedMonth)
+        val footerLines = mutableListOf<String>()
+        if (fellBack) footerLines += "Requested month is outside the last 12 months — showing current month instead."
+        footerLines += if (optedOut.isEmpty()) "Counts every tracked user in this server."
+                       else "${optedOut.size} user(s) have opted out and are not counted."
+
         val embed = EmbedBuilder()
-            .setTitle("Top games this month")
+            .setTitle("Top games — $monthLabel")
             .setDescription(
-                if (rows.isEmpty()) "_Nothing recorded yet for this month._"
+                if (rows.isEmpty()) "_Nothing recorded yet for that month._"
                 else rows.joinToString("\n") { "**${it.key}** — ${formatDuration(it.value)}" }
             )
-            .setFooter(
-                if (optedOut.isEmpty()) "Counts every tracked user in this server."
-                else "${optedOut.size} user(s) have opted out and are not counted."
+            .setFooter(footerLines.joinToString(" "))
+            .build()
+
+        val send = event.hook.sendMessageEmbeds(embed).setEphemeral(true)
+        if (rows.isEmpty()) {
+            send.queue(invokeDeleteOnMessageResponse(deleteDelay))
+            return
+        }
+
+        // Component id encodes guild + month (epoch day); activity name rides
+        // on each option value. No registry — fully self-contained routing.
+        val menu = StringSelectMenu.create("${MenuHelper.ACTIVITY_CONTRIB}:$guildId:${selectedMonth.toEpochDay()}")
+            .setPlaceholder("See who contributed…")
+            .addOptions(
+                rows.map { entry ->
+                    val safe = entry.key.take(100)
+                    SelectOption.of(safe, safe)
+                }
             )
             .build()
-        event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
+
+        send.addComponents(ActionRow.of(menu)).queue(invokeDeleteOnMessageResponse(deleteDelay))
+    }
+
+    private fun parseMonthOption(event: SlashCommandInteractionEvent): LocalDate? {
+        val raw = event.getOption(OPT_MONTH)?.asString?.takeIf { it.isNotBlank() } ?: return null
+        val parts = raw.split("-")
+        if (parts.size != 2) return null
+        val year = parts[0].toIntOrNull() ?: return null
+        val month = parts[1].toIntOrNull() ?: return null
+        if (month !in 1..12) return null
+        return runCatching { LocalDate.of(year, month, 1) }.getOrNull()
+    }
+
+    private fun clampMonth(requested: LocalDate?, thisMonth: LocalDate): LocalDate? {
+        if (requested == null) return null
+        val first = requested.withDayOfMonth(1)
+        val oldest = thisMonth.minusMonths(11)
+        if (first.isBefore(oldest) || first.isAfter(thisMonth)) return null
+        return first
+    }
+
+    private fun formatMonth(d: LocalDate): String {
+        val name = d.month.name.lowercase().replaceFirstChar { it.titlecase() }
+        return "$name ${d.year}"
     }
 
     private fun setOptOut(event: SlashCommandInteractionEvent, userDto: UserDto, optOut: Boolean, deleteDelay: Int) {

@@ -5,4 +5,5 @@ object MenuHelper {
     const val EDIT_INTRO = "editintro"
     const val DELETE_INTRO = "deleteintro"
     const val DND = "dnd"
+    const val ACTIVITY_CONTRIB = "activitycontrib"
 }

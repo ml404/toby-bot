@@ -25,6 +25,11 @@ import java.time.LocalDate
                 "order by r.seconds desc"
     ),
     NamedQuery(
+        name = "ActivityMonthlyRollupDto.forGuildSince",
+        query = "select r from ActivityMonthlyRollupDto r " +
+                "where r.guildId = :guildId and r.monthStart >= :since"
+    ),
+    NamedQuery(
         name = "ActivityMonthlyRollupDto.deleteBefore",
         query = "delete from ActivityMonthlyRollupDto r where r.monthStart < :cutoff"
     )

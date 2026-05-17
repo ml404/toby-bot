@@ -33,5 +33,8 @@ class DefaultActivityMonthlyRollupService @Autowired constructor(
         monthStart: LocalDate
     ): List<ActivityMonthlyRollupDto> = persistence.forUserMonth(guildId, discordId, monthStart)
 
+    override fun forGuildSince(guildId: Long, since: LocalDate): List<ActivityMonthlyRollupDto> =
+        persistence.forGuildSince(guildId, since)
+
     override fun deleteBefore(cutoff: LocalDate): Int = persistence.deleteBefore(cutoff)
 }

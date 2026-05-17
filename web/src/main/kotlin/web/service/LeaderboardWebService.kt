@@ -31,6 +31,10 @@ class LeaderboardWebService(
         const val TOBY_COIN_LEADERBOARD_LIMIT = 10
         // Matches /activity server in Discord so the web view tells the same story.
         const val TOP_GAMES_LIMIT = 10
+        const val TOP_CONTRIBUTORS_LIMIT = 8
+        const val HISTORY_MONTHS = 12
+        const val SPARK_WIDTH = 80
+        const val SPARK_HEIGHT = 20
     }
 
     fun getGuildsWhereUserCanView(accessToken: String, discordId: Long): List<LeaderboardGuildCard> {
@@ -62,7 +66,8 @@ class LeaderboardWebService(
 
     fun getGuildView(
         guildId: Long,
-        sort: LeaderboardSort = LeaderboardSort.THIS_MONTH
+        sort: LeaderboardSort = LeaderboardSort.THIS_MONTH,
+        topGamesMonth: LocalDate? = null
     ): LeaderboardGuildView? {
         val guild = jda.getGuildById(guildId) ?: return null
         val rawRows = moderationWebService.getLeaderboard(guildId)
@@ -87,6 +92,8 @@ class LeaderboardWebService(
             .maxByOrNull { it.voiceSecondsThisMonth }
             ?.name
 
+        val topGamesPanel = buildTopGamesPanel(guild, guildId, topGamesMonth)
+
         return LeaderboardGuildView(
             guildName = guild.name,
             podium = resorted.take(3),
@@ -97,12 +104,27 @@ class LeaderboardWebService(
             totalMembers = resorted.size,
             sort = sort,
             tobyCoinLeaders = buildTobyCoinLeaders(guildId),
-            topGames = buildTopGames(guildId)
+            topGames = topGamesPanel.rows,
+            topGamesMonth = topGamesPanel.selectedMonth,
+            topGamesMonthOptions = topGamesPanel.monthOptions,
         )
     }
 
-    private fun buildTopGames(guildId: Long): List<TopGameRow> {
+    private data class TopGamesPanel(
+        val rows: List<TopGameRow>,
+        val selectedMonth: LocalDate,
+        val monthOptions: List<MonthOption>,
+    )
+
+    private fun buildTopGamesPanel(
+        guild: net.dv8tion.jda.api.entities.Guild,
+        guildId: Long,
+        requestedMonth: LocalDate?,
+    ): TopGamesPanel {
         val thisMonth = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val oldest = thisMonth.minusMonths((HISTORY_MONTHS - 1).toLong())
+        val selectedMonth = clampMonth(requestedMonth, thisMonth, oldest) ?: thisMonth
+
         // Mirror /activity server: skip rollup rows owned by users who have
         // explicitly opted out of tracking, even though their old rows still exist.
         val optedOut = runCatching {
@@ -113,19 +135,122 @@ class LeaderboardWebService(
                 .toSet()
         }.getOrDefault(emptySet())
 
-        val rollups = runCatching { rollupService.forGuildMonth(guildId, thisMonth) }
+        // One query covers the whole panel: top games, contributors, deltas,
+        // sparklines all read from the same in-memory slice.
+        val all = runCatching { rollupService.forGuildSince(guildId, oldest) }
             .getOrDefault(emptyList())
-
-        return rollups.asSequence()
             .filter { it.discordId !in optedOut }
-            .groupBy { it.activityName }
-            .mapValues { (_, rows) -> rows.sumOf { it.seconds } }
-            .entries
+
+        val rowsByMonth: Map<LocalDate, List<database.dto.ActivityMonthlyRollupDto>> = all.groupBy { it.monthStart }
+        val totalsByMonthGame: Map<LocalDate, Map<String, Long>> = rowsByMonth.mapValues { (_, rs) ->
+            rs.groupBy { it.activityName }.mapValues { (_, gr) -> gr.sumOf { it.seconds } }
+        }
+        val selectedTotals = totalsByMonthGame[selectedMonth].orEmpty()
+        val prevTotals = totalsByMonthGame[selectedMonth.minusMonths(1)].orEmpty()
+
+        val months: List<LocalDate> = (0 until HISTORY_MONTHS)
+            .map { thisMonth.minusMonths(it.toLong()) }
+            .reversed()
+
+        val topRows = selectedTotals.entries
             .sortedByDescending { it.value }
             .take(TOP_GAMES_LIMIT)
             .mapIndexed { index, entry ->
-                TopGameRow(rank = index + 1, name = entry.key, seconds = entry.value)
+                val activityName = entry.key
+                val totalSeconds = entry.value
+                val contributors = buildContributors(
+                    guild = guild,
+                    rows = rowsByMonth[selectedMonth].orEmpty().filter { it.activityName == activityName },
+                    totalSeconds = totalSeconds,
+                )
+                val prev = prevTotals[activityName] ?: 0L
+                val history = months.map { m -> totalsByMonthGame[m]?.get(activityName) ?: 0L }
+                TopGameRow(
+                    rank = index + 1,
+                    name = activityName,
+                    seconds = totalSeconds,
+                    contributors = contributors,
+                    deltaSeconds = totalSeconds - prev,
+                    isNew = prev == 0L && totalSeconds > 0L,
+                    historySeconds = history,
+                    sparklinePolyline = sparklinePolyline(history),
+                )
             }
+
+        // `months` is already oldest→newest; emit picker options in the same order
+        // so the rendered <select> reads chronologically.
+        val monthOptions = months.map { m ->
+            MonthOption(
+                value = monthValue(m),
+                label = monthLabel(m),
+                isSelected = m == selectedMonth,
+                hasData = (totalsByMonthGame[m]?.isNotEmpty() == true),
+            )
+        }
+
+        return TopGamesPanel(rows = topRows, selectedMonth = selectedMonth, monthOptions = monthOptions)
+    }
+
+    private fun buildContributors(
+        guild: net.dv8tion.jda.api.entities.Guild,
+        rows: List<database.dto.ActivityMonthlyRollupDto>,
+        totalSeconds: Long,
+    ): List<TopGameContributor> {
+        if (totalSeconds <= 0) return emptyList()
+        return rows.groupBy { it.discordId }
+            .mapValues { (_, rs) -> rs.sumOf { it.seconds } }
+            .entries
+            .sortedByDescending { it.value }
+            .take(TOP_CONTRIBUTORS_LIMIT)
+            .map { (discordId, seconds) ->
+                val member = runCatching { guild.getMemberById(discordId) }.getOrNull()
+                TopGameContributor(
+                    discordId = discordId.toString(),
+                    name = member?.effectiveName ?: "Unknown",
+                    avatarUrl = member?.effectiveAvatarUrl,
+                    seconds = seconds,
+                    percent = ((seconds * 100.0) / totalSeconds).toInt().coerceIn(0, 100),
+                    playtimeDisplay = formatDurationShort(seconds),
+                )
+            }
+    }
+
+    private fun sparklinePolyline(history: List<Long>): String {
+        if (history.isEmpty()) return ""
+        val max = history.max().coerceAtLeast(1L)
+        val n = history.size
+        val xStep = if (n > 1) SPARK_WIDTH.toDouble() / (n - 1) else 0.0
+        return history.mapIndexed { i, v ->
+            val x = (i * xStep)
+            // Invert: SVG y grows downward, but a higher value should plot higher.
+            val y = SPARK_HEIGHT - ((v.toDouble() / max) * SPARK_HEIGHT)
+            "${formatCoord(x)},${formatCoord(y)}"
+        }.joinToString(" ")
+    }
+
+    private fun formatCoord(d: Double): String {
+        val rounded = (d * 10.0).toInt() / 10.0
+        return if (rounded == rounded.toInt().toDouble()) rounded.toInt().toString() else rounded.toString()
+    }
+
+    private fun monthValue(d: LocalDate): String = "%04d-%02d".format(d.year, d.monthValue)
+    private fun monthLabel(d: LocalDate): String {
+        val name = d.month.name.lowercase().replaceFirstChar { it.titlecase() }
+        return "$name ${d.year}"
+    }
+
+    private fun clampMonth(requested: LocalDate?, thisMonth: LocalDate, oldest: LocalDate): LocalDate? {
+        if (requested == null) return null
+        val first = requested.withDayOfMonth(1)
+        if (first.isBefore(oldest) || first.isAfter(thisMonth)) return null
+        return first
+    }
+
+    private fun formatDurationShort(seconds: Long): String {
+        if (seconds <= 0) return "0m"
+        val hours = seconds / 3600
+        val minutes = (seconds % 3600) / 60
+        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 
     private fun buildTobyCoinLeaders(guildId: Long): List<TobyCoinLeaderRow> {
@@ -218,7 +343,9 @@ data class LeaderboardGuildView(
     val totalMembers: Int,
     val sort: LeaderboardSort = LeaderboardSort.THIS_MONTH,
     val tobyCoinLeaders: List<TobyCoinLeaderRow> = emptyList(),
-    val topGames: List<TopGameRow> = emptyList()
+    val topGames: List<TopGameRow> = emptyList(),
+    val topGamesMonth: LocalDate? = null,
+    val topGamesMonthOptions: List<MonthOption> = emptyList(),
 ) {
     @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
@@ -254,13 +381,45 @@ data class TobyCoinLeaderRow(
 data class TopGameRow(
     val rank: Int,
     val name: String,
-    val seconds: Long
+    val seconds: Long,
+    val contributors: List<TopGameContributor> = emptyList(),
+    val deltaSeconds: Long = 0L,
+    val isNew: Boolean = false,
+    val historySeconds: List<Long> = emptyList(),
+    val sparklinePolyline: String = "",
 ) {
     @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
-    val playtimeDisplay: String get() {
+    val playtimeDisplay: String get() = formatDuration(seconds)
+
+    @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
+    val deltaDisplay: String
+        get() {
+            if (isNew) return "NEW"
+            if (deltaSeconds == 0L) return ""
+            val abs = formatDuration(kotlin.math.abs(deltaSeconds))
+            return if (deltaSeconds > 0) "+$abs" else "-$abs"
+        }
+
+    private fun formatDuration(seconds: Long): String {
         if (seconds <= 0) return "0m"
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60
         return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 }
+
+data class TopGameContributor(
+    val discordId: String,
+    val name: String,
+    val avatarUrl: String?,
+    val seconds: Long,
+    val percent: Int,
+    val playtimeDisplay: String,
+)
+
+data class MonthOption(
+    val value: String,
+    val label: String,
+    val isSelected: Boolean,
+    val hasData: Boolean,
+)
