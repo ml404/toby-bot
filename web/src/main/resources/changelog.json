@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Modal-driven /team split with preview-confirm flow + web presets",
+    "summary": "Rebuilds `/team` around a Discord modal, a preview-then-confirm flow, and a `/teams/{guildId}` web UI for saved rosters. Replaces the old one-shot slash command that immediately created voice channels with no chance to review. **Discord flow** `/team split` opens a modal (optional `members:` slash-option pre-fills it) Modal collects: optional preset name, members (paragraph; `@mentions` or raw IDs), team count, naming strategy (`prefix`|`list`), names Submit shows an ephem…",
+    "emoji": "✨",
+    "prNumber": 469
+  },
+  {
+    "date": "May 2026",
     "title": "Add ban/timeout/purge/lock/slowmode tools + Actions UI tab",
     "summary": "Replaces `/shh` and `/talk` (and their voice-tab Shh/Talk buttons) with a proper moderation toolkit. Every new action is reachable both as a Discord slash command and from a new **Actions** tab on the moderation dashboard. ### New slash commands (`discord-bot`) | Command | What it does | |---|---| | `/ban` | Ban one or more mentioned members (optional reason + 0-7 days message delete) | | `/unban` | Unban a user by Discord ID | | `/timeout` | Discord-native timeout, 1-4032…",
     "emoji": "🛡️",
