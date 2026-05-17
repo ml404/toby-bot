@@ -21,7 +21,8 @@ class HelpCommand @Autowired constructor(private val commands: List<core.command
         // If no specific command is provided, direct users to the general wiki page
         if (args.isEmpty()) {
             val helpMessage =
-                "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands)"
+                "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands).\n" +
+                "Enjoying the bot? You can support development on [Ko-fi](https://ko-fi.com/fratlayton)."
             event.hook.replyAndDelete(helpMessage, deleteDelay)
             return
         }

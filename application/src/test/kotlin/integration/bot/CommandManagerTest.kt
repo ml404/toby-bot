@@ -160,11 +160,12 @@ class CommandManagerTest {
             PlinkoCommand::class.java,
             WheelOfFortuneCommand::class.java,
             HorseRacingCommand::class.java,
+            SupportCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(65, commandManager.allCommands.size)
-        Assertions.assertEquals(65, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(66, commandManager.allCommands.size)
+        Assertions.assertEquals(66, commandManager.allSlashCommands.size)
     }
 
     @Test
