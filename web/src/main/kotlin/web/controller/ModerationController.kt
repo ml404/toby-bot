@@ -69,6 +69,14 @@ class ModerationController(
         ra: RedirectAttributes
     ): String = renderSubPage(guildId, user, model, ra, "moderation/users")
 
+    @GetMapping("/{guildId}/actions")
+    fun actionsPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = renderSubPage(guildId, user, model, ra, "moderation/actions")
+
     @GetMapping("/{guildId}/settings")
     fun settingsPage(
         @PathVariable guildId: Long,
@@ -206,6 +214,120 @@ class ModerationController(
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
+    @PostMapping("/{guildId}/ban", consumes = ["application/json"])
+    @ResponseBody
+    fun ban(
+        @PathVariable guildId: Long,
+        @RequestBody body: BanRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val targetId = body.targetDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid user id."))
+        val error = moderationWebService.banMember(actor, guildId, targetId, body.reason, body.deleteDays)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/unban", consumes = ["application/json"])
+    @ResponseBody
+    fun unban(
+        @PathVariable guildId: Long,
+        @RequestBody body: UnbanRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val targetId = body.targetDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid user id."))
+        val error = moderationWebService.unbanUser(actor, guildId, targetId)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/timeout", consumes = ["application/json"])
+    @ResponseBody
+    fun timeout(
+        @PathVariable guildId: Long,
+        @RequestBody body: TimeoutRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val targetId = body.targetDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid user id."))
+        val error = moderationWebService.timeoutMember(actor, guildId, targetId, body.minutes, body.reason)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/untimeout", consumes = ["application/json"])
+    @ResponseBody
+    fun untimeout(
+        @PathVariable guildId: Long,
+        @RequestBody body: UntimeoutRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val targetId = body.targetDiscordId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid user id."))
+        val error = moderationWebService.untimeoutMember(actor, guildId, targetId)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/purge", consumes = ["application/json"])
+    @ResponseBody
+    fun purge(
+        @PathVariable guildId: Long,
+        @RequestBody body: PurgeRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<PurgeResponse> = WebGuildAccess.requireSignedInForJson(
+        user, { PurgeResponse(false, "Not signed in.") }
+    ) { actor ->
+        val channelId = body.channelId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(PurgeResponse(false, "Invalid channel id."))
+        val filterUserId = body.filterUserId?.takeIf { it.isNotBlank() }?.toLongOrNull()
+        val result = moderationWebService.purgeMessages(actor, guildId, channelId, body.count, filterUserId)
+        if (result.error != null) {
+            ResponseEntity.badRequest().body(PurgeResponse(false, result.error, result.deleted, result.skipped))
+        } else {
+            ResponseEntity.ok(PurgeResponse(true, null, result.deleted, result.skipped))
+        }
+    }
+
+    @PostMapping("/{guildId}/channel/{channelId}/lock", consumes = ["application/json"])
+    @ResponseBody
+    fun lockChannel(
+        @PathVariable guildId: Long,
+        @PathVariable channelId: Long,
+        @RequestBody body: LockRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val error = moderationWebService.lockChannel(actor, guildId, channelId, body.lock)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    @PostMapping("/{guildId}/channel/{channelId}/slowmode", consumes = ["application/json"])
+    @ResponseBody
+    fun slowmode(
+        @PathVariable guildId: Long,
+        @PathVariable channelId: Long,
+        @RequestBody body: SlowmodeRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val error = moderationWebService.setSlowmode(actor, guildId, channelId, body.seconds)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
     @PostMapping("/{guildId}/voice/move", consumes = ["application/json"])
     @ResponseBody
     fun move(
@@ -223,24 +345,6 @@ class ModerationController(
             ResponseEntity.badRequest().body(MoveResponse(false, result.error, result.moved, result.skipped))
         } else {
             ResponseEntity.ok(MoveResponse(true, null, result.moved, result.skipped))
-        }
-    }
-
-    @PostMapping("/{guildId}/voice/{channelId}/mute", consumes = ["application/json"])
-    @ResponseBody
-    fun muteVoiceChannel(
-        @PathVariable guildId: Long,
-        @PathVariable channelId: Long,
-        @RequestBody body: MuteRequest,
-        @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<MuteResponse> = WebGuildAccess.requireSignedInForJson(
-        user, { MuteResponse(false, "Not signed in.") }
-    ) { actor ->
-        val result = moderationWebService.muteVoiceChannel(actor, guildId, channelId, body.mute)
-        if (result.error != null) {
-            ResponseEntity.badRequest().body(MuteResponse(false, result.error, result.changed, result.skipped))
-        } else {
-            ResponseEntity.ok(MuteResponse(true, null, result.changed, result.skipped))
         }
     }
 
@@ -434,21 +538,39 @@ data class PermissionRequest(val permission: String = "")
 data class SocialCreditRequest(val delta: Long = 0)
 data class ConfigRequest(val key: String = "", val value: String = "")
 data class KickRequest(val targetDiscordId: String = "", val reason: String? = null)
+data class BanRequest(
+    val targetDiscordId: String = "",
+    val reason: String? = null,
+    val deleteDays: Int = 0,
+)
+data class UnbanRequest(val targetDiscordId: String = "")
+data class TimeoutRequest(
+    val targetDiscordId: String = "",
+    val minutes: Long = 10,
+    val reason: String? = null,
+)
+data class UntimeoutRequest(val targetDiscordId: String = "")
+data class PurgeRequest(
+    val channelId: String = "",
+    val count: Int = 10,
+    val filterUserId: String? = null,
+)
+data class LockRequest(val lock: Boolean = true)
+data class SlowmodeRequest(val seconds: Int = 0)
 data class MoveRequest(val targetChannelId: String = "", val memberIds: List<String> = emptyList())
-data class MuteRequest(val mute: Boolean = true)
 data class PollRequest(val channelId: String = "", val question: String = "", val options: List<String> = emptyList())
+
+data class PurgeResponse(
+    val ok: Boolean,
+    val error: String?,
+    val deleted: Int = 0,
+    val skipped: Int = 0,
+)
 
 data class MoveResponse(
     val ok: Boolean,
     val error: String?,
     val moved: List<String> = emptyList(),
-    val skipped: List<String> = emptyList()
-)
-
-data class MuteResponse(
-    val ok: Boolean,
-    val error: String?,
-    val changed: List<String> = emptyList(),
     val skipped: List<String> = emptyList()
 )
 

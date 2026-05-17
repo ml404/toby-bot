@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Actions', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'actions')}"></div>
+
+    <section class="mod-panel" data-panel="actions">
+        <p class="muted mb-4">
+            Run Discord moderation actions without leaving the dashboard. You
+            need the matching Discord permission (Ban / Kick / Moderate /
+            Manage) on the bot AND on yourself for each action.
+        </p>
+
+        <h2 class="mod-section-title">Kick member</h2>
+        <p class="muted action-explainer">
+            Remove a member from the server. They can rejoin via an
+            invite link. Requires the Kick Members permission.
+        </p>
+        <form class="mod-action-form" data-action="kick">
+            <label>Member
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='targetDiscordId',
+                        id='kick-target',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Pick a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <label>Reason (optional)
+                <input type="text" name="reason" maxlength="512">
+            </label>
+            <button type="submit" class="btn-danger">Kick</button>
+        </form>
+
+        <h2 class="mod-section-title">Ban member</h2>
+        <p class="muted action-explainer">
+            Remove a member and prevent them rejoining until they're
+            unbanned. Optionally delete their messages from the past N days
+            (0-7). Requires the Ban Members permission.
+        </p>
+        <form class="mod-action-form" data-action="ban">
+            <label>Member
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='targetDiscordId',
+                        id='ban-target',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Pick a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <label>Reason (optional)
+                <input type="text" name="reason" maxlength="512">
+            </label>
+            <label>Delete recent messages (days, 0-7)
+                <input type="number" name="deleteDays" min="0" max="7" value="0">
+            </label>
+            <button type="submit" class="btn-danger">Ban</button>
+        </form>
+
+        <h2 class="mod-section-title">Unban user by ID</h2>
+        <p class="muted action-explainer">
+            Lift a ban so a previously-banned user can rejoin. Discord
+            user IDs are 17-19 digit numbers; right-click a user in
+            Discord with Developer Mode on to copy theirs.
+        </p>
+        <form class="mod-action-form" data-action="unban">
+            <label>Discord user ID
+                <input type="text" name="targetDiscordId" required pattern="[0-9]+">
+            </label>
+            <button type="submit" class="btn">Unban</button>
+        </form>
+
+        <h2 class="mod-section-title">Timeout member</h2>
+        <p class="muted action-explainer">
+            Mute a member across every channel for a set duration — they
+            can still see messages but can't send, react, or speak in
+            voice. Discord caps timeouts at 28 days (40320 minutes).
+            Requires the Moderate Members permission.
+        </p>
+        <form class="mod-action-form" data-action="timeout">
+            <label>Member
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='targetDiscordId',
+                        id='timeout-target',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Pick a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <label>Duration (minutes, 1-40320)
+                <input type="number" name="minutes" min="1" max="40320" value="10" required>
+            </label>
+            <label>Reason (optional)
+                <input type="text" name="reason" maxlength="512">
+            </label>
+            <button type="submit" class="btn">Timeout</button>
+        </form>
+
+        <h2 class="mod-section-title">Remove timeout</h2>
+        <p class="muted action-explainer">
+            Clear an active timeout early so the member can talk again.
+        </p>
+        <form class="mod-action-form" data-action="untimeout">
+            <label>Member
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='targetDiscordId',
+                        id='untimeout-target',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Pick a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <button type="submit" class="btn">Untimeout</button>
+        </form>
+
+        <h2 class="mod-section-title">Purge messages</h2>
+        <p class="muted action-explainer">
+            Bulk-delete the last N messages in a channel (max 100),
+            optionally filtered to a single user. Discord only allows
+            bulk-deleting messages from the last 14 days — older ones
+            are skipped automatically. Requires Manage Messages.
+        </p>
+        <form class="mod-action-form" data-action="purge">
+            <label>Channel
+                <select name="channelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"></option>
+                </select>
+            </label>
+            <label>Count (1-100)
+                <input type="number" name="count" min="1" max="100" value="10" required>
+            </label>
+            <label>Filter to user (optional)
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='filterUserId',
+                        id='purge-filter',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Any user',
+                        emptyLabel='Any user',
+                        required=false,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <button type="submit" class="btn-danger">Purge</button>
+        </form>
+
+        <h2 class="mod-section-title">Lock / unlock channel</h2>
+        <p class="muted action-explainer">
+            Toggle whether @everyone can send messages in a text channel.
+            "Lock" denies Send Messages on @everyone's permission
+            override; "Unlock" clears the override so the role default
+            applies again. Requires Manage Permissions.
+        </p>
+        <form class="mod-action-form" data-action="lock">
+            <label>Channel
+                <select name="channelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"></option>
+                </select>
+            </label>
+            <div class="lock-actions">
+                <button type="button" class="btn-danger" data-lock="true">Lock</button>
+                <button type="button" class="btn" data-lock="false">Unlock</button>
+            </div>
+        </form>
+
+        <h2 class="mod-section-title">Slowmode</h2>
+        <p class="muted action-explainer">
+            Force a minimum delay between each user's messages in a
+            channel. Set to 0 to disable. Max 21600 seconds (6 hours).
+            Requires Manage Channel.
+        </p>
+        <form class="mod-action-form" data-action="slowmode">
+            <label>Channel
+                <select name="channelId" required>
+                    <option value="">&mdash; choose &mdash;</option>
+                    <option th:each="tc : ${overview.textChannels}"
+                            th:value="${tc.id}"
+                            th:text="'#' + ${tc.name}"></option>
+                </select>
+            </label>
+            <label>Seconds (0-21600, 0 to disable)
+                <input type="number" name="seconds" min="0" max="21600" value="0" required>
+            </label>
+            <button type="submit" class="btn">Apply</button>
+        </form>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/actions.js}"></script>
+</body>
+</html>

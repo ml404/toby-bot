@@ -761,3 +761,61 @@ details.config-section.is-hidden { display: none; }
     flex: 0 0 auto;
     margin-left: auto;
 }
+
+/* Moderation Actions tab: stacked forms for ban / timeout / purge etc.
+   Each form is a block laid out with a column of labels + a submit row. */
+.mod-action-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    margin-bottom: var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+.mod-action-form label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.mod-action-form input[type="text"],
+.mod-action-form input[type="number"],
+.mod-action-form select {
+    padding: 7px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+}
+.mod-action-form input:focus-visible,
+.mod-action-form select:focus-visible {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.mod-action-form button {
+    align-self: flex-start;
+}
+/* The page-level .btn-danger override (smaller padding) is intended for
+   inline table-row buttons (e.g. the per-row Kick); inside an action
+   form it sits next to .btn submit buttons, so restore the base size
+   from base.css so the two button styles match. */
+.mod-action-form .btn-danger {
+    padding: 10px 20px;
+    font-size: 0.95rem;
+    border-radius: var(--radius-md);
+}
+.lock-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+.action-explainer {
+    margin: calc(var(--space-2) * -1) 0 var(--space-3);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    max-width: 70ch;
+}
