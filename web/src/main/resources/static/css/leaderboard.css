@@ -359,3 +359,226 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
    moderation user list, and with the mobile 2-row standings grid that
    re-lays the cards as `(rank | member | title) / (m1 | m2 | m3)` so
    the metrics read as a set rather than three stacked headlines. */
+
+/* -- Section tabs (Members / TobyCoin / Games) -- */
+/* Visual clone of `.lb-sort` so we don't grow new tab CSS — same
+   pill-strip aesthetic, same accent-on-active, same focus ring. The
+   only behavioural difference is JS-driven panel switching instead of
+   navigation, so the elements are <button> rather than <a>. */
+.lb-section-tabs {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 3px;
+    gap: 2px;
+    margin-bottom: var(--space-4);
+    flex-wrap: wrap;
+}
+.lb-section-tabs .lb-sort-option {
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    min-height: 36px;
+}
+.lb-tab-panel[hidden] { display: none; }
+
+/* -- Month picker (Games tab) -- */
+.lb-month-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+}
+.lb-month-picker select {
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    min-height: 36px;
+}
+.lb-month-picker select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* -- Top Games table: opt out of the standings 2-row grid -- */
+/* The standings grid in base.css lays cells into (rank|member|title)/(m1|m2|m3).
+   That mapping presumes the standings cell labels, which Top Games doesn't have.
+   This class lets the games table fall back to the default `.mod-table`
+   card transform — each cell stacks as label-left / value-right. */
+.lb-topgames-table { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 600px) {
+    /* Exclude the games table from the standings grid override. */
+    .lb-standings-table.lb-topgames-table.mod-table tr {
+        display: block;
+        padding: 8px 10px;
+    }
+    .lb-standings-table.lb-topgames-table.mod-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 0;
+        width: auto;
+    }
+    .lb-standings-table.lb-topgames-table.mod-table td::before {
+        content: attr(data-label);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        flex: 0 0 auto;
+        margin-right: var(--space-2);
+    }
+    .lb-standings-table.lb-topgames-table.mod-table td[data-label="#"]::before {
+        content: '';
+        margin: 0;
+    }
+}
+
+/* -- Contributor tooltip -- */
+.lb-tooltip-host {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: help;
+}
+.lb-tooltip-host:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+}
+.lb-tooltip-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-style: italic;
+}
+.lb-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    z-index: 10;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    min-width: 240px;
+    max-width: 320px;
+    box-shadow: 0 6px 18px #00000066;
+}
+.lb-tooltip[hidden] { display: none; }
+.lb-tooltip.lb-tooltip-flipped {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 6px;
+}
+.lb-tooltip-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    margin-bottom: var(--space-2);
+}
+.lb-tooltip-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.lb-tooltip-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px var(--space-2);
+}
+.lb-tooltip-meta {
+    display: inline-flex;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text);
+    grid-column: 2;
+}
+.lb-tooltip-bar-track {
+    grid-column: 1 / -1;
+    height: 4px;
+    background: var(--bg-input);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.lb-tooltip-bar {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+}
+
+@media (max-width: 600px) {
+    .lb-tooltip {
+        position: fixed;
+        left: var(--space-3);
+        right: var(--space-3);
+        top: auto;
+        bottom: var(--space-3);
+        min-width: 0;
+        max-width: none;
+        margin: 0;
+    }
+    .lb-tooltip.lb-tooltip-flipped {
+        bottom: var(--space-3);
+        top: auto;
+        margin: 0;
+    }
+}
+
+/* -- Sparkline -- */
+.lb-spark-wrap {
+    display: inline-block;
+    width: 80px;
+    max-width: 100%;
+    line-height: 0;
+}
+.lb-spark {
+    width: 100%;
+    height: 20px;
+    color: var(--accent);
+    display: block;
+}
+
+/* -- NEW pill -- */
+.lb-new-pill {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.lb-empty-games {
+    padding: var(--space-4) var(--space-5);
+    text-align: center;
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    margin-top: var(--space-3);
+}

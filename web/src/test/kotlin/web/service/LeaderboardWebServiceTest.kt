@@ -92,8 +92,13 @@ class LeaderboardWebServiceTest {
 
         assertEquals(3, view.podium.size)
         assertEquals("A", view.podium[0].name)
-        assertEquals(2, view.standings.size)
-        assertEquals(4, view.standings[0].rank)
+        // standings carries the full ranked list (top 3 included) so the
+        // Members tab is self-contained — the podium above the tabs is a
+        // visual hero, not a substitute for the top rows of the table.
+        assertEquals(5, view.standings.size)
+        assertEquals(1, view.standings[0].rank)
+        assertEquals("A", view.standings[0].name)
+        assertEquals(5, view.standings.last().rank)
         assertEquals(5, view.totalMembers)
         assertEquals(100L, view.totalCreditsThisMonth)
         assertEquals(3600L, view.totalVoiceThisMonth)
@@ -132,7 +137,11 @@ class LeaderboardWebServiceTest {
 
         val view = service.getGuildView(guildId)!!
         assertEquals(1, view.podium.size)
-        assertTrue(view.standings.isEmpty())
+        // The single member is on the podium AND in the standings table —
+        // the Members tab should not appear empty just because the guild
+        // is tiny.
+        assertEquals(1, view.standings.size)
+        assertEquals("Solo", view.standings[0].name)
     }
 
     @Test

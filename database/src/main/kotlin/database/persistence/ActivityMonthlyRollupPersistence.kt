@@ -15,5 +15,6 @@ interface ActivityMonthlyRollupPersistence {
     fun forGuildMonth(guildId: Long, monthStart: LocalDate): List<ActivityMonthlyRollupDto>
     fun forUser(guildId: Long, discordId: Long): List<ActivityMonthlyRollupDto>
     fun forUserMonth(guildId: Long, discordId: Long, monthStart: LocalDate): List<ActivityMonthlyRollupDto>
+    fun forGuildSince(guildId: Long, since: LocalDate): List<ActivityMonthlyRollupDto>
     fun deleteBefore(cutoff: LocalDate): Int
 }

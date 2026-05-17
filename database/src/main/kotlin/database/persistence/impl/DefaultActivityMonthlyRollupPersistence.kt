@@ -77,6 +77,15 @@ class DefaultActivityMonthlyRollupPersistence : ActivityMonthlyRollupPersistence
         return q.resultList
     }
 
+    override fun forGuildSince(guildId: Long, since: LocalDate): List<ActivityMonthlyRollupDto> {
+        val q: TypedQuery<ActivityMonthlyRollupDto> = entityManager.createNamedQuery(
+            "ActivityMonthlyRollupDto.forGuildSince", ActivityMonthlyRollupDto::class.java
+        )
+        q.setParameter("guildId", guildId)
+        q.setParameter("since", since)
+        return q.resultList
+    }
+
     override fun deleteBefore(cutoff: LocalDate): Int {
         val q = entityManager.createNamedQuery("ActivityMonthlyRollupDto.deleteBefore")
         q.setParameter("cutoff", cutoff)

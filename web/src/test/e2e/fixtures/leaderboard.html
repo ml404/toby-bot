@@ -17,10 +17,18 @@
         <a href="#">Profile</a>
     </div>
 </nav>
-<main class="container-wide">
+<main class="container-wide" data-guild-id="42">
     <div class="page-header">
         <h1>Leaderboard — Toby Test Server</h1>
     </div>
+
+    <nav class="lb-section-tabs" role="tablist" aria-label="Leaderboard sections">
+        <button type="button" role="tab" class="lb-sort-option active" data-tab="members" aria-selected="true">🏆 Members</button>
+        <button type="button" role="tab" class="lb-sort-option" data-tab="tobycoins" aria-selected="false">🪙 TobyCoin</button>
+        <button type="button" role="tab" class="lb-sort-option" data-tab="topgames" aria-selected="false">🎮 Games</button>
+    </nav>
+
+    <div class="lb-tab-panel" data-tab-panel="members" role="tabpanel">
     <div class="mod-table-wrap">
         <table class="mod-table lb-standings-table">
             <thead>
@@ -46,6 +54,79 @@
             </tbody>
         </table>
     </div>
+    </div><!-- /lb-tab-panel members -->
+
+    <div class="lb-tab-panel" data-tab-panel="topgames" role="tabpanel" hidden>
+        <form class="lb-month-picker" method="get" action="/leaderboard.html">
+            <label for="lb-month-select" class="muted">Month</label>
+            <select id="lb-month-select" name="month">
+                <option value="2026-04">April 2026</option>
+                <option value="2026-05" selected>May 2026</option>
+            </select>
+            <input type="hidden" name="sort" value="month"/>
+        </form>
+
+        <div class="mod-table-wrap">
+            <table class="mod-table lb-standings-table lb-topgames-table">
+                <thead>
+                    <tr>
+                        <th class="lb-col-rank">#</th>
+                        <th>Game</th>
+                        <th class="lb-col-value">🎮 Playtime</th>
+                        <th class="lb-col-value">Δ vs last month</th>
+                        <th class="lb-col-value">Trend</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-label="#"><span class="lb-rank lb-rank-1">1</span></td>
+                        <td data-label="Game">
+                            <div class="lb-tooltip-host" tabindex="0" aria-describedby="lb-tip-1">
+                                <span class="lb-name">Counter-Strike: Global Offensive</span>
+                                <span class="lb-tooltip-hint" aria-hidden="true">i</span>
+                                <div class="lb-tooltip" role="tooltip" hidden id="lb-tip-1">
+                                    <div class="lb-tooltip-title">Top contributors</div>
+                                    <ul class="lb-tooltip-list">
+                                        <li class="lb-tooltip-row">
+                                            <div class="member-cell"><div class="avatar"></div><span class="lb-name">Alice</span></div>
+                                            <div class="lb-tooltip-meta"><span class="lb-tooltip-time">12h 0m</span><span class="lb-tooltip-percent muted">(60%)</span></div>
+                                            <div class="lb-tooltip-bar-track"><div class="lb-tooltip-bar" style="width:60%"></div></div>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Playtime" class="lb-col-value"><strong class="lb-value">20h 0m</strong></td>
+                        <td data-label="Δ vs last month" class="lb-col-value"><span class="lb-value-month">+2h 30m</span></td>
+                        <td data-label="Trend" class="lb-col-value">
+                            <span class="lb-spark-wrap">
+                                <svg class="lb-spark" viewBox="0 0 80 20" preserveAspectRatio="none">
+                                    <polyline points="0,15 8,12 16,18 24,8 32,4 40,10 48,6 56,3 64,9 72,5 80,0" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td data-label="#"><span class="lb-rank lb-rank-2">2</span></td>
+                        <td data-label="Game">
+                            <div class="lb-tooltip-host" tabindex="0">
+                                <span class="lb-name">Tetris</span>
+                            </div>
+                        </td>
+                        <td data-label="Playtime" class="lb-col-value"><strong class="lb-value">5h 0m</strong></td>
+                        <td data-label="Δ vs last month" class="lb-col-value"><span class="lb-new-pill">NEW</span></td>
+                        <td data-label="Trend" class="lb-col-value">
+                            <span class="lb-spark-wrap">
+                                <svg class="lb-spark" viewBox="0 0 80 20" preserveAspectRatio="none">
+                                    <polyline points="0,20 80,0" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                                </svg>
+                            </span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div><!-- /lb-tab-panel topgames -->
 </main>
 </body>
 </html>
