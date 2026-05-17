@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Add per-guild XP, levels, role rewards and title gates",
+    "summary": "Adds a leveling / engagement system on top of the existing social-credit infrastructure. XP is tracked **separately** from social credit so spending or losing credit at the casino doesn't drag a user's level down — the long-term progression track is durable. ### XP awards (all daily-capped, default 1000 XP/day per user/guild) **Messages**: 15–25 XP per non-bot message with a 60s per-user cooldown (Tatsu/MEE6-style anti-spam), tracked in a Caffeine cache keyed on `(guildId,…",
+    "emoji": "🛡️",
+    "prNumber": 477
+  },
+  {
+    "date": "May 2026",
     "title": "Resume preempted audio after intro plays",
     "summary": "Today, when a member joins voice while the bot is already playing audio, their intro is enqueued **behind** the currently-playing track and only plays after that track finishes — defeating the point of an intro. This PR makes the intro preempt the currently-playing audio and resume it (from the same position) once the intro finishes.",
     "emoji": "🎵",
