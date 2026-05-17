@@ -97,7 +97,10 @@ class LeaderboardWebService(
         return LeaderboardGuildView(
             guildName = guild.name,
             podium = resorted.take(3),
-            standings = resorted.drop(3),
+            // The Members tab shows the full ranked list, top 3 included.
+            // The podium above the tabs is a visual hero, not a substitute for
+            // the top 3 rows in the standings table.
+            standings = resorted,
             totalCreditsThisMonth = totalCreditsThisMonth,
             totalVoiceThisMonth = totalVoiceThisMonth,
             mostActiveMember = mostActiveName,
