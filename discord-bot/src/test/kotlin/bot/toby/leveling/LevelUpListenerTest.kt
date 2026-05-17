@@ -102,7 +102,7 @@ class LevelUpListenerTest {
         every { jda.getGuildById(guildId) } returns guild
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
-        every { guild.getTextChannelById(any()) } returns channel
+        every { guild.getTextChannelById(any<Long>()) } returns channel
         every { channel.sendMessage(any<String>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { titleService.listAll() } returns emptyList()
@@ -133,7 +133,7 @@ class LevelUpListenerTest {
         every { jda.getGuildById(guildId) } returns guild
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
-        every { guild.getTextChannelById(any()) } returns channel
+        every { guild.getTextChannelById(any<Long>()) } returns channel
         every { channel.sendMessage(any<String>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
@@ -162,7 +162,7 @@ class LevelUpListenerTest {
         every { jda.getGuildById(guildId) } returns guild
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
-        every { guild.getTextChannelById(any()) } returns channel
+        every { guild.getTextChannelById(any<Long>()) } returns channel
         every { channel.sendMessage(any<String>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
