@@ -44,6 +44,7 @@ class ModerationWebServiceTest {
     private lateinit var jackpotService: database.service.JackpotService
     private lateinit var casinoAdminService: database.service.CasinoAdminService
     private lateinit var jackpotLotteryService: database.service.JackpotLotteryService
+    private lateinit var levelRoleRewardService: database.service.LevelRoleRewardService
     private lateinit var service: ModerationWebService
 
     private lateinit var guild: Guild
@@ -69,6 +70,7 @@ class ModerationWebServiceTest {
         jackpotService = mockk(relaxed = true)
         casinoAdminService = mockk(relaxed = true)
         jackpotLotteryService = mockk(relaxed = true)
+        levelRoleRewardService = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         service = ModerationWebService(
@@ -83,6 +85,7 @@ class ModerationWebServiceTest {
             jackpotService,
             casinoAdminService,
             jackpotLotteryService,
+            levelRoleRewardService,
             eventPublisher
         )
 
@@ -1792,5 +1795,184 @@ class ModerationWebServiceTest {
         val result = service.sanitizeChannelName(long)
         assertNotNull(result)
         assertEquals(90, result!!.length)
+    }
+
+    // ---- leveling moderation ----
+
+    @Test
+    fun `upsertLevelReward rejects non-owner actor`() {
+        mockMember(superUserId, isOwner = false)
+        every { introWebService.isSuperUser(superUserId, guildId) } returns true
+
+        val err = service.upsertLevelReward(superUserId, guildId, level = 2, roleId = 999L)
+
+        assertEquals("Only the server owner can change guild config.", err)
+        verify(exactly = 0) { levelRoleRewardService.upsert(any()) }
+    }
+
+    @Test
+    fun `upsertLevelReward rejects level zero`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.upsertLevelReward(ownerId, guildId, level = 0, roleId = 999L)
+
+        assertEquals("Level must be 1 or higher.", err)
+        verify(exactly = 0) { levelRoleRewardService.upsert(any()) }
+    }
+
+    @Test
+    fun `upsertLevelReward rejects unknown role`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getRoleById(999L) } returns null
+
+        val err = service.upsertLevelReward(ownerId, guildId, level = 2, roleId = 999L)
+
+        assertEquals("Role not found in this server.", err)
+        verify(exactly = 0) { levelRoleRewardService.upsert(any()) }
+    }
+
+    @Test
+    fun `upsertLevelReward rejects managed role`() {
+        mockMember(ownerId, isOwner = true)
+        val role = mockk<net.dv8tion.jda.api.entities.Role>(relaxed = true).also {
+            every { it.isManaged } returns true
+        }
+        every { guild.getRoleById(999L) } returns role
+
+        val err = service.upsertLevelReward(ownerId, guildId, level = 2, roleId = 999L)
+
+        assertEquals(
+            "That role is managed by an integration and can't be assigned by the bot.",
+            err
+        )
+    }
+
+    @Test
+    fun `upsertLevelReward rejects role above bot hierarchy`() {
+        mockMember(ownerId, isOwner = true)
+        val role = mockk<net.dv8tion.jda.api.entities.Role>(relaxed = true).also {
+            every { it.isManaged } returns false
+            every { it.name } returns "Top Tier"
+        }
+        every { guild.getRoleById(999L) } returns role
+        val selfMember = mockk<SelfMember>(relaxed = true).also {
+            every { it.canInteract(role) } returns false
+        }
+        every { guild.selfMember } returns selfMember
+
+        val err = service.upsertLevelReward(ownerId, guildId, level = 2, roleId = 999L)
+
+        assertNotNull(err)
+        assertTrue(err!!.contains("Top Tier"))
+    }
+
+    @Test
+    fun `upsertLevelReward saves valid reward`() {
+        mockMember(ownerId, isOwner = true)
+        val role = mockk<net.dv8tion.jda.api.entities.Role>(relaxed = true).also {
+            every { it.isManaged } returns false
+        }
+        every { guild.getRoleById(999L) } returns role
+        val selfMember = mockk<SelfMember>(relaxed = true).also {
+            every { it.canInteract(role) } returns true
+        }
+        every { guild.selfMember } returns selfMember
+
+        val err = service.upsertLevelReward(ownerId, guildId, level = 5, roleId = 999L)
+
+        assertNull(err)
+        val captured = slot<database.dto.LevelRoleRewardDto>()
+        verify(exactly = 1) { levelRoleRewardService.upsert(capture(captured)) }
+        assertEquals(guildId, captured.captured.guildId)
+        assertEquals(5, captured.captured.level)
+        assertEquals(999L, captured.captured.roleId)
+    }
+
+    @Test
+    fun `deleteLevelReward rejects non-owner actor`() {
+        mockMember(superUserId, isOwner = false)
+        every { introWebService.isSuperUser(superUserId, guildId) } returns true
+
+        val err = service.deleteLevelReward(superUserId, guildId, level = 2)
+
+        assertEquals("Only the server owner can change guild config.", err)
+        verify(exactly = 0) { levelRoleRewardService.delete(any(), any()) }
+    }
+
+    @Test
+    fun `deleteLevelReward succeeds for owner`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.deleteLevelReward(ownerId, guildId, level = 5)
+
+        assertNull(err)
+        verify(exactly = 1) { levelRoleRewardService.delete(guildId, 5) }
+    }
+
+    @Test
+    fun `setTitleRequiredLevel rejects non-owner actor`() {
+        mockMember(superUserId, isOwner = false)
+        every { introWebService.isSuperUser(superUserId, guildId) } returns true
+
+        val err = service.setTitleRequiredLevel(superUserId, guildId, titleId = 7L, requiredLevel = 3)
+
+        assertEquals("Only the server owner can change guild config.", err)
+        verify(exactly = 0) { titleService.updateRequiredLevel(any(), any()) }
+    }
+
+    @Test
+    fun `setTitleRequiredLevel rejects negative level`() {
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.setTitleRequiredLevel(ownerId, guildId, titleId = 7L, requiredLevel = -1)
+
+        assertEquals("Required level must be zero or higher.", err)
+    }
+
+    @Test
+    fun `setTitleRequiredLevel surfaces title-not-found`() {
+        mockMember(ownerId, isOwner = true)
+        every { titleService.updateRequiredLevel(7L, 3) } returns null
+
+        val err = service.setTitleRequiredLevel(ownerId, guildId, titleId = 7L, requiredLevel = 3)
+
+        assertEquals("Title not found.", err)
+    }
+
+    @Test
+    fun `setTitleRequiredLevel persists when valid`() {
+        mockMember(ownerId, isOwner = true)
+        val updated = TitleDto(id = 7L, label = "Speaker", cost = 500L).apply { requiredLevel = 5 }
+        every { titleService.updateRequiredLevel(7L, 5) } returns updated
+
+        val err = service.setTitleRequiredLevel(ownerId, guildId, titleId = 7L, requiredLevel = 5)
+
+        assertNull(err)
+        verify(exactly = 1) { titleService.updateRequiredLevel(7L, 5) }
+    }
+
+    @Test
+    fun `getLevelingOverview surfaces missing-role flag for dangling rewards`() {
+        every { levelRoleRewardService.listForGuild(guildId) } returns listOf(
+            database.dto.LevelRoleRewardDto(guildId = guildId, level = 5, roleId = 555L),
+            database.dto.LevelRoleRewardDto(guildId = guildId, level = 10, roleId = 666L),
+        )
+        val liveRole = mockk<net.dv8tion.jda.api.entities.Role>(relaxed = true).also {
+            every { it.name } returns "Veteran"
+            every { it.colorRaw } returns 0
+        }
+        every { guild.getRoleById(555L) } returns liveRole
+        every { guild.getRoleById(666L) } returns null
+        every { guild.roles } returns emptyList()
+        every { titleService.listAll() } returns emptyList()
+
+        val overview = service.getLevelingOverview(guildId)
+
+        assertNotNull(overview)
+        assertEquals(2, overview!!.levelRewards.size)
+        assertFalse(overview.levelRewards[0].roleMissing)
+        assertEquals("Veteran", overview.levelRewards[0].roleName)
+        assertTrue(overview.levelRewards[1].roleMissing)
+        assertEquals("(deleted role)", overview.levelRewards[1].roleName)
     }
 }

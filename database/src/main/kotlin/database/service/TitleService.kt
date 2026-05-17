@@ -11,4 +11,12 @@ interface TitleService {
     fun listOwned(discordId: Long): List<UserOwnedTitleDto>
     fun owns(discordId: Long, titleId: Long): Boolean
     fun recordPurchase(discordId: Long, titleId: Long): UserOwnedTitleDto
+
+    /**
+     * Update the level gate on an existing title. Returns the updated
+     * row, or null if no title exists with [titleId]. [requiredLevel]
+     * must be `>= 0`; the caller is expected to validate before calling.
+     * A value of 0 means "no gate" (default).
+     */
+    fun updateRequiredLevel(titleId: Long, requiredLevel: Int): TitleDto?
 }

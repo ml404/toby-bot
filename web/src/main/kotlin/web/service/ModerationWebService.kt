@@ -4,10 +4,12 @@ import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UserDto
+import database.dto.LevelRoleRewardDto
 import database.service.CasinoAdminService
 import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.JackpotService
+import database.service.LevelRoleRewardService
 import database.service.LotteryHelper
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
@@ -43,6 +45,7 @@ class ModerationWebService(
     private val jackpotService: JackpotService,
     private val casinoAdminService: CasinoAdminService,
     private val jackpotLotteryService: JackpotLotteryService,
+    private val levelRoleRewardService: LevelRoleRewardService,
     private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
@@ -60,6 +63,7 @@ class ModerationWebService(
         private val CHANNEL_CONFIG_ALLOWLIST: Set<ConfigDto.Configurations> = setOf(
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.LEADERBOARD_CHANNEL,
+            ConfigDto.Configurations.LEVEL_UP_CHANNEL,
         )
 
         /** Allow-list for the admin-only `create-admin-only-channel`
@@ -510,6 +514,107 @@ class ModerationWebService(
                     openedNew = false, newSeeded = 0L,
                 )
         }
+    }
+
+    // ---------------- Leveling moderation ----------------
+
+    /**
+     * Build the data backing the per-guild leveling moderation page: the
+     * current `(level, role)` reward bindings joined to live JDA role
+     * info (so missing/renamed roles surface clearly), and every title
+     * with its current `requiredLevel` so admins can gate purchases.
+     * Returns null if JDA can't see the guild.
+     */
+    fun getLevelingOverview(guildId: Long): LevelingOverview? {
+        val guild = jda.getGuildById(guildId) ?: return null
+        val rewards = levelRoleRewardService.listForGuild(guildId).map { dto ->
+            val role = guild.getRoleById(dto.roleId)
+            LevelRoleRewardView(
+                level = dto.level,
+                roleId = dto.roleId.toString(),
+                roleName = role?.name ?: "(deleted role)",
+                roleColorHex = role?.colorRaw?.takeIf { it != 0 }?.let { String.format("#%06x", it and 0xFFFFFF) },
+                roleMissing = role == null,
+            )
+        }
+        val roles = guild.roles
+            .filter { !it.isManaged && it.idLong != guild.idLong } // hide @everyone and integration roles
+            .sortedByDescending { it.position }
+            .map { RoleInfo(id = it.id, name = it.name) }
+        val titles = titleService.listAll().map { t ->
+            TitleGateView(
+                id = t.id ?: 0L,
+                label = t.label,
+                colorHex = t.colorHex,
+                cost = t.cost,
+                requiredLevel = t.requiredLevel,
+            )
+        }
+        return LevelingOverview(
+            guildId = guild.id,
+            guildName = guild.name,
+            levelRewards = rewards,
+            roles = roles,
+            titles = titles,
+        )
+    }
+
+    /**
+     * Upsert a `(level, roleId)` binding. Owner-only. The level must be
+     * a positive integer (level 0 is the starting state — rewards at 0
+     * would fire on every new user). The role must exist in the guild
+     * and must not be managed (integration-owned roles can't be assigned
+     * by the bot). Returns null on success, otherwise a user-facing
+     * error message.
+     */
+    fun upsertLevelReward(
+        actorDiscordId: Long,
+        guildId: Long,
+        level: Int,
+        roleId: Long,
+    ): String? {
+        if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        if (level <= 0) return "Level must be 1 or higher."
+        val role = guild.getRoleById(roleId) ?: return "Role not found in this server."
+        if (role.isManaged) return "That role is managed by an integration and can't be assigned by the bot."
+        if (!guild.selfMember.canInteract(role)) {
+            return "The bot's highest role is below ${role.name} — move TobyBot's role above it to allow assignment."
+        }
+        levelRoleRewardService.upsert(
+            LevelRoleRewardDto(guildId = guildId, level = level, roleId = roleId)
+        )
+        return null
+    }
+
+    /**
+     * Drop the `(guildId, level)` binding. Owner-only. No-op if no row
+     * exists at that level — surfaces success either way so the UI's
+     * delete button is idempotent.
+     */
+    fun deleteLevelReward(actorDiscordId: Long, guildId: Long, level: Int): String? {
+        if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
+        levelRoleRewardService.delete(guildId, level)
+        return null
+    }
+
+    /**
+     * Set `required_level` on a title. Owner-only. A value of 0 means
+     * "no gate" (the default). Returns null on success or a user-facing
+     * error message.
+     */
+    fun setTitleRequiredLevel(
+        actorDiscordId: Long,
+        guildId: Long,
+        titleId: Long,
+        requiredLevel: Int,
+    ): String? {
+        if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
+        if (requiredLevel < 0) return "Required level must be zero or higher."
+        if (requiredLevel > 1000) return "Required level can't exceed 1000."
+        titleService.updateRequiredLevel(titleId, requiredLevel)
+            ?: return "Title not found."
+        return null
     }
 
     /**
@@ -975,14 +1080,19 @@ class ModerationWebService(
                 n.toString()
             }
             ConfigDto.Configurations.LEVEL_UP_CHANNEL -> {
-                val id = rawValue.trim()
-                if (id.isEmpty()) return "Channel id is required."
-                val idLong = id.toLongOrNull()
-                    ?: return "Channel id must be numeric."
-                if (guild.getTextChannelById(idLong) == null) {
-                    return "No text channel with that id exists in this server."
+                val v = rawValue.trim()
+                if (v.isEmpty()) {
+                    // Empty value clears the override. LevelUpListener falls
+                    // back to the originating channel (where the XP was
+                    // earned) and finally to the guild's system channel.
+                    ""
+                } else {
+                    val id = v.toLongOrNull()
+                        ?: return "Channel id must be numeric."
+                    val channel = guild.getTextChannelById(id)
+                        ?: return "No text channel with that id exists in this server."
+                    channel.id
                 }
-                id
             }
             ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS -> {
                 // Empty resets to default. Otherwise must parse cleanly via
@@ -1472,6 +1582,45 @@ data class VoiceChannelInfo(
 data class TextChannelInfo(
     val id: String,
     val name: String
+)
+
+/**
+ * Subset of guild data needed to render the leveling moderation tab.
+ * Sits alongside [GuildOverview] (which the tab also pulls — config map
+ * + textChannels + categories for the channel picker / create-channel
+ * widget). This struct adds the leveling-specific projections: live
+ * level→role bindings with role display info, and titles with their
+ * current `requiredLevel` so admins can gate purchases.
+ */
+data class LevelingOverview(
+    val guildId: String,
+    val guildName: String,
+    val levelRewards: List<LevelRoleRewardView>,
+    val roles: List<RoleInfo>,
+    val titles: List<TitleGateView>,
+)
+
+data class LevelRoleRewardView(
+    val level: Int,
+    val roleId: String,
+    val roleName: String,
+    val roleColorHex: String?,
+    /** True if the role id no longer resolves in JDA — surfaced in the
+     *  UI so admins can clean up dangling rewards after a role delete. */
+    val roleMissing: Boolean,
+)
+
+data class RoleInfo(
+    val id: String,
+    val name: String,
+)
+
+data class TitleGateView(
+    val id: Long,
+    val label: String,
+    val colorHex: String?,
+    val cost: Long,
+    val requiredLevel: Int,
 )
 
 /**

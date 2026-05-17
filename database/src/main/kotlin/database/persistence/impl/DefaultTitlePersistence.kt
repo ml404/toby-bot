@@ -49,4 +49,10 @@ class DefaultTitlePersistence : TitlePersistence {
         entityManager.flush()
         return owned
     }
+
+    override fun update(title: TitleDto): TitleDto {
+        val merged = entityManager.merge(title)
+        entityManager.flush()
+        return merged
+    }
 }

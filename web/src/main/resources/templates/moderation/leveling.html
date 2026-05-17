@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Leveling', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'leveling')}"></div>
+
+    <!--
+        Leveling moderation: per-guild XP tuning + level-up announcement
+        channel + level→role rewards + per-title level gating. Split into
+        four <details> sections so admins can collapse the bits they're
+        not tuning. The four config rows reuse the canonical
+        .config-row + .save-config wiring picked up by moderationCommon.js;
+        the channel picker mirrors lottery.html's LOTTERY_CHANNEL block;
+        role-reward + title-gate widgets are wired in /js/moderation/leveling.js.
+    -->
+    <section class="mod-panel" data-panel="leveling">
+        <p class="muted mb-4">
+            Engagement XP is awarded by message activity, slash commands,
+            and voice sessions, subject to a per-guild daily cap. Hitting
+            a level threshold can grant a Discord role and unlock titles
+            gated to that level. Configure all of it here.
+        </p>
+
+        <div class="mod-card mod-card-wide leveling-admin-card">
+            <details class="config-section" open>
+                <summary>XP &amp; level perks</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="DAILY_XP_CAP">
+                        <label>
+                            Daily XP cap
+                            <span class="config-hint">
+                                Per-user ceiling on XP earned in a UTC day across all
+                                sources (messages, commands, voice intros, voice
+                                sessions). Default 1000.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['DAILY_XP_CAP']}"
+                               placeholder="1000"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="DAILY_CAP_PER_LEVEL_BONUS">
+                        <label>
+                            Daily credit cap bonus per level
+                            <span class="config-hint">
+                                Extra social-credit headroom added to DAILY_CREDIT_CAP
+                                per level the user has reached. Default +10/level;
+                                0 disables the perk.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="1000"
+                               th:value="${overview.config['DAILY_CAP_PER_LEVEL_BONUS']}"
+                               placeholder="10"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="UBI_PER_LEVEL_BONUS">
+                        <label>
+                            UBI bonus per level
+                            <span class="config-hint">
+                                Extra credits added to each daily UBI grant per level.
+                                Default +5/level; 0 disables the perk.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="1000"
+                               th:value="${overview.config['UBI_PER_LEVEL_BONUS']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Level-up announcement channel</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LEVEL_UP_CHANNEL">
+                        <label>
+                            Announce channel
+                            <span class="config-hint">
+                                Level-up messages land here. Leave on "fall back"
+                                to post in the channel where the XP was earned
+                                (and the guild's system channel for voice-derived
+                                level-ups).
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="">&mdash; fall back to message/system &mdash;</option>
+                            <option th:each="tc : ${overview.textChannels}"
+                                    th:value="${tc.id}"
+                                    th:text="'#' + ${tc.name}"
+                                    th:selected="${overview.config['LEVEL_UP_CHANNEL'] == tc.id}"></option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-create-channel">
+                        <div class="config-create-channel-text">
+                            <strong>Create a read-only level-up channel</strong>
+                            <p class="muted">
+                                Creates a new text channel where @everyone can read but
+                                only TobyBot can post; auto-sets the announce channel
+                                above to it. Bot needs the Manage Channels permission.
+                            </p>
+                        </div>
+                        <form class="config-create-channel-form"
+                              data-target-config="LEVEL_UP_CHANNEL"
+                              data-default-name="level-ups">
+                            <label class="config-create-channel-field">
+                                <span>Channel name</span>
+                                <input type="text" name="name" value="level-ups"
+                                       maxlength="90" th:disabled="${!isOwner}">
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>Category</span>
+                                <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                    <option value="">&mdash; top-level &mdash;</option>
+                                    <option th:each="cat : ${overview.categories}"
+                                            th:value="${cat.id}"
+                                            th:text="${cat.name}"></option>
+                                </select>
+                            </label>
+                            <label class="config-create-channel-field">
+                                <span>or new category name</span>
+                                <input type="text" name="newCategoryName"
+                                       maxlength="100" placeholder="(blank = use existing)"
+                                       th:disabled="${!isOwner}">
+                            </label>
+                            <button type="submit" class="btn config-create-channel-btn"
+                                    th:disabled="${!isOwner}">Create</button>
+                        </form>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Role rewards</summary>
+                <p class="muted mb-3">
+                    Bind a Discord role to a level threshold — TobyBot assigns it the
+                    moment the user crosses that level. Make sure TobyBot's role sits
+                    above any role you bind here, or the assign will fail at runtime.
+                </p>
+
+                <div class="leveling-rewards" id="leveling-rewards-list">
+                    <p class="muted" th:if="${#lists.isEmpty(leveling.levelRewards)}">
+                        No role rewards bound yet.
+                    </p>
+                    <table class="leveling-rewards-table" th:if="${not #lists.isEmpty(leveling.levelRewards)}">
+                        <thead>
+                            <tr>
+                                <th>Level</th>
+                                <th>Role</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${leveling.levelRewards}" th:data-level="${r.level}">
+                                <td th:text="${r.level}">1</td>
+                                <td>
+                                    <span class="title-pill"
+                                          th:style="${r.roleColorHex != null ? 'color: ' + r.roleColorHex : ''}"
+                                          th:text="${r.roleName}">Role</span>
+                                    <span class="badge off" th:if="${r.roleMissing}">missing</span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger leveling-reward-delete"
+                                            th:data-level="${r.level}"
+                                            th:disabled="${!isOwner}">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <form id="leveling-reward-add" class="leveling-reward-add">
+                    <label>
+                        <span>Level</span>
+                        <input type="number" name="level" min="1" max="1000"
+                               placeholder="10" th:disabled="${!isOwner}">
+                    </label>
+                    <label>
+                        <span>Role</span>
+                        <select name="roleId" th:disabled="${!isOwner}">
+                            <option value="">&mdash; pick a role &mdash;</option>
+                            <option th:each="role : ${leveling.roles}"
+                                    th:value="${role.id}"
+                                    th:text="${role.name}"></option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn" th:disabled="${!isOwner}">Add reward</button>
+                </form>
+            </details>
+
+            <details class="config-section">
+                <summary th:text="'Title gating (' + ${#lists.size(leveling.titles)} + ' titles)'">Title gating</summary>
+                <p class="muted mb-3">
+                    Set a minimum level a user must reach before they can buy a title.
+                    Crossing that level also auto-unlocks the title for free, so this
+                    doubles as a level-up reward path. 0 means "no gate".
+                </p>
+
+                <table class="leveling-titles-table" th:if="${not #lists.isEmpty(leveling.titles)}">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Cost</th>
+                            <th>Required level</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="t : ${leveling.titles}" th:data-title-id="${t.id}">
+                            <td>
+                                <span class="title-pill"
+                                      th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}"
+                                      th:text="${t.label}">Title</span>
+                            </td>
+                            <td th:text="${t.cost}">0</td>
+                            <td>
+                                <input type="number" class="leveling-title-level-input"
+                                       min="0" max="1000"
+                                       th:value="${t.requiredLevel}"
+                                       th:disabled="${!isOwner}">
+                            </td>
+                            <td>
+                                <button type="button" class="btn leveling-title-save"
+                                        th:data-title-id="${t.id}"
+                                        th:disabled="${!isOwner}">Save</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="muted" th:if="${#lists.isEmpty(leveling.titles)}">
+                    No titles defined yet — they live in the `title` table and seed via the V13 migration.
+                </p>
+            </details>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/leveling.js}"></script>
+</body>
+</html>
