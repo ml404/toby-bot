@@ -304,6 +304,205 @@ class TrackSchedulerTest {
     }
 
     @Test
+    fun `queueIntro starts intro immediately when nothing is playing`() {
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns null
+        every { player.startTrack(intro, true) } returns true
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        verify(exactly = 1) { player.startTrack(intro, true) }
+        verify(exactly = 0) { player.startTrack(intro, false) }
+        assertFalse(scheduler.hasResumeAfterIntro())
+        assertTrue(scheduler.isIntroTrack(intro))
+    }
+
+    @Test
+    fun `queueIntro preempts current track and stores clone in resume slot`() {
+        val current = mockTrack("Current", volume = 40)
+        val clone = mockTrack("Current clone", volume = 40)
+        every { current.position } returns 12345L
+        every { current.userData } returns 40
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        verify(exactly = 1) { current.makeClone() }
+        verify(exactly = 1) { clone.position = 12345L }
+        verify(exactly = 1) { player.startTrack(intro, false) }
+        assertTrue(scheduler.hasResumeAfterIntro())
+        assertTrue(scheduler.isIntroTrack(intro))
+    }
+
+    @Test
+    fun `queueIntro copies volume from preempted track onto the clone`() {
+        val current = mockTrack("Current", volume = 33)
+        val clone = mockTrack("Clone")
+        every { current.position } returns 0L
+        every { current.userData } returns 33
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        verify { clone.userData = 33 }
+    }
+
+    @Test
+    fun `queueIntro preserves clip bounds and requester id of preempted track`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 500L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        every { player.startTrack(current, true) } returns true
+        scheduler.queue(current, 100L, 9000L, 50, requesterId = 777L)
+
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        assertEquals(777L, scheduler.getRequesterId(clone))
+    }
+
+    @Test
+    fun `onTrackEnd resumes preempted track when intro ends and does not advance queue`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 4000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        // Pre-existing user-queued track that should NOT be advanced when the intro ends.
+        val queued = mockTrack("Queued")
+        scheduler.queue.offer(queued)
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.FINISHED)
+
+        verify(exactly = 1) { player.startTrack(clone, false) }
+        // The queued track must remain queued — intro-resume takes priority.
+        verify(exactly = 0) { player.startTrack(queued, false) }
+        assertEquals(1, scheduler.queue.size)
+        assertFalse(scheduler.hasResumeAfterIntro())
+    }
+
+    @Test
+    fun `onTrackEnd resumes preempted track when intro ends via STOPPED (clip marker)`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 4000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED)
+
+        verify(exactly = 1) { player.startTrack(clone, false) }
+    }
+
+    @Test
+    fun `onTrackEnd does not resume when ended track is not an intro`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 1000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60)
+        // Pretend an unrelated track ends — the resume slot must stay intact.
+        val unrelated = mockTrack("Unrelated")
+
+        scheduler.onTrackEnd(player, unrelated, AudioTrackEndReason.FINISHED)
+
+        verify(exactly = 0) { player.startTrack(clone, false) }
+        assertTrue(scheduler.hasResumeAfterIntro())
+    }
+
+    @Test
+    fun `queueIntro does not overwrite resume slot when one is already occupied`() {
+        val current = mockTrack("Current")
+        val firstClone = mockTrack("First clone")
+        every { current.position } returns 1000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns firstClone
+
+        val intro1 = mockTrack("Intro 1")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro1, 0L, null, 60)
+        assertTrue(scheduler.hasResumeAfterIntro())
+
+        // Now another member joins; intro2 fires while intro1 is "playing".
+        val intro2 = mockTrack("Intro 2")
+        val secondClone = mockTrack("Second clone")
+        every { intro1.makeClone() } returns secondClone
+        every { player.playingTrack } returns intro1
+        every { player.startTrack(intro2, true) } returns false
+
+        scheduler.queueIntro(intro2, 0L, null, 60)
+
+        // intro1's clone must still be the one in the resume slot.
+        verify(exactly = 0) { intro1.makeClone() }
+        // intro2 should be queued (not preempt).
+        verify(exactly = 0) { player.startTrack(intro2, false) }
+        verify(exactly = 1) { player.startTrack(intro2, true) }
+        assertTrue(scheduler.queue.contains(intro2))
+        // Resuming the intro1 → preempted track still resumes firstClone, not secondClone.
+        scheduler.onTrackEnd(player, intro1, AudioTrackEndReason.FINISHED)
+        verify(exactly = 1) { player.startTrack(firstClone, false) }
+        verify(exactly = 0) { player.startTrack(secondClone, false) }
+    }
+
+    @Test
+    fun `stopTrack clears resume slot so subsequent intro end does not auto-resume`() {
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 1000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+        assertTrue(scheduler.hasResumeAfterIntro())
+
+        scheduler.stopTrack(true)
+        assertFalse(scheduler.hasResumeAfterIntro())
+
+        // Simulate the intro ending after stop — must NOT resume the clone.
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED)
+        verify(exactly = 0) { player.startTrack(clone, false) }
+    }
+
+    @Test
+    fun `intro-resume runs before loop branch — looping intro does not repeat`() {
+        scheduler.isLooping = true
+        val current = mockTrack("Current")
+        val clone = mockTrack("Clone")
+        every { current.position } returns 2000L
+        every { current.userData } returns 50
+        every { current.makeClone() } returns clone
+        val intro = mockTrack("Intro")
+        val introClone = mockTrack("Intro clone")
+        every { intro.makeClone() } returns introClone
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.FINISHED)
+
+        verify(exactly = 1) { player.startTrack(clone, false) }
+        // The intro must NOT be re-cloned-and-restarted by the loop branch.
+        verify(exactly = 0) { player.startTrack(introClone, false) }
+    }
+
+    @Test
     fun `SchedulerEvents publisher being null does not crash event-emitting paths`() {
         // Ensure publisher is null (default in tests).
         SchedulerEvents.publisher = null

@@ -554,6 +554,70 @@ class VoiceEventHandlerTest {
     }
 
     @Test
+    fun `member join routes intro through loadAndPlayIntro (not loadAndPlay)`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 9L
+        every { guild.id } returns "9"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns channel
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+
+        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "9") } returns
+            ConfigDto().apply { value = "30" }
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "9") } returns null
+
+        val musicDto = mockk<MusicDto>(relaxed = true) {
+            every { fileName } returns "https://example.com/intro.mp3"
+            every { musicBlob } returns null
+            every { introVolume } returns 75
+            every { startMs } returns null
+            every { endMs } returns null
+        }
+        every { userDtoHelper.calculateUserDto(1L, 9L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 9L
+            every { musicDtos } returns mutableListOf(musicDto)
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(atLeast = 1) {
+            audioPlayerManager.loadAndPlayIntro(
+                guild, null, "https://example.com/intro.mp3", 30, 0L, 75, null,
+            )
+        }
+        // Intros must never go through the regular loadAndPlay path now.
+        verify(exactly = 0) {
+            audioPlayerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any())
+        }
+        verify(exactly = 0) {
+            audioPlayerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
     fun `no intro award when user has no musicDto`() {
         val guild = mockk<Guild>(relaxed = true)
         val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)

@@ -30,8 +30,14 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val trackClipBounds = ConcurrentHashMap<AudioTrack, Pair<Long, Long>>()
     private val trackRequesters = ConcurrentHashMap<AudioTrack, Long>()
+    private val introTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
+    private var resumeAfterIntro: AudioTrack? = null
 
     fun getRequesterId(track: AudioTrack): Long? = trackRequesters[track]
+
+    internal fun hasResumeAfterIntro(): Boolean = resumeAfterIntro != null
+
+    internal fun isIntroTrack(track: AudioTrack): Boolean = introTracks.contains(track)
 
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int, requesterId: Long? = null) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
@@ -40,6 +46,65 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
             "Adding to queue: `${track.info.title}` by `${track.info.author}` starting at '${startPosition} ms'$endNote with volume '$volume'",
             deleteDelay,
         )
+        prepareTrack(track, startPosition, endPosition, volume, requesterId)
+        synchronized(queue) {
+            if (!player.startTrack(track, true)) {
+                queue.offer(track)
+            }
+        }
+        publishQueueChanged()
+    }
+
+    /**
+     * Play an intro track immediately, preempting whatever is currently playing.
+     * The preempted track is cloned (with its live position) and stored so it
+     * resumes after the intro finishes. If nothing is playing, falls back to the
+     * regular queue path. If an intro is already in flight (resume slot already
+     * occupied), this intro is queued normally rather than overwriting the slot.
+     */
+    fun queueIntro(
+        introTrack: AudioTrack,
+        startPosition: Long,
+        endPosition: Long?,
+        volume: Int,
+        requesterId: Long? = null,
+    ) {
+        logger.info("Preparing intro ${introTrack.info.title} for guild $guildId")
+        prepareTrack(introTrack, startPosition, endPosition, volume, requesterId)
+        val currentlyPlaying = player.playingTrack
+        if (currentlyPlaying == null || resumeAfterIntro != null) {
+            // No track to preempt, or a resume slot is already occupied by an
+            // earlier intro — fall back to the standard queue-or-start path so
+            // we don't clobber the original music with a second intro.
+            synchronized(queue) {
+                if (!player.startTrack(introTrack, true)) {
+                    queue.offer(introTrack)
+                }
+            }
+            introTracks.add(introTrack)
+            publishQueueChanged()
+            return
+        }
+        // Snapshot the currently-playing track into a resume slot before the
+        // intro replaces it.
+        val clone = currentlyPlaying.makeClone()
+        clone.position = currentlyPlaying.position
+        clone.userData = currentlyPlaying.userData
+        trackClipBounds[currentlyPlaying]?.let { trackClipBounds[clone] = it }
+        trackRequesters[currentlyPlaying]?.let { trackRequesters[clone] = it }
+        resumeAfterIntro = clone
+        introTracks.add(introTrack)
+        player.startTrack(introTrack, false)
+        publishQueueChanged()
+    }
+
+    private fun prepareTrack(
+        track: AudioTrack,
+        startPosition: Long,
+        endPosition: Long?,
+        volume: Int,
+        requesterId: Long?,
+    ) {
         track.position = startPosition
         track.userData = volume
         requesterId?.let { trackRequesters[track] = it }
@@ -55,12 +120,6 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
                 }
             })
         }
-        synchronized(queue) {
-            if (!player.startTrack(track, true)) {
-                queue.offer(track)
-            }
-        }
-        publishQueueChanged()
     }
 
     // Back-compat overload for the pre-clip call sites; currently unused but keeps
@@ -104,10 +163,22 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
         trackClipBounds.remove(track)
         trackRequesters.remove(track)
+        val wasIntro = introTracks.remove(track)
         event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
         if (endReason.mayStartNext) {
+            // An intro just finished and we have a preempted track waiting:
+            // restart that, do NOT advance the regular queue (so user-queued
+            // tracks added during the intro stay queued behind the resumed one).
+            if (wasIntro && resumeAfterIntro != null) {
+                val resume = resumeAfterIntro!!
+                resumeAfterIntro = null
+                player.setVolumeToPrevious()
+                logger.info("Resuming preempted track ${resume.info.title} at ${resume.position} ms")
+                player.startTrack(resume, false)
+                return
+            }
             handleNextTrack(player, track)
         }
     }
@@ -196,6 +267,10 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
 
     fun stopTrack(isStoppable: Boolean): Boolean {
         if (!isStoppable) return false
+        // A user-initiated stop should not auto-resume a preempted track when
+        // the in-flight intro ends.
+        resumeAfterIntro = null
+        introTracks.clear()
         player.stopTrack()
         player.setVolumeToPrevious()
         return true

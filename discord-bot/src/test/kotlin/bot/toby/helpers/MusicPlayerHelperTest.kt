@@ -5,6 +5,8 @@ import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import database.dto.MusicDto
+import database.dto.UserDto
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import net.dv8tion.jda.api.entities.Guild
@@ -178,6 +180,109 @@ class MusicPlayerHelperTest {
                 it.title == "Title" && it.description?.contains("Author") == true
             })
             messageEditAction.setComponents(any<ActionRow>()).queue()
+        }
+    }
+
+    @Test
+    fun `playUserIntro routes through loadAndPlayIntro (not loadAndPlay) when user has musicDto`() {
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+
+            val musicDto = MusicDto().apply {
+                fileName = "https://example.com/intro.mp3"
+                introVolume = 88
+                startMs = 0
+                endMs = 2500
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(musicDto)
+            }
+
+            every {
+                playerManager.loadAndPlayIntro(
+                    guildMock, null, "https://example.com/intro.mp3", 5,
+                    0L, 88, 2500L,
+                )
+            } just Runs
+            every { playerManager.setPreviousVolume(50) } just Runs
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            verify(exactly = 1) {
+                playerManager.loadAndPlayIntro(
+                    guildMock, null, "https://example.com/intro.mp3", 5,
+                    0L, 88, 2500L,
+                )
+            }
+            // Crucially: the old code path must NOT be used for intros.
+            verify(exactly = 0) {
+                playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any(), any())
+            }
+            verify(exactly = 1) { playerManager.setPreviousVolume(50) }
+        } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `playUserIntro falls back to currentVolume when musicDto introVolume is null`() {
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 42
+
+            val musicDto = MusicDto().apply {
+                fileName = "https://example.com/intro.mp3"
+                introVolume = null
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(musicDto)
+            }
+
+            every {
+                playerManager.loadAndPlayIntro(
+                    guildMock, null, "https://example.com/intro.mp3", 5,
+                    0L, 42, null,
+                )
+            } just Runs
+            every { playerManager.setPreviousVolume(42) } just Runs
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            verify(exactly = 1) {
+                playerManager.loadAndPlayIntro(
+                    guildMock, null, "https://example.com/intro.mp3", 5,
+                    0L, 42, null,
+                )
+            }
+        } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `playUserIntro does nothing when user has no musicDto`() {
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf()
+            }
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            verify(exactly = 0) {
+                playerManager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any())
+            }
+            verify(exactly = 0) {
+                playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any(), any())
+            }
+        } finally {
+            unmockkObject(PlayerManager.Companion)
         }
     }
 
