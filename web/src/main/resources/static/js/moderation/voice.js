@@ -1,32 +1,10 @@
-// Voice tab: per-channel mute/unmute, bulk member move.
+// Voice tab: bulk member move.
 (function () {
     'use strict';
 
     const ctx = window.ModerationCommon;
     if (!ctx) return;
     const { guildId, postJson } = ctx;
-
-    document.querySelectorAll('.mute-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const card = btn.closest('.voice-card');
-            const channelId = card.dataset.channelId;
-            const mute = btn.dataset.mute === 'true';
-            btn.disabled = true;
-            postJson('/moderation/' + guildId + '/voice/' + channelId + '/mute', { mute: mute })
-                .then(r => {
-                    btn.disabled = false;
-                    if (r && r.ok) {
-                        const label = mute ? 'muted' : 'unmuted';
-                        const n = (r.changed || []).length;
-                        toast(label + ' ' + n + ' member' + (n === 1 ? '' : 's') + '.', 'success');
-                        if (r.skipped && r.skipped.length) toast('Skipped: ' + r.skipped.join(', '), 'info');
-                    } else {
-                        toast(r?.error || 'Could not change mute.', 'error');
-                    }
-                })
-                .catch(() => { btn.disabled = false; toast('Network error.', 'error'); });
-        });
-    });
 
     const moveForm = document.querySelector('.move-form');
     if (moveForm) {

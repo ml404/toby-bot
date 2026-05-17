@@ -14,24 +14,9 @@
 
     <section class="mod-panel" data-panel="voice">
         <p class="muted mb-4">
-            Pick a voice channel to mass-mute, unmute, or move its occupants.
-            Requires the bot and you to have the Mute Members / Move Members
-            permissions.
+            Move voice-channel occupants between channels. Requires the bot
+            and you to have the Move Members permission.
         </p>
-        <div class="voice-grid">
-            <div class="voice-card" th:each="vc : ${overview.voiceChannels}"
-                 th:attr="data-channel-id=${vc.id}">
-                <header>
-                    <span class="vc-name" th:text="${vc.name}">#channel</span>
-                    <span class="vc-count"
-                          th:text="${#lists.size(vc.memberIds)} + ' in channel'">0 in channel</span>
-                </header>
-                <div class="voice-actions">
-                    <button type="button" class="btn mute-btn" data-mute="true">Shh</button>
-                    <button type="button" class="btn mute-btn" data-mute="false">Talk</button>
-                </div>
-            </div>
-        </div>
 
         <h2 class="mod-section-title">Move members</h2>
         <form class="move-form">

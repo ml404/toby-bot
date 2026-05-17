@@ -18,11 +18,15 @@ import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import java.time.Duration
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.util.EnumSet
+import java.util.concurrent.TimeUnit
 
 @Service
 class ModerationWebService(
@@ -1114,6 +1118,204 @@ class ModerationWebService(
         return null
     }
 
+    fun banMember(
+        actorDiscordId: Long,
+        guildId: Long,
+        targetDiscordId: Long,
+        reason: String?,
+        deleteDays: Int
+    ): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val target = guild.getMemberById(targetDiscordId) ?: return "Target is not a member of that server."
+        val bot = guild.selfMember
+        val clampedDays = deleteDays.coerceIn(0, 7)
+        if (!actor.canInteract(target) || !actor.hasPermission(Permission.BAN_MEMBERS)) {
+            return "You can't ban ${target.effectiveName}."
+        }
+        if (!bot.canInteract(target) || !bot.hasPermission(Permission.BAN_MEMBERS)) {
+            return "Bot can't ban ${target.effectiveName}."
+        }
+        return try {
+            guild.ban(target, clampedDays, TimeUnit.DAYS)
+                .reason(reason?.takeIf { it.isNotBlank() } ?: "Banned via web moderation UI.")
+                .complete()
+            null
+        } catch (e: Exception) {
+            "Could not ban: ${e.message}"
+        }
+    }
+
+    fun unbanUser(actorDiscordId: Long, guildId: Long, targetDiscordId: Long): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val bot = guild.selfMember
+        if (!actor.hasPermission(Permission.BAN_MEMBERS)) return "You need the Ban Members permission."
+        if (!bot.hasPermission(Permission.BAN_MEMBERS)) return "Bot needs the Ban Members permission."
+        return try {
+            guild.unban(UserSnowflake.fromId(targetDiscordId))
+                .reason("Unbanned via web moderation UI.")
+                .complete()
+            null
+        } catch (e: Exception) {
+            "Could not unban: ${e.message}"
+        }
+    }
+
+    fun timeoutMember(
+        actorDiscordId: Long,
+        guildId: Long,
+        targetDiscordId: Long,
+        minutes: Long,
+        reason: String?
+    ): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val target = guild.getMemberById(targetDiscordId) ?: return "Target is not a member of that server."
+        val bot = guild.selfMember
+        if (minutes < 1 || minutes > 28L * 24L * 60L) {
+            return "Duration must be between 1 and ${28L * 24L * 60L} minutes."
+        }
+        if (!actor.canInteract(target) || !actor.hasPermission(Permission.MODERATE_MEMBERS)) {
+            return "You can't timeout ${target.effectiveName}."
+        }
+        if (!bot.canInteract(target) || !bot.hasPermission(Permission.MODERATE_MEMBERS)) {
+            return "Bot can't timeout ${target.effectiveName}."
+        }
+        return try {
+            target.timeoutFor(Duration.ofMinutes(minutes))
+                .reason(reason?.takeIf { it.isNotBlank() } ?: "Timed out via web moderation UI.")
+                .complete()
+            null
+        } catch (e: Exception) {
+            "Could not timeout: ${e.message}"
+        }
+    }
+
+    fun untimeoutMember(actorDiscordId: Long, guildId: Long, targetDiscordId: Long): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not a member of that server."
+        val target = guild.getMemberById(targetDiscordId) ?: return "Target is not a member of that server."
+        val bot = guild.selfMember
+        if (!actor.canInteract(target) || !actor.hasPermission(Permission.MODERATE_MEMBERS)) {
+            return "You can't untimeout ${target.effectiveName}."
+        }
+        if (!bot.canInteract(target) || !bot.hasPermission(Permission.MODERATE_MEMBERS)) {
+            return "Bot can't untimeout ${target.effectiveName}."
+        }
+        return try {
+            target.removeTimeout().reason("Cleared via web moderation UI.").complete()
+            null
+        } catch (e: Exception) {
+            "Could not remove timeout: ${e.message}"
+        }
+    }
+
+    fun purgeMessages(
+        actorDiscordId: Long,
+        guildId: Long,
+        channelId: Long,
+        count: Int,
+        filterUserId: Long?
+    ): PurgeResult {
+        if (!canModerate(actorDiscordId, guildId)) {
+            return PurgeResult(error = "You are not allowed to moderate this server.")
+        }
+        if (count < 1 || count > 100) {
+            return PurgeResult(error = "Count must be between 1 and 100.")
+        }
+        val guild = jda.getGuildById(guildId) ?: return PurgeResult(error = "Bot is not in that server.")
+        val actor = guild.getMemberById(actorDiscordId)
+            ?: return PurgeResult(error = "You are not in that server.")
+        val bot = guild.selfMember
+        val channel = guild.getTextChannelById(channelId)
+            ?: return PurgeResult(error = "Text channel not found.")
+        if (!actor.hasPermission(channel, Permission.MESSAGE_MANAGE)) {
+            return PurgeResult(error = "You need Manage Messages in that channel.")
+        }
+        if (!bot.hasPermission(channel, Permission.MESSAGE_MANAGE)) {
+            return PurgeResult(error = "Bot needs Manage Messages in that channel.")
+        }
+
+        return try {
+            val history = channel.history.retrievePast(count).complete()
+            val targets = if (filterUserId != null) {
+                history.filter { it.author.idLong == filterUserId }
+            } else history
+            if (targets.isEmpty()) return PurgeResult(deleted = 0)
+            if (targets.size == 1) {
+                targets[0].delete().reason("Purged via web moderation UI.").complete()
+            } else {
+                channel.deleteMessages(targets).complete()
+            }
+            PurgeResult(deleted = targets.size)
+        } catch (e: Exception) {
+            PurgeResult(error = "Could not purge: ${e.message}")
+        }
+    }
+
+    fun lockChannel(
+        actorDiscordId: Long,
+        guildId: Long,
+        channelId: Long,
+        lock: Boolean
+    ): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not in that server."
+        val bot = guild.selfMember
+        val channel = guild.getTextChannelById(channelId) ?: return "Text channel not found."
+        if (!actor.hasPermission(channel, Permission.MANAGE_PERMISSIONS)) {
+            return "You need Manage Permissions in that channel."
+        }
+        if (!bot.hasPermission(channel, Permission.MANAGE_PERMISSIONS)) {
+            return "Bot needs Manage Permissions in that channel."
+        }
+        val everyone = guild.publicRole
+        val sendSet = EnumSet.of(Permission.MESSAGE_SEND)
+        val action = channel.upsertPermissionOverride(everyone)
+        return try {
+            if (lock) {
+                action.deny(sendSet).reason("Locked via web moderation UI.").complete()
+            } else {
+                action.clear(sendSet).reason("Unlocked via web moderation UI.").complete()
+            }
+            null
+        } catch (e: Exception) {
+            "Could not ${if (lock) "lock" else "unlock"} channel: ${e.message}"
+        }
+    }
+
+    fun setSlowmode(
+        actorDiscordId: Long,
+        guildId: Long,
+        channelId: Long,
+        seconds: Int
+    ): String? {
+        if (!canModerate(actorDiscordId, guildId)) return "You are not allowed to moderate this server."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val actor = guild.getMemberById(actorDiscordId) ?: return "You are not in that server."
+        val bot = guild.selfMember
+        val channel = guild.getTextChannelById(channelId) ?: return "Text channel not found."
+        if (seconds < 0 || seconds > 21_600) return "Seconds must be between 0 and 21600."
+        if (!actor.hasPermission(channel, Permission.MANAGE_CHANNEL)) {
+            return "You need Manage Channel in that channel."
+        }
+        if (!bot.hasPermission(channel, Permission.MANAGE_CHANNEL)) {
+            return "Bot needs Manage Channel in that channel."
+        }
+        return try {
+            channel.manager.setSlowmode(seconds).reason("Set via web moderation UI.").complete()
+            null
+        } catch (e: Exception) {
+            "Could not set slowmode: ${e.message}"
+        }
+    }
+
     fun moveMembers(
         actorDiscordId: Long,
         guildId: Long,
@@ -1160,45 +1362,6 @@ class ModerationWebService(
             }
         }
         return MoveResult(moved = moved, skipped = skipped)
-    }
-
-    fun muteVoiceChannel(
-        actorDiscordId: Long,
-        guildId: Long,
-        channelId: Long,
-        mute: Boolean
-    ): MuteResult {
-        if (!canModerate(actorDiscordId, guildId)) {
-            return MuteResult(error = "You are not allowed to moderate this server.")
-        }
-        val guild = jda.getGuildById(guildId) ?: return MuteResult(error = "Bot is not in that server.")
-        val actor = guild.getMemberById(actorDiscordId) ?: return MuteResult(error = "You are not in that server.")
-        val bot = guild.selfMember
-        val channel = guild.getVoiceChannelById(channelId)
-            ?: return MuteResult(error = "Voice channel not found.")
-        if (!actor.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            return MuteResult(error = "You need the Mute Members permission.")
-        }
-        if (!bot.hasPermission(Permission.VOICE_MUTE_OTHERS)) {
-            return MuteResult(error = "Bot needs the Mute Members permission.")
-        }
-
-        val action = if (mute) "Muted" else "Unmuted"
-        val changed = mutableListOf<String>()
-        val skipped = mutableListOf<String>()
-        channel.members.filter { !it.user.isBot }.forEach { target ->
-            if (!actor.canInteract(target)) {
-                skipped += target.effectiveName
-                return@forEach
-            }
-            try {
-                guild.mute(target, mute).reason(action).complete()
-                changed += target.effectiveName
-            } catch (e: Exception) {
-                skipped += "${target.effectiveName}: ${e.message}"
-            }
-        }
-        return MuteResult(changed = changed, skipped = skipped)
     }
 
     fun createPoll(
@@ -1317,8 +1480,7 @@ data class MoveResult(
     val error: String? = null
 )
 
-data class MuteResult(
-    val changed: List<String> = emptyList(),
-    val skipped: List<String> = emptyList(),
+data class PurgeResult(
+    val deleted: Int = 0,
     val error: String? = null
 )

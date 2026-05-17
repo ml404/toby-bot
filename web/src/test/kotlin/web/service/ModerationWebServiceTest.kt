@@ -552,14 +552,88 @@ class ModerationWebServiceTest {
         assertEquals("Select at least one member to move.", result.error)
     }
 
-    // ---- muteVoiceChannel ----
+    // ---- banMember / unbanUser / timeoutMember / untimeoutMember ----
 
     @Test
-    fun `muteVoiceChannel denied for non-moderator`() {
+    fun `banMember denied for non-moderator`() {
         mockMember(plainUserId)
         every { introWebService.isSuperUser(plainUserId, guildId) } returns false
-        val result = service.muteVoiceChannel(plainUserId, guildId, 555L, true)
+        val err = service.banMember(plainUserId, guildId, targetUserId, null, 0)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `unbanUser denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val err = service.unbanUser(plainUserId, guildId, targetUserId)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `timeoutMember denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val err = service.timeoutMember(plainUserId, guildId, targetUserId, 5L, null)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `timeoutMember rejects out-of-range duration`() {
+        mockMember(ownerId, isOwner = true)
+        mockMember(targetUserId)
+        val err = service.timeoutMember(ownerId, guildId, targetUserId, 0L, null)
+        assertNotNull(err)
+        assertTrue(err!!.contains("1"))
+    }
+
+    @Test
+    fun `untimeoutMember denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val err = service.untimeoutMember(plainUserId, guildId, targetUserId)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    // ---- purgeMessages / lockChannel / setSlowmode ----
+
+    @Test
+    fun `purgeMessages denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val result = service.purgeMessages(plainUserId, guildId, 333L, 10, null)
         assertEquals("You are not allowed to moderate this server.", result.error)
+    }
+
+    @Test
+    fun `purgeMessages rejects count out of range`() {
+        mockMember(ownerId, isOwner = true)
+        val result = service.purgeMessages(ownerId, guildId, 333L, 500, null)
+        assertEquals("Count must be between 1 and 100.", result.error)
+    }
+
+    @Test
+    fun `lockChannel denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val err = service.lockChannel(plainUserId, guildId, 333L, true)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `setSlowmode denied for non-moderator`() {
+        mockMember(plainUserId)
+        every { introWebService.isSuperUser(plainUserId, guildId) } returns false
+        val err = service.setSlowmode(plainUserId, guildId, 333L, 5)
+        assertEquals("You are not allowed to moderate this server.", err)
+    }
+
+    @Test
+    fun `setSlowmode rejects out-of-range seconds`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getTextChannelById(333L) } returns mockk(relaxed = true)
+        val err = service.setSlowmode(ownerId, guildId, 333L, 99999)
+        assertEquals("Seconds must be between 0 and 21600.", err)
     }
 
     // ---- createPoll ----

@@ -105,8 +105,14 @@ class CommandManagerTest {
             HelloThereCommand::class.java,
             BrotherCommand::class.java,
             ChCommand::class.java,
-            ShhCommand::class.java,
-            TalkCommand::class.java,
+            BanCommand::class.java,
+            UnbanCommand::class.java,
+            TimeoutCommand::class.java,
+            UntimeoutCommand::class.java,
+            PurgeCommand::class.java,
+            LockCommand::class.java,
+            UnlockCommand::class.java,
+            SlowmodeCommand::class.java,
             PollCommand::class.java,
             JoinCommand::class.java,
             LeaveCommand::class.java,
@@ -157,8 +163,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(59, commandManager.allCommands.size)
-        Assertions.assertEquals(59, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(65, commandManager.allCommands.size)
+        Assertions.assertEquals(65, commandManager.allSlashCommands.size)
     }
 
     @Test

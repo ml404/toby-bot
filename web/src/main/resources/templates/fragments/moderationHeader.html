@@ -2,13 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <!--
-    Per-guild moderation page header. Each split sub-page (users, settings,
-    voice, poll, casino, lottery) embeds this fragment so the back link,
-    guild name, owner/superuser banner, alerts include, and sub-nav are
-    laid out identically. The `active` arg is the slug of the currently
-    rendered sub-page (users / settings / voice / poll / casino /
-    lottery); the matching link gets the .active class + aria-current so
-    the user knows where they are.
+    Per-guild moderation page header. Each split sub-page (users, actions,
+    settings, voice, poll, casino, lottery) embeds this fragment so the
+    back link, guild name, owner/superuser banner, alerts include, and
+    sub-nav are laid out identically. The `active` arg is the slug of the
+    currently rendered sub-page (users / actions / settings / voice / poll
+    / casino / lottery); the matching link gets the .active class +
+    aria-current so the user knows where they are.
 -->
 <div th:fragment="moderationHeader(overview, isOwner, active)">
     <div class="page-header mod-header">
@@ -25,6 +25,10 @@
            class="mod-subnav-link"
            th:classappend="${active == 'users'} ? ' active'"
            th:attr="aria-current=${active == 'users'} ? 'page'">Users</a>
+        <a th:href="@{/moderation/{id}/actions(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'actions'} ? ' active'"
+           th:attr="aria-current=${active == 'actions'} ? 'page'">Actions</a>
         <a th:href="@{/moderation/{id}/settings(id=${overview.guildId})}"
            class="mod-subnav-link"
            th:classappend="${active == 'settings'} ? ' active'"
