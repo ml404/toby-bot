@@ -15,7 +15,6 @@ import io.mockk.verify
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel
 import net.dv8tion.jda.api.modals.Modal
-import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.AuditableRestAction
 import net.dv8tion.jda.api.requests.restaction.interactions.ModalCallbackAction
 import org.junit.jupiter.api.AfterEach
@@ -68,7 +67,7 @@ internal class TeamCommandTest : CommandTest {
         }
         val deleteAction = mockk<AuditableRestAction<Void>>(relaxed = true)
         every { teamChannel.delete() } returns deleteAction
-        every { (deleteAction as RestAction<Void>).queue() } just Runs
+        every { deleteAction.queue() } just Runs
 
         every { event.subcommandName } returns TeamCommand.SUB_CLEANUP
         every { guild.channels } returns listOf(teamChannel, unrelatedChannel)

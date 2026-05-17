@@ -5,9 +5,7 @@ import database.dto.TeamPresetDto
 import database.dto.TeamSplitSessionDto
 import database.service.TeamPresetService
 import database.service.TeamSplitSessionService
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -18,7 +16,6 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.interactions.modals.ModalMapping
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -61,18 +58,13 @@ class TeamSplitModalTest {
             every { this@mockk.guild } returns this@TeamSplitModalTest.guild
         }
 
+        // hook + the WebhookMessageCreateAction it returns are relaxed mocks,
+        // so the fluent setEphemeral / addComponents / queue chain just works.
+        // The capture-slot stub overrides the relaxed default for sendMessage(String)
+        // to record what was sent.
         @Suppress("UNCHECKED_CAST")
         val sendAction = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
         every { hook.sendMessage(capture(errorSlot)) } returns sendAction
-        every { sendAction.setEphemeral(true) } returns sendAction
-        every { sendAction.queue() } just Runs
-
-        @Suppress("UNCHECKED_CAST")
-        val embedAction = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
-        every { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns embedAction
-        every { embedAction.addComponents(any()) } returns embedAction
-        every { embedAction.setEphemeral(true) } returns embedAction
-        every { embedAction.queue() } just Runs
 
         // Default: empty modal values; individual tests override the ones they need.
         every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns null

@@ -2,17 +2,13 @@ package bot.toby.button.buttons
 
 import bot.toby.command.commands.misc.TeamCommand
 import core.button.ButtonContext
-import database.dto.UserDto
 import database.service.TeamSplitSessionService
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -40,13 +36,8 @@ class TeamCancelButtonTest {
             every { this@mockk.event } returns this@TeamCancelButtonTest.event
             every { this@mockk.guild } returns mockk<Guild>(relaxed = true)
         }
-
-        @Suppress("UNCHECKED_CAST")
-        val editAction = mockk<WebhookMessageEditAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.editOriginal(any<String>()) } returns editAction
-        every { editAction.setEmbeds(emptyList()) } returns editAction
-        every { editAction.setComponents() } returns editAction
-        every { editAction.queue() } just Runs
+        // hook is relaxed = true; the editOriginal(...).setEmbeds(...).setComponents().queue()
+        // chain returns relaxed mocks automatically.
     }
 
     @Test

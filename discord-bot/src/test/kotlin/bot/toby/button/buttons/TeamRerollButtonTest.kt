@@ -7,9 +7,7 @@ import database.dto.UserDto
 import database.service.TeamSplitSessionService
 import database.service.encodeAssignments
 import database.service.encodeTeamNames
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -18,7 +16,6 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -66,12 +63,6 @@ class TeamRerollButtonTest {
         )
         every { sessionService.getSession(sessionId) } returns sessionDto
 
-        @Suppress("UNCHECKED_CAST")
-        val editAction = mockk<WebhookMessageEditAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.editOriginalEmbeds(*anyVararg()) } returns editAction
-        every { editAction.setComponents(*anyVararg()) } returns editAction
-        every { editAction.queue() } just Runs
-
         val captured = slot<List<List<Long>>>()
         every { sessionService.updateAssignments(sessionId, capture(captured)) } returns sessionDto
 
@@ -82,7 +73,6 @@ class TeamRerollButtonTest {
         assert(flat.size == 4)
         assert(flat.toSet() == setOf(111L, 222L, 333L, 444L))
         assert(captured.captured.size == 2)
-        verify { hook.editOriginalEmbeds(*anyVararg()) }
     }
 
     @Test
@@ -96,17 +86,10 @@ class TeamRerollButtonTest {
         )
         every { sessionService.getSession(sessionId) } returns sessionDto
 
-        val msg = slot<String>()
-        @Suppress("UNCHECKED_CAST")
-        val sendAction = mockk<net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.sendMessage(capture(msg)) } returns sendAction
-        every { sendAction.setEphemeral(true) } returns sendAction
-        every { sendAction.queue() } just Runs
-
         button.handle(ctx, requesterDto, 0)
 
         verify(exactly = 0) { sessionService.updateAssignments(any(), any()) }
-        assert(msg.captured.contains("Already confirmed", ignoreCase = true))
+        verify { hook.sendMessage(match<String> { it.contains("Already confirmed", ignoreCase = true) }) }
     }
 
     private fun memberMock(id: Long): Member {

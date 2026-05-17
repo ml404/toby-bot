@@ -11,7 +11,6 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -22,7 +21,6 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.ChannelAction
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -58,12 +56,8 @@ class TeamConfirmButtonTest {
             every { this@mockk.guild } returns this@TeamConfirmButtonTest.guild
         }
         requesterDto = mockk(relaxed = true)
-
-        @Suppress("UNCHECKED_CAST")
-        val editAction = mockk<WebhookMessageEditAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.editOriginalEmbeds(*anyVararg()) } returns editAction
-        every { editAction.setComponents(*anyVararg()) } returns editAction
-        every { editAction.queue() } just Runs
+        // hook is relaxed = true, so editOriginalEmbeds(...).setComponents(...).queue()
+        // and editOriginal(...)... chains return relaxed mocks automatically.
     }
 
     @Test
@@ -98,7 +92,7 @@ class TeamConfirmButtonTest {
 
         val moveRest = mockk<RestAction<Void>>(relaxed = true)
         every { guild.moveVoiceMember(any(), any<AudioChannel>()) } returns moveRest
-        every { moveRest.queue(any(), any()) } just Runs
+        every { moveRest.queue() } just Runs
 
         button.handle(ctx, requesterDto, 0)
 
@@ -119,30 +113,16 @@ class TeamConfirmButtonTest {
         )
         every { sessionService.getSession(sessionId) } returns sessionDto
 
-        val warning = slot<String>()
-        @Suppress("UNCHECKED_CAST")
-        val sendAction = mockk<net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.sendMessage(capture(warning)) } returns sendAction
-        every { sendAction.setEphemeral(true) } returns sendAction
-        every { sendAction.queue() } just Runs
-
         button.handle(ctx, requesterDto, 0)
 
         verify(exactly = 0) { guild.createVoiceChannel(any<String>()) }
         verify(exactly = 0) { sessionService.markConfirmed(any()) }
-        assert(warning.captured.contains("already created", ignoreCase = true))
+        verify { hook.sendMessage(match<String> { it.contains("already created", ignoreCase = true) }) }
     }
 
     @Test
     fun `expired session edits message in place rather than creating channels`() {
         every { sessionService.getSession(sessionId) } returns null
-
-        @Suppress("UNCHECKED_CAST")
-        val editAction = mockk<WebhookMessageEditAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
-        every { hook.editOriginal(any<String>()) } returns editAction
-        every { editAction.setEmbeds(emptyList()) } returns editAction
-        every { editAction.setComponents() } returns editAction
-        every { editAction.queue() } just Runs
 
         button.handle(ctx, requesterDto, 0)
 

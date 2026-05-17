@@ -61,10 +61,10 @@ class TeamConfirmButton @Autowired constructor(
                 .setBitrate(guild.maxBitrate).complete()
             memberIds.forEach { id ->
                 val target = guild.getMemberById(id) ?: return@forEach
-                guild.moveVoiceMember(target, channel as AudioChannel).queue(
-                    { /* moved */ },
-                    { /* member not in voice / left — skip silently */ },
-                )
+                // JDA's RestAction.queue() default error handler logs failures; we don't
+                // need a custom callback. A member who left voice between preview and
+                // confirm just fails silently here, which matches the legacy behavior.
+                guild.moveVoiceMember(target, channel as AudioChannel).queue()
             }
         }
 
