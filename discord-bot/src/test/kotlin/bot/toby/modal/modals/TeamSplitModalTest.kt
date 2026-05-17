@@ -110,6 +110,17 @@ class TeamSplitModalTest {
     }
 
     @Test
+    fun `parseMemberIds tolerates decorative names from the prefill format`() {
+        // /team split pre-fills the modal as `Name (<@id>), Name (<@id>), …` so
+        // typos and wrong people are easier to spot. The parser must still
+        // ignore the names and pick up only the <@id> tokens.
+        val ids = TeamSplitModal.parseMemberIds(
+            "Alice (<@111111111111111111>), Bob (<@!222222222222222222>), Charlie (<@333333333333333333>)"
+        )
+        assertEquals(listOf(111111111111111111L, 222222222222222222L, 333333333333333333L), ids)
+    }
+
+    @Test
     fun `parseMemberIds yields empty on blank input`() {
         assertTrue(TeamSplitModal.parseMemberIds("").isEmpty())
         assertTrue(TeamSplitModal.parseMemberIds("   ").isEmpty())

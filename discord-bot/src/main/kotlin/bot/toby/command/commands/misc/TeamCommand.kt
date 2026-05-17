@@ -84,11 +84,19 @@ class TeamCommand : MiscCommand {
         builder.addComponents(Label.of("Load preset (optional)", presetField))
 
         val membersBuilder = TextInput.create(TeamSplitModal.FIELD_MEMBERS, TextInputStyle.PARAGRAPH)
-            .setPlaceholder("@mentions or raw IDs. Combined with preset if both are filled.")
+            .setPlaceholder("@mentions or raw IDs. Names in parentheses are decorative.")
             .setRequired(false)
             .setMaxLength(MEMBERS_FIELD_MAX)
         if (prefilledMembers.isNotEmpty()) {
-            membersBuilder.setValue(prefilledMembers.joinToString(" ") { "<@${it.idLong}>" })
+            // Modal text inputs render raw text, not Discord mentions, so a bare
+            // `<@123…>` string is unreadable. Prefix each id with the member's
+            // effective name so the user can spot wrong people / typos at a
+            // glance. The parser only looks at the `<@id>` token, so the name
+            // is decorative — users can remove a whole `Name (<@id>)` block to
+            // drop someone, and adding a new member still requires the raw id.
+            membersBuilder.setValue(
+                prefilledMembers.joinToString(", ") { "${it.effectiveName} (<@${it.idLong}>)" }
+            )
         }
         builder.addComponents(Label.of("Members", membersBuilder.build()))
 
