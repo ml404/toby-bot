@@ -1,4 +1,5 @@
-// Users tab: client-side member search, permission toggles, kick, social-credit adjust.
+// Users tab: client-side member search, permission toggles, social-credit adjust.
+// Kick/ban/timeout live on the Actions tab.
 (function () {
     'use strict';
 
@@ -73,30 +74,6 @@
                 btn.disabled = false;
                 toast('Network error.', 'error');
             });
-        });
-    });
-
-    // --- Kick ---
-    document.querySelectorAll('.kick-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const row = btn.closest('tr');
-            const memberId = row.dataset.memberId;
-            const name = btn.dataset.name || 'this member';
-            const reason = prompt('Kick ' + name + '? Optional reason:');
-            if (reason === null) return;
-            btn.disabled = true;
-            postJson('/moderation/' + guildId + '/kick', {
-                targetDiscordId: memberId,
-                reason: reason || null
-            }).then(r => {
-                btn.disabled = false;
-                if (r && r.ok) {
-                    toast('Kicked ' + name + '.', 'success');
-                    row.remove();
-                } else {
-                    toast(r?.error || 'Could not kick.', 'error');
-                }
-            }).catch(() => { btn.disabled = false; toast('Network error.', 'error'); });
         });
     });
 

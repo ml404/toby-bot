@@ -15,9 +15,29 @@
     <section class="mod-panel" data-panel="actions">
         <p class="muted mb-4">
             Run Discord moderation actions without leaving the dashboard. You
-            need the matching Discord permission (Ban / Moderate / Manage)
-            on the bot AND on yourself for each action.
+            need the matching Discord permission (Ban / Kick / Moderate /
+            Manage) on the bot AND on yourself for each action.
         </p>
+
+        <h2 class="mod-section-title">Kick member</h2>
+        <form class="mod-action-form" data-action="kick">
+            <label>Member
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='targetDiscordId',
+                        id='kick-target',
+                        members=${overview.members},
+                        selectedId=null,
+                        placeholder='Pick a member…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+            </label>
+            <label>Reason (optional)
+                <input type="text" name="reason" maxlength="512">
+            </label>
+            <button type="submit" class="btn-danger">Kick</button>
+        </form>
 
         <h2 class="mod-section-title">Ban member</h2>
         <form class="mod-action-form" data-action="ban">

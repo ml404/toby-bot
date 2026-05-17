@@ -15,7 +15,9 @@
     <section class="mod-panel" data-panel="users">
         <p class="muted mb-4">
             Toggle TobyBot permissions for members of this server. Server owners
-            can also toggle SUPERUSER, adjust social credit, and kick members.
+            can also toggle SUPERUSER and adjust social credit. Kick / ban /
+            timeout and other moderation actions live on the
+            <a th:href="@{/moderation/{id}/actions(id=${overview.guildId})}">Actions tab</a>.
             View the full credit standings on the
             <a th:href="@{/leaderboard/{id}(id=${overview.guildId})}">leaderboard page</a>.
         </p>
@@ -39,7 +41,6 @@
                     <th>Dig</th>
                     <th>Superuser</th>
                     <th>Credit</th>
-                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -100,11 +101,6 @@
                             <button type="button" class="btn sc-apply">Apply</button>
                         </div>
                         <span th:unless="${isOwner}" class="sc-score" th:text="${m.socialCredit}">0</span>
-                    </td>
-                    <td data-label="Actions">
-                        <button type="button" class="btn-danger kick-btn"
-                                th:attr="data-name=${m.name}"
-                                th:disabled="${m.isOwner}">Kick</button>
                     </td>
                 </tr>
                 </tbody>

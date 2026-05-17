@@ -28,6 +28,20 @@
         return (el.value || '').trim();
     }
 
+    document.querySelectorAll('.mod-action-form[data-action="kick"]').forEach(form => {
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            const targetDiscordId = pickerValue(form, 'targetDiscordId');
+            if (!targetDiscordId) { toast('Pick a member.', 'error'); return; }
+            const reason = (form.elements.reason?.value || '').trim() || null;
+            if (!confirm('Kick this member?')) return;
+            disableSubmit(form, true);
+            postJson('/moderation/' + guildId + '/kick', { targetDiscordId, reason })
+                .then(r => { disableSubmit(form, false); handleApiResult(form, r, 'Kicked.'); })
+                .catch(() => { disableSubmit(form, false); toast('Network error.', 'error'); });
+        });
+    });
+
     document.querySelectorAll('.mod-action-form[data-action="ban"]').forEach(form => {
         form.addEventListener('submit', e => {
             e.preventDefault();
