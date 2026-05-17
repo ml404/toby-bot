@@ -60,6 +60,7 @@ class UserInfoCommandTest : CommandTest {
         // Verify interactions
         verify(exactly = 1) {
             event.hook.sendMessage("Here are the permissions for 'Effective Name': 'MUSIC: true, MEME: true, DIG: true, SUPERUSER: true'. \n" +
+                    " Level 0 (0/100 XP, total 0) \n" +
                     " There is no valid intro music file associated with user Effective Name.")
         }
         verify(exactly = 1) {

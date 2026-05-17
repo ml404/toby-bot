@@ -4,6 +4,7 @@ import common.logging.DiscordLogger
 import database.dto.VoiceSessionDto
 import database.service.SocialCreditAwardService
 import database.service.VoiceSessionService
+import database.service.XpAwardService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.Duration
@@ -12,7 +13,8 @@ import java.time.Instant
 @Service
 class VoiceCreditAwardService @Autowired constructor(
     private val voiceSessionService: VoiceSessionService,
-    private val awardService: SocialCreditAwardService
+    private val awardService: SocialCreditAwardService,
+    private val xpAwardService: XpAwardService
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -29,6 +31,17 @@ class VoiceCreditAwardService @Autowired constructor(
             discordId = session.discordId,
             guildId = session.guildId,
             amount = rawCredits,
+            reason = "voice-session",
+            at = closedAt
+        )
+
+        // Voice XP scales the same way as voice credit, just at a higher
+        // rate so the leveling track moves at roughly the XP daily cap.
+        val rawXp = countedSeconds / VoiceCreditConfig.SECONDS_PER_CREDIT * VOICE_XP_PER_CREDIT
+        xpAwardService.award(
+            discordId = session.discordId,
+            guildId = session.guildId,
+            amount = rawXp,
             reason = "voice-session",
             at = closedAt
         )
@@ -72,5 +85,11 @@ class VoiceCreditAwardService @Autowired constructor(
     fun closeSessionAtShutdown(session: VoiceSessionDto, closedAt: Instant) {
         val rawSeconds = Duration.between(session.joinedAt, closedAt).seconds.coerceAtLeast(0)
         closeSessionAndAward(session, closedAt, rawSeconds)
+    }
+
+    companion object {
+        // Multiplier on the social-credit grant: every credit a voice
+        // session earns also grants this much XP.
+        const val VOICE_XP_PER_CREDIT: Long = 5L
     }
 }

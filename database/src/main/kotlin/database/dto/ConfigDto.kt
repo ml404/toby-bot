@@ -115,6 +115,26 @@ class ConfigDto(
         // (SocialCreditAwardService.DEFAULT_DAILY_CAP) when unset or invalid.
         DAILY_CREDIT_CAP("DAILY_CREDIT_CAP"),
 
+        // Per-guild override of the daily XP cap. Falls back to 1000
+        // (XpAwardService.DEFAULT_DAILY_XP_CAP) when unset or invalid.
+        DAILY_XP_CAP("DAILY_XP_CAP"),
+
+        // Whole-number bonus added to DAILY_CREDIT_CAP per level the user
+        // has reached. Default 10. Set to 0 to disable the leveling perk
+        // for the social-credit daily cap entirely.
+        DAILY_CAP_PER_LEVEL_BONUS("DAILY_CAP_PER_LEVEL_BONUS"),
+
+        // Whole-number bonus added to UBI_DAILY_AMOUNT per level the user
+        // has reached. Default 5. Set to 0 to disable the leveling perk
+        // for UBI entirely.
+        UBI_PER_LEVEL_BONUS("UBI_PER_LEVEL_BONUS"),
+
+        // Optional Discord text-channel id where level-up announcements
+        // post. When unset (default), announcements post in the channel
+        // where the level-up was earned (message/command channel), or fall
+        // back to the system channel for voice-triggered level-ups.
+        LEVEL_UP_CHANNEL("LEVEL_UP_CHANNEL"),
+
         // Per-game min/max stake bounds. Defaults come from each game's
         // companion-object MIN_STAKE/MAX_STAKE constants when unset, so
         // guilds that never touch these keys see today's behaviour.

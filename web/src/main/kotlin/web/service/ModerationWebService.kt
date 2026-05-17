@@ -956,6 +956,34 @@ class ModerationWebService(
                 if (n !in 0..10000) return "Value must be between 0 and 10000 (default 90)."
                 n.toString()
             }
+            ConfigDto.Configurations.DAILY_XP_CAP -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-100000)."
+                if (n !in 0..100000) return "Value must be between 0 and 100000 (default 1000)."
+                n.toString()
+            }
+            ConfigDto.Configurations.DAILY_CAP_PER_LEVEL_BONUS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-1000)."
+                if (n !in 0..1000) return "Value must be between 0 and 1000 (default 10; 0 disables the perk)."
+                n.toString()
+            }
+            ConfigDto.Configurations.UBI_PER_LEVEL_BONUS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-1000)."
+                if (n !in 0..1000) return "Value must be between 0 and 1000 (default 5; 0 disables the perk)."
+                n.toString()
+            }
+            ConfigDto.Configurations.LEVEL_UP_CHANNEL -> {
+                val id = rawValue.trim()
+                if (id.isEmpty()) return "Channel id is required."
+                val idLong = id.toLongOrNull()
+                    ?: return "Channel id must be numeric."
+                if (guild.getTextChannelById(idLong) == null) {
+                    return "No text channel with that id exists in this server."
+                }
+                id
+            }
             ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS -> {
                 // Empty resets to default. Otherwise must parse cleanly via
                 // [JackpotWheel.validateConfigString] — the live reader uses

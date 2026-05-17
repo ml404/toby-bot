@@ -132,6 +132,7 @@ class CommandManagerTest {
             EditIntroCommand::class.java,
             DeleteIntroCommand::class.java,
             UserInfoCommand::class.java,
+            LevelCommand::class.java,
             RandomCommand::class.java,
             Kf2RandomMapCommand::class.java,
             DbdRandomKillerCommand::class.java,
@@ -164,8 +165,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(66, commandManager.allCommands.size)
-        Assertions.assertEquals(66, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(67, commandManager.allCommands.size)
+        Assertions.assertEquals(67, commandManager.allSlashCommands.size)
     }
 
     @Test

@@ -9,6 +9,7 @@ import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.service.ConfigService
 import database.service.SocialCreditAwardService
+import database.service.XpAwardService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA
@@ -41,6 +42,7 @@ class VoiceEventHandlerTest {
     private val voiceSessionLifecycle: VoiceSessionLifecycle = mockk(relaxed = true)
     private val lastConnectedChannelTracker: LastConnectedChannelTracker = LastConnectedChannelTracker()
     private val awardService: SocialCreditAwardService = mockk(relaxed = true)
+    private val xpAwardService: XpAwardService = mockk(relaxed = true)
     private val nowPlayingManager: NowPlayingManager = mockk(relaxed = true)
 
     private val handler = spyk(
@@ -51,6 +53,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle,
             lastConnectedChannelTracker,
             awardService,
+            xpAwardService,
             nowPlayingManager,
         )
     )
@@ -133,6 +136,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle = mockk(relaxed = true),
             lastConnectedChannelTracker = LastConnectedChannelTracker(),
             awardService = mockk(relaxed = true),
+            xpAwardService = mockk(relaxed = true),
             nowPlayingManager = mockk(relaxed = true),
         )
 
@@ -179,6 +183,7 @@ class VoiceEventHandlerTest {
             voiceSessionLifecycle = voiceSessionLifecycle,
             lastConnectedChannelTracker = LastConnectedChannelTracker(),
             awardService = mockk(relaxed = true),
+            xpAwardService = mockk(relaxed = true),
             nowPlayingManager = mockk(relaxed = true),
         )
 

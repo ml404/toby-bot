@@ -1,5 +1,6 @@
 package web.service
 
+import common.leveling.LevelCurve
 import database.dto.UserDto
 import database.service.TitleService
 import database.service.UserService
@@ -52,6 +53,8 @@ class ProfileWebService(
             }
             .sortedBy { it.label.lowercase() }
 
+        val xp = user?.xp ?: 0L
+        val progress = LevelCurve.progress(xp)
         return ProfileView(
             guildId = guild.id,
             guildName = guild.name,
@@ -59,6 +62,13 @@ class ProfileWebService(
             avatarUrl = member.effectiveAvatarUrl,
             isOwner = member.isOwner,
             balance = user?.socialCredit ?: 0L,
+            level = progress.level,
+            xp = xp,
+            xpIntoLevel = progress.xpIntoLevel,
+            xpForNextLevel = progress.xpForNextLevel,
+            xpProgressPercent = if (progress.xpForNextLevel > 0)
+                ((progress.xpIntoLevel.toDouble() / progress.xpForNextLevel) * 100).toInt().coerceIn(0, 100)
+            else 100,
             equippedTitleLabel = equippedTitle?.label,
             equippedTitleColorHex = equippedTitle?.colorHex,
             ownedTitles = ownedTitles,
@@ -90,6 +100,11 @@ data class ProfileView(
     val avatarUrl: String?,
     val isOwner: Boolean,
     val balance: Long,
+    val level: Int,
+    val xp: Long,
+    val xpIntoLevel: Long,
+    val xpForNextLevel: Long,
+    val xpProgressPercent: Int,
     val equippedTitleLabel: String?,
     val equippedTitleColorHex: String?,
     val ownedTitles: List<ProfileTitleEntry>,

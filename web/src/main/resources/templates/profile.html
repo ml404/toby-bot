@@ -45,6 +45,32 @@
             <a class="btn profile-action" th:href="@{/titles/{id}(id=${profile.guildId})}">Go to title shop &rarr;</a>
         </section>
 
+        <section class="profile-card level-card" th:classappend="'level-tier-' + (${profile.level} >= 50 ? 'diamond' : (${profile.level} >= 25 ? 'gold' : (${profile.level} >= 10 ? 'silver' : 'bronze')))">
+            <h2>Level</h2>
+            <div class="level-hero">
+                <div class="level-badge">
+                    <span class="level-badge-label">LVL</span>
+                    <span class="level-badge-value" th:text="${profile.level}">0</span>
+                </div>
+                <div class="level-meta">
+                    <div class="level-progress-row">
+                        <span class="level-current" th:text="${profile.xpIntoLevel} + ' XP'">0 XP</span>
+                        <span class="level-next" th:text="${profile.xpForNextLevel} + ' XP'">100 XP</span>
+                    </div>
+                    <div class="level-progress" role="progressbar"
+                         th:attr="aria-valuenow=${profile.xpProgressPercent},aria-valuemin=0,aria-valuemax=100"
+                         th:attrappend="aria-label='Progress to next level'">
+                        <div class="level-progress-bar"
+                             th:style="'width: ' + ${profile.xpProgressPercent} + '%'"></div>
+                    </div>
+                    <div class="level-footer">
+                        <span class="muted">Total XP</span>
+                        <span class="level-total-xp" th:text="${profile.xp}">0</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <section class="profile-card">
             <h2>Permissions</h2>
             <ul class="profile-perms">

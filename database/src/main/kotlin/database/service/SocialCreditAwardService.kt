@@ -1,5 +1,6 @@
 package database.service
 
+import common.leveling.LevelCurve
 import database.dto.ConfigDto
 import database.dto.VoiceCreditDailyDto
 import org.springframework.stereotype.Service
@@ -65,7 +66,7 @@ class SocialCreditAwardService(
         val today = LocalDate.ofInstant(at, ZoneOffset.UTC)
         val existing = voiceCreditDailyService.get(discordId, guildId, today)
         val usedToday = existing?.credits ?: 0L
-        val dailyCap = resolveDailyCap(guildId)
+        val dailyCap = resolveDailyCap(discordId, guildId)
         val headroom = (dailyCap - usedToday).coerceAtLeast(0L)
         val granted = requested.coerceAtMost(headroom)
         if (granted > 0L) {
@@ -81,7 +82,23 @@ class SocialCreditAwardService(
         return granted
     }
 
-    private fun resolveDailyCap(guildId: Long): Long {
+    /**
+     * Resolved daily cap for [discordId] in [guildId]: the per-guild
+     * configured base (or [DEFAULT_DAILY_CAP] when unset) plus the user's
+     * level bonus (`level * DAILY_CAP_PER_LEVEL_BONUS`, default +10/level).
+     * The leveling perk is config-driven so server owners can disable it
+     * by setting `DAILY_CAP_PER_LEVEL_BONUS=0`.
+     */
+    fun resolveDailyCap(discordId: Long, guildId: Long): Long {
+        val base = resolveBaseDailyCap(guildId)
+        val perLevelBonus = resolvePerLevelBonus(guildId)
+        if (perLevelBonus == 0L) return base
+        val user = userService.getUserById(discordId, guildId) ?: return base
+        val level = LevelCurve.levelForXp(user.xp)
+        return base + perLevelBonus * level
+    }
+
+    private fun resolveBaseDailyCap(guildId: Long): Long {
         val raw = configService.getConfigByName(
             ConfigDto.Configurations.DAILY_CREDIT_CAP.configValue,
             guildId.toString()
@@ -90,8 +107,20 @@ class SocialCreditAwardService(
         return if (parsed != null && parsed >= 0L) parsed else DEFAULT_DAILY_CAP
     }
 
+    private fun resolvePerLevelBonus(guildId: Long): Long {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.DAILY_CAP_PER_LEVEL_BONUS.configValue,
+            guildId.toString()
+        )?.value
+        val parsed = raw?.toLongOrNull()
+        return if (parsed != null && parsed >= 0L) parsed else DEFAULT_DAILY_CAP_PER_LEVEL_BONUS
+    }
+
     companion object {
         // Fallback when DAILY_CREDIT_CAP config is unset or unparseable for the guild.
         const val DEFAULT_DAILY_CAP: Long = 90L
+
+        // Fallback when DAILY_CAP_PER_LEVEL_BONUS is unset or unparseable.
+        const val DEFAULT_DAILY_CAP_PER_LEVEL_BONUS: Long = 10L
     }
 }
