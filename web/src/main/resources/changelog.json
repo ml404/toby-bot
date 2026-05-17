@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Expand Lavaplayer sources + polish embed + web dashboard",
+    "summary": "Three connected pieces shipped together: ### A — Expanded audio sources Registers **SoundCloud, Bandcamp, Vimeo, Niconico** (built-in Lavaplayer) and **Spotify, Apple Music, Deezer, Yandex Music** (via the LavaSrc 4.8.2 plugin) alongside the existing YouTube/Twitch/HTTP/Local sources. Each LavaSrc source is gated on its env-var credentials (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`, `APPLE_MUSIC_MEDIA_API_TOKEN`, `DEEZER_MASTER_KEY`/`DEEZER_ARL`, `YANDEX_ACCESS_TOKEN`);…",
+    "emoji": "🎵",
+    "prNumber": 472
+  },
+  {
+    "date": "May 2026",
     "title": "Derive homepage game counts from a single GameCatalog",
     "summary": "The homepage was rendering three different game counts because the stats strip, hero paragraph, and casino feature card each held their own hardcoded literal: | Location | Before | |---|---| | Stats strip (`home.html` line 39, `homeStats.gameCount`) | `12` (from `HomeStatsService.GAME_COUNT`) | | Hero meta description + paragraph (`home.html` lines 5, 16) | `13`-game casino | | Casino feature card body (line 64) | `12` quick-play minigames | | Casino feature card tag (line…",
     "emoji": "🔨",
