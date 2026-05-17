@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Dedicated tab + role-reward CRUD + title gating",
+    "summary": "Closes the moderation-UI gaps from #477. That PR shipped the leveling backbone (XP, levels, `level_role_reward` table, `title.required_level` column) but the admin UI was incomplete: the four config keys were buried inside the collapsed-by-default \"Economy\" `<details>`, the `level_role_reward` table had no CRUD path, and `title.required_level` could only be set via direct DB write. ### Why this was missed `ModerationTemplateRowsTest` only enforces that every `ConfigDto.Con…",
+    "emoji": "🛡️",
+    "prNumber": 479
+  },
+  {
+    "date": "May 2026",
     "title": "Collapse navbar dropdown sections on mobile",
     "summary": "On a phone-width viewport (≤600px), the navbar hamburger opened a menu where all four dropdown sections (Play, Economy, Social, Tools) were already fully expanded — every link visible, scroll forever, and the section toggle buttons did nothing. Root cause was one CSS rule in the mobile media query of `nav.css`: `.nav-dropdown-menu { display: flex; ... }` was set unconditionally, overriding the desktop default (`display: none` unless `.open` is on the parent). The `toggleDr…",
     "emoji": "🔨",
