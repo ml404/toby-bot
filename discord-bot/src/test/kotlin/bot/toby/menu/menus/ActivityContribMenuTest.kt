@@ -11,7 +11,7 @@ import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.components.selections.SelectOption
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -35,7 +35,7 @@ class ActivityContribMenuTest {
     private lateinit var event: StringSelectInteractionEvent
     private lateinit var hook: InteractionHook
     private lateinit var guild: Guild
-    private lateinit var sendAction: WebhookMessageCreateAction<*>
+    private lateinit var sendAction: WebhookMessageCreateAction<Message>
 
     @BeforeEach
     fun setup() {
