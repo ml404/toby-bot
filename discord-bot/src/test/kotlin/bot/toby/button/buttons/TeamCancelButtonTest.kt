@@ -3,12 +3,17 @@ package bot.toby.button.buttons
 import bot.toby.command.commands.misc.TeamCommand
 import core.button.ButtonContext
 import database.service.TeamSplitSessionService
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -36,8 +41,17 @@ class TeamCancelButtonTest {
             every { this@mockk.event } returns this@TeamCancelButtonTest.event
             every { this@mockk.guild } returns mockk<Guild>(relaxed = true)
         }
-        // hook is relaxed = true; the editOriginal(...).setEmbeds(...).setComponents().queue()
-        // chain returns relaxed mocks automatically.
+
+        // Explicit chain stubs: relaxed mocks lose self-type on JDA's
+        // MessageEditRequest<R> chain, so each step needs to return the
+        // typed WebhookMessageEditAction mock for the next call.
+        @Suppress("UNCHECKED_CAST")
+        val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
+        every { hook.editOriginal(any<String>()) } returns editAction
+        every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
+        every { editAction.setComponents(*anyVararg()) } returns editAction
+        every { editAction.setComponents(any<Collection<*>>()) } returns editAction
+        every { editAction.queue() } just Runs
     }
 
     @Test

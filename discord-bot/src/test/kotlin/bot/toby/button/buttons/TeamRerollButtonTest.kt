@@ -7,15 +7,20 @@ import database.dto.UserDto
 import database.service.TeamSplitSessionService
 import database.service.encodeAssignments
 import database.service.encodeTeamNames
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
@@ -47,6 +52,18 @@ class TeamRerollButtonTest {
             every { this@mockk.guild } returns this@TeamRerollButtonTest.guild
         }
         requesterDto = mockk(relaxed = true)
+
+        // Same chain-stub trick TeamConfirmButtonTest needs: relaxed mocks
+        // don't preserve the self-typed return shape of JDA's fluent edit chain.
+        @Suppress("UNCHECKED_CAST")
+        val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
+        every { hook.editOriginal(any<String>()) } returns editAction
+        every { hook.editOriginalEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns editAction
+        every { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
+        every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
+        every { editAction.setComponents(*anyVararg()) } returns editAction
+        every { editAction.setComponents(any<Collection<*>>()) } returns editAction
+        every { editAction.queue() } just Runs
     }
 
     @Test

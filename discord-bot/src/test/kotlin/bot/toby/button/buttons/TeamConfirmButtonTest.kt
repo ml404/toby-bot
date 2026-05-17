@@ -14,6 +14,8 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
@@ -21,6 +23,7 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.ChannelAction
+import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -56,8 +59,21 @@ class TeamConfirmButtonTest {
             every { this@mockk.guild } returns this@TeamConfirmButtonTest.guild
         }
         requesterDto = mockk(relaxed = true)
-        // hook is relaxed = true, so editOriginalEmbeds(...).setComponents(...).queue()
-        // and editOriginal(...)... chains return relaxed mocks automatically.
+
+        // JDA's fluent edit chain returns the self-typed `R` from the parent
+        // interface (MessageEditRequest<R>), which is erased at runtime — mockk's
+        // relaxed mode returns the base supertype's mock and the subsequent
+        // `.setComponents` / `.queue` calls explode with a ClassCastException.
+        // Stubbing each step to return the same typed mock fixes the chain.
+        @Suppress("UNCHECKED_CAST")
+        val editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
+        every { hook.editOriginal(any<String>()) } returns editAction
+        every { hook.editOriginalEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns editAction
+        every { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
+        every { editAction.setEmbeds(any<Collection<MessageEmbed>>()) } returns editAction
+        every { editAction.setComponents(*anyVararg()) } returns editAction
+        every { editAction.setComponents(any<Collection<*>>()) } returns editAction
+        every { editAction.queue() } just Runs
     }
 
     @Test
@@ -146,7 +162,12 @@ class TeamConfirmButtonTest {
     private fun channelActionMock(produces: VoiceChannel): ChannelAction<VoiceChannel> {
         val action = mockk<ChannelAction<VoiceChannel>>(relaxed = true)
         every { action.setBitrate(any()) } returns action
-        every { action.complete() } returns produces
+        // `complete()` is `RestAction<T>.complete()`. T is erased at runtime;
+        // mockk needs a hint to fabricate a return value of the right concrete
+        // type (otherwise it picks the base interface and the cast to
+        // VoiceChannel in production blows up). Same pattern the legacy
+        // TeamCommandTest used before the refactor.
+        every { action.hint(VoiceChannel::class).complete() } returns produces
         return action
     }
 }

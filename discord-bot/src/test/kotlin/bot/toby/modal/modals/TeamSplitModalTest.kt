@@ -5,7 +5,9 @@ import database.dto.TeamPresetDto
 import database.dto.TeamSplitSessionDto
 import database.service.TeamPresetService
 import database.service.TeamSplitSessionService
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
@@ -58,13 +60,20 @@ class TeamSplitModalTest {
             every { this@mockk.guild } returns this@TeamSplitModalTest.guild
         }
 
-        // hook + the WebhookMessageCreateAction it returns are relaxed mocks,
-        // so the fluent setEphemeral / addComponents / queue chain just works.
-        // The capture-slot stub overrides the relaxed default for sendMessage(String)
-        // to record what was sent.
+        // JDA's fluent chain returns a self-type (R from MessageCreateRequest<R>)
+        // that's erased at runtime. mockk's relaxed mode then makes the chain
+        // return the erased supertype, and the next call (`addComponents`)
+        // explodes with a ClassCastException. Stub each step to return the
+        // same typed mock so the chain holds together.
         @Suppress("UNCHECKED_CAST")
         val sendAction = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
         every { hook.sendMessage(capture(errorSlot)) } returns sendAction
+        every { hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg<MessageEmbed>()) } returns sendAction
+        every { hook.sendMessageEmbeds(any<Collection<MessageEmbed>>()) } returns sendAction
+        every { sendAction.setEphemeral(any()) } returns sendAction
+        every { sendAction.addComponents(*anyVararg()) } returns sendAction
+        every { sendAction.addComponents(any<Collection<*>>()) } returns sendAction
+        every { sendAction.queue() } just Runs
 
         // Default: empty modal values; individual tests override the ones they need.
         every { event.getValue(TeamSplitModal.FIELD_PRESET_NAME) } returns null
