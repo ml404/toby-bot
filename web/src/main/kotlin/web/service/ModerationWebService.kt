@@ -40,11 +40,8 @@ class ModerationWebService(
     private val eventPublisher: ApplicationEventPublisher
 ) {
     companion object {
-        const val MAX_POLL_OPTIONS = 10
-        private val POLL_EMOJI = listOf(
-            "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣",
-            "6️⃣", "7️⃣", "8️⃣", "9️⃣", "🔟"
-        )
+        const val MAX_POLL_OPTIONS = 4
+        private val POLL_EMOJI = listOf("1️⃣", "2️⃣", "3️⃣", "4️⃣")
         private val logger = DiscordLogger(ModerationWebService::class.java)
 
         /**
@@ -1212,7 +1209,7 @@ class ModerationWebService(
         val cleanedQuestion = question.trim()
         if (cleanedQuestion.isEmpty()) return "Question is required."
         val cleanedOptions = options.map { it.trim() }.filter { it.isNotEmpty() }
-        if (cleanedOptions.size < 2) return "Provide at least 2 options."
+        if (cleanedOptions.isEmpty()) return "Provide at least 1 option."
         if (cleanedOptions.size > MAX_POLL_OPTIONS) return "A poll can have at most $MAX_POLL_OPTIONS options."
 
         val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."

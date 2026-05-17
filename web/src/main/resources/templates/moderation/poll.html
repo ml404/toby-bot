@@ -14,7 +14,7 @@
 
     <section class="mod-panel" data-panel="poll">
         <p class="muted mb-4">
-            Post an emoji-reaction poll in a text channel. Up to 10 options.
+            Post an emoji-reaction poll in a text channel. Up to 4 options.
         </p>
         <form class="poll-form">
             <label>
@@ -28,19 +28,13 @@
             </label>
             <label>
                 Question
-                <input type="text" name="question" maxlength="256" required>
+                <textarea name="question" maxlength="500" rows="3" required></textarea>
             </label>
             <div class="poll-options">
                 <label>Option 1 <input type="text" maxlength="100" class="poll-option" required></label>
-                <label>Option 2 <input type="text" maxlength="100" class="poll-option" required></label>
+                <label>Option 2 <input type="text" maxlength="100" class="poll-option"></label>
                 <label>Option 3 <input type="text" maxlength="100" class="poll-option"></label>
                 <label>Option 4 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 5 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 6 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 7 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 8 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 9 <input type="text" maxlength="100" class="poll-option"></label>
-                <label>Option 10 <input type="text" maxlength="100" class="poll-option"></label>
             </div>
             <button type="submit" class="btn">Post poll</button>
         </form>
