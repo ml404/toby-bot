@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
+import jakarta.servlet.http.HttpServletRequest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -26,6 +27,9 @@ class TeamWebControllerTest {
     private val mockClient = mockk<OAuth2AuthorizedClient>(relaxed = true)
     private val mockModel = mockk<Model>(relaxed = true)
     private val mockRa = mockk<RedirectAttributes>(relaxed = true)
+    private val mockRequest = mockk<HttpServletRequest>(relaxed = true).also {
+        every { it.cookies } returns null
+    }
 
     private val discordId = "111"
     private val guildId = 222L
@@ -47,10 +51,12 @@ class TeamWebControllerTest {
 
     @Test
     fun `guildList renders team-guilds template`() {
-        val guilds = listOf(GuildInfo("1", "Guild One", null))
+        // Multiple guilds + pick=true bypasses the auto-redirect so the
+        // template render is observable here.
+        val guilds = listOf(GuildInfo("1", "Guild One", null), GuildInfo("2", "Guild Two", null))
         every { teamWebService.getMutualGuilds("mock-token") } returns guilds
 
-        val view = controller.guildList(mockClient, mockUser, mockModel)
+        val view = controller.guildList(mockClient, mockUser, pick = true, request = mockRequest, model = mockModel)
 
         assertEquals("team-guilds", view)
         verify { mockModel.addAttribute("guilds", guilds) }

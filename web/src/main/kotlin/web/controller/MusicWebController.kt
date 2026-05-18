@@ -2,6 +2,7 @@ package web.controller
 
 import core.music.MusicControlGateway
 import database.service.MusicPlaylistService.PlaylistNameTakenException
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -21,6 +22,8 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.MusicSseService
 import web.service.MusicWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
@@ -47,14 +50,25 @@ class MusicWebController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val accessToken = client.accessToken.tokenValue
         val discordId = user.discordIdOrNull() ?: return "redirect:/login"
         val guilds = musicWebService.listGuildsForUser(accessToken, discordId)
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/music-player/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
         model.addAttribute("discordId", user.discordIdString())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "music-guilds"
     }
 

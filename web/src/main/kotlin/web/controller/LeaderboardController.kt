@@ -1,5 +1,6 @@
 package web.controller
 
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.LeaderboardSort
 import web.service.LeaderboardWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -27,6 +30,8 @@ class LeaderboardController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model
     ): String {
         val discordId = user.discordIdOrNull()
@@ -34,8 +39,16 @@ class LeaderboardController(
             leaderboardWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/leaderboard/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "leaderboards"
     }
 

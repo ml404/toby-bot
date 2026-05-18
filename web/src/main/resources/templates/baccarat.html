@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-min-stake=${minStake}, data-max-stake=${maxStake}">
 
     <div class="bac-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🎴 Baccarat • ' + ${guildName}">🎴 Baccarat</h1>
         <p class="muted">
             Pick a side. Both hands deal automatically per the standard Punto Banco tableau.

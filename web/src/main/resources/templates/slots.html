@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}">
 
     <div class="slots-header">
-        <a class="back-link" th:href="@{/leaderboards}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'🎰 Slots • ' + ${guildName}">🎰 Slots</h1>
         <p class="muted">3-of-a-kind wins. Bet between
             <span th:text="${minStake}">10</span> and

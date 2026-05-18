@@ -10,7 +10,7 @@
                data-slot-count=${slotCount}">
 
     <div class="wheel-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🎡 Wheel of Fortune • ' + ${guildName}">🎡 Wheel of Fortune</h1>
         <p class="muted">Pick a multiplier, spin the wheel. Land on your pick to win
             <strong>multiplier × stake</strong>. Per-pick RTPs cluster around 0.88

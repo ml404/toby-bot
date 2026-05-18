@@ -51,6 +51,16 @@
     .guild-count.has-intros { background: var(--accent-soft); color: var(--accent); }
     .guild-count.full { background: rgba(231, 76, 60, 0.12); color: var(--danger); }
 
+    .guild-card-wrap { position: relative; display: block; }
+    .guild-card-wrap .default-guild-form {
+        position: absolute;
+        bottom: 8px; left: 50%;
+        transform: translateX(-50%);
+        margin: 0;
+        z-index: 2;
+    }
+    .guild-card-wrap .guild-card { padding-bottom: 44px; }
+
     .search-row {
         display: flex;
         gap: var(--space-3);
@@ -91,25 +101,28 @@
     </div>
 
     <div class="guild-grid" th:if="${not #lists.isEmpty(guilds)}" id="guildGrid">
-        <a class="guild-card"
-           th:each="guild : ${guilds}"
-           th:href="@{/intro/{id}(id=${guild.id})}"
-           th:attr="data-guild-name=${#strings.toLowerCase(guild.name)}">
-            <span class="guild-count"
-                  th:with="count=${introCounts[guild.id] ?: 0}"
-                  th:classappend="${count >= maxIntros ? ' full' : (count > 0 ? ' has-intros' : '')}"
-                  th:text="${count} + ' / ' + ${maxIntros}">0 / 3</span>
-            <img th:if="${guild.iconUrl != null}"
-                 th:src="${guild.iconUrl}"
-                 th:alt="${guild.name} + ' icon'"
-                 class="guild-icon"
-                 onerror="this.style.display='none'">
-            <div th:unless="${guild.iconUrl != null}"
-                 class="guild-icon-placeholder"
-                 aria-hidden="true"
-                 th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
-            <div class="guild-name" th:text="${guild.name}" th:title="${guild.name}">Guild Name</div>
-        </a>
+        <div class="guild-card-wrap"
+             th:each="guild : ${guilds}"
+             th:attr="data-guild-name=${#strings.toLowerCase(guild.name)}">
+            <a class="guild-card"
+               th:href="@{/intro/{id}(id=${guild.id})}">
+                <span class="guild-count"
+                      th:with="count=${introCounts[guild.id] ?: 0}"
+                      th:classappend="${count >= maxIntros ? ' full' : (count > 0 ? ' has-intros' : '')}"
+                      th:text="${count} + ' / ' + ${maxIntros}">0 / 3</span>
+                <img th:if="${guild.iconUrl != null}"
+                     th:src="${guild.iconUrl}"
+                     th:alt="${guild.name} + ' icon'"
+                     class="guild-icon"
+                     onerror="this.style.display='none'">
+                <div th:unless="${guild.iconUrl != null}"
+                     class="guild-icon-placeholder"
+                     aria-hidden="true"
+                     th:text="${#strings.substring(guild.name, 0, 1).toUpperCase()}">G</div>
+                <div class="guild-name" th:text="${guild.name}" th:title="${guild.name}">Guild Name</div>
+            </a>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${guild.id}, ${defaultGuildId}, '/intro/guilds?pick=true')}"></div>
+        </div>
     </div>
 
     <p id="noResults" class="no-results">No servers match your search.</p>
@@ -131,7 +144,7 @@
         search.addEventListener('input', function () {
             const q = search.value.trim().toLowerCase();
             let visible = 0;
-            grid.querySelectorAll('.guild-card').forEach(card => {
+            grid.querySelectorAll('.guild-card-wrap').forEach(card => {
                 const name = card.dataset.guildName || '';
                 const match = !q || name.indexOf(q) !== -1;
                 card.style.display = match ? '' : 'none';

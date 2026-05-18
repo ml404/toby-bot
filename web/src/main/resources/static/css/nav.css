@@ -36,6 +36,24 @@ nav {
     transition: border-color 0.2s, color 0.2s;
 }
 .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+.nav-default-guild {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 160px;
+    padding: 4px 10px;
+    border: 1px solid #555;
+    border-radius: 999px;
+    color: #c5c5d2;
+    font-size: 0.8rem;
+    text-decoration: none;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+.nav-default-guild:hover { border-color: #fff; color: #fff; }
+.nav-default-guild-empty { color: #7a7a8c; }
+.nav-default-guild-empty:hover { color: #c5c5d2; border-color: #7a7a8c; }
 .nav-toggle {
     display: none;
     background: transparent;

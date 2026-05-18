@@ -3,6 +3,7 @@ package web.controller
 import database.service.TipService
 import database.service.TipService.TipOutcome
 import database.service.UserService
+import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.ResponseEntity
@@ -17,6 +18,8 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.event.WebTipSentEvent
 import web.service.EconomyWebService
 import web.service.TipWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -41,6 +44,8 @@ class TipController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val discordId = user.discordIdOrNull()
@@ -48,8 +53,16 @@ class TipController(
             economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/tip/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "tip-guilds"
     }
 

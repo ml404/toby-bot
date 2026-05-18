@@ -5,6 +5,7 @@ import database.service.DuelService
 import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
 import database.service.UserService
+import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.ResponseEntity
@@ -21,6 +22,8 @@ import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
 import web.service.MemberLookupHelper
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -47,14 +50,25 @@ class DuelController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val discordId = user.discordIdOrNull()
         val guilds = if (discordId != null) {
             economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/duel/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "duel-guilds"
     }
 

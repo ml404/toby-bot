@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}">
 
     <div class="dice-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🎲 Dice • ' + ${guildName}">🎲 Dice</h1>
         <p class="muted">Pick a number 1-<span th:text="${sides}">6</span>, roll the die, match for
             <strong th:text="${multiplier} + '×'">5×</strong> stake. Bet

@@ -2,6 +2,7 @@ package web.controller
 
 import database.dto.MusicDto
 import database.service.MusicFileService
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpSession
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.IntroWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
@@ -35,11 +38,20 @@ class IntroWebController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model
     ): String {
         val accessToken = client.accessToken.tokenValue
         val discordId = user.discordIdOrNull()
         val guilds = introWebService.getMutualGuilds(accessToken)
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/intro/$it" }
 
         val counts: Map<String, Int> = if (discordId != null) {
             introWebService.getIntroCountsForGuilds(discordId, guilds.map { it.id.toLong() })
@@ -52,6 +64,7 @@ class IntroWebController(
         model.addAttribute("username", user.displayName())
         model.addAttribute("discordId", user.discordIdString())
         model.addAttribute("inviteUrl", inviteUrl)
+        model.addAttribute("defaultGuildId", defaultGuildId)
 
         return "guilds"
     }

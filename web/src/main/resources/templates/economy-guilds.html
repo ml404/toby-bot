@@ -16,24 +16,26 @@
     <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
-        <a class="lb-guild-card"
-           th:each="g : ${guilds}"
-           th:href="@{/economy/{id}(id=${g.id})}">
-            <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
-            <div class="lb-guild-top">
-                <span class="muted">Price:</span>
-                <span th:if="${g.price != null}"
-                      th:text="${#numbers.formatDecimal(g.price, 1, 2)} + ' credits / coin'">—</span>
-                <span th:unless="${g.price != null}" class="muted">no market yet</span>
-            </div>
-            <div class="lb-guild-stats">
-                <span class="muted">Your holdings:</span>
-                <span>
-                    <strong th:text="${g.coins}">0</strong> TOBY ·
-                    <strong th:text="${g.credits}">0</strong> credits
-                </span>
-            </div>
-        </a>
+        <div class="lb-guild-card lb-guild-card-wrap" th:each="g : ${guilds}">
+            <a class="lb-guild-card-link"
+               th:href="@{/economy/{id}(id=${g.id})}">
+                <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
+                <div class="lb-guild-top">
+                    <span class="muted">Price:</span>
+                    <span th:if="${g.price != null}"
+                          th:text="${#numbers.formatDecimal(g.price, 1, 2)} + ' credits / coin'">—</span>
+                    <span th:unless="${g.price != null}" class="muted">no market yet</span>
+                </div>
+                <div class="lb-guild-stats">
+                    <span class="muted">Your holdings:</span>
+                    <span>
+                        <strong th:text="${g.coins}">0</strong> TOBY ·
+                        <strong th:text="${g.credits}">0</strong> credits
+                    </span>
+                </div>
+            </a>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, '/economy/guilds?pick=true')}"></div>
+        </div>
     </div>
 
     <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}">

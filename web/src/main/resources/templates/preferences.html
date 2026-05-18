@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Settings', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Settings</h1>
+
+    <section class="lb-stat" style="text-align:left;">
+        <h2 style="margin-top:0;">Default server</h2>
+        <p class="muted">
+            Pick a default server and TobyBot will skip the "choose a server"
+            picker on every feature page — clicking <em>Slots</em>,
+            <em>Leaderboards</em>, <em>Intro Songs</em>, and so on will land
+            you straight on the destination for that server.
+        </p>
+        <p class="muted" th:if="${defaultGuildId == null}">
+            No default set yet. Click <strong>☆ Set as default</strong> on any
+            server below.
+        </p>
+        <p class="muted" th:if="${defaultGuildId != null and currentDefaultGuildName != null}">
+            Current default: <strong th:text="${currentDefaultGuildName}">Server</strong>.
+            Click <strong>★ Default</strong> below to clear it.
+        </p>
+    </section>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}" style="margin-top:24px;">
+        <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
+            <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, '/preferences')}"></div>
+        </div>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}" style="margin-top:24px;">
+        <span class="emoji" aria-hidden="true">🤖</span>
+        <h2>No servers to set as default yet</h2>
+        <p class="mb-5">
+            You need to share at least one server with TobyBot before you can
+            anchor one as your default.
+        </p>
+    </div>
+</main>
+</body>
+</html>

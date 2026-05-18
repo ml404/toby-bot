@@ -7,7 +7,7 @@
 
 <main id="main" class="container" th:attr="data-guild-id=${guildId}">
     <div class="lb-header">
-        <a class="back-link" th:href="@{/leaderboards}">&larr; All leaderboards</a>
+        <a class="back-link" th:href="@{/leaderboards(pick=true)}">&larr; All leaderboards</a>
         <h1 th:text="${view.guildName}">Guild Name</h1>
         <p class="muted">Social credit standings &middot; current totals with this month's earnings highlighted</p>
     </div>

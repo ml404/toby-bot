@@ -10,7 +10,7 @@
                data-rows=${rows}, data-buckets=${buckets}">
 
     <div class="plinko-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🟢 Plinko • ' + ${guildName}">🟢 Plinko</h1>
         <p class="muted">Drop a ball through
             <span th:text="${rows}">8</span> peg rows; it lands in one of

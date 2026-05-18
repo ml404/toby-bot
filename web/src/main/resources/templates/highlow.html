@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-active-anchor=${anchor}, data-active-stake=${activeStake}, data-higher-multiplier=${higherMultiplier}, data-lower-multiplier=${lowerMultiplier}">
 
     <div class="highlow-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🃏 High-Low • ' + ${guildName}">🃏 High-Low</h1>
         <p class="muted">Lock your stake first — the anchor is dealt only after you commit.
             Each direction's payout depends on the anchor; safer calls pay less. Tie loses.

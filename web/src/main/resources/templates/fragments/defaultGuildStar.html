@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Star button rendered on the picker pages (casino-guilds,
+    leaderboards, intro/guilds). Clicking POSTs to /preferences/...
+    which writes / clears the toby_default_guild cookie and bounces
+    back to the same picker so the user sees the state flip.
+
+    Args:
+      - guildId     : the card's guild id (String "1234..." OK)
+      - currentId   : the user's current anchored guild id (Long?)
+                      or null when nothing is anchored
+      - redirectUrl : where to bounce back to after toggle; pass the
+                      picker URL the card lives on (including ?game=…)
+                      so the auto-redirect logic re-evaluates with
+                      fresh state.
+-->
+<th:block th:fragment="star(guildId, currentId, redirectUrl)"
+          th:with="isDefault=${currentId != null and currentId.toString() == guildId.toString()}">
+    <form th:action="${isDefault} ? @{/preferences/default-guild/clear} : @{/preferences/default-guild}"
+          method="post"
+          class="default-guild-form">
+        <input type="hidden" name="redirect" th:value="${redirectUrl}">
+        <input th:unless="${isDefault}" type="hidden" name="guildId" th:value="${guildId}">
+        <button type="submit"
+                class="default-guild-toggle"
+                th:classappend="${isDefault} ? ' is-default' : ''"
+                th:aria-label="${isDefault} ? 'Unset default server' : 'Set as default server'"
+                th:title="${isDefault} ? 'Default server — click to clear' : 'Set as default server'">
+            <span aria-hidden="true" th:text="${isDefault} ? '★ Default' : '☆ Set as default'">☆ Set as default</span>
+        </button>
+    </form>
+</th:block>
+</body>
+</html>

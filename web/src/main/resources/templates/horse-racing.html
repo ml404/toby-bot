@@ -10,7 +10,7 @@
                data-field-size=${fieldSize}">
 
     <div class="hr-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🐎 Horse Racing • ' + ${guildName}">🐎 Horse Racing</h1>
         <p class="muted">Pick a horse (1–<span th:text="${fieldSize}">6</span>) and a bet type — Win (1st), Place (top 2),
             or Show (top 3). Bet <span th:text="${minStake}">10</span> to

@@ -12,10 +12,11 @@
         → Tools holds reference / utility pages → Admin
         anchor sits last so the everyday traffic isn't next to it.
 
-        Anchor links inside the Play menu intentionally repeat the same
-        /casino/guilds target for the minigame entries — each row is a
-        feature index (an admin can tell that Baccarat exists from the
-        navbar alone), and the picker page handles the actual routing.
+        Each minigame entry below carries a `?game=<slug>` so the
+        /casino/guilds picker can deep-link past itself when the user
+        only shares one server with the bot (or has anchored one as a
+        default). Without the query param the picker still renders the
+        full per-guild game grid — the slug is intent, not routing.
         Poker / Blackjack / Lottery have dedicated landing routes and
         are separated by a horizontal divider so the visual grouping
         matches the routing reality.
@@ -30,18 +31,18 @@
                     aria-expanded="false"
                     onclick="toggleDropdown(this)">Play <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
             <div class="nav-dropdown-menu" role="menu">
-                <a href="/casino/guilds" role="menuitem">&#127920; Slots</a>
-                <a href="/casino/guilds" role="menuitem">&#129689; Coinflip</a>
-                <a href="/casino/guilds" role="menuitem">&#127922; Dice</a>
-                <a href="/casino/guilds" role="menuitem">&#127183; High-Low</a>
-                <a href="/casino/guilds" role="menuitem">&#127903;&#65039; Scratch</a>
-                <a href="/casino/guilds" role="menuitem">&#127919; Keno</a>
-                <a href="/casino/guilds" role="menuitem">&#127905; Roulette</a>
-                <a href="/casino/guilds" role="menuitem">&#127924; Baccarat</a>
-                <a href="/casino/guilds" role="menuitem">&#127183; Casino Hold'em</a>
-                <a href="/casino/guilds" role="menuitem">&#128994; Plinko</a>
-                <a href="/casino/guilds" role="menuitem">&#128014; Horse Racing</a>
-                <a href="/casino/guilds" role="menuitem">&#127905; Wheel</a>
+                <a href="/casino/guilds?game=slots" role="menuitem">&#127920; Slots</a>
+                <a href="/casino/guilds?game=coinflip" role="menuitem">&#129689; Coinflip</a>
+                <a href="/casino/guilds?game=dice" role="menuitem">&#127922; Dice</a>
+                <a href="/casino/guilds?game=highlow" role="menuitem">&#127183; High-Low</a>
+                <a href="/casino/guilds?game=scratch" role="menuitem">&#127903;&#65039; Scratch</a>
+                <a href="/casino/guilds?game=keno" role="menuitem">&#127919; Keno</a>
+                <a href="/casino/guilds?game=roulette" role="menuitem">&#127905; Roulette</a>
+                <a href="/casino/guilds?game=baccarat" role="menuitem">&#127924; Baccarat</a>
+                <a href="/casino/guilds?game=casinoholdem" role="menuitem">&#127183; Casino Hold'em</a>
+                <a href="/casino/guilds?game=plinko" role="menuitem">&#128994; Plinko</a>
+                <a href="/casino/guilds?game=horse-racing" role="menuitem">&#128014; Horse Racing</a>
+                <a href="/casino/guilds?game=wheel" role="menuitem">&#127905; Wheel</a>
                 <hr class="nav-dropdown-separator" aria-hidden="true">
                 <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
                 <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
@@ -88,6 +89,20 @@
         </div>
         <a href="/moderation/guilds">Admin</a>
         <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+            <a th:if="${currentDefaultGuildName != null}"
+               href="/preferences"
+               class="nav-default-guild"
+               th:title="'Default server: ' + ${currentDefaultGuildName} + ' — click to change'">
+                <span aria-hidden="true">★</span>
+                <span th:text="${currentDefaultGuildName}">Server</span>
+            </a>
+            <a th:unless="${currentDefaultGuildName != null}"
+               href="/preferences"
+               class="nav-default-guild nav-default-guild-empty"
+               title="Set a default server to skip the guild picker">
+                <span aria-hidden="true">☆</span>
+                <span>Default</span>
+            </a>
             <span class="nav-user" th:text="${username}">User</span>
             <form th:action="@{/logout}" method="post" style="margin:0">
                 <button type="submit" class="btn-logout">Logout</button>

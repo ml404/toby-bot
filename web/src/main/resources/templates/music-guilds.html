@@ -35,6 +35,7 @@
 
             <div class="music-guild-actions">
                 <a class="btn-primary" th:href="@{/music-player/{id}(id=${g.id})}">🎶 Open player</a>
+                <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, '/music-player/guilds?pick=true')}"></div>
             </div>
         </article>
     </div>
