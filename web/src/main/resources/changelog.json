@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Daily streak, achievements, notification preferences",
+    "summary": "Adds a cohesive **engagement loop** on top of the existing per-guild XP/credit infrastructure: **Daily streak** (`/daily`): claim once per UTC day to grow a per-(user, guild) streak. Rewards scale by streak length (`min(base + per_day_bonus × (streak − 1), max)`) and bypass the daily XP/credit caps. Publishes `StreakClaimedEvent`. **Achievement engine** (`/achievements`): seeded from `AchievementCatalog` on startup. Counter-based (`progress(code, delta)`) and one-shot (`un…",
+    "emoji": "🎰",
+    "prNumber": 491
+  },
+  {
+    "date": "May 2026",
     "title": "Trim low-value misc commands",
     "summary": "You flagged `/hellothere`, `/ch`, and `/brother` as low-value. This PR removes the first two outright and reworks `/brother` into something a non-Toby guild would actually use. **Delete `/hellothere`** — one-line Star Wars joke that only does anything if you happen to type a date relative to 2005-05-19. No replay value. **Delete `/ch`** — text-mangling gimmick with a stale `ink`/`gamerword` censoring easter egg. **Rework `/brother`** as a real registry: `check` — preserves…",
     "emoji": "🧹",
