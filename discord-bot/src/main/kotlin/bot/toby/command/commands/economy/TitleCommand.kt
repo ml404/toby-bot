@@ -6,6 +6,7 @@ import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
+import database.service.TitlePurchasePolicy
 import database.service.TitleService
 import database.service.UserService
 import net.dv8tion.jda.api.EmbedBuilder
@@ -30,6 +31,18 @@ class TitleCommand @Autowired constructor(
 
     companion object {
         private const val OPT_TITLE = "title"
+
+        /** Renders the title-shop body text. Pure function for unit testing. */
+        internal fun buildShopBody(titles: List<database.dto.TitleDto>): String =
+            if (titles.isEmpty()) {
+                "No titles are available right now."
+            } else {
+                titles.joinToString("\n") { t ->
+                    val desc = if (!t.description.isNullOrBlank()) " — ${t.description}" else ""
+                    val gate = if (t.requiredLevel > 0) " · 🔒 Lvl ${t.requiredLevel}" else ""
+                    "**${t.label}** · ${t.cost} credits$gate$desc"
+                }
+            }
     }
 
     override val subCommands: List<SubcommandData> = listOf(
@@ -70,18 +83,9 @@ class TitleCommand @Autowired constructor(
     }
 
     private fun handleShop(event: SlashCommandInteractionEvent, deleteDelay: Int) {
-        val titles = titleService.listAll()
-        val body = if (titles.isEmpty()) {
-            "No titles are available right now."
-        } else {
-            titles.joinToString("\n") { t ->
-                val desc = if (!t.description.isNullOrBlank()) " — ${t.description}" else ""
-                "**${t.label}** · ${t.cost} credits$desc"
-            }
-        }
         val embed = EmbedBuilder()
             .setTitle("Title Shop")
-            .setDescription(body)
+            .setDescription(buildShopBody(titleService.listAll()))
             .setFooter("Buy with /title buy <exact label>")
             .build()
         event.hook.replyEphemeralEmbedAndDelete(embed, deleteDelay)
@@ -101,6 +105,18 @@ class TitleCommand @Autowired constructor(
         }
         if (titleService.owns(userDto.discordId, titleId)) {
             reply(event, "You already own **${title.label}**. Use /title equip to wear it.", deleteDelay); return
+        }
+        when (val gate = TitlePurchasePolicy.check(title, userDto.xp)) {
+            is TitlePurchasePolicy.Result.LevelLocked -> {
+                reply(
+                    event,
+                    "Requires Level ${gate.required} to buy **${title.label}** — you are Level ${gate.actor}. " +
+                        "Keep chatting / hanging in voice — you'll unlock it free when you ding.",
+                    deleteDelay
+                )
+                return
+            }
+            TitlePurchasePolicy.Result.Ok -> Unit
         }
         val balance = userDto.socialCredit ?: 0L
         if (balance < title.cost) {

@@ -80,6 +80,21 @@ class TitlesControllerBuyWithTobyTest {
     }
 
     @Test
+    fun `LevelLocked maps to 400 with required and actor levels in the message`() {
+        every { titlesWebService.buyTitleWithTobyCoin(discordId, guildId, titleId) } returns
+            BuyWithTobyOutcome.LevelLocked(required = 75, actor = 12)
+
+        val response = controller.buyWithToby(guildId, titleId, user)
+
+        assertEquals(400, response.statusCode.value())
+        val body = response.body!!
+        assertFalse(body.ok)
+        val error = body.error!!
+        assertTrue(error.contains("Level 75"))
+        assertTrue(error.contains("Level 12"))
+    }
+
+    @Test
     fun `Error outcome maps to 400 with propagated message`() {
         every { titlesWebService.buyTitleWithTobyCoin(discordId, guildId, titleId) } returns
             BuyWithTobyOutcome.Error("Title not found.")

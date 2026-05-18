@@ -236,4 +236,96 @@ class LevelUpListenerTest {
         assert(totalField.contains(String.format("%,d", totalXp)))
         assert(embed.footer!!.text!!.contains("Gold"))
     }
+
+    @Test
+    fun `onLevelUp uses extended tier names and colors from Platinum through Legendary`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val channel = mockk<TextChannel>(relaxed = true)
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        val sentEmbeds = mutableListOf<MessageEmbed>()
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.idLong } returns guildId
+        every { guild.id } returns guildId.toString()
+        every { guild.getTextChannelById(any<Long>()) } returns channel
+        every { channel.name } returns "general"
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } answers {
+            sentEmbeds += firstArg<MessageEmbed>()
+            createAction
+        }
+        every { configService.getConfigByName(any(), any()) } returns null
+        every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
+        every { titleService.listAll() } returns emptyList()
+
+        // (newLevel, expected tier name, expected lower-24-bit color)
+        val cases = listOf(
+            Triple(50, "Platinum", 0xE5E4E2),
+            Triple(75, "Diamond", 0x5865F2),
+            Triple(100, "Master", 0x9B30FF),
+            Triple(150, "Mythic", 0xFF3CAC),
+            Triple(200, "Legendary", 0xFFD700),
+        )
+
+        cases.forEachIndexed { i, (lvl, tier, color) ->
+            val totalXp = LevelCurve.cumulativeXpForLevel(lvl)
+            listener.onLevelUp(
+                LevelUpEvent(
+                    discordId = discordId, guildId = guildId,
+                    oldLevel = lvl - 1, newLevel = lvl, totalXp = totalXp, channelId = 99L
+                )
+            )
+            val embed = sentEmbeds[i]
+            assert(embed.footer!!.text!!.contains(tier)) {
+                "level $lvl footer '${embed.footer!!.text}' should mention $tier"
+            }
+            assert((embed.colorRaw and 0xFFFFFF) == color) {
+                "level $lvl expected color 0x${color.toString(16)}, got 0x${(embed.colorRaw and 0xFFFFFF).toString(16)}"
+            }
+        }
+    }
+
+    @Test
+    fun `tier boundaries are off-by-one safe just below each threshold`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val channel = mockk<TextChannel>(relaxed = true)
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        val sentEmbeds = mutableListOf<MessageEmbed>()
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.idLong } returns guildId
+        every { guild.id } returns guildId.toString()
+        every { guild.getTextChannelById(any<Long>()) } returns channel
+        every { channel.name } returns "general"
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } answers {
+            sentEmbeds += firstArg<MessageEmbed>()
+            createAction
+        }
+        every { configService.getConfigByName(any(), any()) } returns null
+        every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
+        every { titleService.listAll() } returns emptyList()
+
+        // (level just below threshold, expected lower-tier name) — guards against
+        // a `>` vs `>=` swap on the tier `when` arms.
+        val boundaries = listOf(
+            9 to "Bronze",     // 10 -> Silver
+            24 to "Silver",    // 25 -> Gold
+            49 to "Gold",      // 50 -> Platinum
+            74 to "Platinum",  // 75 -> Diamond
+            99 to "Diamond",   // 100 -> Master
+            149 to "Master",   // 150 -> Mythic
+            199 to "Mythic",   // 200 -> Legendary
+        )
+
+        boundaries.forEachIndexed { i, (lvl, expectedTier) ->
+            val totalXp = LevelCurve.cumulativeXpForLevel(lvl)
+            listener.onLevelUp(
+                LevelUpEvent(
+                    discordId = discordId, guildId = guildId,
+                    oldLevel = lvl - 1, newLevel = lvl, totalXp = totalXp, channelId = 99L
+                )
+            )
+            val embed = sentEmbeds[i]
+            assert(embed.footer!!.text!!.contains(expectedTier)) {
+                "level $lvl should stay on '$expectedTier' tier, got '${embed.footer!!.text}'"
+            }
+        }
+    }
 }

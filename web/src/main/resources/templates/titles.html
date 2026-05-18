@@ -46,13 +46,22 @@
                 </tr>
                 </thead>
                 <tbody>
-                <tr th:each="t : ${titleShop.catalog}" th:attr="data-title-id=${t.id}">
+                <tr th:each="t : ${titleShop.catalog}" th:attr="data-title-id=${t.id}"
+                    th:with="locked=${t.requiredLevel > 0 and titleShop.actorLevel &lt; t.requiredLevel},
+                             lockTooltip=${'Requires Level ' + t.requiredLevel + ' (you are ' + titleShop.actorLevel + ')'}">
                     <td data-label="Title">
                         <span class="title-label"
                               th:text="${t.label}"
                               th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}">Title</span>
                     </td>
-                    <td data-label="Cost" th:text="${t.cost}">0</td>
+                    <td data-label="Cost">
+                        <span th:text="${t.cost}">0</span>
+                        <span th:if="${t.requiredLevel > 0}"
+                              class="badge muted"
+                              th:classappend="${locked ? ' locked' : ''}"
+                              th:title="${lockTooltip}"
+                              th:text="'Lvl ' + ${t.requiredLevel}">Lvl 0</span>
+                    </td>
                     <td data-label="Description" th:text="${t.description != null ? t.description : ''}"></td>
                     <td data-label="Status">
                         <span th:if="${titleShop.equippedTitleId == t.id}" class="badge owner">equipped</span>
@@ -62,13 +71,14 @@
                     <td data-label="Action">
                         <button type="button" class="btn title-buy"
                                 th:if="${!titleShop.ownedTitleIds.contains(t.id)}"
-                                th:disabled="${titleShop.balance &lt; t.cost}">Buy</button>
+                                th:disabled="${titleShop.balance &lt; t.cost or locked}"
+                                th:title="${locked ? lockTooltip : ''}">Buy</button>
                         <button type="button" class="btn title-buy-toby"
                                 th:if="${!titleShop.ownedTitleIds.contains(t.id) and titleShop.tobyCoins > 0 and titleShop.marketPrice > 0}"
                                 th:with="shortfall=${t.cost - titleShop.balance &gt; 0 ? t.cost - titleShop.balance : 0},
                                          coinsNeeded=${T(java.lang.Math).ceil(shortfall / titleShop.marketPrice)}"
-                                th:disabled="${coinsNeeded > titleShop.tobyCoins}"
-                                th:title="${shortfall > 0 ? 'Sells ~' + coinsNeeded + ' TOBY at live market price' : 'Buys with credits (no TOBY sold)'}">
+                                th:disabled="${coinsNeeded > titleShop.tobyCoins or locked}"
+                                th:title="${locked ? lockTooltip : (shortfall > 0 ? 'Sells ~' + coinsNeeded + ' TOBY at live market price' : 'Buys with credits (no TOBY sold)')}">
                             Buy with TOBY
                         </button>
                         <button type="button" class="btn title-equip"
