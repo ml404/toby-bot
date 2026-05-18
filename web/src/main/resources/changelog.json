@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Render full progress bar on level-up embed",
+    "summary": "The Progress field on the level-up embed was computed via `LevelCurve.progress(totalXp)`, which returns `xpIntoLevel = 0` when the user lands exactly on the level threshold. That made the celebration message render an empty bar (e.g. `░░░░░░░░░░ 0 / 155 XP`) right at the moment of leveling up — the \"wonky\" look in the screenshot. Switch `buildLevelUpEmbed` to use `LevelCurve.xpForNextLevel(newLevel - 1)` as both `filled` and `total` for the bar, so the achieved level rende…",
+    "emoji": "🔨",
+    "prNumber": 484
+  },
+  {
+    "date": "May 2026",
     "title": "Gate purchases by level, add level-ladder titles, extend tiers",
     "summary": "**Gate purchasable titles by level.** `TitleDto.required_level` (added in V34) is now enforced on the buy paths — Discord `/title buy`, web `/titles/{guildId}/{titleId}/buy`, and the one-click \"Buy with TOBY\" flow. Logic is centralised in a new `TitlePurchasePolicy` so all three callsites share the same rule. The auto-unlock branch on level-up (`LevelUpListener.unlockTitles`) is unchanged. **Add 14 level-ladder titles (V35).** New titles span Lvl 5 → Lvl 200 (🌱 Sprout … ♾…",
     "emoji": "💰",
