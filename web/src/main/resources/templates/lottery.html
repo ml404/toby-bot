@@ -14,7 +14,7 @@
                data-revenue-jackpot-pct=${snapshot.revenueJackpotPct}">
 
     <div class="lottery-header">
-        <a class="back-link" th:href="@{/lottery/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/lottery/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'🎟️ Lottery • ' + ${guildName}">🎟️ Lottery</h1>
         <!-- Mode-aware blurb: NUMBER_MATCH (Pick-X) vs WEIGHTED (top-3
              weighted draw) reflects the guild's LOTTERY_DAILY_MODE

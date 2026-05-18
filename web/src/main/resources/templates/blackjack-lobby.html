@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-min-ante=${minAnte}, data-max-ante=${maxAnte}">
 
     <div class="bj-header">
-        <a class="back-link" th:href="@{/blackjack/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/blackjack/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'🂡 Blackjack • ' + ${guildName}">🂡 Blackjack</h1>
         <p class="muted">
             Players vs. shared dealer. Each seat antes the same amount per hand.

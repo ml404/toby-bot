@@ -12,7 +12,7 @@
 -->
 <div th:fragment="moderationHeader(overview, isOwner, active)">
     <div class="page-header mod-header">
-        <a class="back-link" th:href="@{/moderation/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/moderation/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="${overview.guildName}">Guild Name</h1>
         <p class="lede" th:if="${isOwner}">You are the server owner.</p>
         <p class="lede" th:unless="${isOwner}">You are a TobyBot superuser.</p>

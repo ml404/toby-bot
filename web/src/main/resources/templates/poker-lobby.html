@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-min-buyin=${minBuyIn}, data-max-buyin=${maxBuyIn}">
 
     <div class="poker-header">
-        <a class="back-link" th:href="@{/poker/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/poker/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'🃏 Poker • ' + ${guildName}">🃏 Poker</h1>
         <p class="muted">
             Fixed-limit Texas Hold'em.

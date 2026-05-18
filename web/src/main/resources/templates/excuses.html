@@ -13,6 +13,7 @@
 <main id="main" class="container">
 
     <div class="excuse-header">
+        <a class="back-link" th:href="@{/excuses/guilds(pick=true)}">&larr; All servers</a>
         <h1>Excuses — <span th:text="${guildName}">Server</span></h1>
         <span class="excuse-count"
               th:text="${totalCount} + ' total'">0 total</span>
