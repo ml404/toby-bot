@@ -143,6 +143,7 @@ class XpAwardServiceTest {
         assertEquals(guildId, event.guildId)
         assertEquals(0, event.oldLevel)
         assertEquals(1, event.newLevel)
+        assertEquals(100L, event.totalXp)
         assertEquals(1234L, event.channelId)
     }
 

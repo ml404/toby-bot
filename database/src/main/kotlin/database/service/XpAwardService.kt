@@ -73,6 +73,7 @@ class XpAwardService(
                     guildId = guildId,
                     oldLevel = oldLevel,
                     newLevel = newLevel,
+                    totalXp = newXp,
                     channelId = channelId
                 )
             )
