@@ -91,6 +91,7 @@ class LevelUpListener @Autowired constructor(
             .setFooter("${tierName(event.newLevel)} tier")
         member?.let { m ->
             val avatar = runCatching { m.effectiveAvatarUrl }.getOrNull()
+                ?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
             builder.setAuthor(m.effectiveName, null, avatar)
         }
         return builder.build()
