@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Reorganize moderation settings UI into Server/Economy/Casino pillars",
+    "summary": "A re-arranging pass on `/moderation/{guildId}/settings` to fix two awkwardnesses without rewriting the page: **Blackjack and Poker each had settings split across two homes.** Table rules lived in their own section, but ante/blind/buy-in stakes were buried inside the \"Casino stakes & buy-ins\" mega-section — tuning either game meant scrolling between two cards. Stakes now live with their game. **No top-level grouping.** Three `<h2 class=\"config-pillar\">` headers (**Server**…",
+    "emoji": "🛡️",
+    "prNumber": 485
+  },
+  {
+    "date": "May 2026",
     "title": "Render full progress bar on level-up embed",
     "summary": "The Progress field on the level-up embed was computed via `LevelCurve.progress(totalXp)`, which returns `xpIntoLevel = 0` when the user lands exactly on the level threshold. That made the celebration message render an empty bar (e.g. `░░░░░░░░░░ 0 / 155 XP`) right at the moment of leveling up — the \"wonky\" look in the screenshot. Switch `buildLevelUpEmbed` to use `LevelCurve.xpForNextLevel(newLevel - 1)` as both `filled` and `total` for the bar, so the achieved level rende…",
     "emoji": "🔨",
