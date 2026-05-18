@@ -1,5 +1,6 @@
 package database.service
 
+import common.events.DuelResolvedEvent
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.dto.UserDto
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import kotlin.random.Random
 
@@ -26,6 +29,7 @@ class DuelServiceTest {
     private lateinit var configService: ConfigService
     private lateinit var duelLogPersistence: RecordingDuelLogPersistence
     private lateinit var recentDuelResolutions: RecentDuelResolutions
+    private lateinit var eventPublisher: RecordingEventPublisher
 
     @BeforeEach
     fun setup() {
@@ -33,6 +37,7 @@ class DuelServiceTest {
         jackpotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         duelLogPersistence = RecordingDuelLogPersistence()
+        eventPublisher = RecordingEventPublisher()
         // Capture-only scheduler — we don't actually want eviction to run
         // in the JVM thread pool during tests.
         val noopScheduler = mockk<java.util.concurrent.ScheduledExecutorService>(relaxed = true)
@@ -55,6 +60,7 @@ class DuelServiceTest {
             duelLogPersistence,
             recentDuelResolutions = recentDuelResolutions,
             random = random,
+            eventPublisher = eventPublisher,
         )
 
     @Test
@@ -251,6 +257,47 @@ class DuelServiceTest {
             DuelService.AcceptOutcome.UnknownOpponent,
             service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
         )
+    }
+
+    @Test
+    fun `acceptDuel Win publishes a DuelResolvedEvent with the correct winner`() {
+        userService.seed(UserDto(initiator, guildId).apply { socialCredit = 200L })
+        userService.seed(UserDto(opponent, guildId).apply { socialCredit = 200L })
+
+        // AlwaysHeadsRandom → initiator wins.
+        service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
+
+        assertEquals(1, eventPublisher.duelEvents.size)
+        val event = eventPublisher.duelEvents.single()
+        assertEquals(initiator, event.winnerDiscordId)
+        assertEquals(opponent, event.loserDiscordId)
+        assertEquals(guildId, event.guildId)
+        assertEquals(50L, event.stake)
+        assertEquals(100L, event.pot, "pot is 2 * stake regardless of tribute")
+    }
+
+    @Test
+    fun `acceptDuel rejection paths do not publish a DuelResolvedEvent`() {
+        // Initiator missing.
+        userService.seed(UserDto(opponent, guildId).apply { socialCredit = 200L })
+        service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
+        assertTrue(eventPublisher.duelEvents.isEmpty())
+
+        // Reset, then insufficient credits.
+        userService = RecordingUserService()
+        userService.seed(UserDto(initiator, guildId).apply { socialCredit = 5L })
+        userService.seed(UserDto(opponent, guildId).apply { socialCredit = 5L })
+        service().acceptDuel(initiator, opponent, guildId, stake = 50L, at = now)
+        assertTrue(eventPublisher.duelEvents.isEmpty())
+    }
+
+    private class RecordingEventPublisher : ApplicationEventPublisher {
+        val duelEvents: MutableList<DuelResolvedEvent> = mutableListOf()
+        val otherEvents: MutableList<Any> = mutableListOf()
+        override fun publishEvent(event: ApplicationEvent) { otherEvents.add(event) }
+        override fun publishEvent(event: Any) {
+            if (event is DuelResolvedEvent) duelEvents.add(event) else otherEvents.add(event)
+        }
     }
 
     private object AlwaysHeadsRandom : Random() {

@@ -1,21 +1,34 @@
 package database.service.impl
 
+import common.events.IntroSetEvent
 import database.dto.MusicDto
 import database.persistence.MusicFilePersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 
 @Service
-class DefaultMusicFileService : database.service.MusicFileService {
+class DefaultMusicFileService(
+    private val eventPublisher: ApplicationEventPublisher? = null
+) : database.service.MusicFileService {
     @Autowired
     private lateinit var musicFileService: MusicFilePersistence
 
 
     @CachePut(value = ["music"], key = "#musicDto.id")
     override fun createNewMusicFile(musicDto: MusicDto): MusicDto? {
-        return musicFileService.createNewMusicFile(musicDto)
+        val saved = musicFileService.createNewMusicFile(musicDto)
+        if (saved != null) {
+            val user = saved.userDto ?: musicDto.userDto
+            if (user != null) {
+                eventPublisher?.publishEvent(
+                    IntroSetEvent(discordId = user.discordId, guildId = user.guildId)
+                )
+            }
+        }
+        return saved
     }
 
     @CachePut(value = ["music"], key = "#id")

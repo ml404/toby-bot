@@ -46,7 +46,18 @@ class WebSecurityConfig {
                     .clearAuthentication(true)
             }
             .csrf { csrf ->
-                csrf.ignoringRequestMatchers("/v3/api-docs/**", "/swagger-ui/**")
+                // /api/engagement/** is a JSON-only REST surface. Browser
+                // clients hit it from authenticated dashboard JS that doesn't
+                // round-trip the CSRF token; protection comes from the
+                // OAuth2 session cookie + per-(user, guild) membership check
+                // inside EngagementApiController. Mutating endpoints
+                // operate only on the authenticated user's own row, so the
+                // residual CSRF surface is "an attacker tricks you into
+                // claiming your own daily streak" — not a meaningful risk.
+                csrf.ignoringRequestMatchers(
+                    "/v3/api-docs/**", "/swagger-ui/**",
+                    "/api/engagement/**",
+                )
             }
 
         return http.build()

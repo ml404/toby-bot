@@ -228,6 +228,51 @@ class JackpotLotteryServiceTest {
     }
 
     @Test
+    fun `drawLottery publishes one LotteryWonEvent per winner with their amount`() {
+        val recordingPublisher = RecordingEventPublisher()
+        val withPublisher = JackpotLotteryService(
+            lotteryPersistence, jackpotService, userService, configService,
+            random = kotlin.random.Random(42),
+            eventPublisher = recordingPublisher,
+        )
+
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 1L, ticketCount = 1, spent = 100L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 2L, ticketCount = 1, spent = 100L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 3L, ticketCount = 1, spent = 100L),
+        )
+        (1L..3L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        withPublisher.drawLottery(guildId)
+
+        assertEquals(3, recordingPublisher.lotteryEvents.size)
+        recordingPublisher.lotteryEvents.forEach { e ->
+            assertEquals(guildId, e.guildId)
+            assertTrue(e.discordId in 1L..3L)
+            assertTrue(e.amount in setOf(500L, 300L, 200L))
+        }
+    }
+
+    private class RecordingEventPublisher : org.springframework.context.ApplicationEventPublisher {
+        val lotteryEvents: MutableList<common.events.LotteryWonEvent> = mutableListOf()
+        override fun publishEvent(event: org.springframework.context.ApplicationEvent) {}
+        override fun publishEvent(event: Any) {
+            if (event is common.events.LotteryWonEvent) lotteryEvents.add(event)
+        }
+    }
+
+    @Test
     fun `cancelLottery refunds buyers and returns seed to the jackpot pool`() {
         val lottery = JackpotLotteryDto(
             id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_500L,

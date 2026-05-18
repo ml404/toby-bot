@@ -1,15 +1,18 @@
 package database.service.impl
 
+import common.events.VoiceSessionLoggedEvent
 import database.dto.VoiceSessionDto
 import database.persistence.VoiceSessionPersistence
 import database.service.VoiceSessionService
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Instant
 
 @Service
 class DefaultVoiceSessionService @Autowired constructor(
-    private val persistence: VoiceSessionPersistence
+    private val persistence: VoiceSessionPersistence,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) : VoiceSessionService {
 
     override fun openSession(session: VoiceSessionDto): VoiceSessionDto = persistence.openSession(session)
@@ -19,7 +22,20 @@ class DefaultVoiceSessionService @Autowired constructor(
 
     override fun findAllOpenSessions(): List<VoiceSessionDto> = persistence.findAllOpenSessions()
 
-    override fun closeSession(session: VoiceSessionDto): VoiceSessionDto = persistence.closeSession(session)
+    override fun closeSession(session: VoiceSessionDto): VoiceSessionDto {
+        val closed = persistence.closeSession(session)
+        val seconds = closed.countedSeconds ?: 0L
+        if (seconds > 0L) {
+            eventPublisher?.publishEvent(
+                VoiceSessionLoggedEvent(
+                    discordId = closed.discordId,
+                    guildId = closed.guildId,
+                    countedSeconds = seconds
+                )
+            )
+        }
+        return closed
+    }
 
     override fun sumCountedSecondsInRange(
         guildId: Long,

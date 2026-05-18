@@ -156,11 +156,14 @@ class CommandManagerTest {
             WheelOfFortuneCommand::class.java,
             HorseRacingCommand::class.java,
             SupportCommand::class.java,
+            DailyCommand::class.java,
+            AchievementsCommand::class.java,
+            NotifyCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(63, commandManager.allCommands.size)
-        Assertions.assertEquals(63, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(66, commandManager.allCommands.size)
+        Assertions.assertEquals(66, commandManager.allSlashCommands.size)
     }
 
     @Test

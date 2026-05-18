@@ -1,8 +1,10 @@
 package database.service
 
+import common.events.LotteryWonEvent
 import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
 import database.persistence.JackpotLotteryPersistence
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -40,6 +42,7 @@ class JackpotLotteryService(
     private val userService: UserService,
     private val configService: ConfigService,
     private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     // ===================================================================
@@ -256,6 +259,7 @@ class JackpotLotteryService(
             jackpotService.recordWin(guildId, ticket.discordId, amount)
             payouts += WinnerPayout(ticket.discordId, ticket.ticketCount, amount)
             totalPaid += amount
+            eventPublisher?.publishEvent(LotteryWonEvent(ticket.discordId, guildId, amount))
         }
 
         val drained = lottery.poolAmount
@@ -495,6 +499,7 @@ class JackpotLotteryService(
                 jackpotService.recordWin(guildId, ticket.discordId, perWinner)
                 payouts += MatchTierPayout(ticket.discordId, matchCount, perWinner)
                 totalPaid += perWinner
+                eventPublisher?.publishEvent(LotteryWonEvent(ticket.discordId, guildId, perWinner))
             }
         }
 
