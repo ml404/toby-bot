@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Auto-route through guild pickers when possible",
+    "summary": "Skips the `/{thing}/guilds` picker when the user only shares one server with the bot, or has anchored a default server. Applies to every picker in the navbar (casino games, leaderboards, intros, poker, blackjack, lottery, profile, economy, titles, tip, duel, music, excuses, teams, moderation). Each picker card grows a `☆ Set as default` / `★ Default` toggle, the navbar shows a \"★ ServerName\" pill when anchored, and a new `/preferences` page lets the user manage the anchor…",
+    "emoji": "🎟️",
+    "prNumber": 486
+  },
+  {
+    "date": "May 2026",
     "title": "Reorganize moderation settings UI into Server/Economy/Casino pillars",
     "summary": "A re-arranging pass on `/moderation/{guildId}/settings` to fix two awkwardnesses without rewriting the page: **Blackjack and Poker each had settings split across two homes.** Table rules lived in their own section, but ante/blind/buy-in stakes were buried inside the \"Casino stakes & buy-ins\" mega-section — tuning either game meant scrolling between two cards. Stakes now live with their game. **No top-level grouping.** Three `<h2 class=\"config-pillar\">` headers (**Server**…",
     "emoji": "🛡️",
