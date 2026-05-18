@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Gate purchases by level, add level-ladder titles, extend tiers",
+    "summary": "**Gate purchasable titles by level.** `TitleDto.required_level` (added in V34) is now enforced on the buy paths — Discord `/title buy`, web `/titles/{guildId}/{titleId}/buy`, and the one-click \"Buy with TOBY\" flow. Logic is centralised in a new `TitlePurchasePolicy` so all three callsites share the same rule. The auto-unlock branch on level-up (`LevelUpListener.unlockTitles`) is unchanged. **Add 14 level-ladder titles (V35).** New titles span Lvl 5 → Lvl 200 (🌱 Sprout … ♾…",
+    "emoji": "💰",
+    "prNumber": 483
+  },
+  {
+    "date": "May 2026",
     "title": "Award XP for web casino/poker/duel/economy actions",
     "summary": "Web gameplay surfaces (casino, blackjack, poker, duels, lottery, the economy market, tips) previously bypassed the XP system entirely — playing slots in Discord awarded 5 XP per slash invocation, but the same action through the browser awarded zero. This change closes the gap. New `WebGameplayXpInterceptor` — a Spring `HandlerInterceptor` that, after a successful (2xx) POST to a gameplay/economy route, calls `XpAwardService.award(...)` with the same 5 XP grant Discord uses…",
     "emoji": "✨",
