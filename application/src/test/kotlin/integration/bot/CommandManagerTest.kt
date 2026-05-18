@@ -102,9 +102,7 @@ class CommandManagerTest {
             RollCommand::class.java,
             MemeCommand::class.java,
             DnDSearchCommand::class.java,
-            HelloThereCommand::class.java,
             BrotherCommand::class.java,
-            ChCommand::class.java,
             BanCommand::class.java,
             UnbanCommand::class.java,
             TimeoutCommand::class.java,
@@ -165,8 +163,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(67, commandManager.allCommands.size)
-        Assertions.assertEquals(67, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(65, commandManager.allCommands.size)
+        Assertions.assertEquals(65, commandManager.allSlashCommands.size)
     }
 
     @Test
