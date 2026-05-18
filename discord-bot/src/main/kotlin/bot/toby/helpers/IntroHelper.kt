@@ -13,6 +13,7 @@ import database.dto.MusicDto
 import database.dto.MusicDto.Companion.computeHash
 import database.service.ConfigService
 import database.service.MusicFileService
+import database.service.UserNotificationPrefService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,10 +38,14 @@ class IntroHelper(
     private val httpHelper: HttpHelper,
     private val eventWaiter: EventWaiter,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    // Nullable + default null so legacy positional test constructors keep
+    // compiling. Spring autowires the real bean in production.
+    private val notificationPrefService: UserNotificationPrefService? = null,
     private val validationService: IntroValidationService = IntroValidationService(httpHelper, dispatcher),
     private val mediaLoader: IntroMediaLoader = IntroMediaLoader(),
     private val notificationService: IntroNotificationService = IntroNotificationService(
-        userDtoHelper, musicFileService, httpHelper, eventWaiter, validationService, mediaLoader, dispatcher,
+        userDtoHelper, musicFileService, httpHelper, eventWaiter, validationService, mediaLoader,
+        notificationPrefService, dispatcher,
     ),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)

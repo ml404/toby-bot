@@ -2,16 +2,15 @@ package bot.toby.notify
 
 import bot.toby.command.commands.economy.DuelEmbeds
 import common.logging.DiscordLogger
+import common.notification.ChannelRouteKey
 import database.configuration.RegistryScheduler
 import database.duel.PendingDuelRegistry
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
-import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import web.event.WebDuelOfferedEvent
@@ -22,8 +21,8 @@ import java.util.concurrent.TimeUnit
  * Posts a Discord channel notification when a duel is offered from
  * the web UI. The slash-command path posts inline to the channel
  * where `/duel` was invoked; web-initiated offers have no such
- * channel context, so this listener targets the guild's system
- * channel.
+ * channel context, so this listener routes through the
+ * [SYSTEM][ChannelRouteKey.SYSTEM] route via [NotificationRouter].
  *
  * Accept/Decline buttons resolve through the shared
  * [PendingDuelRegistry] regardless of which channel hosts the
@@ -31,7 +30,7 @@ import java.util.concurrent.TimeUnit
  * the registry to clean up its (ephemeral-interaction-hook-backed)
  * message when the TTL fires. For web offers there's no interaction
  * hook to edit through, so the notifier owns its own cleanup:
- * captures the sent message's id from the `queue` callback, then
+ * captures the sent message via the router's `onSent` callback, then
  * schedules a TTL-aligned task that atomically claims the offer via
  * [PendingDuelRegistry.cancel] and — if it wins the race against
  * accept/decline — edits the embed to [DuelEmbeds.timeoutEmbed] and
@@ -39,7 +38,7 @@ import java.util.concurrent.TimeUnit
  */
 @Component
 class WebDuelOfferNotifier(
-    private val jda: JDA,
+    private val notificationRouter: NotificationRouter,
     private val pendingDuelRegistry: PendingDuelRegistry,
     private val scheduler: ScheduledExecutorService = RegistryScheduler.instance,
 ) {
@@ -47,14 +46,6 @@ class WebDuelOfferNotifier(
 
     @EventListener
     fun on(event: WebDuelOfferedEvent) {
-        val guild = jda.getGuildById(event.guildId) ?: run {
-            logger.warn("WebDuelOfferedEvent for guild ${event.guildId} but bot is not in that guild; skipping.")
-            return
-        }
-        val channel = resolveChannel(guild) ?: run {
-            logger.warn("No writable system channel in guild ${event.guildId}; skipping web-duel notification.")
-            return
-        }
         val accept = Button.success(
             DuelEmbeds.acceptButtonId(event.duelId, event.opponentDiscordId),
             "Accept"
@@ -63,26 +54,31 @@ class WebDuelOfferNotifier(
             DuelEmbeds.declineButtonId(event.duelId, event.opponentDiscordId),
             "Decline"
         )
-        // addContent on the message (not the embed description) so the
-        // <@opponent> mention actually pings — embed-mention pings are silent.
-        runCatching {
-            channel.sendMessageEmbeds(
-                DuelEmbeds.offerEmbed(
-                    event.initiatorDiscordId,
-                    event.opponentDiscordId,
-                    event.stake,
-                    pendingDuelRegistry.ttl
-                )
-            )
-                .addContent("<@${event.opponentDiscordId}>")
-                .addComponents(ActionRow.of(accept, decline))
-                .queue { sent -> scheduleTimeoutCleanup(event, channel, sent) }
-        }.onFailure {
-            logger.error("Could not post web-duel notification to ${channel.id}: ${it.message}")
-        }
+        notificationRouter.sendChannel(
+            guildId = event.guildId,
+            route = ChannelRouteKey.SYSTEM,
+            message = {
+                // setContent on the message (not the embed description) so the
+                // <@opponent> mention actually pings — embed-mention pings are silent.
+                MessageCreateBuilder()
+                    .setEmbeds(
+                        DuelEmbeds.offerEmbed(
+                            event.initiatorDiscordId,
+                            event.opponentDiscordId,
+                            event.stake,
+                            pendingDuelRegistry.ttl,
+                        )
+                    )
+                    .setContent("<@${event.opponentDiscordId}>")
+                    .setComponents(ActionRow.of(accept, decline))
+                    .build()
+            },
+            onSent = { sent -> scheduleTimeoutCleanup(event, sent) },
+        )
     }
 
-    private fun scheduleTimeoutCleanup(event: WebDuelOfferedEvent, channel: TextChannel, sent: Message) {
+    private fun scheduleTimeoutCleanup(event: WebDuelOfferedEvent, sent: Message) {
+        val channel: MessageChannel = sent.channel
         scheduler.schedule({
             // Atomic claim — if cancel returns null the offer was already
             // accepted/declined and DuelButton already edited the message;
@@ -101,12 +97,5 @@ class WebDuelOfferNotifier(
                 logger.error("Could not edit expired web-duel message ${sent.id} in ${channel.id}: ${it.message}")
             }
         }, pendingDuelRegistry.ttl.toMillis(), TimeUnit.MILLISECONDS)
-    }
-
-    private fun resolveChannel(guild: Guild): TextChannel? {
-        val bot = guild.selfMember
-        return guild.systemChannel?.takeIf {
-            bot.hasPermission(it, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
-        }
     }
 }

@@ -9,17 +9,11 @@ import common.events.LotteryWonEvent
 import common.events.StreakClaimedEvent
 import common.events.TipSentEvent
 import common.events.VoiceSessionLoggedEvent
-import common.logging.DiscordLogger
+import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
-import database.dto.ConfigDto.Configurations.ACHIEVEMENT_ANNOUNCE_CHANNEL
 import database.service.AchievementService
-import database.service.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
-import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.awt.Color
@@ -40,12 +34,9 @@ import java.awt.Color
  */
 @Component
 class AchievementEventHandler(
-    @Lazy private val jda: JDA,
     private val achievementService: AchievementService,
-    private val configService: ConfigService,
-    private val notificationRouter: NotificationRouter
+    private val notificationRouter: NotificationRouter,
 ) {
-    private val logger = DiscordLogger.createLogger(this::class.java)
 
     @EventListener
     fun onStreakClaimed(event: StreakClaimedEvent) {
@@ -171,26 +162,19 @@ class AchievementEventHandler(
     }
 
     private fun postPublicShoutout(event: AchievementUnlockedEvent) {
-        val guild = jda.getGuildById(event.guildId) ?: return
-        val configured = configService
-            .getConfigByName(ACHIEVEMENT_ANNOUNCE_CHANNEL.configValue, guild.id)?.value
-            ?.toLongOrNull()
-            ?: return
-        val channel: TextChannel = guild.getTextChannelById(configured) ?: return
-        if (!guild.selfMember.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)) return
-
-        val embed = EmbedBuilder()
-            .setTitle("${event.icon ?: "🏅"} Achievement unlocked")
-            .setDescription("<@${event.discordId}> unlocked **${event.name}** — ${event.description}")
-            .setColor(Color(0xFFC857))
-            .build()
-        runCatching {
-            channel.sendMessageEmbeds(embed).queue(null) { err ->
-                logger.warn("Failed to post achievement shoutout in #${channel.name}: ${err.message}")
-            }
-        }.onFailure {
-            logger.warn("Achievement shoutout dispatch failed: ${it.message}")
-        }
+        notificationRouter.sendChannel(
+            guildId = event.guildId,
+            route = ChannelRouteKey.ACHIEVEMENT_SHOUTOUT,
+            message = {
+                MessageCreateBuilder().setEmbeds(
+                    EmbedBuilder()
+                        .setTitle("${event.icon ?: "🏅"} Achievement unlocked")
+                        .setDescription("<@${event.discordId}> unlocked **${event.name}** — ${event.description}")
+                        .setColor(Color(0xFFC857))
+                        .build()
+                ).build()
+            },
+        )
     }
 
     companion object {

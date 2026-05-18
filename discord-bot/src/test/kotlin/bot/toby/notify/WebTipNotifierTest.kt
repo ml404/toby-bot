@@ -1,24 +1,22 @@
 package bot.toby.notify
 
+import common.notification.ChannelRouteKey
+import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
-import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.Permission
-import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
-import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import net.dv8tion.jda.api.utils.messages.MessageCreateData
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import web.event.WebTipSentEvent
 
 class WebTipNotifierTest {
 
-    private lateinit var jda: JDA
-    private lateinit var guild: Guild
-    private lateinit var channel: TextChannel
-    private lateinit var createAction: MessageCreateAction
+    private lateinit var router: NotificationRouter
     private lateinit var notifier: WebTipNotifier
 
     private val guildId = 42L
@@ -39,50 +37,43 @@ class WebTipNotifierTest {
 
     @BeforeEach
     fun setup() {
-        jda = mockk(relaxed = true)
-        guild = mockk(relaxed = true)
-        channel = mockk(relaxed = true)
-        createAction = mockk(relaxed = true)
-        every { jda.getGuildById(guildId) } returns guild
-        every { guild.systemChannel } returns channel
-        every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns true
-        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
-        every { createAction.addContent(any()) } returns createAction
-        notifier = WebTipNotifier(jda)
+        router = mockk(relaxed = true)
+        notifier = WebTipNotifier(router)
     }
 
     @Test
-    fun `happy path posts the embed and chains addContent for the recipient ping`() {
+    fun `on routes to SYSTEM with the correct guildId`() {
         notifier.on(event())
 
-        verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 1) { createAction.addContent("<@$recipientId>") }
+        verify(exactly = 1) {
+            router.sendChannel(
+                guildId = guildId,
+                route = ChannelRouteKey.SYSTEM,
+                originChannelId = null,
+                message = any(),
+                onSent = null,
+            )
+        }
     }
 
     @Test
-    fun `skips when bot is not in the guild`() {
-        every { jda.getGuildById(guildId) } returns null
+    fun `the lazy message includes the recipient ping in content (not the embed)`() {
+        val builder = slot<() -> MessageCreateData>()
+        every {
+            router.sendChannel(any(), any(), any(), capture(builder), any())
+        } answers { }
 
         notifier.on(event())
 
-        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
-    }
-
-    @Test
-    fun `skips when guild has no system channel`() {
-        every { guild.systemChannel } returns null
-
-        notifier.on(event())
-
-        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
-    }
-
-    @Test
-    fun `skips when bot lacks permission on the system channel`() {
-        every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns false
-
-        notifier.on(event())
-
-        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+        // Force the lazy lambda; the router does this once the channel
+        // resolves. We're verifying the build output independently.
+        val data: MessageCreateData = builder.captured.invoke()
+        assertNotNull(data)
+        assertTrue(
+            data.content.contains("<@$recipientId>"),
+            "Recipient mention must live in setContent, not the embed; embed-mentions don't ping."
+        )
+        // Embed is also present.
+        assertEquals(1, data.embeds.size)
     }
 }

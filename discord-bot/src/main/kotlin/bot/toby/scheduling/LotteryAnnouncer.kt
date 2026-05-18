@@ -1,22 +1,22 @@
 package bot.toby.scheduling
 
+import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
+import common.notification.ChannelRouteKey
 import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.LotteryHelper
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
-import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.ErrorResponse
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -57,6 +57,7 @@ import java.awt.Color
 class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
     private val jackpotLotteryService: JackpotLotteryService,
+    private val notificationRouter: NotificationRouter,
     @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
 
@@ -81,35 +82,29 @@ class LotteryAnnouncer @Autowired constructor(
         priorOutcome: PriorOutcome?,
         openOutcome: OpenSummary,
     ) {
-        val channel = resolveChannel(guild) ?: run {
-            logger.warn(
-                "No writable channel for daily lottery announcement in guild ${guild.idLong}; " +
-                    "set LOTTERY_CHANNEL or LEADERBOARD_CHANNEL, or grant the bot send-messages " +
-                    "in the system channel."
-            )
-            return
-        }
-        val embed = buildEmbed(guild, mode, priorOutcome, openOutcome)
-        val content = buildAnnouncementContent(guild, priorOutcome)
         val lotteryId = (openOutcome as? OpenSummary.Ok)?.lotteryId
         val poolAmount = (openOutcome as? OpenSummary.Ok)?.poolAmount
-        val actionRow = announcementActionRow(mode, guild.idLong)
-        runCatching {
-            val send = channel.sendMessageEmbeds(embed)
-                .setAllowedMentions(allowedMentionTypes(content))
-            if (content.isNotBlank()) {
-                send.addContent(content)
-            }
-            if (actionRow != null) {
-                send.addComponents(actionRow)
-            }
-            send.queue({ message ->
+        notificationRouter.sendChannel(
+            guildId = guild.idLong,
+            route = ChannelRouteKey.LOTTERY,
+            message = {
+                val embed = buildEmbed(guild, mode, priorOutcome, openOutcome)
+                val content = buildAnnouncementContent(guild, priorOutcome)
+                val actionRow = announcementActionRow(mode, guild.idLong)
+                val builder = MessageCreateBuilder()
+                    .setEmbeds(embed)
+                    .setAllowedMentions(allowedMentionTypes(content))
+                if (content.isNotBlank()) builder.setContent(content)
+                if (actionRow != null) builder.setComponents(actionRow)
+                builder.build()
+            },
+            onSent = { sent ->
                 if (lotteryId != null && poolAmount != null) {
                     runCatching {
                         jackpotLotteryService.recordAnnouncement(
                             lotteryId = lotteryId,
-                            channelId = channel.idLong,
-                            messageId = message.idLong,
+                            channelId = sent.channel.idLong,
+                            messageId = sent.idLong,
                             pool = poolAmount,
                         )
                     }.onFailure {
@@ -119,12 +114,8 @@ class LotteryAnnouncer @Autowired constructor(
                         )
                     }
                 }
-            }, { failure ->
-                logger.error("Could not post lottery announcement to ${channel.id}: ${failure.message}")
-            })
-        }.onFailure {
-            logger.error("Could not post lottery announcement to ${channel.id}: ${it.message}")
-        }
+            },
+        )
     }
 
     /**
@@ -302,27 +293,6 @@ class LotteryAnnouncer @Autowired constructor(
         }
     }
 
-    // ---- channel resolution ----
-
-    private fun resolveChannel(guild: Guild): TextChannel? {
-        val bot = guild.selfMember
-        // 1. LOTTERY_CHANNEL — explicit lottery channel.
-        LotteryHelper.lotteryChannelId(configService, guild.idLong)?.let { id ->
-            val channel = guild.getTextChannelById(id)
-            if (channel != null && bot.hasPermission(channel, *REQUIRED_PERMS)) return channel
-        }
-        // 2. LEADERBOARD_CHANNEL — shared announce channel fallback.
-        configService.getConfigByName(
-            ConfigDto.Configurations.LEADERBOARD_CHANNEL.configValue,
-            guild.id
-        )?.value?.toLongOrNull()?.let { id ->
-            val channel = guild.getTextChannelById(id)
-            if (channel != null && bot.hasPermission(channel, *REQUIRED_PERMS)) return channel
-        }
-        // 3. systemChannel as last resort.
-        return guild.systemChannel?.takeIf { bot.hasPermission(it, *REQUIRED_PERMS) }
-    }
-
     // ---- embed building ----
 
     private fun buildEmbed(
@@ -469,7 +439,6 @@ class LotteryAnnouncer @Autowired constructor(
     }
 
     companion object {
-        private val REQUIRED_PERMS = arrayOf(Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
         private const val LOTTERY_COMMAND_NAME = "lottery"
         private const val LOTTERY_BUY_SUBCOMMAND = "buy"
 

@@ -1,11 +1,11 @@
 package bot.toby.leveling
 
+import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
 import common.logging.DiscordLogger
-import database.dto.ConfigDto.Configurations.LEVEL_UP_CHANNEL
+import common.notification.ChannelRouteKey
 import database.dto.TitleDto
-import database.service.ConfigService
 import database.service.LevelRoleRewardService
 import database.service.TitleService
 import net.dv8tion.jda.api.EmbedBuilder
@@ -15,7 +15,7 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.UserSnowflake
-import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.EventListener
@@ -37,9 +37,9 @@ import java.awt.Color
 @Service
 class LevelUpListener @Autowired constructor(
     @Lazy private val jda: JDA,
-    private val configService: ConfigService,
     private val levelRoleRewardService: LevelRoleRewardService,
-    private val titleService: TitleService
+    private val titleService: TitleService,
+    private val notificationRouter: NotificationRouter,
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -59,19 +59,15 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun announce(guild: Guild, event: LevelUpEvent) {
-        val channel = resolveAnnouncementChannel(guild, event.channelId) ?: run {
-            logger.info { "No announcement channel resolved for guild ${guild.idLong}; skipping level-up message." }
-            return
-        }
         val member = runCatching { guild.getMemberById(event.discordId) }.getOrNull()
-        val embed = buildLevelUpEmbed(event, member)
-        runCatching {
-            channel.sendMessageEmbeds(embed).queue(null) { err ->
-                logger.warn("Failed to post level-up announcement in #${channel.name}: ${err.message}")
-            }
-        }.onFailure {
-            logger.warn("Level-up announcement dispatch failed: ${it.message}")
-        }
+        notificationRouter.sendChannel(
+            guildId = guild.idLong,
+            route = ChannelRouteKey.LEVEL_UP,
+            originChannelId = event.channelId,
+            message = {
+                MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
+            },
+        )
     }
 
     private fun buildLevelUpEmbed(event: LevelUpEvent, member: Member?): MessageEmbed {
@@ -127,15 +123,6 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun formatXp(value: Long): String = String.format("%,d", value)
-
-    private fun resolveAnnouncementChannel(guild: Guild, originId: Long?): TextChannel? {
-        val configured = configService
-            .getConfigByName(LEVEL_UP_CHANNEL.configValue, guild.id)?.value
-            ?.toLongOrNull()
-        configured?.let { id -> guild.getTextChannelById(id)?.let { return it } }
-        originId?.let { id -> guild.getTextChannelById(id)?.let { return it } }
-        return guild.systemChannel
-    }
 
     private fun assignRoleRewards(guild: Guild, event: LevelUpEvent) {
         val rewards = levelRoleRewardService.listInRange(
