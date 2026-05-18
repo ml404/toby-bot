@@ -15,7 +15,7 @@
                data-user-avatar=${currentUserAvatarUrl}">
 
     <div class="duel-header">
-        <a class="back-link" th:href="@{/duel/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/duel/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'⚔️ Duel • ' + ${guildName}">⚔️ Duel</h1>
         <p class="muted">
             Stake between <span th:text="${minStake}">10</span> and

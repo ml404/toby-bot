@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-min-tip=${minTip}, data-max-tip=${maxTip}, data-daily-cap=${dailyCap}">
 
     <div class="tip-header">
-        <a class="back-link" th:href="@{/tip/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/tip/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'💸 Tip • ' + ${guildName}">💸 Tip</h1>
         <p class="muted">
             Send between <span th:text="${minTip}">10</span> and

@@ -13,6 +13,7 @@
 <main id="main" class="container">
 
     <div class="excuse-header">
+        <a class="back-link" th:href="@{/teams/guilds(pick=true)}">&larr; All servers</a>
         <h1>Teams — <span th:text="${guildName}">Server</span></h1>
         <span class="excuse-count"
               th:text="${#lists.size(presets)} + ' preset' + (${#lists.size(presets)} == 1 ? '' : 's')">0 presets</span>

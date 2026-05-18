@@ -9,7 +9,7 @@
 
     <header class="music-header">
         <h1>🎵 <span th:text="${guildName}">Server</span></h1>
-        <a class="btn-tertiary" href="/music-player/guilds">← All servers</a>
+        <a class="btn-tertiary" href="/music-player/guilds?pick=true">← All servers</a>
     </header>
 
     <div th:replace="~{fragments/alerts :: error}"></div>

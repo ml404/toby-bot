@@ -7,7 +7,7 @@
 
 <main id="main" class="container">
     <div class="profile-header">
-        <a class="back-link" th:href="@{/profile/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/profile/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="${profile.guildName}">Guild</h1>
     </div>
 

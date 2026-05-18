@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-my-discord-id=${myDiscordId}">
 
     <div class="bj-header">
-        <a class="back-link" th:href="@{/blackjack/guilds}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/blackjack/guilds(pick=true)}">&larr; All servers</a>
         <h1>🂡 Solo blackjack</h1>
         <p class="muted">
             Bet between <span th:text="${minStake}">10</span> and
