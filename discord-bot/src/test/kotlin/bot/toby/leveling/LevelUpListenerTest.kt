@@ -1,6 +1,7 @@
 package bot.toby.leveling
 
 import common.events.LevelUpEvent
+import common.leveling.LevelCurve
 import database.dto.LevelRoleRewardDto
 import database.dto.TitleDto
 import database.service.ConfigService
@@ -12,6 +13,7 @@ import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -41,7 +43,7 @@ class LevelUpListenerTest {
     }
 
     @Test
-    fun `onLevelUp posts announcement in the origin channel when present`() {
+    fun `onLevelUp posts an embed in the origin channel when present`() {
         val guild = mockk<Guild>(relaxed = true)
         val channel = mockk<TextChannel>(relaxed = true)
         val createAction = mockk<MessageCreateAction>(relaxed = true)
@@ -50,7 +52,7 @@ class LevelUpListenerTest {
         every { guild.id } returns guildId.toString()
         every { guild.getTextChannelById(99L) } returns channel
         every { channel.name } returns "general"
-        every { channel.sendMessage(any<String>()) } returns createAction
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
         every { titleService.listAll() } returns emptyList()
@@ -58,14 +60,16 @@ class LevelUpListenerTest {
         listener.onLevelUp(
             LevelUpEvent(
                 discordId = discordId, guildId = guildId,
-                oldLevel = 0, newLevel = 1, channelId = 99L
+                oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = 99L
             )
         )
 
-        val sent = slot<String>()
-        verify { channel.sendMessage(capture(sent)) }
-        assert(sent.captured.contains("Level 1"))
-        assert(sent.captured.contains("<@$discordId>"))
+        val sent = slot<MessageEmbed>()
+        verify { channel.sendMessageEmbeds(capture(sent)) }
+        val embed = sent.captured
+        assert(embed.title!!.contains("LVL 1"))
+        assert(embed.description!!.contains("<@$discordId>"))
+        assert(embed.description!!.contains("Level 1"))
     }
 
     @Test
@@ -78,16 +82,16 @@ class LevelUpListenerTest {
         every { guild.id } returns guildId.toString()
         every { guild.systemChannel } returns systemChannel
         every { systemChannel.name } returns "general"
-        every { systemChannel.sendMessage(any<String>()) } returns createAction
+        every { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
         every { titleService.listAll() } returns emptyList()
 
         listener.onLevelUp(
-            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, channelId = null)
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = null)
         )
 
-        verify { systemChannel.sendMessage(any<String>()) }
+        verify { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
@@ -103,7 +107,7 @@ class LevelUpListenerTest {
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
         every { guild.getTextChannelById(any<Long>()) } returns channel
-        every { channel.sendMessage(any<String>()) } returns createAction
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { titleService.listAll() } returns emptyList()
         every { levelRoleRewardService.listInRange(guildId, fromExclusive = 1, toInclusive = 3) } returns listOf(
@@ -117,7 +121,7 @@ class LevelUpListenerTest {
         every { guild.addRoleToMember(any<UserSnowflake>(), any()) } returns addRoleAction
 
         listener.onLevelUp(
-            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, channelId = 99L)
+            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, totalXp = 500L, channelId = 99L)
         )
 
         verify(exactly = 1) { guild.addRoleToMember(any<UserSnowflake>(), role1) }
@@ -134,7 +138,7 @@ class LevelUpListenerTest {
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
         every { guild.getTextChannelById(any<Long>()) } returns channel
-        every { channel.sendMessage(any<String>()) } returns createAction
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
 
@@ -145,7 +149,7 @@ class LevelUpListenerTest {
         every { titleService.owns(discordId, 10L) } returns false
 
         listener.onLevelUp(
-            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, channelId = 99L)
+            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, totalXp = 500L, channelId = 99L)
         )
 
         verify(exactly = 1) { titleService.recordPurchase(discordId, 10L) }
@@ -163,7 +167,7 @@ class LevelUpListenerTest {
         every { guild.idLong } returns guildId
         every { guild.id } returns guildId.toString()
         every { guild.getTextChannelById(any<Long>()) } returns channel
-        every { channel.sendMessage(any<String>()) } returns createAction
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
         every { configService.getConfigByName(any(), any()) } returns null
         every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
 
@@ -172,7 +176,7 @@ class LevelUpListenerTest {
         every { titleService.owns(discordId, 10L) } returns true
 
         listener.onLevelUp(
-            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, channelId = 99L)
+            LevelUpEvent(discordId, guildId, oldLevel = 1, newLevel = 3, totalXp = 500L, channelId = 99L)
         )
 
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
@@ -183,9 +187,53 @@ class LevelUpListenerTest {
         every { jda.getGuildById(guildId) } returns null
 
         listener.onLevelUp(
-            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, channelId = 99L)
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = 99L)
         )
 
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
+    }
+
+    @Test
+    fun `onLevelUp posts a tier-colored embed with progress matching LevelCurve`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val channel = mockk<TextChannel>(relaxed = true)
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.idLong } returns guildId
+        every { guild.id } returns guildId.toString()
+        every { guild.getTextChannelById(99L) } returns channel
+        every { channel.name } returns "general"
+        every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
+        every { configService.getConfigByName(any(), any()) } returns null
+        every { levelRoleRewardService.listInRange(any(), any(), any()) } returns emptyList()
+        every { titleService.listAll() } returns emptyList()
+
+        // Craft a totalXp that sits inside level 25 (Gold tier).
+        val totalXp = LevelCurve.cumulativeXpForLevel(25) + 50L
+        val expected = LevelCurve.progress(totalXp)
+
+        listener.onLevelUp(
+            LevelUpEvent(
+                discordId = discordId, guildId = guildId,
+                oldLevel = 24, newLevel = 25, totalXp = totalXp, channelId = 99L
+            )
+        )
+
+        val sent = slot<MessageEmbed>()
+        verify { channel.sendMessageEmbeds(capture(sent)) }
+        val embed = sent.captured
+        assert(embed.title!!.contains("LVL 25"))
+        assert((embed.colorRaw and 0xFFFFFF) == 0xD4A017) {
+            "expected Gold tier color 0xD4A017, got ${(embed.colorRaw and 0xFFFFFF).toString(16)}"
+        }
+        val progressField = embed.fields.single { it.name == "Progress" }.value!!
+        val formattedInto = String.format("%,d", expected.xpIntoLevel)
+        val formattedNext = String.format("%,d", expected.xpForNextLevel)
+        assert(progressField.contains("$formattedInto / $formattedNext XP")) {
+            "progress field '$progressField' should contain '$formattedInto / $formattedNext XP'"
+        }
+        val totalField = embed.fields.single { it.name == "Total XP" }.value!!
+        assert(totalField.contains(String.format("%,d", totalXp)))
+        assert(embed.footer!!.text!!.contains("Gold"))
     }
 }

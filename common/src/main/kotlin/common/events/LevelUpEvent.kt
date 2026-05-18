@@ -7,6 +7,10 @@ package common.events
  * originating channel, assigning configured role rewards, and unlocking
  * any titles gated by `required_level`.
  *
+ * [totalXp] is the user's lifetime XP after the award that triggered the
+ * level-up — useful for rendering accurate progress (xp into level / xp
+ * for next level) without the listener needing to re-read the user row.
+ *
  * [channelId] is the Discord text-channel id where the triggering action
  * happened (e.g. the message that earned the XP, the slash-command channel).
  * It is null for voice-derived awards — listeners should fall back to the
@@ -17,5 +21,6 @@ data class LevelUpEvent(
     val guildId: Long,
     val oldLevel: Int,
     val newLevel: Int,
+    val totalXp: Long,
     val channelId: Long?
 )

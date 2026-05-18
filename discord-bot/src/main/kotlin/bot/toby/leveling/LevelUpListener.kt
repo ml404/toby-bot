@@ -1,14 +1,18 @@
 package bot.toby.leveling
 
 import common.events.LevelUpEvent
+import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations.LEVEL_UP_CHANNEL
 import database.dto.TitleDto
 import database.service.ConfigService
 import database.service.LevelRoleRewardService
 import database.service.TitleService
+import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -16,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
+import java.awt.Color
 
 /**
  * Consumer of [LevelUpEvent]. On a level-up:
@@ -58,19 +63,62 @@ class LevelUpListener @Autowired constructor(
             logger.info { "No announcement channel resolved for guild ${guild.idLong}; skipping level-up message." }
             return
         }
-        val mention = "<@${event.discordId}>"
-        val body = buildString {
-            append("GG ").append(mention).append(" — you reached **Level ")
-            append(event.newLevel).append("**!")
-        }
+        val member = runCatching { guild.getMemberById(event.discordId) }.getOrNull()
+        val embed = buildLevelUpEmbed(event, member)
         runCatching {
-            channel.sendMessage(body).queue(null) { err ->
+            channel.sendMessageEmbeds(embed).queue(null) { err ->
                 logger.warn("Failed to post level-up announcement in #${channel.name}: ${err.message}")
             }
         }.onFailure {
             logger.warn("Level-up announcement dispatch failed: ${it.message}")
         }
     }
+
+    private fun buildLevelUpEmbed(event: LevelUpEvent, member: Member?): MessageEmbed {
+        val progress = LevelCurve.progress(event.totalXp)
+        val mention = "<@${event.discordId}>"
+        val builder = EmbedBuilder()
+            .setTitle("Level Up — LVL ${event.newLevel}")
+            .setDescription("GG $mention — welcome to **Level ${event.newLevel}**!")
+            .setColor(Color(tierColor(event.newLevel)))
+            .addField(
+                "Progress",
+                "`${progressBar(progress.xpIntoLevel, progress.xpForNextLevel)}` " +
+                    "${formatXp(progress.xpIntoLevel)} / ${formatXp(progress.xpForNextLevel)} XP",
+                false
+            )
+            .addField("Total XP", formatXp(event.totalXp), true)
+            .setFooter("${tierName(event.newLevel)} tier")
+        member?.let { m ->
+            val avatar = runCatching { m.effectiveAvatarUrl }.getOrNull()
+                ?.takeIf { it.startsWith("http://") || it.startsWith("https://") }
+            builder.setAuthor(m.effectiveName, null, avatar)
+        }
+        return builder.build()
+    }
+
+    private fun tierColor(level: Int): Int = when {
+        level >= 50 -> 0x5865F2 // Diamond
+        level >= 25 -> 0xD4A017 // Gold
+        level >= 10 -> 0x9AA3B2 // Silver
+        else -> 0xC9803A        // Bronze
+    }
+
+    private fun tierName(level: Int): String = when {
+        level >= 50 -> "Diamond"
+        level >= 25 -> "Gold"
+        level >= 10 -> "Silver"
+        else -> "Bronze"
+    }
+
+    private fun progressBar(filled: Long, total: Long, cells: Int = 10): String {
+        if (total <= 0L) return "░".repeat(cells)
+        val ratio = (filled.toDouble() / total.toDouble()).coerceIn(0.0, 1.0)
+        val full = (ratio * cells).toInt().coerceIn(0, cells)
+        return "█".repeat(full) + "░".repeat(cells - full)
+    }
+
+    private fun formatXp(value: Long): String = String.format("%,d", value)
 
     private fun resolveAnnouncementChannel(guild: Guild, originId: Long?): TextChannel? {
         val configured = configService
