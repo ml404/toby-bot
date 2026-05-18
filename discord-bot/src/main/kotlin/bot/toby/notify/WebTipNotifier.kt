@@ -2,6 +2,7 @@ package bot.toby.notify
 
 import bot.toby.command.commands.economy.TipEmbeds
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.service.TipService.TipOutcome
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.context.event.EventListener
@@ -46,6 +47,12 @@ class WebTipNotifier(
                     .setContent("<@${event.recipientDiscordId}>")
                     .build()
             },
+            // Router suppresses the recipient's user-ping when they've
+            // opted out of (TIP_RECEIVED, CHANNEL). Post still happens.
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.TIP_RECEIVED,
+                userIds = listOf(event.recipientDiscordId),
+            ),
         )
     }
 }

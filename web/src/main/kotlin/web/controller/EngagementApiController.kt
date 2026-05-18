@@ -1,6 +1,7 @@
 package web.controller
 
 import common.notification.NotificationChannelKind
+import common.notification.Surface
 import database.service.AchievementService
 import database.service.LoginStreakService
 import database.service.UserNotificationPrefService
@@ -124,25 +125,34 @@ class EngagementApiController(
         val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
         if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
 
+        // Index explicit rows by (kind, surface). One response entry per
+        // supported (kind, surface) — kinds that don't support a surface
+        // simply don't appear for that surface (the web matrix renders a
+        // placeholder cell).
         val explicit = notificationPrefService.listForUser(discordId, guildId)
-            .associateBy { it.channelKind }
+            .associateBy { it.channelKind to it.surface }
 
-        return ResponseEntity.ok(NotificationChannelKind.entries.map { kind ->
-            val row = explicit[kind.name]
-            NotificationPrefResponse(
-                kind = kind.name,
-                displayName = kind.displayName,
-                description = kind.description,
-                optIn = row?.optIn ?: kind.defaultOptIn,
-                isDefault = row == null
-            )
-        })
+        val response = NotificationChannelKind.entries.flatMap { kind ->
+            kind.supportedSurfaces.map { surface ->
+                val row = explicit[kind.name to surface.name]
+                NotificationPrefResponse(
+                    kind = kind.name,
+                    surface = surface.name,
+                    displayName = kind.displayName,
+                    description = kind.description,
+                    optIn = row?.optIn ?: kind.defaultOptIn(surface),
+                    isDefault = row == null
+                )
+            }
+        }
+        return ResponseEntity.ok(response)
     }
 
-    @PostMapping("/notifications/{kindCode}")
+    @PostMapping("/notifications/{kindCode}/{surfaceCode}")
     fun setNotification(
         @PathVariable guildId: Long,
         @PathVariable kindCode: String,
+        @PathVariable surfaceCode: String,
         @RequestBody body: NotificationPrefUpdate,
         @AuthenticationPrincipal user: OAuth2User?,
     ): ResponseEntity<NotificationPrefResponse> {
@@ -151,11 +161,18 @@ class EngagementApiController(
 
         val kind = NotificationChannelKind.fromCode(kindCode)
             ?: return ResponseEntity.badRequest().build()
+        val surface = runCatching { Surface.valueOf(surfaceCode.uppercase()) }.getOrNull()
+            ?: return ResponseEntity.badRequest().build()
+        if (!kind.supports(surface)) {
+            // Service would throw IllegalArgumentException; surface as 400.
+            return ResponseEntity.badRequest().build()
+        }
 
-        val row = notificationPrefService.setPref(discordId, guildId, kind, body.optIn)
+        val row = notificationPrefService.setPref(discordId, guildId, kind, surface, body.optIn)
         return ResponseEntity.ok(
             NotificationPrefResponse(
                 kind = kind.name,
+                surface = surface.name,
                 displayName = kind.displayName,
                 description = kind.description,
                 optIn = row.optIn,
@@ -194,6 +211,7 @@ class EngagementApiController(
 
     data class NotificationPrefResponse(
         val kind: String,
+        val surface: String,
         val displayName: String,
         val description: String,
         val optIn: Boolean,

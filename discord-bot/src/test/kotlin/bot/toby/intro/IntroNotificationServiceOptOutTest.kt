@@ -4,6 +4,7 @@ import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
 import common.notification.NotificationChannelKind
+import common.notification.Surface
 import database.service.MusicFileService
 import database.service.UserNotificationPrefService
 import io.mockk.every
@@ -53,7 +54,7 @@ class IntroNotificationServiceOptOutTest {
     @Test
     fun `opted-out user gets no DM and no waiter setup`() {
         every {
-            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT)
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, Surface.DM)
         } returns false
 
         service.promptUserForMusicInfo(user, guild)
@@ -66,7 +67,7 @@ class IntroNotificationServiceOptOutTest {
     @Test
     fun `opted-in user reaches the prompt path`() {
         every {
-            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT)
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, Surface.DM)
         } returns true
         // `relaxed = true` on the User mock returns a relaxed mock from
         // openPrivateChannel() automatically — no need to over-specify
@@ -76,5 +77,20 @@ class IntroNotificationServiceOptOutTest {
         service.promptUserForMusicInfo(user, guild)
 
         verify(exactly = 1) { user.openPrivateChannel() }
+    }
+
+    @Test
+    fun `pref check uses Surface DM explicitly (regression guard)`() {
+        // If someone refactors the gate to drop the surface arg, this
+        // verification on the exact 4-arg call fails.
+        every {
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, Surface.DM)
+        } returns true
+
+        service.promptUserForMusicInfo(user, guild)
+
+        verify(exactly = 1) {
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, Surface.DM)
+        }
     }
 }

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Notification preferences', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Notification preferences</h1>
+    <p class="muted">
+        Each server has its own preference matrix. Pick a server below.
+    </p>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}" style="margin-top:24px;">
+        <a class="lb-guild-card"
+           th:each="g : ${guilds}"
+           th:href="@{'/preferences/notifications/' + ${g.id}}">
+            <img th:if="${g.iconUrl != null}" th:src="${g.iconUrl}" alt=""
+                 style="width:48px; height:48px; border-radius:50%; vertical-align:middle;">
+            <span style="margin-left:8px;" th:text="${g.name}">Server</span>
+        </a>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(guilds)}" style="margin-top:24px;">
+        <span class="emoji" aria-hidden="true">🤖</span>
+        <h2>No servers yet</h2>
+        <p>You need to share at least one server with TobyBot.</p>
+    </div>
+</main>
+</body>
+</html>

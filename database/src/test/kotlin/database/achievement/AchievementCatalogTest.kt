@@ -83,17 +83,15 @@ class AchievementCatalogTest {
      * visible.
      */
     @Test
-    fun `hidden achievements correspond to known pending-hookup codes`() {
-        // blackjack_natural needs touching the multi/solo settlement
-        // paths in BlackjackService — deferred to a follow-up so the
-        // engagement-loop PR stays scoped.
-        val expectedPending = setOf("blackjack_natural")
+    fun `no achievements are hidden`() {
+        // blackjack_natural was the last hidden entry; this PR wires it
+        // through BlackjackService → BlackjackNaturalEvent →
+        // AchievementEventHandler. Every catalog entry is now reachable.
         val actuallyHidden = AchievementCatalog.all.filter { it.hidden }.map { it.code }.toSet()
         assertEquals(
-            expectedPending, actuallyHidden,
-            "Hidden achievements drifted from the documented pending-hookup list. " +
-                "Either wire up the trigger and flip hidden=false, or add the new " +
-                "pending code to expectedPending in this test."
+            emptySet<String>(), actuallyHidden,
+            "Hidden achievements set is non-empty. Either wire up the trigger " +
+                "and flip hidden=false, or document the new pending-hookup code in this test."
         )
     }
 
@@ -101,19 +99,21 @@ class AchievementCatalogTest {
     fun `every visible achievement is reachable via a wired event handler`() {
         // The handlers in AchievementEventHandler unlock/progress by
         // these exact codes:
-        //   streak  → streak_first + streak_{3,7,30}
-        //   level   → level_{5,25,50}
-        //   tip     → tip_giver
-        //   duel    → first_duel_win, duel_wins_10
-        //   lottery → lottery_winner
-        //   intro   → intro_set
-        //   voice   → voice_10h, voice_100h
+        //   streak    → streak_first + streak_{3,7,30}
+        //   level     → level_{5,25,50}
+        //   tip       → tip_giver
+        //   duel      → first_duel_win, duel_wins_10
+        //   lottery   → lottery_winner
+        //   intro     → intro_set
+        //   voice     → voice_10h, voice_100h
+        //   blackjack → blackjack_natural
         val wired = setOf(
             "streak_first", "streak_3", "streak_7", "streak_30",
             "level_5", "level_25", "level_50",
             "tip_giver", "first_duel_win", "duel_wins_10",
             "lottery_winner", "intro_set",
-            "voice_10h", "voice_100h"
+            "voice_10h", "voice_100h",
+            "blackjack_natural",
         )
         val visible = AchievementCatalog.all.filterNot { it.hidden }.map { it.code }.toSet()
         val orphaned = visible - wired

@@ -6,6 +6,7 @@ import bot.toby.helpers.InputData
 import bot.toby.util.isUrl
 import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
+import common.notification.Surface
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.MusicDto
 import database.service.MusicFileService
@@ -59,7 +60,7 @@ class IntroNotificationService(
         // skip the DM (no waiter is set up either). Pref service is
         // nullable for legacy/test callers — null means "no gate".
         val gateActive = notificationPrefService
-            ?.isOptedIn(user.idLong, guild.idLong, NotificationChannelKind.INTRO_PROMPT)
+            ?.isOptedIn(user.idLong, guild.idLong, NotificationChannelKind.INTRO_PROMPT, Surface.DM)
             ?: true
         if (!gateActive) {
             logger.info { "User opted out of INTRO_PROMPT; skipping prompt for guild '${guild.name}'." }

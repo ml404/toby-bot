@@ -1,11 +1,12 @@
 package bot.toby.notify
 
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.duel.PendingDuelRegistry
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.just
 import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
@@ -67,7 +68,19 @@ class WebDuelOfferNotifierTest {
     }
 
     @Test
-    fun `on routes the offer to SYSTEM with an onSent callback`() {
+    fun `on routes the offer to SYSTEM with an onSent callback and opponent mention`() {
+        val mentions = slot<ChannelMentions>()
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = any(),
+                onSent = any(),
+                mentions = capture(mentions),
+            )
+        } answers { }
+
         notifier.on(event())
 
         verify(exactly = 1) {
@@ -77,14 +90,26 @@ class WebDuelOfferNotifierTest {
                 originChannelId = null,
                 message = any(),
                 onSent = any(),
+                mentions = any(),
             )
         }
+        assertEquals(NotificationChannelKind.DUEL_OFFER, mentions.captured.kind)
+        assertEquals(listOf(opponentId), mentions.captured.userIds)
     }
 
     @Test
-    fun `the built MessageCreateData carries the opponent ping in content`() {
+    fun `the built MessageCreateData carries the opponent ping in content and buttons`() {
         val builder = slot<() -> MessageCreateData>()
-        every { router.sendChannel(any(), any(), any(), capture(builder), any()) } just runs
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = capture(builder),
+                onSent = any(),
+                mentions = any(),
+            )
+        } just runs
 
         notifier.on(event())
 
@@ -98,8 +123,7 @@ class WebDuelOfferNotifierTest {
 
     @Test
     fun `onSent callback schedules a TTL-aligned cleanup task`() {
-        val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        val onSent = captureOnSent()
 
         notifier.on(event())
         val sent = fakeSentMessage(channelMock = mockk(relaxed = true))
@@ -115,8 +139,7 @@ class WebDuelOfferNotifierTest {
     @Test
     fun `cleanup edits the message with the timeout embed when the offer is still pending`() {
         val channel: MessageChannelUnion = mockk(relaxed = true)
-        val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        val onSent = captureOnSent()
         notifier.on(event())
         val sent = fakeSentMessage(channelMock = channel)
         onSent.captured.invoke(sent)
@@ -143,8 +166,7 @@ class WebDuelOfferNotifierTest {
     @Test
     fun `cleanup is a no-op when the offer was already accepted or declined`() {
         val channel: MessageChannelUnion = mockk(relaxed = true)
-        val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        val onSent = captureOnSent()
         notifier.on(event())
         onSent.captured.invoke(fakeSentMessage(channelMock = channel))
 
@@ -159,8 +181,7 @@ class WebDuelOfferNotifierTest {
     @Test
     fun `cleanup swallows JDA exceptions so a failing edit does not kill the scheduler thread`() {
         val channel: MessageChannelUnion = mockk(relaxed = true)
-        val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        val onSent = captureOnSent()
         notifier.on(event())
         onSent.captured.invoke(fakeSentMessage(channelMock = channel))
 
@@ -175,6 +196,22 @@ class WebDuelOfferNotifierTest {
 
         // Must not propagate — scheduler thread would die otherwise.
         capturedTasks[0].run()
+    }
+
+    /** Capture the onSent callback the router was given. */
+    private fun captureOnSent(): io.mockk.CapturingSlot<(Message) -> Unit> {
+        val onSent = slot<(Message) -> Unit>()
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = any(),
+                onSent = capture(onSent),
+                mentions = any(),
+            )
+        } just runs
+        return onSent
     }
 
     private fun fakeSentMessage(channelMock: MessageChannelUnion): Message = mockk(relaxed = true) {

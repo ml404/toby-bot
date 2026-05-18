@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Notification preferences', '/css/leaderboard.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId}">
+
+    <h1 class="mb-3">
+        Notifications —
+        <span th:text="${guildName}">Server</span>
+    </h1>
+
+    <p class="muted mb-3">
+        Each notification kind can be on or off per surface. Toggle a cell
+        to change. The PUSH column is reserved for an upcoming
+        push-notification provider — you can opt in now, the bot will
+        start using it as soon as an adapter ships.
+    </p>
+
+    <a class="back-link" th:href="@{/preferences/notifications}">&larr; Pick a different server</a>
+
+    <table class="notif-matrix" style="margin-top:24px; width:100%; border-collapse:collapse;">
+        <thead>
+            <tr>
+                <th style="text-align:left;">Notification</th>
+                <th th:each="surfaceName : ${surfaces}"
+                    style="text-align:center; padding:8px;"
+                    th:text="${surfaceName}">DM</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="row : ${matrix}"
+                class="notif-row"
+                th:attr="data-kind=${row.kind}">
+                <td style="padding:8px;">
+                    <strong th:text="${row.displayName}">Kind</strong>
+                    <div class="muted" th:text="${row.description}">desc</div>
+                </td>
+                <td th:each="cell : ${row.cells}"
+                    style="text-align:center; padding:8px;">
+                    <!-- Placeholder cell: kind doesn't support this surface. -->
+                    <span th:if="${cell.class.simpleName == 'Placeholder'}"
+                          class="notif-placeholder muted"
+                          th:attr="data-surface=${cell.surface}">—</span>
+                    <!-- Toggle cell: clickable on/off. -->
+                    <button th:if="${cell.class.simpleName == 'Toggle'}"
+                            type="button"
+                            class="notif-toggle"
+                            th:classappend="${cell.optIn} ? ' is-on' : ' is-off'"
+                            th:attr="data-kind=${row.kind},
+                                     data-surface=${cell.surface},
+                                     data-opt-in=${cell.optIn},
+                                     data-default=${cell.isDefault}"
+                            th:text="${cell.optIn} ? 'On' : 'Off'">Off</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p class="muted" style="margin-top:16px;">
+        <span class="notif-push-footnote">PUSH is opt-in-ready — no provider is wired yet, but your preference persists.</span>
+    </p>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/preferences-notifications.js}"></script>
+</body>
+</html>

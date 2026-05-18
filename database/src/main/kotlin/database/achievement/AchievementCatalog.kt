@@ -183,10 +183,6 @@ object AchievementCatalog {
             threshold = 360000L
         ),
 
-        // ---- Pending hookup. Hidden so they don't show up in
-        // `/achievements` until the trigger path is wired in a
-        // follow-up. Seeder still upserts the row so the id stays
-        // stable when the hookup lands.
         AchievementSpec(
             code = "blackjack_natural",
             name = "21!",
@@ -194,8 +190,7 @@ object AchievementCatalog {
             category = "casino",
             icon = "🃏",
             xpReward = 50,
-            creditReward = 50,
-            hidden = true
+            creditReward = 50
         )
     )
 

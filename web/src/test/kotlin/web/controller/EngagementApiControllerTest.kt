@@ -1,6 +1,7 @@
 package web.controller
 
 import common.notification.NotificationChannelKind
+import common.notification.Surface
 import database.dto.AchievementDto
 import database.dto.LoginStreakDto
 import database.dto.UserNotificationPrefDto
@@ -163,77 +164,134 @@ class EngagementApiControllerTest {
         assertEquals(10L, locked.threshold)
     }
 
-    // ---------- notification prefs ----------
+    // ---------- notification prefs (per-surface) ----------
 
     @Test
-    fun `listNotifications composes the catalogue with explicit overrides and default markers`() {
+    fun `listNotifications returns one entry per supported (kind, surface)`() {
+        // No explicit rows — every entry should carry isDefault=true.
+        every { notificationPrefService.listForUser(discordId, guildId) } returns emptyList()
+
+        val body = controller.listNotifications(guildId, user).body!!
+
+        val expectedCount = NotificationChannelKind.entries.sumOf { it.supportedSurfaces.size }
+        assertEquals(expectedCount, body.size, "one response entry per supported (kind, surface)")
+
+        // Every entry carries kind, surface, and the default's value.
+        body.forEach { entry ->
+            val kind = NotificationChannelKind.fromCode(entry.kind)!!
+            val surface = Surface.valueOf(entry.surface)
+            assertTrue(kind.supports(surface), "${entry.kind}+${entry.surface} should be supported")
+            assertEquals(kind.defaultOptIn(surface), entry.optIn, "default value for ${entry.kind}+${entry.surface}")
+            assertTrue(entry.isDefault, "no explicit row → isDefault true")
+        }
+    }
+
+    @Test
+    fun `listNotifications surfaces explicit (kind, surface) overrides`() {
+        // ACHIEVEMENT_UNLOCK supports DM, CHANNEL, PUSH. Opt out of DM,
+        // leave the other two on their defaults.
         every { notificationPrefService.listForUser(discordId, guildId) } returns listOf(
             UserNotificationPrefDto(
                 discordId = discordId,
                 guildId = guildId,
-                channelKind = NotificationChannelKind.STREAK_REMINDER.name,
-                optIn = true
+                channelKind = NotificationChannelKind.ACHIEVEMENT_UNLOCK.name,
+                surface = Surface.DM.name,
+                optIn = false
             )
         )
 
         val body = controller.listNotifications(guildId, user).body!!
+        val achDm = body.first { it.kind == "ACHIEVEMENT_UNLOCK" && it.surface == "DM" }
+        assertFalse(achDm.optIn)
+        assertFalse(achDm.isDefault, "explicit row → isDefault false")
 
-        assertEquals(NotificationChannelKind.entries.size, body.size)
-
-        val explicit = body.first { it.kind == NotificationChannelKind.STREAK_REMINDER.name }
-        assertTrue(explicit.optIn, "explicit STREAK_REMINDER row should be opt-in")
-        assertFalse(explicit.isDefault, "explicit row should not be marked default")
-
-        val defaulted = body.first { it.kind == NotificationChannelKind.DUEL_OFFER.name }
-        assertTrue(defaulted.optIn, "DUEL_OFFER default is opt-in")
-        assertTrue(defaulted.isDefault, "no explicit row → isDefault true")
+        val achChannel = body.first { it.kind == "ACHIEVEMENT_UNLOCK" && it.surface == "CHANNEL" }
+        assertTrue(achChannel.optIn, "CHANNEL surface unaffected by DM opt-out")
+        assertTrue(achChannel.isDefault)
     }
 
     @Test
-    fun `setNotification persists and returns the new row`() {
+    fun `setNotification persists for supported (kind, surface) and returns the new row`() {
         every {
-            notificationPrefService.setPref(discordId, guildId, NotificationChannelKind.PRICE_ALERT, true)
+            notificationPrefService.setPref(
+                discordId, guildId,
+                NotificationChannelKind.ACHIEVEMENT_UNLOCK, Surface.DM, true
+            )
         } returns UserNotificationPrefDto(
-            discordId = discordId,
-            guildId = guildId,
-            channelKind = NotificationChannelKind.PRICE_ALERT.name,
-            optIn = true
+            discordId = discordId, guildId = guildId,
+            channelKind = NotificationChannelKind.ACHIEVEMENT_UNLOCK.name,
+            surface = Surface.DM.name, optIn = true
         )
 
         val response = controller.setNotification(
-            guildId, "PRICE_ALERT",
+            guildId, "ACHIEVEMENT_UNLOCK", "DM",
             EngagementApiController.NotificationPrefUpdate(optIn = true),
             user
         )
 
         assertEquals(200, response.statusCode.value())
         val body = response.body!!
-        assertEquals(NotificationChannelKind.PRICE_ALERT.name, body.kind)
+        assertEquals("ACHIEVEMENT_UNLOCK", body.kind)
+        assertEquals("DM", body.surface)
         assertTrue(body.optIn)
         assertFalse(body.isDefault)
-        verify { notificationPrefService.setPref(discordId, guildId, NotificationChannelKind.PRICE_ALERT, true) }
     }
 
     @Test
-    fun `setNotification with unknown kind returns 400`() {
+    fun `setNotification rejects unknown kind with 400`() {
         val response = controller.setNotification(
-            guildId, "NOT_A_KIND",
+            guildId, "NOT_A_KIND", "DM",
             EngagementApiController.NotificationPrefUpdate(optIn = true),
             user
         )
         assertEquals(400, response.statusCode.value())
-        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any()) }
+        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `setNotification rejects unknown surface code with 400`() {
+        val response = controller.setNotification(
+            guildId, "DUEL_OFFER", "NOT_A_SURFACE",
+            EngagementApiController.NotificationPrefUpdate(optIn = true),
+            user
+        )
+        assertEquals(400, response.statusCode.value())
+        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `setNotification rejects unsupported (kind, surface) pair with 400`() {
+        // TIP_RECEIVED is CHANNEL + PUSH only, not DM.
+        val response = controller.setNotification(
+            guildId, "TIP_RECEIVED", "DM",
+            EngagementApiController.NotificationPrefUpdate(optIn = true),
+            user
+        )
+        assertEquals(400, response.statusCode.value())
+        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any(), any()) }
     }
 
     @Test
     fun `setNotification rejects non-member with 403`() {
         every { membership.isMember(discordId, guildId) } returns false
         val response = controller.setNotification(
-            guildId, "DUEL_OFFER",
+            guildId, "DUEL_OFFER", "CHANNEL",
             EngagementApiController.NotificationPrefUpdate(optIn = false),
             user
         )
         assertEquals(403, response.statusCode.value())
-        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any()) }
+        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `setNotification rejects unauthenticated with 401`() {
+        val anon = mockk<OAuth2User> { every { getAttribute<String>("id") } returns null }
+        val response = controller.setNotification(
+            guildId, "DUEL_OFFER", "CHANNEL",
+            EngagementApiController.NotificationPrefUpdate(optIn = false),
+            anon
+        )
+        assertEquals(401, response.statusCode.value())
+        verify(exactly = 0) { notificationPrefService.setPref(any(), any(), any(), any(), any()) }
     }
 }

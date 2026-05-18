@@ -1155,4 +1155,128 @@ class BlackjackServiceTest {
         userService.updateUser(UserDto(1L, 1L))
         assertEquals(1L, s.captured.discordId)
     }
+
+    // -------------------------------------------------------------------------
+    // BlackjackNaturalEvent (per-surface PR)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Helper: rebuild the service with a recording event publisher
+     * wired in. The default `setup()` constructor leaves publisher
+     * null (nullable-default pattern) so existing tests keep behaviour;
+     * these tests construct a second instance with the publisher set.
+     */
+    private fun serviceWithPublisher(): Pair<BlackjackService, RecordingEventPublisher> {
+        val publisher = RecordingEventPublisher()
+        val withPublisher = BlackjackService(
+            userService = userService,
+            jackpotService = jackpotService,
+            configService = configService,
+            tableRegistry = registry,
+            blackjack = blackjack,
+            random = Random(0),
+            eventPublisher = publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `solo natural BJ publishes exactly one BlackjackNaturalEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWithBalance(1_000L)
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.ACE), c(Rank.KING)),
+            mutableListOf(c(Rank.NINE), c(Rank.SEVEN))
+        )
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_BLACKJACK
+
+        svc.dealSolo(discordId, guildId, stake = 100L)
+
+        assertEquals(1, publisher.naturalEvents.size)
+        val event = publisher.naturalEvents.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `solo non-natural (PLAYER_WIN reached after hit) publishes no BlackjackNaturalEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWithBalance(1_000L)
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.TEN), c(Rank.NINE)),
+            mutableListOf(c(Rank.SIX), c(Rank.TEN))
+        )
+        // evaluate() returns PLAYER_WIN, not PLAYER_BLACKJACK.
+        every { blackjack.evaluate(any(), any(), any()) } returns Blackjack.Result.PLAYER_WIN
+
+        svc.dealSolo(discordId, guildId, stake = 100L)
+
+        assertTrue(
+            publisher.naturalEvents.isEmpty(),
+            "Regular PLAYER_WIN must not fire the natural-BJ event"
+        )
+    }
+
+    @Test
+    fun `solo player bust publishes no BlackjackNaturalEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWithBalance(1_000L)
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.TEN), c(Rank.NINE)),
+            mutableListOf(c(Rank.SIX), c(Rank.TEN))
+        )
+        every { blackjack.evaluate(any(), any(), any()) } returns Blackjack.Result.PLAYER_BUST
+
+        svc.dealSolo(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.naturalEvents.isEmpty())
+    }
+
+    @Test
+    fun `solo dealer-also-natural (PUSH) publishes no BlackjackNaturalEvent`() {
+        // Player has natural BJ but dealer also does → evaluate returns PUSH.
+        // No win for the player, no achievement.
+        val (svc, publisher) = serviceWithPublisher()
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWithBalance(1_000L)
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.ACE), c(Rank.KING)),
+            mutableListOf(c(Rank.ACE, Suit.HEARTS), c(Rank.QUEEN, Suit.HEARTS))
+        )
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PUSH
+
+        svc.dealSolo(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.naturalEvents.isEmpty())
+    }
+
+    @Test
+    fun `legacy constructor without publisher still compiles and works`() {
+        // Defensive — locks in the nullable-default constructor backward
+        // compatibility we rely on across tests. If someone removes the
+        // default and forces the publisher arg this test fails to compile.
+        val s = BlackjackService(
+            userService = userService,
+            jackpotService = jackpotService,
+            configService = configService,
+            tableRegistry = registry,
+            blackjack = blackjack,
+            random = Random(0),
+        )
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWithBalance(1_000L)
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.ACE), c(Rank.KING)),
+            mutableListOf(c(Rank.NINE), c(Rank.SEVEN))
+        )
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_BLACKJACK
+        // Doesn't throw despite null publisher.
+        s.dealSolo(discordId, guildId, stake = 100L)
+    }
+
+    private class RecordingEventPublisher : org.springframework.context.ApplicationEventPublisher {
+        val naturalEvents: MutableList<common.events.BlackjackNaturalEvent> = mutableListOf()
+        override fun publishEvent(event: org.springframework.context.ApplicationEvent) {}
+        override fun publishEvent(event: Any) {
+            if (event is common.events.BlackjackNaturalEvent) naturalEvents.add(event)
+        }
+    }
 }

@@ -91,6 +91,9 @@ class NotificationRouterChannelTest {
         every { fallbackChannel.sendMessage(any<MessageCreateData>()) } returns createAction
         every { originChannel.sendMessage(any<MessageCreateData>()) } returns createAction
         every { systemChannel.sendMessage(any<MessageCreateData>()) } returns createAction
+        // mentionUsers(...) returns the action so the router can chain
+        // .queue afterwards when mentions filtering is active.
+        every { createAction.mentionUsers(*anyVararg<Long>()) } returns createAction
         every {
             createAction.queue(any<Consumer<Message>>(), any<Consumer<in Throwable>>())
         } just runs
@@ -191,13 +194,16 @@ class NotificationRouterChannelTest {
     }
 
     @Test
-    fun `does not check user notification prefs for channel routing`() {
+    fun `does not check user notification prefs when no mentions are passed`() {
         stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
         every { guild.getTextChannelById(1L) } returns primaryChannel
 
         router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
 
-        verify(exactly = 0) { prefService.isOptedIn(any(), any(), any()) }
+        // 4-arg signature matches `isOptedIn(discordId, guildId, kind, surface)`.
+        verify(exactly = 0) { prefService.isOptedIn(any(), any(), any(), any()) }
+        // And no mentionUsers call either — no whitelist to apply.
+        verify(exactly = 0) { createAction.mentionUsers(*anyVararg<Long>()) }
     }
 
     @Test
@@ -226,5 +232,119 @@ class NotificationRouterChannelTest {
         router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
 
         verify(exactly = 0) { primaryChannel.sendMessage(any<MessageCreateData>()) }
+    }
+
+    // ---- mentions filtering (per-(kind, CHANNEL) opt-in) ----
+
+    @Test
+    fun `mentions with all users opted-in whitelist all ids via mentionUsers`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        val ids = listOf(10L, 20L, 30L)
+        every {
+            prefService.isOptedIn(any(), guildId, common.notification.NotificationChannelKind.TIP_RECEIVED, common.notification.Surface.CHANNEL)
+        } returns true
+
+        router.sendChannel(
+            guildId, ChannelRouteKey.LEVEL_UP,
+            message = builder,
+            mentions = ChannelMentions(common.notification.NotificationChannelKind.TIP_RECEIVED, ids),
+        )
+
+        verify(exactly = 1) { createAction.mentionUsers(10L, 20L, 30L) }
+    }
+
+    @Test
+    fun `mentions with all users opted-out whitelists nothing (empty vararg)`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        val ids = listOf(10L, 20L)
+        every {
+            prefService.isOptedIn(any(), guildId, any(), common.notification.Surface.CHANNEL)
+        } returns false
+
+        router.sendChannel(
+            guildId, ChannelRouteKey.LEVEL_UP,
+            message = builder,
+            mentions = ChannelMentions(common.notification.NotificationChannelKind.TIP_RECEIVED, ids),
+        )
+
+        // Still called — mentionUsers with empty vararg restricts the
+        // whitelist to nothing, so no users get pinged.
+        verify(exactly = 1) { createAction.mentionUsers() }
+    }
+
+    @Test
+    fun `mentions with mixed opt-in filters to the opted-in subset only`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every {
+            prefService.isOptedIn(10L, guildId, any(), common.notification.Surface.CHANNEL)
+        } returns true
+        every {
+            prefService.isOptedIn(20L, guildId, any(), common.notification.Surface.CHANNEL)
+        } returns false
+        every {
+            prefService.isOptedIn(30L, guildId, any(), common.notification.Surface.CHANNEL)
+        } returns true
+
+        router.sendChannel(
+            guildId, ChannelRouteKey.LEVEL_UP,
+            message = builder,
+            mentions = ChannelMentions(
+                common.notification.NotificationChannelKind.TIP_RECEIVED,
+                listOf(10L, 20L, 30L),
+            ),
+        )
+
+        // Only 10 and 30 — 20 dropped because they opted out.
+        verify(exactly = 1) { createAction.mentionUsers(10L, 30L) }
+    }
+
+    @Test
+    fun `empty mentions list calls mentionUsers with empty vararg (defensive)`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+
+        router.sendChannel(
+            guildId, ChannelRouteKey.LEVEL_UP,
+            message = builder,
+            mentions = ChannelMentions(
+                common.notification.NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET,
+                emptyList(),
+            ),
+        )
+
+        // The router calls mentionUsers() regardless when mentions is
+        // non-null — same as "all opted out". Caller passes a non-null
+        // ChannelMentions with empty list to signal "I want the
+        // suppression policy applied, there just happen to be no users
+        // to target right now".
+        verify(exactly = 1) { createAction.mentionUsers() }
+    }
+
+    @Test
+    fun `mentions filtering uses the kind from ChannelMentions, not the route`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        // Route is LEVEL_UP but mentions.kind is DUEL_OFFER — the pref
+        // check must look up DUEL_OFFER, not LEVEL_UP.
+        every {
+            prefService.isOptedIn(10L, guildId, common.notification.NotificationChannelKind.DUEL_OFFER, common.notification.Surface.CHANNEL)
+        } returns true
+
+        router.sendChannel(
+            guildId, ChannelRouteKey.LEVEL_UP,
+            message = builder,
+            mentions = ChannelMentions(
+                common.notification.NotificationChannelKind.DUEL_OFFER,
+                listOf(10L),
+            ),
+        )
+
+        verify(exactly = 1) {
+            prefService.isOptedIn(10L, guildId, common.notification.NotificationChannelKind.DUEL_OFFER, common.notification.Surface.CHANNEL)
+        }
+        verify(exactly = 1) { createAction.mentionUsers(10L) }
     }
 }

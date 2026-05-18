@@ -1,8 +1,10 @@
 package bot.toby.scheduling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
@@ -115,6 +117,15 @@ class LotteryAnnouncer @Autowired constructor(
                     }
                 }
             },
+            // Router suppresses any winner's user-ping when they've
+            // opted out of (LOTTERY_DRAW_WITH_MY_TICKET, CHANNEL). Wide
+            // ping (@here/@everyone) is unaffected. winnerPingIds is
+            // empty when there are no winners — passing a non-null
+            // mentions with an empty list is the correct signal.
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET,
+                userIds = winnerPingIds(priorOutcome),
+            ),
         )
     }
 

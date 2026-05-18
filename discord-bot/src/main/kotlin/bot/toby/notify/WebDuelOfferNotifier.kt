@@ -3,6 +3,7 @@ package bot.toby.notify
 import bot.toby.command.commands.economy.DuelEmbeds
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.configuration.RegistryScheduler
 import database.duel.PendingDuelRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
@@ -74,6 +75,13 @@ class WebDuelOfferNotifier(
                     .build()
             },
             onSent = { sent -> scheduleTimeoutCleanup(event, sent) },
+            // Router suppresses the opponent's user-ping when they've
+            // opted out of (DUEL_OFFER, CHANNEL). Buttons still render
+            // and the embed still shows; they just don't get notified.
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.DUEL_OFFER,
+                userIds = listOf(event.opponentDiscordId),
+            ),
         )
     }
 
