@@ -75,7 +75,7 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun buildLevelUpEmbed(event: LevelUpEvent, member: Member?): MessageEmbed {
-        val progress = LevelCurve.progress(event.totalXp)
+        val achievedXp = LevelCurve.xpForNextLevel((event.newLevel - 1).coerceAtLeast(0))
         val mention = "<@${event.discordId}>"
         val builder = EmbedBuilder()
             .setTitle("Level Up — LVL ${event.newLevel}")
@@ -83,8 +83,8 @@ class LevelUpListener @Autowired constructor(
             .setColor(Color(tierColor(event.newLevel)))
             .addField(
                 "Progress",
-                "`${progressBar(progress.xpIntoLevel, progress.xpForNextLevel)}` " +
-                    "${formatXp(progress.xpIntoLevel)} / ${formatXp(progress.xpForNextLevel)} XP",
+                "`${progressBar(achievedXp, achievedXp)}` " +
+                    "${formatXp(achievedXp)} / ${formatXp(achievedXp)} XP",
                 false
             )
             .addField("Total XP", formatXp(event.totalXp), true)
