@@ -1,48 +1,107 @@
+/* ============================================================
+   Site navbar.
+
+   Desktop (≥ 601px): flat horizontal row — brand on the left, links
+   + dropdowns inline to the right. Section eyebrows, drawer chrome,
+   identity card, backdrop, and the auth footer are all
+   display: none on desktop; the hamburger is too.
+
+   Mobile (≤ 600px): the hamburger toggles a fixed-position drawer
+   that slides in from the right with a dim backdrop. The drawer
+   stacks: sticky header → identity card (signed-in) → grouped
+   sections with eyebrow labels and icons → auth footer pinned at
+   the bottom. Body scroll is locked while the drawer is open
+   (body.nav-open).
+   ============================================================ */
+
 nav {
-    background: #16213e;
+    background: var(--bg-elevated);
     padding: 14px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1px solid #2a2a4a;
-    flex-wrap: wrap;
-    gap: 12px;
+    border-bottom: 1px solid var(--border);
+    gap: var(--space-3);
+    position: relative;
+    z-index: 10;
 }
-.brand { font-weight: 700; font-size: 1.2rem; color: #fff; text-decoration: none; max-width: calc(100% - 64px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.nav-links { display: flex; align-items: center; gap: 20px; }
-.nav-links a { color: #a0a0b0; text-decoration: none; font-size: 0.9rem; transition: color 0.2s; }
-.nav-links a:hover { color: #fff; }
-.nav-user { color: #a0a0b0; font-size: 0.9rem; }
+.brand {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #fff;
+    text-decoration: none;
+    max-width: calc(100% - 64px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: var(--space-5);
+}
+.nav-links > .nav-section {
+    display: contents;
+}
+.nav-links > .nav-section > .nav-section-eyebrow,
+.nav-drawer-header,
+.nav-identity,
+.nav-auth {
+    display: none;
+}
+.nav-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.nav-item:hover { color: #fff; background: var(--accent-soft); }
+.nav-item-icon {
+    display: none;
+    width: 20px;
+    justify-content: center;
+    font-size: 1.05rem;
+    opacity: 0.85;
+}
+.nav-user { color: var(--text-muted); font-size: 0.9rem; }
 .btn-discord {
-    display: inline-block;
-    background: #5865F2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
     color: #fff;
     text-decoration: none;
     padding: 8px 18px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     font-size: 0.9rem;
     font-weight: 600;
     transition: background 0.2s;
 }
-.btn-discord:hover { background: #4752c4; }
+.btn-discord:hover { background: var(--accent-hover); color: #fff; }
 .btn-logout {
     background: transparent;
-    border: 1px solid #555;
-    color: #a0a0b0;
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
     padding: 8px 14px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
     font-size: 0.85rem;
+    font-family: inherit;
     transition: border-color 0.2s, color 0.2s;
 }
-.btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
+.btn-logout:hover { border-color: var(--danger); color: var(--danger); }
 .nav-default-guild {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     max-width: 160px;
     padding: 4px 10px;
-    border: 1px solid #555;
+    border: 1px solid var(--border-strong);
     border-radius: 999px;
     color: #c5c5d2;
     font-size: 0.8rem;
@@ -52,17 +111,60 @@ nav {
     text-overflow: ellipsis;
 }
 .nav-default-guild:hover { border-color: #fff; color: #fff; }
-.nav-default-guild-empty { color: #7a7a8c; }
-.nav-default-guild-empty:hover { color: #c5c5d2; border-color: #7a7a8c; }
+.nav-default-guild-empty { color: var(--text-dim); }
+.nav-default-guild-empty:hover { color: #c5c5d2; border-color: var(--text-dim); }
+
+/* Hamburger toggle — hidden on desktop, swap glyph via [aria-expanded]
+   so JS only flips the attribute. */
 .nav-toggle {
     display: none;
     background: transparent;
-    border: 1px solid #555;
-    color: #a0a0b0;
+    border: 1px solid var(--border-strong);
+    color: var(--text-muted);
     font-size: 1.2rem;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     cursor: pointer;
+    line-height: 1;
+}
+.nav-toggle-icon { display: inline-block; line-height: 1; }
+.nav-toggle-icon::before { content: "\2630"; }
+.nav-toggle[aria-expanded="true"] .nav-toggle-icon::before { content: "\2715"; }
+
+/* Drawer-only chrome — surfaced inside the @media block */
+.nav-drawer-brand {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #fff;
+}
+.nav-drawer-close {
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 1rem;
+    cursor: pointer;
+    font-family: inherit;
+    line-height: 1;
+}
+.nav-drawer-close:hover { border-color: var(--accent); color: #fff; }
+
+.nav-identity-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.nav-backdrop { display: none; }
+
+/* Active-page accent. Desktop: subtle underline via box-shadow so layout
+   doesn't shift. Mobile rule below replaces this with a left-rail accent. */
+.nav-item[aria-current="page"],
+.nav-dropdown.is-active-parent > .nav-dropdown-toggle {
+    color: #fff;
+    box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* Intermediate breakpoint — between desktop (full nav) and 600px
@@ -70,7 +172,7 @@ nav {
    wrap onto multiple rows or get clipped on iPad-portrait widths. */
 @media (max-width: 768px) {
     nav { padding: 12px 16px; }
-    .nav-links { gap: 12px; }
+    .nav-links { gap: var(--space-3); }
 }
 
 /* Dropdown menus (Economy, Casino, ...). Trigger looks like a regular nav
@@ -87,19 +189,27 @@ nav {
 .nav-dropdown-toggle {
     background: transparent;
     border: none;
-    color: #a0a0b0;
+    color: var(--text-muted);
     font-size: 0.9rem;
     cursor: pointer;
-    padding: 0;
-    transition: color 0.2s;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s, background 0.15s, box-shadow 0.15s;
     font-family: inherit;
     display: inline-flex;
     align-items: center;
     gap: 4px;
 }
 .nav-dropdown-toggle:hover,
-.nav-dropdown.open > .nav-dropdown-toggle { color: #fff; }
-.nav-dropdown-caret { font-size: 0.75em; transition: transform 0.2s; }
+.nav-dropdown.open > .nav-dropdown-toggle {
+    color: #fff;
+    background: var(--accent-soft);
+}
+.nav-dropdown-caret {
+    font-size: 0.75em;
+    transition: transform 0.2s;
+    margin-left: 2px;
+}
 @media (hover: hover) and (pointer: fine) {
     .nav-dropdown:hover .nav-dropdown-caret { transform: rotate(180deg); }
 }
@@ -110,63 +220,248 @@ nav {
     top: 100%;
     left: 0;
     margin-top: 0;
-    background: #16213e;
-    border: 1px solid #2a2a4a;
-    border-radius: 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
     padding: 6px 0;
-    min-width: 160px;
+    min-width: 180px;
     z-index: 10;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-md);
     flex-direction: column;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: opacity 0.12s ease-out, transform 0.12s ease-out;
 }
 @media (hover: hover) and (pointer: fine) {
-    .nav-dropdown:hover .nav-dropdown-menu { display: flex; }
+    .nav-dropdown:hover .nav-dropdown-menu {
+        display: flex;
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
-.nav-dropdown.open .nav-dropdown-menu { display: flex; }
+.nav-dropdown.open .nav-dropdown-menu {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+}
 .nav-dropdown-menu a,
 .nav-dropdown-menu .nav-dropdown-coming-soon {
     padding: 8px 16px;
-    color: #a0a0b0;
+    color: var(--text-muted);
     text-decoration: none;
     font-size: 0.9rem;
-    transition: background 0.2s, color 0.2s;
+    transition: background 0.15s, color 0.15s;
     white-space: nowrap;
 }
-.nav-dropdown-menu a:hover { background: #2a2a4a; color: #fff; }
-.nav-dropdown-coming-soon { color: #555; cursor: default; font-style: italic; }
+.nav-dropdown-menu a:hover { background: var(--accent-soft); color: #fff; }
+.nav-dropdown-menu a[aria-current="page"] {
+    color: #fff;
+    background: var(--accent-soft);
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+.nav-dropdown-coming-soon { color: var(--border-strong); cursor: default; font-style: italic; }
 .nav-dropdown-separator {
     border: 0;
-    border-top: 1px solid #2a2a4a;
+    border-top: 1px solid var(--border);
     margin: 4px 12px;
 }
 
+/* ============================================================
+   Mobile drawer (≤ 600px).
+   ============================================================ */
 @media (max-width: 600px) {
-    .nav-toggle { display: block; min-height: 40px; min-width: 40px; }
-    .nav-links { display: none; flex-direction: column; align-items: stretch; gap: 4px; width: 100%; padding: 8px 0; }
-    .nav-links.open { display: flex; }
-    .nav-links a, .nav-user { padding: 10px 4px; min-height: 40px; display: flex; align-items: center; }
-    .nav-links .btn-discord, .nav-links .btn-logout { align-self: flex-start; min-height: 40px; display: inline-flex; align-items: center; }
+    nav {
+        padding: 12px var(--space-4);
+        flex-wrap: nowrap;
+        gap: var(--space-2);
+    }
+    .brand { max-width: calc(100% - 56px); }
 
-    /* On mobile, dropdown items inline under the trigger and toggle
-       open/closed via the .open class set by toggleDropdown() — each
-       section starts collapsed so the menu isn't one giant scroll.
-       Hover is deliberately not a trigger on touch; see the
-       @media (hover: hover) guard above. The desktop hover-bridge
-       padding is also neutralised so it doesn't push items apart. */
+    .nav-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        min-width: 40px;
+        position: relative;
+        z-index: 60;
+    }
+
+    /* The drawer itself. Slides in from the right. */
+    .nav-links {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: auto;
+        width: min(86vw, 340px);
+        max-width: 100vw;
+        padding: 0 var(--space-4) var(--space-5);
+
+        background: var(--bg-elevated);
+        border-left: 1px solid var(--border);
+        box-shadow: var(--shadow-lg);
+
+        overflow-y: auto;
+        overscroll-behavior: contain;
+
+        transform: translateX(100%);
+        transition: transform 0.22s ease-out;
+        z-index: 50;
+    }
+    .nav-links.open { transform: translateX(0); }
+
+    /* Sticky drawer header — keeps the brand + close X visible as the
+       user scrolls a long list of dropdown items. */
+    .nav-drawer-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: sticky;
+        top: 0;
+        background: var(--bg-elevated);
+        padding: var(--space-4) 0 var(--space-3);
+        border-bottom: 1px solid var(--border);
+        margin: 0 0 var(--space-2);
+        z-index: 2;
+    }
+
+    /* Identity card (signed-in only). */
+    .nav-identity {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-2);
+        padding: var(--space-3);
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+    }
+    .nav-identity .nav-default-guild {
+        max-width: 100%;
+        align-self: stretch;
+    }
+
+    /* Sections. .nav-section was display: contents on desktop; flip it
+       to a real flex column so the eyebrow + items group together. */
+    .nav-links > .nav-section {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .nav-links > .nav-section > .nav-section-eyebrow {
+        display: block;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-dim);
+        font-weight: 600;
+        padding: var(--space-2) var(--space-2) 4px;
+    }
+
+    /* Items + dropdown triggers as full-width tap targets. */
+    .nav-item,
+    .nav-dropdown-toggle {
+        width: 100%;
+        justify-content: flex-start;
+        padding: 10px var(--space-2);
+        min-height: var(--tap-min);
+        font-size: 0.95rem;
+        gap: var(--space-3);
+        border-radius: var(--radius-sm);
+    }
+    .nav-item-icon {
+        display: inline-flex;
+        flex-shrink: 0;
+    }
+    .nav-dropdown-toggle .nav-dropdown-label { flex: 1; text-align: left; }
+    .nav-dropdown-toggle .nav-dropdown-caret { margin-left: auto; }
+
+    /* Mobile active-pill replaces the desktop underline. */
+    .nav-item[aria-current="page"],
+    .nav-dropdown.is-active-parent > .nav-dropdown-toggle {
+        background: var(--accent-soft);
+        color: #fff;
+        box-shadow: inset 3px 0 0 var(--accent);
+    }
+
+    /* Inlined dropdowns: each section starts collapsed so the menu isn't
+       one giant scroll. Hover is deliberately not a trigger on touch (see
+       the @media (hover: hover) guard above). Desktop hover-bridge padding
+       is neutralised so it doesn't push items apart. */
     .nav-dropdown { width: 100%; padding-bottom: 0; margin-bottom: 0; }
-    .nav-dropdown-toggle { padding: 10px 4px; min-height: 40px; width: 100%; justify-content: flex-start; }
     .nav-dropdown-menu {
         position: static;
-        margin-top: 0;
+        margin: 4px 0 0 32px;
+        padding: 2px 0 2px var(--space-3);
         border: none;
-        padding: 0 0 0 16px;
+        border-left: 1px solid var(--border);
         background: transparent;
         box-shadow: none;
         min-width: 0;
+        opacity: 1;
+        transform: none;
+        transition: none;
     }
-    .nav-dropdown-menu a, .nav-dropdown-menu .nav-dropdown-coming-soon {
-        padding: 8px 4px;
-        min-height: 36px;
+    .nav-dropdown-menu a,
+    .nav-dropdown-menu .nav-dropdown-coming-soon {
+        padding: 10px 8px;
+        min-height: 40px;
         white-space: normal;
+        display: flex;
+        align-items: center;
+        border-radius: var(--radius-sm);
     }
+
+    /* Auth footer pinned to the bottom of the drawer. */
+    .nav-auth {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+        margin-top: auto;
+        padding-top: var(--space-4);
+        border-top: 1px solid var(--border);
+    }
+    .nav-auth-form { margin: 0; }
+    .nav-auth .btn-discord,
+    .nav-auth .btn-logout {
+        width: 100%;
+        justify-content: center;
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        min-height: var(--tap-min);
+    }
+
+    /* Backdrop. */
+    .nav-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(10, 10, 20, 0.55);
+        z-index: 40;
+        animation: nav-backdrop-fade-in 0.18s ease-out;
+    }
+    .nav-backdrop[hidden] { display: none; }
+
+    /* Scroll lock while the drawer is open. */
+    body.nav-open { overflow: hidden; }
+}
+
+@keyframes nav-backdrop-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* Honour the user's motion preference. The drawer still opens/closes
+   instantly; only the slide + fade transitions are dropped. */
+@media (prefers-reduced-motion: reduce) {
+    .nav-links,
+    .nav-dropdown-menu,
+    .nav-backdrop,
+    .nav-dropdown-caret { transition: none; animation: none; }
 }
