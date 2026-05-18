@@ -226,10 +226,11 @@ class AchievementEventHandlerTest {
 
     @Test
     fun `achievement shoutout does not pass mentions (embed mention is silent)`() {
-        // The shoutout embeds `<@discordId>` in the embed description
-        // — embed mentions don't ping by Discord rules, so there's no
-        // user-ping suppression needed and the router shouldn't be
-        // asked to filter.
+        // The shoutout embeds `<@discordId>` in the embed description —
+        // embed mentions don't ping by Discord rules, so there's no
+        // user-ping suppression needed. The earlier test already
+        // verifies `mentions = null` is passed explicitly; this case is
+        // covered by that assertion.
         val event = AchievementUnlockedEvent(
             discordId = discordId, guildId = guildId,
             achievementId = 1L, achievementCode = "tip_giver",
@@ -237,14 +238,17 @@ class AchievementEventHandlerTest {
         )
         handler.onAchievementUnlocked(event)
 
-        verify(exactly = 0) {
+        // Only one sendChannel call total (the shoutout). It must have
+        // mentions = null — anything else would constitute "router
+        // please filter these users", which is wrong for embed-only.
+        verify(exactly = 1) {
             router.sendChannel(
                 guildId = any(),
                 route = any(),
                 originChannelId = any(),
                 message = any(),
                 onSent = any(),
-                mentions = match<ChannelMentions?> { it != null },
+                mentions = null,
             )
         }
     }

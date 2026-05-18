@@ -187,6 +187,22 @@ class EngagementApiControllerTest {
     }
 
     @Test
+    fun `listNotifications rejects unauthenticated with 401`() {
+        val anon = mockk<OAuth2User> { every { getAttribute<String>("id") } returns null }
+        val response = controller.listNotifications(guildId, anon)
+        assertEquals(401, response.statusCode.value())
+        verify(exactly = 0) { notificationPrefService.listForUser(any(), any()) }
+    }
+
+    @Test
+    fun `listNotifications rejects non-member with 403`() {
+        every { membership.isMember(discordId, guildId) } returns false
+        val response = controller.listNotifications(guildId, user)
+        assertEquals(403, response.statusCode.value())
+        verify(exactly = 0) { notificationPrefService.listForUser(any(), any()) }
+    }
+
+    @Test
     fun `listNotifications surfaces explicit (kind, surface) overrides`() {
         // ACHIEVEMENT_UNLOCK supports DM, CHANNEL, PUSH. Opt out of DM,
         // leave the other two on their defaults.

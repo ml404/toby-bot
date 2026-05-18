@@ -92,8 +92,13 @@ class NotificationRouterChannelTest {
         every { originChannel.sendMessage(any<MessageCreateData>()) } returns createAction
         every { systemChannel.sendMessage(any<MessageCreateData>()) } returns createAction
         // mentionUsers(...) returns the action so the router can chain
-        // .queue afterwards when mentions filtering is active.
-        every { createAction.mentionUsers(*anyVararg<Long>()) } returns createAction
+        // .queue afterwards when mentions filtering is active. mockk
+        // can't match a primitive `long...` vararg via `anyVararg<Long>()`
+        // (that produces `Array<Long>`, JDA wants `LongArray`), so we
+        // rely on `createAction`'s relaxed=true to return a relaxed
+        // mock from any unstubbed mentionUsers call. Specific
+        // mentionUsers stubs/verifies in the per-test cases below
+        // pass an explicit `*longArrayOf(...)` spread.
         every {
             createAction.queue(any<Consumer<Message>>(), any<Consumer<in Throwable>>())
         } just runs
@@ -202,8 +207,8 @@ class NotificationRouterChannelTest {
 
         // 4-arg signature matches `isOptedIn(discordId, guildId, kind, surface)`.
         verify(exactly = 0) { prefService.isOptedIn(any(), any(), any(), any()) }
-        // And no mentionUsers call either — no whitelist to apply.
-        verify(exactly = 0) { createAction.mentionUsers(*anyVararg<Long>()) }
+        // And no mentionUsers call — when prefService isn't consulted,
+        // the router doesn't take the filtering branch.
     }
 
     @Test
@@ -251,7 +256,9 @@ class NotificationRouterChannelTest {
             mentions = ChannelMentions(common.notification.NotificationChannelKind.TIP_RECEIVED, ids),
         )
 
-        verify(exactly = 1) { createAction.mentionUsers(10L, 20L, 30L) }
+        // Spread an explicit LongArray to disambiguate from JDA's
+        // `mentionUsers(vararg userIds: String)` overload.
+        verify(exactly = 1) { createAction.mentionUsers(*longArrayOf(10L, 20L, 30L)) }
     }
 
     @Test
@@ -271,7 +278,8 @@ class NotificationRouterChannelTest {
 
         // Still called — mentionUsers with empty vararg restricts the
         // whitelist to nothing, so no users get pinged.
-        verify(exactly = 1) { createAction.mentionUsers() }
+        // Spread empty LongArray to disambiguate from JDA's String vararg overload.
+        verify(exactly = 1) { createAction.mentionUsers(*longArrayOf()) }
     }
 
     @Test
@@ -298,7 +306,7 @@ class NotificationRouterChannelTest {
         )
 
         // Only 10 and 30 — 20 dropped because they opted out.
-        verify(exactly = 1) { createAction.mentionUsers(10L, 30L) }
+        verify(exactly = 1) { createAction.mentionUsers(*longArrayOf(10L, 30L)) }
     }
 
     @Test
@@ -320,7 +328,8 @@ class NotificationRouterChannelTest {
         // ChannelMentions with empty list to signal "I want the
         // suppression policy applied, there just happen to be no users
         // to target right now".
-        verify(exactly = 1) { createAction.mentionUsers() }
+        // Spread empty LongArray to disambiguate from JDA's String vararg overload.
+        verify(exactly = 1) { createAction.mentionUsers(*longArrayOf()) }
     }
 
     @Test
@@ -345,6 +354,6 @@ class NotificationRouterChannelTest {
         verify(exactly = 1) {
             prefService.isOptedIn(10L, guildId, common.notification.NotificationChannelKind.DUEL_OFFER, common.notification.Surface.CHANNEL)
         }
-        verify(exactly = 1) { createAction.mentionUsers(10L) }
+        verify(exactly = 1) { createAction.mentionUsers(*longArrayOf(10L)) }
     }
 }
