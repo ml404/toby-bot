@@ -12,6 +12,7 @@ import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -151,11 +152,17 @@ class NotifyCommandSurfaceTest : CommandTest {
 
         notifyCommand.handle(DefaultCommandContext(event), userDto, deleteDelay = 0)
 
-        // We can't easily peek inside the produced embed without
-        // jumping through hooks, but we can verify the command
-        // reaches the prefService and produces an embed.
+        // Verifying the queue() call directly is fragile — the production
+        // chain is `sendMessageEmbeds(embed).setEphemeral(true).queue(...)`
+        // and mockk auto-creates an intermediate mock for the chained
+        // stub, so `.queue(...)` lands on a different mock than
+        // webhookMessageCreateAction. Anchor on the entry point of the
+        // chain instead: sendMessageEmbeds being called proves the
+        // embed-rendering path executed.
         verify(exactly = 1) { prefService.listForUser(1L, 1L) }
-        verify(atLeast = 1) { webhookMessageCreateAction.queue(any()) }
+        verify(atLeast = 1) {
+            event.hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg())
+        }
     }
 
     @Test
