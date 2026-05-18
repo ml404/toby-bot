@@ -1,5 +1,6 @@
 package bot.toby.handler
 
+import common.leveling.XpAmounts
 import common.logging.DiscordLogger
 import core.managers.CommandManager
 import database.service.XpAwardService
@@ -38,18 +39,11 @@ class SlashCommandEventListener @Autowired constructor(
                 xpAwardService.award(
                     discordId = event.user.idLong,
                     guildId = guildId,
-                    amount = COMMAND_XP,
+                    amount = XpAmounts.COMMAND_XP,
                     reason = "slash-command:${event.name}",
                     channelId = channelId
                 )
             }
         }
-    }
-
-    companion object {
-        // Small XP grant per slash-command invocation. The daily XP cap
-        // (default 1000) prevents spam-farming while still letting active
-        // users meaningfully progress from command usage alone.
-        const val COMMAND_XP: Long = 5L
     }
 }
