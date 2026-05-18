@@ -1,9 +1,6 @@
 package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import common.helpers.Cache
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URI
@@ -14,9 +11,7 @@ import java.time.Duration
 import kotlin.random.Random
 
 @Service
-class UtilsWebService(
-    private val cache: Cache
-) {
+class UtilsWebService {
     private val http: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .build()
@@ -76,64 +71,6 @@ class UtilsWebService(
         } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
             UtilsResult.error("Request interrupted.")
-        }
-    }
-
-    fun randomDbdKiller(): UtilsResult<String> {
-        return try {
-            val killers = fetchWiki(
-                cacheKey = "dbdKillers",
-                url = "https://deadbydaylight.fandom.com/wiki/Killers",
-                className = "mw-content-ltr"
-            ) { root -> parseDbdKillers(root) }
-            if (killers.isEmpty()) UtilsResult.error("No killers parsed.")
-            else UtilsResult.ok(killers[Random.nextInt(killers.size)])
-        } catch (e: IOException) {
-            UtilsResult.error("Could not reach the wiki: ${e.message}")
-        }
-    }
-
-    fun randomKf2Map(): UtilsResult<String> {
-        return try {
-            val maps = fetchWiki(
-                cacheKey = "kf2Maps",
-                url = "https://wiki.killingfloor2.com/index.php?title=Maps_(Killing_Floor_2)",
-                className = "mw-parser-output"
-            ) { root -> root.select("b").eachText() }
-            if (maps.isEmpty()) UtilsResult.error("No maps parsed.")
-            else UtilsResult.ok(maps[Random.nextInt(maps.size)])
-        } catch (e: IOException) {
-            UtilsResult.error("Could not reach the wiki: ${e.message}")
-        }
-    }
-
-    private fun fetchWiki(
-        cacheKey: String,
-        url: String,
-        className: String,
-        parse: (Element) -> List<String>
-    ): List<String> {
-        cache.get(cacheKey)?.let { return it }
-        val doc = Jsoup.connect(url).get()
-        val root = doc.getElementsByClass(className).first()
-            ?: throw IOException("Element with class '$className' not found")
-        val values = parse(root).filter { it.isNotBlank() }
-        cache.put(cacheKey, values)
-        return values
-    }
-
-    private fun parseDbdKillers(root: Element): List<String> {
-        val outerDivs = root.select("div")
-        val container = outerDivs.getOrNull(3) ?: return emptyList()
-        return container.select("> div").mapNotNull { div ->
-            val realName = div.selectFirst("a")?.text()?.trim()
-            val alias = div.ownText().trim()
-            when {
-                !realName.isNullOrBlank() && alias.isNotBlank() -> "$realName — $alias"
-                !realName.isNullOrBlank() -> realName
-                alias.isNotBlank() -> alias
-                else -> null
-            }
         }
     }
 

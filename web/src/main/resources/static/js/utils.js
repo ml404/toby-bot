@@ -159,42 +159,4 @@
                 .catch(() => { submit.disabled = false; toast('Network error.', 'error'); });
         });
     }
-
-    // --- DBD killer ---
-    const dbdBtn = document.querySelector('[data-action="dbd"]');
-    if (dbdBtn) {
-        dbdBtn.addEventListener('click', () => {
-            dbdBtn.disabled = true;
-            fetchJson('/utils/api/dbd-killer')
-                .then(r => {
-                    dbdBtn.disabled = false;
-                    if (r && r.ok && r.text) {
-                        output('dbd').textContent = r.text;
-                    } else {
-                        output('dbd').textContent = r?.error || 'Could not fetch killer.';
-                        toast(r?.error || 'Could not fetch killer.', 'error');
-                    }
-                })
-                .catch(() => { dbdBtn.disabled = false; toast('Network error.', 'error'); });
-        });
-    }
-
-    // --- KF2 map ---
-    const kf2Btn = document.querySelector('[data-action="kf2"]');
-    if (kf2Btn) {
-        kf2Btn.addEventListener('click', () => {
-            kf2Btn.disabled = true;
-            fetchJson('/utils/api/kf2-map')
-                .then(r => {
-                    kf2Btn.disabled = false;
-                    if (r && r.ok && r.text) {
-                        output('kf2').textContent = r.text;
-                    } else {
-                        output('kf2').textContent = r?.error || 'Could not fetch map.';
-                        toast(r?.error || 'Could not fetch map.', 'error');
-                    }
-                })
-                .catch(() => { kf2Btn.disabled = false; toast('Network error.', 'error'); });
-        });
-    }
 })();

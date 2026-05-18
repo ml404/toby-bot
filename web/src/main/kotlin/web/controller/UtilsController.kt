@@ -42,29 +42,6 @@ class UtilsController(
             ResponseEntity.ok(MemeResponse(true, null, result.value))
         }
     }
-
-    @GetMapping("/api/dbd-killer", produces = ["application/json"])
-    @ResponseBody
-    fun dbdKiller(): ResponseEntity<TextResponse> {
-        val result = utilsWebService.randomDbdKiller()
-        return if (result.error != null || result.value == null) {
-            ResponseEntity.badRequest().body(TextResponse(false, result.error, null))
-        } else {
-            ResponseEntity.ok(TextResponse(true, null, result.value))
-        }
-    }
-
-    @GetMapping("/api/kf2-map", produces = ["application/json"])
-    @ResponseBody
-    fun kf2Map(): ResponseEntity<TextResponse> {
-        val result = utilsWebService.randomKf2Map()
-        return if (result.error != null || result.value == null) {
-            ResponseEntity.badRequest().body(TextResponse(false, result.error, null))
-        } else {
-            ResponseEntity.ok(TextResponse(true, null, result.value))
-        }
-    }
 }
 
 data class MemeResponse(val ok: Boolean, val error: String?, val meme: MemeResult?)
-data class TextResponse(val ok: Boolean, val error: String?, val text: String?)
