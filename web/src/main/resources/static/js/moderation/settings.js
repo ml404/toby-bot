@@ -26,6 +26,7 @@
     const total = rows.length;
 
     const sections = Array.from(document.querySelectorAll('details.config-section'));
+    const pillars = Array.from(document.querySelectorAll('h2.config-pillar'));
     // Snapshot which sections were open before any search ran so we can
     // restore that state when the query is cleared. Force-open while
     // searching so matches deep inside collapsed sections are visible.
@@ -58,6 +59,22 @@
             const anyVisible = sectionRows.some(r => !r.classList.contains('is-hidden'));
             section.classList.toggle('is-hidden', !anyVisible && q !== '');
             if (q !== '' && anyVisible) section.open = true;
+        });
+        // Hide pillar headers whose sections are all filtered out so the
+        // page doesn't show a bare "Casino" h2 with nothing under it. A
+        // pillar "owns" every sibling .config-section up to the next
+        // pillar; walk forward from each pillar and check whether any
+        // owned section is still visible.
+        pillars.forEach((pillar, idx) => {
+            const nextPillar = pillars[idx + 1] || null;
+            let anyOwnedVisible = false;
+            for (let el = pillar.nextElementSibling; el && el !== nextPillar; el = el.nextElementSibling) {
+                if (el.classList.contains('config-section') && !el.classList.contains('is-hidden')) {
+                    anyOwnedVisible = true;
+                    break;
+                }
+            }
+            pillar.classList.toggle('is-hidden', !anyOwnedVisible && q !== '');
         });
         if (count) {
             count.textContent = q === '' ? '' : shown + ' of ' + total;

@@ -35,9 +35,8 @@ class ModerationTemplateRowsTest {
 
     @Test
     fun `settings template surfaces every blackjack config key as an editable row`() {
-        // Stake-shaped keys (BLACKJACK_MIN_ANTE / BLACKJACK_MAX_ANTE) live
-        // in the consolidated "Casino stakes & buy-ins" card now, but the
-        // page still has to render rows for them — this test just asserts
+        // All Blackjack keys (table rules + ante stakes) now live together
+        // inside the Blackjack section; this test just asserts
         // presence-anywhere, not which card.
         val keys = listOf(
             ConfigDto.Configurations.BLACKJACK_RAKE_PCT,
@@ -106,10 +105,12 @@ class ModerationTemplateRowsTest {
     fun `settings template surfaces every stake or buy-in config key as an editable row`() {
         // Every stake-shaped config — per-minigame min/max, blackjack ante
         // bounds, and the poker chip thresholds (blinds/bets/buy-ins) —
-        // lives in the consolidated "Casino stakes & buy-ins" card. The
-        // jackpot stake anchor migrated up into the dedicated Jackpot
-        // section in the split refactor; it's covered by the dedicated
-        // jackpot test below.
+        // has a row somewhere on the settings page. Blackjack ante and
+        // Poker blinds/buy-ins now live inside their respective game
+        // sections; the simpler games live in the "Game stake limits"
+        // section. The jackpot stake anchor lives in the dedicated
+        // Jackpot section; it's covered by the dedicated jackpot test
+        // below.
         val keys = listOf(
             ConfigDto.Configurations.DICE_MIN_STAKE,
             ConfigDto.Configurations.DICE_MAX_STAKE,
@@ -147,27 +148,87 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
-    fun `casino stakes and buy-ins section has its own collapsed details block`() {
+    fun `game stake limits section has its own collapsed details block`() {
         assertTrue(
-            settingsHtml.contains("<summary>Casino stakes &amp; buy-ins</summary>"),
-            "expected a <details><summary>Casino stakes & buy-ins</summary> wrapper around the consolidated stake rows"
+            settingsHtml.contains("<summary>Game stake limits</summary>"),
+            "expected a <details><summary>Game stake limits</summary> wrapper around the simple-game stake rows"
         )
     }
 
     @Test
-    fun `casino stakes card sub-groups every game with an h4 heading`() {
+    fun `game stake limits card sub-groups every game with an h4 heading`() {
         // The card is too long without sub-headings — admins scan by game.
         // Asserting on a sample of headings so a flatten regression is
         // obvious without making the test enumerate every group.
+        // Blackjack and Poker headings now live in their dedicated game
+        // sections under "Stakes per hand" / "Blinds & buy-ins"
+        // subgroups, so this card only carries the simple games.
         val headings = listOf(
             "<h4>Dice</h4>",
-            "<h4>Blackjack</h4>",
-            "<h4>Poker</h4>",
+            "<h4>Coinflip</h4>",
+            "<h4>Duel</h4>",
         )
         for (h in headings) {
             assertTrue(
                 settingsHtml.contains(h),
-                "expected $h sub-heading inside the consolidated card"
+                "expected $h sub-heading inside the Game stake limits card"
+            )
+        }
+    }
+
+    @Test
+    fun `blackjack section consolidates table rules and stake bounds in one place`() {
+        // Pre-pass, BLACKJACK_MIN_ANTE / MAX_ANTE lived in a separate
+        // "Casino stakes & buy-ins" card; tuning blackjack meant scrolling
+        // between two sections. Pin them inside the Blackjack section.
+        val blackjackStart = settingsHtml.indexOf("<summary>Blackjack</summary>")
+        assertTrue(blackjackStart >= 0, "Blackjack section not found")
+        val sectionEnd = settingsHtml.indexOf("</details>", blackjackStart)
+        assertTrue(sectionEnd > blackjackStart, "Blackjack section not terminated")
+        val sectionHtml = settingsHtml.substring(blackjackStart, sectionEnd)
+        for (key in listOf("BLACKJACK_MIN_ANTE", "BLACKJACK_MAX_ANTE")) {
+            assertTrue(
+                sectionHtml.contains("data-key=\"$key\""),
+                "$key should live inside the Blackjack section, not the Game stake limits card"
+            )
+        }
+    }
+
+    @Test
+    fun `poker section consolidates table rules with blinds and buy-ins in one place`() {
+        // Same regression-shape as the blackjack consolidation —
+        // POKER_SMALL_BLIND etc. used to live in the stakes mega-card.
+        val pokerStart = settingsHtml.indexOf("<summary>Poker</summary>")
+        assertTrue(pokerStart >= 0, "Poker section not found")
+        val sectionEnd = settingsHtml.indexOf("</details>", pokerStart)
+        assertTrue(sectionEnd > pokerStart, "Poker section not terminated")
+        val sectionHtml = settingsHtml.substring(pokerStart, sectionEnd)
+        val pokerStakeKeys = listOf(
+            "POKER_SMALL_BLIND",
+            "POKER_BIG_BLIND",
+            "POKER_SMALL_BET",
+            "POKER_BIG_BET",
+            "POKER_MIN_BUY_IN",
+            "POKER_MAX_BUY_IN",
+        )
+        for (key in pokerStakeKeys) {
+            assertTrue(
+                sectionHtml.contains("data-key=\"$key\""),
+                "$key should live inside the Poker section, not the Game stake limits card"
+            )
+        }
+    }
+
+    @Test
+    fun `settings template groups sections under server economy and casino pillars`() {
+        // The three top-level <h2 class="config-pillar"> headers anchor
+        // the visual grouping of the otherwise-flat accordion sections.
+        // If the pillars disappear, the page reverts to a wall of
+        // accordions and the rearrangement loses its point.
+        for (pillar in listOf("Server", "Economy", "Casino")) {
+            assertTrue(
+                settingsHtml.contains("<h2 class=\"config-pillar\">$pillar</h2>"),
+                "expected a <h2 class=\"config-pillar\">$pillar</h2> grouping header"
             )
         }
     }

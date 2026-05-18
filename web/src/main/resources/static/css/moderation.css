@@ -169,6 +169,23 @@ details.config-section.is-hidden { display: none; }
 .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* Config tab */
+/* Top-level pillar headers ("Server", "Economy", "Casino") that group
+   the accordion sections beneath them. Plain <h2> siblings between
+   <details> blocks — kept out of `.config-section` so the search filter
+   in settings.js doesn't pick them up as collapsible cards. */
+.config-pillar {
+    margin: var(--space-4) 0 var(--space-2);
+    padding: 0 0 var(--space-2);
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+}
+.config-pillar:first-of-type { margin-top: 0; }
+.config-pillar.is-hidden { display: none; }
+
 .config-section {
     margin-bottom: var(--space-3);
     background: var(--bg-elevated);
@@ -375,10 +392,11 @@ details.config-section.is-hidden { display: none; }
     margin: var(--space-2) 0 0;
 }
 
-/* Config sub-groups (e.g. "Casino stakes & buy-ins" splits into Dice /
-   Coinflip / Poker / etc. sub-groups). Each `.config-group` carries a
-   small uppercase `<h4>` heading and a hairline divider between groups
-   so the card is scannable game-by-game. */
+/* Config sub-groups (e.g. "Game stake limits" splits into Dice /
+   Coinflip / etc. per game; Blackjack and Poker sections split into
+   "Table rules" and stake/blind sub-groups). Each `.config-group`
+   carries a small uppercase `<h4>` heading and a hairline divider
+   between groups so the card is scannable group-by-group. */
 .config-group { padding-top: var(--space-2); }
 .config-group + .config-group {
     border-top: 1px solid var(--border);
