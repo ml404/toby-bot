@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Centralise channel routing through NotificationRouter",
+    "summary": "Follow-up to #491. Pulls channel resolution + permission checks out of each notifier and into a single `NotificationRouter.sendChannel(...)` method, gated by a per-route `ChannelRouteKey` enum. Same shape as the existing `sendDm(...)` — one delivery gate per surface, two surfaces (DM, CHANNEL). Also fixes the latent `INTRO_PROMPT` preference bypass: `IntroNotificationService.promptUserForMusicInfo` used to DM unconditionally; now it honours the per-user opt-out.",
+    "emoji": "🎟️",
+    "prNumber": 492
+  },
+  {
+    "date": "May 2026",
     "title": "Daily streak, achievements, notification preferences",
     "summary": "Adds a cohesive **engagement loop** on top of the existing per-guild XP/credit infrastructure: **Daily streak** (`/daily`): claim once per UTC day to grow a per-(user, guild) streak. Rewards scale by streak length (`min(base + per_day_bonus × (streak − 1), max)`) and bypass the daily XP/credit caps. Publishes `StreakClaimedEvent`. **Achievement engine** (`/achievements`): seeded from `AchievementCatalog` on startup. Counter-based (`progress(code, delta)`) and one-shot (`un…",
     "emoji": "🎰",
