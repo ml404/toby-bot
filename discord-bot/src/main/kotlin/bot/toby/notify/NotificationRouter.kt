@@ -124,9 +124,13 @@ class NotificationRouter(
 
         runCatching {
             channel.sendMessage(payload).queue(
-                { sent -> if (onSent != null) runCatching { onSent(sent) }.onFailure {
-                    logger.warn("$route onSent callback threw: ${it.message}")
-                } },
+                { sent ->
+                    onSent?.let { cb ->
+                        runCatching { cb(sent) }.onFailure {
+                            logger.warn("$route onSent callback threw: ${it.message}")
+                        }
+                    }
+                },
                 { err ->
                     logger.warn("Failed to post $route to #${channel.name}: ${err.message}")
                 },

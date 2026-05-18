@@ -11,8 +11,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.User
-import net.dv8tion.jda.api.requests.restaction.CacheRestAction
-import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -70,8 +68,10 @@ class IntroNotificationServiceOptOutTest {
         every {
             prefService.isOptedIn(discordId, guildId, NotificationChannelKind.INTRO_PROMPT)
         } returns true
-        val privateChannel: CacheRestAction<PrivateChannel> = mockk(relaxed = true)
-        every { user.openPrivateChannel() } returns privateChannel
+        // `relaxed = true` on the User mock returns a relaxed mock from
+        // openPrivateChannel() automatically — no need to over-specify
+        // the RestAction return type here, which has shifted between
+        // JDA versions.
 
         service.promptUserForMusicInfo(user, guild)
 

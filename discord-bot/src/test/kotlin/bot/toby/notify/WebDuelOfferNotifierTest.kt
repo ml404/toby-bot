@@ -11,7 +11,7 @@ import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion
 import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -114,7 +114,7 @@ class WebDuelOfferNotifierTest {
 
     @Test
     fun `cleanup edits the message with the timeout embed when the offer is still pending`() {
-        val channel: MessageChannel = mockk(relaxed = true)
+        val channel: MessageChannelUnion = mockk(relaxed = true)
         val onSent = slot<(Message) -> Unit>()
         every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
         notifier.on(event())
@@ -142,7 +142,7 @@ class WebDuelOfferNotifierTest {
 
     @Test
     fun `cleanup is a no-op when the offer was already accepted or declined`() {
-        val channel: MessageChannel = mockk(relaxed = true)
+        val channel: MessageChannelUnion = mockk(relaxed = true)
         val onSent = slot<(Message) -> Unit>()
         every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
         notifier.on(event())
@@ -158,7 +158,7 @@ class WebDuelOfferNotifierTest {
 
     @Test
     fun `cleanup swallows JDA exceptions so a failing edit does not kill the scheduler thread`() {
-        val channel: MessageChannel = mockk(relaxed = true)
+        val channel: MessageChannelUnion = mockk(relaxed = true)
         val onSent = slot<(Message) -> Unit>()
         every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
         notifier.on(event())
@@ -177,7 +177,7 @@ class WebDuelOfferNotifierTest {
         capturedTasks[0].run()
     }
 
-    private fun fakeSentMessage(channelMock: MessageChannel): Message = mockk(relaxed = true) {
+    private fun fakeSentMessage(channelMock: MessageChannelUnion): Message = mockk(relaxed = true) {
         every { id } returns sentMessageId
         every { channel } returns channelMock
     }
