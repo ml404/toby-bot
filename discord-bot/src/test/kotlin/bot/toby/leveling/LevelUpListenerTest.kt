@@ -210,7 +210,7 @@ class LevelUpListenerTest {
 
         // Craft a totalXp that sits inside level 25 (Gold tier).
         val totalXp = LevelCurve.cumulativeXpForLevel(25) + 50L
-        val expected = LevelCurve.progress(totalXp)
+        val achieved = LevelCurve.xpForNextLevel(24)
 
         listener.onLevelUp(
             LevelUpEvent(
@@ -227,10 +227,12 @@ class LevelUpListenerTest {
             "expected Gold tier color 0xD4A017, got ${(embed.colorRaw and 0xFFFFFF).toString(16)}"
         }
         val progressField = embed.fields.single { it.name == "Progress" }.value!!
-        val formattedInto = String.format("%,d", expected.xpIntoLevel)
-        val formattedNext = String.format("%,d", expected.xpForNextLevel)
-        assert(progressField.contains("$formattedInto / $formattedNext XP")) {
-            "progress field '$progressField' should contain '$formattedInto / $formattedNext XP'"
+        val formattedAchieved = String.format("%,d", achieved)
+        assert(progressField.contains("$formattedAchieved / $formattedAchieved XP")) {
+            "progress field '$progressField' should contain '$formattedAchieved / $formattedAchieved XP'"
+        }
+        assert(progressField.contains("██████████")) {
+            "progress field '$progressField' should render a full bar on level-up"
         }
         val totalField = embed.fields.single { it.name == "Total XP" }.value!!
         assert(totalField.contains(String.format("%,d", totalXp)))
