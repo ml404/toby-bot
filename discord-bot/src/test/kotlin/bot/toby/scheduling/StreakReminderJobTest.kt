@@ -53,13 +53,14 @@ class StreakReminderJobTest {
         every { notificationRouter.sendDm(any(), any(), any(), any()) } just runs
     }
 
-    /** Build the job with a single-guild JDA cache. */
+    /** Build the job with a JDA cache containing the supplied guild ids. */
     private fun buildJob(vararg guildIds: Long): StreakReminderJob {
-        val guilds = guildIds.map { id ->
-            mockk<Guild>(relaxed = true) {
-                every { idLong } returns id
-                every { this@mockk.id } returns id.toString()
-            }
+        // Rename loop var so it doesn't shadow Guild.id when we stub it.
+        val guilds = guildIds.map { gid ->
+            val g = mockk<Guild>(relaxed = true)
+            every { g.idLong } returns gid
+            every { g.id } returns gid.toString()
+            g
         }
         val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true)
         every { jda.guildCache } returns cache
