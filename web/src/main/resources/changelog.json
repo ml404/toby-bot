@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Trim low-value misc commands",
+    "summary": "You flagged `/hellothere`, `/ch`, and `/brother` as low-value. This PR removes the first two outright and reworks `/brother` into something a non-Toby guild would actually use. **Delete `/hellothere`** — one-line Star Wars joke that only does anything if you happen to type a date relative to 2005-05-19. No replay value. **Delete `/ch`** — text-mangling gimmick with a stale `ink`/`gamerword` censoring easter egg. **Rework `/brother`** as a real registry: `check` — preserves…",
+    "emoji": "🧹",
+    "prNumber": 490
+  },
+  {
+    "date": "May 2026",
     "title": "Restore desktop navbar identity/auth + dedupe drawer close ✕",
     "summary": "Three follow-ups to the navbar redesign in #488 (now on `main`): **1. Desktop regression — Login + default-guild pill were invisible.** The redesign moved Login into `.nav-auth` and the username + default-guild pill into `.nav-identity`, then set both to `display: none` on desktop. Result: logged-out users couldn't see the Login button; logged-in users couldn't see their default-server pill or Logout button on desktop. Removed both from the desktop hide-list and gave them…",
     "emoji": "🔨",
