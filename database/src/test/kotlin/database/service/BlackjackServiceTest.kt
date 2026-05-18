@@ -1250,6 +1250,62 @@ class BlackjackServiceTest {
     }
 
     @Test
+    fun `multi-table natural BJ publishes one event per natural seat only`() {
+        // 3-seat table: host BJ (natural), seat A loss, seat B BJ. Two
+        // events expected, both with the right (discordId, guildId).
+        val (svc, publisher) = serviceWithPublisher()
+        val host = userWithBalance(1_000L)
+        val a = userWithBalance(1_000L, id = otherDiscordId)
+        val b = userWithBalance(1_000L, id = 102L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns a
+        every { userService.getUserByIdForUpdate(102L, guildId) } returns b
+        every { blackjack.evaluate(any(), any()) } returnsMany listOf(
+            Blackjack.Result.PLAYER_BLACKJACK,
+            Blackjack.Result.DEALER_WIN,
+            Blackjack.Result.PLAYER_BLACKJACK,
+        )
+
+        val create = svc.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        svc.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        svc.joinMultiTable(102L, guildId, create.tableId)
+        svc.startMultiHand(discordId, guildId, create.tableId)
+        svc.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        svc.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+        svc.applyMultiAction(102L, guildId, create.tableId, Blackjack.Action.STAND)
+
+        // Two events — one per natural-BJ seat. Loser (otherDiscordId)
+        // gets nothing.
+        assertEquals(2, publisher.naturalEvents.size)
+        val winnerIds = publisher.naturalEvents.map { it.discordId }.toSet()
+        assertEquals(setOf(discordId, 102L), winnerIds)
+        publisher.naturalEvents.forEach { event ->
+            assertEquals(guildId, event.guildId)
+        }
+    }
+
+    @Test
+    fun `multi-table with no naturals publishes no BlackjackNaturalEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val host = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        // Both PLAYER_WIN — regular, not natural.
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_WIN
+
+        val create = svc.createMultiTable(discordId, guildId, ante = 100L)
+            as BlackjackService.MultiCreateOutcome.Ok
+        svc.joinMultiTable(otherDiscordId, guildId, create.tableId)
+        svc.startMultiHand(discordId, guildId, create.tableId)
+        svc.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
+        svc.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
+
+        assertTrue(publisher.naturalEvents.isEmpty())
+    }
+
+    @Test
     fun `legacy constructor without publisher still compiles and works`() {
         // Defensive — locks in the nullable-default constructor backward
         // compatibility we rely on across tests. If someone removes the
