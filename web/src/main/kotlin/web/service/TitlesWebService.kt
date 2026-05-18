@@ -1,9 +1,11 @@
 package web.service
 
+import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import database.dto.TitleDto
 import database.service.EconomyTradeService
 import database.service.EconomyTradeService.TradeOutcome
+import database.service.TitlePurchasePolicy
 import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
@@ -62,7 +64,8 @@ class TitlesWebService(
                 label = t.label,
                 cost = t.cost,
                 description = t.description,
-                colorHex = t.colorHex
+                colorHex = t.colorHex,
+                requiredLevel = t.requiredLevel
             )
         }
         val ownedIds: Set<Long> = safely("owned titles", emptyList()) {
@@ -72,6 +75,7 @@ class TitlesWebService(
         val equippedId = actorDto?.activeTitleId
         val balance = actorDto?.socialCredit ?: 0L
         val tobyCoins = actorDto?.tobyCoins ?: 0L
+        val actorLevel = LevelCurve.levelForXp(actorDto?.xp ?: 0L)
         val marketPrice = safely("market price for $guildId", 0.0) {
             marketService.getMarket(guildId)?.price ?: 0.0
         }
@@ -81,7 +85,8 @@ class TitlesWebService(
             equippedTitleId = equippedId,
             balance = balance,
             tobyCoins = tobyCoins,
-            marketPrice = marketPrice
+            marketPrice = marketPrice,
+            actorLevel = actorLevel
         )
     }
 
@@ -90,6 +95,11 @@ class TitlesWebService(
         val title = titleService.getById(titleId) ?: return "Title not found."
         val actor = userService.getUserById(actorDiscordId, guildId) ?: return "You don't have a profile in that server yet."
         if (titleService.owns(actorDiscordId, titleId)) return "You already own this title."
+        when (val gate = TitlePurchasePolicy.check(title, actor.xp)) {
+            is TitlePurchasePolicy.Result.LevelLocked ->
+                return "Requires Level ${gate.required} to buy this title — you are Level ${gate.actor}."
+            TitlePurchasePolicy.Result.Ok -> Unit
+        }
         val balance = actor.socialCredit ?: 0L
         if (balance < title.cost) return "Not enough credits. You need ${title.cost}, you have $balance."
         actor.socialCredit = balance - title.cost
@@ -121,6 +131,14 @@ class TitlesWebService(
         // AlreadyOwns cleanly.
         if (titleService.owns(actorDiscordId, titleId)) {
             return BuyWithTobyOutcome.AlreadyOwns
+        }
+        // Level gate runs INSIDE the lock too, so the level read is consistent
+        // with the same transaction's XP snapshot — and we bail before touching
+        // the market or selling any TOBY.
+        when (val gate = TitlePurchasePolicy.check(title, actor.xp)) {
+            is TitlePurchasePolicy.Result.LevelLocked ->
+                return BuyWithTobyOutcome.LevelLocked(required = gate.required, actor = gate.actor)
+            TitlePurchasePolicy.Result.Ok -> Unit
         }
         val currentCredits = actor.socialCredit ?: 0L
         val shortfall = (title.cost - currentCredits).coerceAtLeast(0L)
@@ -220,7 +238,8 @@ data class TitleShopEntry(
     val label: String,
     val cost: Long,
     val description: String?,
-    val colorHex: String?
+    val colorHex: String?,
+    val requiredLevel: Int = 0
 )
 
 data class TitleShopView(
@@ -229,7 +248,8 @@ data class TitleShopView(
     val equippedTitleId: Long?,
     val balance: Long,
     val tobyCoins: Long = 0L,
-    val marketPrice: Double = 0.0
+    val marketPrice: Double = 0.0,
+    val actorLevel: Int = 0
 )
 
 sealed interface BuyWithTobyOutcome {
@@ -242,5 +262,6 @@ sealed interface BuyWithTobyOutcome {
 
     data class InsufficientCoins(val needed: Long, val have: Long) : BuyWithTobyOutcome
     data object AlreadyOwns : BuyWithTobyOutcome
+    data class LevelLocked(val required: Int, val actor: Int) : BuyWithTobyOutcome
     data class Error(val message: String) : BuyWithTobyOutcome
 }

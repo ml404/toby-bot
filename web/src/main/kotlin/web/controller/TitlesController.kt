@@ -117,6 +117,12 @@ class TitlesController(
             BuyWithTobyOutcome.AlreadyOwns -> ResponseEntity.badRequest().body(
                 BuyWithTobyResponse(false, "You already own this title.")
             )
+            is BuyWithTobyOutcome.LevelLocked -> ResponseEntity.badRequest().body(
+                BuyWithTobyResponse(
+                    false,
+                    "Requires Level ${outcome.required} to buy this title — you are Level ${outcome.actor}."
+                )
+            )
             is BuyWithTobyOutcome.Error -> ResponseEntity.badRequest().body(
                 BuyWithTobyResponse(false, outcome.message)
             )

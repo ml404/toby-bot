@@ -98,14 +98,22 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun tierColor(level: Int): Int = when {
-        level >= 50 -> 0x5865F2 // Diamond
-        level >= 25 -> 0xD4A017 // Gold
-        level >= 10 -> 0x9AA3B2 // Silver
-        else -> 0xC9803A        // Bronze
+        level >= 200 -> 0xFFD700 // Legendary
+        level >= 150 -> 0xFF3CAC // Mythic
+        level >= 100 -> 0x9B30FF // Master
+        level >= 75 -> 0x5865F2  // Diamond
+        level >= 50 -> 0xE5E4E2  // Platinum
+        level >= 25 -> 0xD4A017  // Gold
+        level >= 10 -> 0x9AA3B2  // Silver
+        else -> 0xC9803A         // Bronze
     }
 
     private fun tierName(level: Int): String = when {
-        level >= 50 -> "Diamond"
+        level >= 200 -> "Legendary"
+        level >= 150 -> "Mythic"
+        level >= 100 -> "Master"
+        level >= 75 -> "Diamond"
+        level >= 50 -> "Platinum"
         level >= 25 -> "Gold"
         level >= 10 -> "Silver"
         else -> "Bronze"

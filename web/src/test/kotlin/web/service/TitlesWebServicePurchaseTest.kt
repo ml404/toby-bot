@@ -286,6 +286,94 @@ class TitlesWebServicePurchaseTest {
     }
 
     @Test
+    fun `getTitlesForGuild surfaces requiredLevel per entry and actorLevel for the viewer`() {
+        // Cumulative XP to reach lvl 5 is 100+155+220+295+380 = 1150,
+        // so xp=1200 puts the actor at level 5 exactly.
+        val actor = UserDto(discordId = discordId, guildId = guildId).apply {
+            socialCredit = 50L
+            tobyCoins = 0L
+            xp = 1_200L
+        }
+        every { titleService.listAll() } returns listOf(
+            TitleDto(id = 1L, label = "Free", cost = 10L, requiredLevel = 0),
+            TitleDto(id = 2L, label = "Gated", cost = 200L, requiredLevel = 10),
+        )
+        every { titleService.listOwned(discordId) } returns emptyList()
+        every { userService.getUserById(discordId, guildId) } returns actor
+        every { marketService.getMarket(guildId) } returns market(0.0)
+
+        val view = service.getTitlesForGuild(guildId, discordId)
+
+        assertEquals(5, view.actorLevel)
+        val gated = view.catalog.first { it.id == 2L }
+        assertEquals(10, gated.requiredLevel)
+        val free = view.catalog.first { it.id == 1L }
+        assertEquals(0, free.requiredLevel)
+    }
+
+    @Test
+    fun `buyTitle returns level-locked message and does not deduct credits`() {
+        val title = TitleDto(id = 42L, label = "🌱 Sprout", cost = 200L, requiredLevel = 5)
+        val actor = UserDto(discordId = discordId, guildId = guildId).apply {
+            socialCredit = 100_000L
+            xp = 0L
+        }
+        every { titleService.getById(42L) } returns title
+        every { titleService.owns(discordId, 42L) } returns false
+        every { userService.getUserById(discordId, guildId) } returns actor
+
+        val error = service.buyTitle(discordId, guildId, 42L)
+
+        assertTrue(error != null && error.contains("Requires Level 5"))
+        assertEquals(100_000L, actor.socialCredit)
+        verify(exactly = 0) { userService.updateUser(any()) }
+        verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
+    }
+
+    @Test
+    fun `buyTitle succeeds when actor level meets requiredLevel (fallback purchase path)`() {
+        // cumulative XP to reach level 5 is 1150
+        val title = TitleDto(id = 42L, label = "🌱 Sprout", cost = 200L, requiredLevel = 5)
+        val actor = UserDto(discordId = discordId, guildId = guildId).apply {
+            socialCredit = 500L
+            xp = 1_200L
+        }
+        every { titleService.getById(42L) } returns title
+        every { titleService.owns(discordId, 42L) } returns false
+        every { userService.getUserById(discordId, guildId) } returns actor
+
+        val error = service.buyTitle(discordId, guildId, 42L)
+
+        assertEquals(null, error)
+        assertEquals(300L, actor.socialCredit)
+        verify(exactly = 1) { userService.updateUser(actor) }
+        verify(exactly = 1) { titleService.recordPurchase(discordId, 42L) }
+    }
+
+    @Test
+    fun `buyTitleWithTobyCoin returns LevelLocked without selling TOBY or touching market`() {
+        val title = TitleDto(id = 42L, label = "🌱 Sprout", cost = 200L, requiredLevel = 5)
+        val actor = UserDto(discordId = discordId, guildId = guildId).apply {
+            socialCredit = 0L
+            tobyCoins = 1_000L
+            xp = 0L
+        }
+        every { titleService.getById(42L) } returns title
+        every { titleService.owns(discordId, 42L) } returns false
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
+
+        val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 42L)
+
+        val locked = assertInstanceOf(BuyWithTobyOutcome.LevelLocked::class.java, outcome)
+        assertEquals(5, locked.required)
+        assertEquals(0, locked.actor)
+        verify(exactly = 0) { marketService.getMarketForUpdate(any()) }
+        verify(exactly = 0) { tradeService.sell(any(), any(), any(), any()) }
+        verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
+        verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    @Test
     fun `sell failure from trade service is propagated as Error`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
