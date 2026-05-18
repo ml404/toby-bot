@@ -14,6 +14,34 @@ const NAVBAR_FRAGMENT = path.resolve(
     '../../main/resources/templates/fragments/navbar.html'
 );
 
+// Extracts the contents of the .nav-links container by walking forward
+// from its opening tag and balancing <div>/</div> pairs. Anchoring on a
+// sibling element (like the old .nav-toggle) is brittle — the toggle now
+// sits BEFORE .nav-links in the DOM. This walker only cares about the
+// .nav-links subtree.
+function extractNavLinksInner(html) {
+    const openTag = '<div class="nav-links"';
+    const start = html.indexOf(openTag);
+    if (start < 0) return null;
+    const contentStart = html.indexOf('>', start) + 1;
+    let depth = 1;
+    let i = contentStart;
+    while (i < html.length && depth > 0) {
+        const nextOpen = html.indexOf('<div', i);
+        const nextClose = html.indexOf('</div>', i);
+        if (nextClose < 0) return null;
+        if (nextOpen >= 0 && nextOpen < nextClose) {
+            depth += 1;
+            i = nextOpen + 4;
+        } else {
+            depth -= 1;
+            if (depth === 0) return html.slice(contentStart, nextClose);
+            i = nextClose + 6;
+        }
+    }
+    return null;
+}
+
 describe('navbar fragment', () => {
     let html;
 
@@ -29,6 +57,16 @@ describe('navbar fragment', () => {
         expect(html).toMatch(
             /<button[^>]*class="[^"]*\bnav-toggle\b[^"]*"[^>]*onclick="toggleNav\(\)"/
         );
+    });
+
+    test('hamburger is exposed to assistive tech (aria-controls, aria-expanded)', () => {
+        // After the redesign the toggle drives a fixed-position drawer; the
+        // attributes let screen readers announce open/closed state and
+        // hop directly to the menu it controls.
+        const toggleMatch = html.match(/<button[^>]*class="[^"]*\bnav-toggle\b[^"]*"[^>]*>/);
+        expect(toggleMatch).not.toBeNull();
+        expect(toggleMatch[0]).toMatch(/aria-controls="nav-menu"/);
+        expect(toggleMatch[0]).toMatch(/aria-expanded="false"/);
     });
 
     test('renders the collapsible menu container with id="nav-menu"', () => {
@@ -50,6 +88,42 @@ describe('navbar fragment', () => {
         expect(fragmentMatch[0]).toMatch(
             /<script[^>]*th:src\s*=\s*"@\{\s*\/js\/home\.js\s*}"/
         );
+    });
+
+    test('renders a backdrop element wired to toggleNav()', () => {
+        // The drawer needs a dim/tap-outside-to-close backdrop on mobile.
+        // It lives outside .nav-links so it's not part of the panel itself.
+        expect(html).toMatch(
+            /<div[^>]*class="[^"]*\bnav-backdrop\b[^"]*"[^>]*id="nav-backdrop"[^>]*onclick="toggleNav\(\)"/
+        );
+    });
+
+    test('renders a drawer header with a close button wired to toggleNav()', () => {
+        expect(html).toMatch(/class="[^"]*\bnav-drawer-header\b/);
+        expect(html).toMatch(
+            /<button[^>]*class="[^"]*\bnav-drawer-close\b[^"]*"[^>]*onclick="toggleNav\(\)"/
+        );
+    });
+
+    test('groups links into labelled sections (Main / Games / Economy / Social / Tools / Moderation)', () => {
+        // Each .nav-section block carries a .nav-section-eyebrow with the
+        // section name; on desktop those eyebrows are display:none, on
+        // mobile they group the items inside the drawer.
+        const expected = ['Main', 'Games', 'Economy', 'Social', 'Tools', 'Moderation'];
+        for (const label of expected) {
+            const re = new RegExp(
+                `<div[^>]*class="[^"]*\\bnav-section-eyebrow\\b[^"]*"[^>]*>\\s*${label}\\s*</div>`
+            );
+            expect(html).toMatch(re);
+        }
+    });
+
+    test('exposes an auth footer with either Login or Logout', () => {
+        expect(html).toMatch(/class="[^"]*\bnav-auth\b/);
+        // Login link (signed-out) and Logout form (signed-in) both live in
+        // the auth footer.
+        expect(html).toMatch(/href="\/oauth2\/authorization\/discord"[^>]*class="[^"]*\bbtn-discord\b/);
+        expect(html).toMatch(/<button[^>]*type="submit"[^>]*class="[^"]*\bbtn-logout\b[^"]*"/);
     });
 
     // PR 2 (navbar dropdowns): Economy folds Market + Titles; Casino is
@@ -92,14 +166,11 @@ describe('navbar fragment', () => {
     test('Market and Titles are no longer top-level nav-links siblings', () => {
         // Regression: if someone re-introduces them at the top level the
         // navbar grows by two items and the dropdown becomes redundant.
-        const navLinks = html.match(
-            /<div class="nav-links" id="nav-menu">([\s\S]*?)<button class="nav-toggle"/
-        );
-        expect(navLinks).not.toBeNull();
-        const topLevel = navLinks[1];
+        const inner = extractNavLinksInner(html);
+        expect(inner).not.toBeNull();
         // Market / Titles links exist (inside dropdowns) but not as direct
         // children of nav-links — strip out the dropdown subtrees first.
-        const stripped = topLevel.replace(/<div class="nav-dropdown">[\s\S]*?<\/div>\s*<\/div>/g, '');
+        const stripped = inner.replace(/<div class="nav-dropdown">[\s\S]*?<\/div>\s*<\/div>/g, '');
         expect(stripped).not.toMatch(/href="\/economy\/guilds"/);
         expect(stripped).not.toMatch(/href="\/titles\/guilds"/);
     });

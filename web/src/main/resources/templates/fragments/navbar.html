@@ -4,13 +4,35 @@
 <nav th:fragment="navbar">
     <a class="brand" href="/">TobyBot</a>
     <!--
+        Toggle sits BEFORE .nav-links so it doesn't get pushed below the
+        expanded menu on mobile (nav is flex-wrap: wrap; the open drawer
+        used to take width:100% and wrap the toggle onto a new line).
+        On desktop the toggle is hidden via CSS so layout is unchanged.
+        The glyph is swapped CSS-side off [aria-expanded] — JS only flips
+        the attribute and never mutates button text.
+    -->
+    <button class="nav-toggle"
+            id="nav-toggle"
+            aria-controls="nav-menu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleNav()">
+        <span class="nav-toggle-icon" aria-hidden="true"></span>
+    </button>
+
+    <!--
         Top-level nav grouping: personal anchors first (Profile,
         Leaderboards) → "Play" rolls every game (minigames + tables +
         lottery) into one drop-down so a new admin can find every game
         under one heading → Economy keeps the credit-flow features
         together → Social groups passive identity features (intros)
-        → Tools holds reference / utility pages → Admin
-        anchor sits last so the everyday traffic isn't next to it.
+        → Tools holds reference / utility pages → Admin sits last so
+        the everyday traffic isn't next to it.
+
+        Mobile: .nav-links becomes a fixed-position right drawer with a
+        sticky header + section eyebrows + bottom auth footer. Desktop
+        keeps the flat inline row — eyebrows + drawer chrome are
+        display:none on desktop.
 
         Each minigame entry below carries a `?game=<slug>` so the
         /casino/guilds picker can deep-link past itself when the user
@@ -21,96 +43,137 @@
         are separated by a horizontal divider so the visual grouping
         matches the routing reality.
     -->
-    <div class="nav-links" id="nav-menu">
-        <a href="/profile/guilds">Profile</a>
-        <a href="/leaderboards">Leaderboards</a>
-        <div class="nav-dropdown">
+    <div class="nav-links" id="nav-menu" aria-label="Main navigation">
+        <div class="nav-drawer-header">
+            <span class="nav-drawer-brand">TobyBot</span>
             <button type="button"
-                    class="nav-dropdown-toggle"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    onclick="toggleDropdown(this)">Play <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
-            <div class="nav-dropdown-menu" role="menu">
-                <a href="/casino/guilds?game=slots" role="menuitem">&#127920; Slots</a>
-                <a href="/casino/guilds?game=coinflip" role="menuitem">&#129689; Coinflip</a>
-                <a href="/casino/guilds?game=dice" role="menuitem">&#127922; Dice</a>
-                <a href="/casino/guilds?game=highlow" role="menuitem">&#127183; High-Low</a>
-                <a href="/casino/guilds?game=scratch" role="menuitem">&#127903;&#65039; Scratch</a>
-                <a href="/casino/guilds?game=keno" role="menuitem">&#127919; Keno</a>
-                <a href="/casino/guilds?game=roulette" role="menuitem">&#127905; Roulette</a>
-                <a href="/casino/guilds?game=baccarat" role="menuitem">&#127924; Baccarat</a>
-                <a href="/casino/guilds?game=casinoholdem" role="menuitem">&#127183; Casino Hold'em</a>
-                <a href="/casino/guilds?game=plinko" role="menuitem">&#128994; Plinko</a>
-                <a href="/casino/guilds?game=horse-racing" role="menuitem">&#128014; Horse Racing</a>
-                <a href="/casino/guilds?game=wheel" role="menuitem">&#127905; Wheel</a>
-                <hr class="nav-dropdown-separator" aria-hidden="true">
-                <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
-                <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
-                <a href="/lottery/guilds" role="menuitem">&#127903;&#65039; Lottery</a>
-            </div>
+                    class="nav-drawer-close"
+                    aria-label="Close menu"
+                    onclick="toggleNav()">&#10005;</button>
         </div>
-        <div class="nav-dropdown">
-            <button type="button"
-                    class="nav-dropdown-toggle"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    onclick="toggleDropdown(this)">Economy <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
-            <div class="nav-dropdown-menu" role="menu">
-                <a href="/economy/guilds" role="menuitem">Market</a>
-                <a href="/titles/guilds" role="menuitem">Titles</a>
-                <a href="/tip/guilds" role="menuitem">&#128184; Tip</a>
-                <a href="/duel/guilds" role="menuitem">&#9876;&#65039; Duel</a>
-            </div>
-        </div>
-        <div class="nav-dropdown">
-            <button type="button"
-                    class="nav-dropdown-toggle"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    onclick="toggleDropdown(this)">Social <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
-            <div class="nav-dropdown-menu" role="menu">
-                <a href="/music-player/guilds" role="menuitem">&#127925; Music</a>
-                <a href="/intro/guilds" role="menuitem">Intro Songs</a>
-                <a href="/excuses/guilds" role="menuitem">Excuses</a>
-                <a href="/teams/guilds" role="menuitem">Teams</a>
-            </div>
-        </div>
-        <div class="nav-dropdown">
-            <button type="button"
-                    class="nav-dropdown-toggle"
-                    aria-haspopup="true"
-                    aria-expanded="false"
-                    onclick="toggleDropdown(this)">Tools <span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
-            <div class="nav-dropdown-menu" role="menu">
-                <a href="/utils" role="menuitem">Utils</a>
-                <a href="/dnd" role="menuitem">D&amp;D lookups</a>
-                <a href="/commands/wiki" role="menuitem">Commands</a>
-            </div>
-        </div>
-        <a href="/moderation/guilds">Admin</a>
-        <span th:if="${username != null}" style="display:flex;align-items:center;gap:12px;">
+
+        <div class="nav-identity" th:if="${username != null}">
+            <div class="nav-identity-name" th:text="${username}">User</div>
             <a th:if="${currentDefaultGuildName != null}"
                href="/preferences"
                class="nav-default-guild"
                th:title="'Default server: ' + ${currentDefaultGuildName} + ' — click to change'">
-                <span aria-hidden="true">★</span>
+                <span aria-hidden="true">&#9733;</span>
                 <span th:text="${currentDefaultGuildName}">Server</span>
             </a>
             <a th:unless="${currentDefaultGuildName != null}"
                href="/preferences"
                class="nav-default-guild nav-default-guild-empty"
                title="Set a default server to skip the guild picker">
-                <span aria-hidden="true">☆</span>
-                <span>Default</span>
+                <span aria-hidden="true">&#9734;</span>
+                <span>Set default server</span>
             </a>
-            <span class="nav-user" th:text="${username}">User</span>
-            <form th:action="@{/logout}" method="post" style="margin:0">
-                <button type="submit" class="btn-logout">Logout</button>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Main</div>
+            <a class="nav-item" href="/profile/guilds"><span class="nav-item-icon" aria-hidden="true">&#128100;</span><span>Profile</span></a>
+            <a class="nav-item" href="/leaderboards"><span class="nav-item-icon" aria-hidden="true">&#127942;</span><span>Leaderboards</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Games</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127922;</span><span class="nav-dropdown-label">Play</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/casino/guilds?game=slots" role="menuitem">&#127920; Slots</a>
+                    <a href="/casino/guilds?game=coinflip" role="menuitem">&#129689; Coinflip</a>
+                    <a href="/casino/guilds?game=dice" role="menuitem">&#127922; Dice</a>
+                    <a href="/casino/guilds?game=highlow" role="menuitem">&#127183; High-Low</a>
+                    <a href="/casino/guilds?game=scratch" role="menuitem">&#127903;&#65039; Scratch</a>
+                    <a href="/casino/guilds?game=keno" role="menuitem">&#127919; Keno</a>
+                    <a href="/casino/guilds?game=roulette" role="menuitem">&#127905; Roulette</a>
+                    <a href="/casino/guilds?game=baccarat" role="menuitem">&#127924; Baccarat</a>
+                    <a href="/casino/guilds?game=casinoholdem" role="menuitem">&#127183; Casino Hold'em</a>
+                    <a href="/casino/guilds?game=plinko" role="menuitem">&#128994; Plinko</a>
+                    <a href="/casino/guilds?game=horse-racing" role="menuitem">&#128014; Horse Racing</a>
+                    <a href="/casino/guilds?game=wheel" role="menuitem">&#127905; Wheel</a>
+                    <hr class="nav-dropdown-separator" aria-hidden="true">
+                    <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
+                    <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
+                    <a href="/lottery/guilds" role="menuitem">&#127903;&#65039; Lottery</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Economy</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#128176;</span><span class="nav-dropdown-label">Economy</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/economy/guilds" role="menuitem">Market</a>
+                    <a href="/titles/guilds" role="menuitem">Titles</a>
+                    <a href="/tip/guilds" role="menuitem">&#128184; Tip</a>
+                    <a href="/duel/guilds" role="menuitem">&#9876;&#65039; Duel</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Social</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127925;</span><span class="nav-dropdown-label">Social</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/music-player/guilds" role="menuitem">&#127925; Music</a>
+                    <a href="/intro/guilds" role="menuitem">Intro Songs</a>
+                    <a href="/excuses/guilds" role="menuitem">Excuses</a>
+                    <a href="/teams/guilds" role="menuitem">Teams</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Tools</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#128736;&#65039;</span><span class="nav-dropdown-label">Tools</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/utils" role="menuitem">Utils</a>
+                    <a href="/dnd" role="menuitem">D&amp;D lookups</a>
+                    <a href="/commands/wiki" role="menuitem">Commands</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Moderation</div>
+            <a class="nav-item" href="/moderation/guilds"><span class="nav-item-icon" aria-hidden="true">&#128737;&#65039;</span><span>Admin</span></a>
+        </div>
+
+        <div class="nav-auth">
+            <form th:if="${username != null}"
+                  th:action="@{/logout}"
+                  method="post"
+                  class="nav-auth-form">
+                <button type="submit" class="btn-logout">Log out</button>
             </form>
-        </span>
-        <a th:if="${username == null}" href="/oauth2/authorization/discord" class="btn-discord">Login</a>
+            <a th:if="${username == null}"
+               href="/oauth2/authorization/discord"
+               class="btn-discord">Log in with Discord</a>
+        </div>
     </div>
-    <button class="nav-toggle" onclick="toggleNav()" aria-label="Toggle navigation">&#9776;</button>
+
+    <div class="nav-backdrop" id="nav-backdrop" hidden onclick="toggleNav()"></div>
     <script th:src="@{/js/home.js}"></script>
 </nav>
 </body>
