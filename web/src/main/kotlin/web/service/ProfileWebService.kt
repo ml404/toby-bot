@@ -2,11 +2,16 @@ package web.service
 
 import common.leveling.LevelCurve
 import database.dto.UserDto
+import database.service.AchievementService
+import database.service.LoginStreakService
 import database.service.TitleService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 @Service
 class ProfileWebService(
@@ -15,6 +20,8 @@ class ProfileWebService(
     private val titleService: TitleService,
     private val introWebService: IntroWebService,
     private val membership: GuildMembership,
+    private val loginStreakService: LoginStreakService,
+    private val achievementService: AchievementService,
 ) {
 
     fun getMemberGuilds(accessToken: String, discordId: Long): List<ProfileGuildCard> {
@@ -55,6 +62,31 @@ class ProfileWebService(
 
         val xp = user?.xp ?: 0L
         val progress = LevelCurve.progress(xp)
+
+        val streakRow = loginStreakService.get(discordId, guildId)
+        val today = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC)
+        val streakView = ProfileStreakView(
+            currentStreak = streakRow?.currentStreak ?: 0,
+            longestStreak = streakRow?.longestStreak ?: 0,
+            lastClaimDate = streakRow?.lastClaimDate?.toString(),
+            claimedToday = streakRow?.lastClaimDate == today,
+        )
+
+        val achievementViews = achievementService.listFor(discordId, guildId)
+        val unlockedAchievements = achievementViews.filter { it.unlockedAt != null }
+        val achievementEntries = achievementViews.map { v ->
+            ProfileAchievementEntry(
+                code = v.achievement.code,
+                name = v.achievement.name,
+                description = v.achievement.description,
+                icon = v.achievement.icon,
+                category = v.achievement.category,
+                threshold = v.achievement.threshold,
+                progress = v.progress,
+                unlocked = v.unlockedAt != null,
+            )
+        }
+
         return ProfileView(
             guildId = guild.id,
             guildName = guild.name,
@@ -72,7 +104,11 @@ class ProfileWebService(
             equippedTitleLabel = equippedTitle?.label,
             equippedTitleColorHex = equippedTitle?.colorHex,
             ownedTitles = ownedTitles,
-            permissions = permissionsFor(user)
+            permissions = permissionsFor(user),
+            streak = streakView,
+            achievementsUnlocked = unlockedAchievements.size,
+            achievementsTotal = achievementViews.size,
+            achievements = achievementEntries,
         )
     }
 
@@ -108,7 +144,29 @@ data class ProfileView(
     val equippedTitleLabel: String?,
     val equippedTitleColorHex: String?,
     val ownedTitles: List<ProfileTitleEntry>,
-    val permissions: List<ProfilePermission>
+    val permissions: List<ProfilePermission>,
+    val streak: ProfileStreakView,
+    val achievementsUnlocked: Int,
+    val achievementsTotal: Int,
+    val achievements: List<ProfileAchievementEntry>
+)
+
+data class ProfileStreakView(
+    val currentStreak: Int,
+    val longestStreak: Int,
+    val lastClaimDate: String?,
+    val claimedToday: Boolean
+)
+
+data class ProfileAchievementEntry(
+    val code: String,
+    val name: String,
+    val description: String,
+    val icon: String?,
+    val category: String,
+    val threshold: Long,
+    val progress: Long,
+    val unlocked: Boolean
 )
 
 data class ProfileTitleEntry(

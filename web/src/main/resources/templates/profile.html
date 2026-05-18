@@ -82,6 +82,61 @@
             </ul>
         </section>
 
+        <section class="profile-card profile-streak-card"
+                 th:attr="data-guild-id=${profile.guildId},
+                          data-claimed-today=${profile.streak.claimedToday}">
+            <h2>Daily streak</h2>
+            <div class="profile-streak">
+                <div class="profile-streak-stat">
+                    <span class="profile-streak-num" th:text="${profile.streak.currentStreak}">0</span>
+                    <span class="muted">Current</span>
+                </div>
+                <div class="profile-streak-stat">
+                    <span class="profile-streak-num" th:text="${profile.streak.longestStreak}">0</span>
+                    <span class="muted">Best</span>
+                </div>
+            </div>
+            <p class="muted profile-streak-meta"
+               th:if="${profile.streak.lastClaimDate != null}"
+               th:text="'Last claim: ' + ${profile.streak.lastClaimDate}">Last claim: —</p>
+            <p class="muted profile-streak-meta"
+               th:unless="${profile.streak.lastClaimDate != null}">
+                You haven't claimed yet — `/daily` in Discord or click the button below.
+            </p>
+            <button type="button" class="btn profile-streak-claim"
+                    th:disabled="${profile.streak.claimedToday}"
+                    th:text="${profile.streak.claimedToday} ? 'Already claimed today' : 'Claim daily'">
+                Claim daily
+            </button>
+        </section>
+
+        <section class="profile-card profile-card-wide profile-achievements-card">
+            <h2>
+                Achievements
+                <span class="muted profile-achievements-count"
+                      th:text="'(' + ${profile.achievementsUnlocked} + ' / ' + ${profile.achievementsTotal} + ')'">
+                    (0 / 0)
+                </span>
+            </h2>
+            <div th:if="${profile.achievementsTotal == 0}" class="muted">
+                No achievements seeded yet — check back soon.
+            </div>
+            <ul class="profile-achievements" th:if="${profile.achievementsTotal > 0}">
+                <li th:each="a : ${profile.achievements}"
+                    class="profile-achievement"
+                    th:classappend="${a.unlocked} ? ' is-unlocked' : ' is-locked'">
+                    <span class="profile-achievement-icon" th:text="${a.icon != null ? a.icon : '🏅'}">🏅</span>
+                    <div class="profile-achievement-body">
+                        <div class="profile-achievement-name" th:text="${a.name}">Name</div>
+                        <div class="muted profile-achievement-desc" th:text="${a.description}">Description</div>
+                        <div class="profile-achievement-progress muted"
+                             th:if="${not a.unlocked and a.threshold > 1}"
+                             th:text="${a.progress} + ' / ' + ${a.threshold}">0 / 1</div>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
         <section class="profile-card profile-card-wide">
             <h2>Owned titles</h2>
             <div th:if="${#lists.isEmpty(profile.ownedTitles)}" class="muted">
@@ -100,5 +155,7 @@
         </section>
     </div>
 </main>
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/profile.js}"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 package database.service
 
+import common.events.TipSentEvent
 import database.dto.TipDailyDto
 import database.dto.TipLogDto
 import database.dto.UserDto
@@ -10,6 +11,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEvent
+import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -25,6 +28,7 @@ class TipServiceTest {
     private lateinit var userService: RecordingUserService
     private lateinit var tipDailyService: InMemoryTipDailyService
     private lateinit var tipLogPersistence: RecordingTipLogPersistence
+    private lateinit var eventPublisher: RecordingEventPublisher
     private lateinit var service: TipService
 
     @BeforeEach
@@ -32,7 +36,8 @@ class TipServiceTest {
         userService = RecordingUserService()
         tipDailyService = InMemoryTipDailyService()
         tipLogPersistence = RecordingTipLogPersistence()
-        service = TipService(userService, tipDailyService, tipLogPersistence)
+        eventPublisher = RecordingEventPublisher()
+        service = TipService(userService, tipDailyService, tipLogPersistence, eventPublisher)
     }
 
     @Test
@@ -159,6 +164,47 @@ class TipServiceTest {
         assertTrue(outcome is TipService.TipOutcome.Ok)
         assertNotNull(tipLogPersistence.inserted[0].note)
         assertEquals(TipService.MAX_NOTE_LENGTH, tipLogPersistence.inserted[0].note!!.length)
+    }
+
+    @Test
+    fun `tip happy path publishes a TipSentEvent`() {
+        userService.seed(UserDto(sender, guildId).apply { socialCredit = 200L })
+        userService.seed(UserDto(recipient, guildId).apply { socialCredit = 0L })
+
+        service.tip(sender, recipient, guildId, amount = 50L, note = null, at = now)
+
+        assertEquals(1, eventPublisher.tipEvents.size)
+        val event = eventPublisher.tipEvents.single()
+        assertEquals(sender, event.senderDiscordId)
+        assertEquals(recipient, event.recipientDiscordId)
+        assertEquals(guildId, event.guildId)
+        assertEquals(50L, event.amount)
+    }
+
+    @Test
+    fun `tip rejection paths do not publish a TipSentEvent`() {
+        // Insufficient credits.
+        userService.seed(UserDto(sender, guildId).apply { socialCredit = 5L })
+        userService.seed(UserDto(recipient, guildId).apply { socialCredit = 0L })
+        service.tip(sender, recipient, guildId, amount = 50L, at = now)
+        assertTrue(eventPublisher.tipEvents.isEmpty())
+
+        // Invalid amount.
+        service.tip(sender, recipient, guildId, amount = 1L, at = now)
+        assertTrue(eventPublisher.tipEvents.isEmpty())
+
+        // Self-tip.
+        service.tip(sender, sender, guildId, amount = 50L, at = now)
+        assertTrue(eventPublisher.tipEvents.isEmpty())
+    }
+
+    private class RecordingEventPublisher : ApplicationEventPublisher {
+        val tipEvents: MutableList<TipSentEvent> = mutableListOf()
+        val otherEvents: MutableList<Any> = mutableListOf()
+        override fun publishEvent(event: ApplicationEvent) { otherEvents.add(event) }
+        override fun publishEvent(event: Any) {
+            if (event is TipSentEvent) tipEvents.add(event) else otherEvents.add(event)
+        }
     }
 
     private class RecordingUserService : UserService {

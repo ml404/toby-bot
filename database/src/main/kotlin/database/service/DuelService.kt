@@ -1,11 +1,13 @@
 package database.service
 
+import common.events.DuelResolvedEvent
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.duel.RecentDuelResolutions
 import database.economy.Coinflip
 import database.persistence.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -44,6 +46,7 @@ class DuelService @Autowired constructor(
     private val duelLogPersistence: DuelLogPersistence,
     private val recentDuelResolutions: RecentDuelResolutions = RecentDuelResolutions(),
     private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
     sealed interface StartOutcome {
         data class Ok(val initiatorBalance: Long) : StartOutcome
@@ -188,6 +191,15 @@ class DuelService @Autowired constructor(
                 pot = outcome.pot,
                 lossTribute = outcome.lossTribute,
                 resolvedAt = at,
+            )
+        )
+        eventPublisher?.publishEvent(
+            DuelResolvedEvent(
+                winnerDiscordId = outcome.winnerDiscordId,
+                loserDiscordId = outcome.loserDiscordId,
+                guildId = guildId,
+                stake = stake,
+                pot = pot
             )
         )
         return outcome

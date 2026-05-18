@@ -1,0 +1,204 @@
+package web.controller
+
+import common.notification.NotificationChannelKind
+import database.service.AchievementService
+import database.service.LoginStreakService
+import database.service.UserNotificationPrefService
+import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+import web.util.GuildMembership
+import web.util.discordIdOrNull
+import java.time.Instant
+
+/**
+ * JSON-only REST surface for the engagement loop:
+ *   - POST /api/engagement/{guildId}/daily/claim — claim today's streak.
+ *   - GET  /api/engagement/{guildId}/achievements — list catalogue + user state.
+ *   - GET  /api/engagement/{guildId}/notifications — current prefs (incl defaults).
+ *   - POST /api/engagement/{guildId}/notifications/{kind} — opt in or out.
+ *
+ * Reuses [LoginStreakService] / [AchievementService] / [UserNotificationPrefService]
+ * verbatim so the slash-command path (`/daily`, `/achievements`, `/notify`) and
+ * the web path are guaranteed to agree on streak counts, ownership, and prefs.
+ *
+ * Every endpoint refuses guild access for non-members (and unauthenticated
+ * requests) so a crafted POST can't claim a streak in a server the user
+ * isn't in.
+ */
+@RestController
+@RequestMapping("/api/engagement/{guildId}")
+class EngagementApiController(
+    private val loginStreakService: LoginStreakService,
+    private val achievementService: AchievementService,
+    private val notificationPrefService: UserNotificationPrefService,
+    private val membership: GuildMembership,
+) {
+
+    @PostMapping("/daily/claim")
+    fun claimDaily(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<DailyClaimResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
+
+        return when (val result = loginStreakService.claim(discordId, guildId)) {
+            is LoginStreakService.ClaimResult.Granted -> ResponseEntity.ok(
+                DailyClaimResponse(
+                    status = "granted",
+                    currentStreak = result.currentStreak,
+                    longestStreak = result.longestStreak,
+                    xpGranted = result.xpGranted,
+                    creditsGranted = result.creditsGranted,
+                    newBest = result.isNewBest
+                )
+            )
+            is LoginStreakService.ClaimResult.AlreadyClaimed -> ResponseEntity.ok(
+                DailyClaimResponse(
+                    status = "already_claimed",
+                    currentStreak = result.currentStreak,
+                    longestStreak = result.longestStreak,
+                    xpGranted = 0L,
+                    creditsGranted = 0L,
+                    newBest = false
+                )
+            )
+        }
+    }
+
+    @GetMapping("/daily")
+    fun streakStatus(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<StreakStatusResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
+
+        val row = loginStreakService.get(discordId, guildId)
+        return ResponseEntity.ok(
+            StreakStatusResponse(
+                currentStreak = row?.currentStreak ?: 0,
+                longestStreak = row?.longestStreak ?: 0,
+                lastClaimDate = row?.lastClaimDate?.toString(),
+                totalClaims = row?.totalClaims ?: 0L
+            )
+        )
+    }
+
+    @GetMapping("/achievements")
+    fun listAchievements(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<List<AchievementResponse>> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
+
+        val views = achievementService.listFor(discordId, guildId)
+        return ResponseEntity.ok(views.map { v ->
+            AchievementResponse(
+                code = v.achievement.code,
+                name = v.achievement.name,
+                description = v.achievement.description,
+                category = v.achievement.category,
+                icon = v.achievement.icon,
+                threshold = v.achievement.threshold,
+                progress = v.progress,
+                unlocked = v.unlockedAt != null,
+                unlockedAt = v.unlockedAt
+            )
+        })
+    }
+
+    @GetMapping("/notifications")
+    fun listNotifications(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<List<NotificationPrefResponse>> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
+
+        val explicit = notificationPrefService.listForUser(discordId, guildId)
+            .associateBy { it.channelKind }
+
+        return ResponseEntity.ok(NotificationChannelKind.entries.map { kind ->
+            val row = explicit[kind.name]
+            NotificationPrefResponse(
+                kind = kind.name,
+                displayName = kind.displayName,
+                description = kind.description,
+                optIn = row?.optIn ?: kind.defaultOptIn,
+                isDefault = row == null
+            )
+        })
+    }
+
+    @PostMapping("/notifications/{kindCode}")
+    fun setNotification(
+        @PathVariable guildId: Long,
+        @PathVariable kindCode: String,
+        @RequestBody body: NotificationPrefUpdate,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<NotificationPrefResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
+
+        val kind = NotificationChannelKind.fromCode(kindCode)
+            ?: return ResponseEntity.badRequest().build()
+
+        val row = notificationPrefService.setPref(discordId, guildId, kind, body.optIn)
+        return ResponseEntity.ok(
+            NotificationPrefResponse(
+                kind = kind.name,
+                displayName = kind.displayName,
+                description = kind.description,
+                optIn = row.optIn,
+                isDefault = false
+            )
+        )
+    }
+
+    data class DailyClaimResponse(
+        val status: String,
+        val currentStreak: Int,
+        val longestStreak: Int,
+        val xpGranted: Long,
+        val creditsGranted: Long,
+        val newBest: Boolean
+    )
+
+    data class StreakStatusResponse(
+        val currentStreak: Int,
+        val longestStreak: Int,
+        val lastClaimDate: String?,
+        val totalClaims: Long
+    )
+
+    data class AchievementResponse(
+        val code: String,
+        val name: String,
+        val description: String,
+        val category: String,
+        val icon: String?,
+        val threshold: Long,
+        val progress: Long,
+        val unlocked: Boolean,
+        val unlockedAt: Instant?
+    )
+
+    data class NotificationPrefResponse(
+        val kind: String,
+        val displayName: String,
+        val description: String,
+        val optIn: Boolean,
+        val isDefault: Boolean
+    )
+
+    data class NotificationPrefUpdate(val optIn: Boolean)
+}

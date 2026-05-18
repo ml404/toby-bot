@@ -1,9 +1,11 @@
 package database.service
 
+import common.events.TipSentEvent
 import database.dto.TipDailyDto
 import database.dto.TipLogDto
 import database.persistence.TipLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
@@ -28,6 +30,7 @@ class TipService @Autowired constructor(
     private val userService: UserService,
     private val tipDailyService: TipDailyService,
     private val tipLogPersistence: TipLogPersistence,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
     sealed interface TipOutcome {
         data class Ok(
@@ -109,6 +112,15 @@ class TipService @Autowired constructor(
                 amount = amount,
                 note = truncatedNote,
                 createdAt = at
+            )
+        )
+
+        eventPublisher?.publishEvent(
+            TipSentEvent(
+                senderDiscordId = senderDiscordId,
+                recipientDiscordId = recipientDiscordId,
+                guildId = guildId,
+                amount = amount
             )
         )
 

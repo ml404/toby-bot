@@ -301,7 +301,27 @@ class ConfigDto(
         // online members only), or "EVERYONE" (@everyone — all members).
         // Defaults to "EVERYONE" so a fresh-install guild gets the most
         // visible nudge to buy tickets; admins can dial it down per-server.
-        LOTTERY_PING_MODE("LOTTERY_PING_MODE");
+        LOTTERY_PING_MODE("LOTTERY_PING_MODE"),
+
+        // Daily streak XP reward shape. Computed as
+        // `min(base + per_day_bonus * (streak - 1), max)` inside
+        // DefaultLoginStreakService. Streak rewards bypass DAILY_XP_CAP.
+        // Default 50 base, +5 per day, capped at 300.
+        STREAK_BASE_REWARD_XP("STREAK_BASE_REWARD_XP"),
+        STREAK_PER_DAY_BONUS_XP("STREAK_PER_DAY_BONUS_XP"),
+        STREAK_MAX_REWARD_XP("STREAK_MAX_REWARD_XP"),
+
+        // Daily streak social-credit reward shape. Same formula as the
+        // XP variant. Bypasses DAILY_CREDIT_CAP. Default 25 base, +5
+        // per day, capped at 200.
+        STREAK_BASE_REWARD_CREDIT("STREAK_BASE_REWARD_CREDIT"),
+        STREAK_PER_DAY_BONUS_CREDIT("STREAK_PER_DAY_BONUS_CREDIT"),
+        STREAK_MAX_REWARD_CREDIT("STREAK_MAX_REWARD_CREDIT"),
+
+        // Optional Discord text-channel id where achievement-unlock
+        // shoutouts post in addition to the unlocker's DM. When unset,
+        // unlocks are DM-only. Stored as a stringified Long.
+        ACHIEVEMENT_ANNOUNCE_CHANNEL("ACHIEVEMENT_ANNOUNCE_CHANNEL");
     }
 
     override fun toString(): String {

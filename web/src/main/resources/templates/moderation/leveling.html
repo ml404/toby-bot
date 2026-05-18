@@ -200,6 +200,119 @@
             </details>
 
             <details class="config-section">
+                <summary>Daily streak &amp; achievements</summary>
+                <p class="muted mb-3">
+                    Daily-claim rewards scale by streak length:
+                    <code>min(base + per_day_bonus &times; (streak &minus; 1), max)</code>.
+                    Both XP and credit grants bypass their respective daily caps.
+                    Set per-day bonus to 0 to make rewards flat. The
+                    achievement-announce channel posts a public shoutout in
+                    addition to the unlocker's DM — leave it blank to keep
+                    unlocks DM-only.
+                </p>
+                <div class="config-grid">
+                    <div class="config-row" data-key="STREAK_BASE_REWARD_XP">
+                        <label>
+                            Streak base XP
+                            <span class="config-hint">
+                                XP awarded on day 1 of a streak. Default 50.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['STREAK_BASE_REWARD_XP']}"
+                               placeholder="50"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="STREAK_PER_DAY_BONUS_XP">
+                        <label>
+                            Streak XP bonus per day
+                            <span class="config-hint">
+                                Extra XP added each consecutive day. Default 5.
+                                0 makes the reward flat.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['STREAK_PER_DAY_BONUS_XP']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="STREAK_MAX_REWARD_XP">
+                        <label>
+                            Streak XP ceiling
+                            <span class="config-hint">
+                                Upper bound on the per-day XP grant once the
+                                streak gets long. Default 300.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="1000000"
+                               th:value="${overview.config['STREAK_MAX_REWARD_XP']}"
+                               placeholder="300"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="STREAK_BASE_REWARD_CREDIT">
+                        <label>
+                            Streak base credits
+                            <span class="config-hint">
+                                Social credit awarded on day 1 of a streak. Default 25.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['STREAK_BASE_REWARD_CREDIT']}"
+                               placeholder="25"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="STREAK_PER_DAY_BONUS_CREDIT">
+                        <label>
+                            Streak credit bonus per day
+                            <span class="config-hint">
+                                Extra credits added each consecutive day. Default 5.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['STREAK_PER_DAY_BONUS_CREDIT']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="STREAK_MAX_REWARD_CREDIT">
+                        <label>
+                            Streak credit ceiling
+                            <span class="config-hint">
+                                Upper bound on the per-day credit grant once the
+                                streak gets long. Default 200.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="1000000"
+                               th:value="${overview.config['STREAK_MAX_REWARD_CREDIT']}"
+                               placeholder="200"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="ACHIEVEMENT_ANNOUNCE_CHANNEL">
+                        <label>
+                            Achievement shoutout channel
+                            <span class="config-hint">
+                                Optional public channel for achievement unlocks.
+                                Leave blank to keep unlocks DM-only.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="">&mdash; DM only &mdash;</option>
+                            <option th:each="tc : ${overview.textChannels}"
+                                    th:value="${tc.id}"
+                                    th:text="'#' + ${tc.name}"
+                                    th:selected="${overview.config['ACHIEVEMENT_ANNOUNCE_CHANNEL'] == tc.id}"></option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section">
                 <summary th:text="'Title gating (' + ${#lists.size(leveling.titles)} + ' titles)'">Title gating</summary>
                 <p class="muted mb-3">
                     Set a minimum level a user must reach before they can buy a title.

@@ -1184,12 +1184,14 @@ class ModerationWebService(
                 v
             }
             ConfigDto.Configurations.LOTTERY_CHANNEL,
-            ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID -> {
+            ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID,
+            ConfigDto.Configurations.ACHIEVEMENT_ANNOUNCE_CHANNEL -> {
                 val v = rawValue.trim()
                 if (v.isEmpty()) {
                     // Empty value clears the override. LOTTERY_CHANNEL falls
                     // back to LEADERBOARD_CHANNEL → systemChannel at runtime;
                     // CASINO_MODLOG_CHANNEL_ID falls back to systemChannel.
+                    // ACHIEVEMENT_ANNOUNCE_CHANNEL is DM-only when unset.
                     ""
                 } else {
                     val id = v.toLongOrNull()
@@ -1198,6 +1200,19 @@ class ModerationWebService(
                         ?: return "No text channel with that id exists in this server."
                     channel.id
                 }
+            }
+            // Streak reward shape — whole-number XP/credit amounts, 0
+            // disables either floor (base) or scaling (per-day) cleanly.
+            ConfigDto.Configurations.STREAK_BASE_REWARD_XP,
+            ConfigDto.Configurations.STREAK_PER_DAY_BONUS_XP,
+            ConfigDto.Configurations.STREAK_MAX_REWARD_XP,
+            ConfigDto.Configurations.STREAK_BASE_REWARD_CREDIT,
+            ConfigDto.Configurations.STREAK_PER_DAY_BONUS_CREDIT,
+            ConfigDto.Configurations.STREAK_MAX_REWARD_CREDIT -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number (>= 0)."
+                if (n < 0L) return "Value must be zero or positive."
+                n.toString()
             }
         }
 
