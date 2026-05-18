@@ -44,11 +44,36 @@ nav {
     display: contents;
 }
 .nav-links > .nav-section > .nav-section-eyebrow,
-.nav-drawer-header,
-.nav-identity,
-.nav-auth {
+.nav-drawer-header {
     display: none;
 }
+
+/* Identity (default-guild pill + username) and auth (Login / Logout)
+   live inline on desktop and restyle into card + footer inside the
+   drawer via the @media (max-width: 600px) block below. */
+.nav-identity {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: transparent;
+    border: none;
+    padding: 0;
+    border-radius: 0;
+}
+.nav-identity-name {
+    font-weight: 500;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+.nav-auth {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    border: none;
+    gap: 0;
+}
+.nav-auth-form { margin: 0; }
 .nav-item {
     display: inline-flex;
     align-items: center;
@@ -150,12 +175,6 @@ nav {
     line-height: 1;
 }
 .nav-drawer-close:hover { border-color: var(--accent); color: #fff; }
-
-.nav-identity-name {
-    font-weight: 600;
-    color: #fff;
-    font-size: 0.95rem;
-}
 
 .nav-backdrop { display: none; }
 
@@ -286,6 +305,10 @@ nav {
         position: relative;
         z-index: 60;
     }
+    /* Once the drawer is open, the drawer's own sticky-header ✕ is the
+       single dismissal affordance — hide the hamburger so it doesn't
+       render a second overlapping ✕ glyph on top of the drawer. */
+    body.nav-open .nav-toggle { display: none; }
 
     /* The drawer itself. Slides in from the right. */
     .nav-links {
@@ -341,6 +364,11 @@ nav {
         background: var(--bg);
         border: 1px solid var(--border);
         border-radius: var(--radius-md);
+    }
+    .nav-identity-name {
+        font-weight: 600;
+        color: #fff;
+        font-size: 0.95rem;
     }
     .nav-identity .nav-default-guild {
         max-width: 100%;

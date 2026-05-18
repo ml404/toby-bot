@@ -13,6 +13,33 @@ const NAVBAR_FRAGMENT = path.resolve(
     __dirname,
     '../../main/resources/templates/fragments/navbar.html'
 );
+const NAV_CSS = path.resolve(
+    __dirname,
+    '../../main/resources/static/css/nav.css'
+);
+
+// Extracts a CSS rule body (everything between `selector {` and the
+// matching closing brace) so we can assert on the declarations without
+// being brittle about whitespace or sibling rule order. Returns null if
+// the selector isn't found.
+function extractRuleBody(css, selectorPrefix) {
+    const start = css.indexOf(selectorPrefix);
+    if (start < 0) return null;
+    const braceOpen = css.indexOf('{', start);
+    if (braceOpen < 0) return null;
+    let depth = 1;
+    let i = braceOpen + 1;
+    while (i < css.length && depth > 0) {
+        const ch = css[i];
+        if (ch === '{') depth += 1;
+        else if (ch === '}') {
+            depth -= 1;
+            if (depth === 0) return css.slice(braceOpen + 1, i);
+        }
+        i += 1;
+    }
+    return null;
+}
 
 // Extracts the contents of the .nav-links container by walking forward
 // from its opening tag and balancing <div>/</div> pairs. Anchoring on a
@@ -173,5 +200,91 @@ describe('navbar fragment', () => {
         const stripped = inner.replace(/<div class="nav-dropdown">[\s\S]*?<\/div>\s*<\/div>/g, '');
         expect(stripped).not.toMatch(/href="\/economy\/guilds"/);
         expect(stripped).not.toMatch(/href="\/titles\/guilds"/);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// CSS regression tests
+//
+// The follow-up fix in this PR restored desktop visibility of the Login
+// button + default-guild pill, and de-duplicated the close-✕ glyph that
+// rendered on top of the hamburger when the mobile drawer was open. These
+// tests pin those contracts so a future restyle can't silently revert
+// either regression.
+// ---------------------------------------------------------------------------
+
+describe('nav.css desktop visibility', () => {
+    let css;
+
+    beforeAll(() => {
+        css = fs.readFileSync(NAV_CSS, 'utf8');
+    });
+
+    test('.nav-identity is not display:none at top level', () => {
+        // Locate the top-level .nav-identity rule body and assert it's
+        // not hidden. The mobile drawer rule lives inside @media and is
+        // a different rule body.
+        const body = extractRuleBody(css, '\n.nav-identity {');
+        expect(body).not.toBeNull();
+        expect(body).not.toMatch(/display:\s*none/);
+    });
+
+    test('.nav-auth is not display:none at top level', () => {
+        const body = extractRuleBody(css, '\n.nav-auth {');
+        expect(body).not.toBeNull();
+        expect(body).not.toMatch(/display:\s*none/);
+    });
+
+    test('.nav-identity and .nav-auth are not bundled into the desktop hide list', () => {
+        // The original regression was a single rule like
+        //   .nav-drawer-header, .nav-identity, .nav-auth { display: none; }
+        // that hid all three on desktop. Catch it by name — the drawer
+        // header is allowed (mobile-only), the other two must not appear.
+        const hideListPattern = /\.nav-drawer-header[\s\S]{0,200}?display:\s*none/;
+        const hideListMatch = css.match(hideListPattern);
+        if (hideListMatch) {
+            expect(hideListMatch[0]).not.toMatch(/\.nav-identity\b/);
+            expect(hideListMatch[0]).not.toMatch(/\.nav-auth\b/);
+        }
+    });
+
+    test('drawer-only chrome (.nav-drawer-header) stays hidden on desktop', () => {
+        // Companion to the rule above: the drawer header *should* be
+        // hidden on desktop. Asserts the dedupe didn't accidentally
+        // unhide it.
+        expect(css).toMatch(/\.nav-drawer-header[\s\S]{0,80}?display:\s*none/);
+    });
+});
+
+describe('nav.css mobile drawer-close dedupe', () => {
+    let css;
+
+    beforeAll(() => {
+        css = fs.readFileSync(NAV_CSS, 'utf8');
+    });
+
+    test('hides the hamburger while the drawer is open', () => {
+        // Without this rule the hamburger swaps glyph to ✕ via
+        // [aria-expanded="true"] and stacks visually on top of the
+        // drawer's own sticky-header close button — two ✕ marks
+        // overlapping. The drawer's ✕ is the canonical dismissal
+        // affordance once open.
+        expect(css).toMatch(
+            /body\.nav-open\s+\.nav-toggle\s*\{\s*display:\s*none\s*;?\s*\}/
+        );
+    });
+
+    test('hamburger remains visible by default (no global hide)', () => {
+        // Defensive check: the hide rule must be scoped to body.nav-open,
+        // not applied unconditionally. A naked `.nav-toggle { display: none }`
+        // would leave the closed-state navbar with no way to open the menu.
+        const mobileBlockStart = css.indexOf('@media (max-width: 600px)');
+        expect(mobileBlockStart).toBeGreaterThan(-1);
+        const mobileBlock = css.slice(mobileBlockStart);
+        // The mobile rule for .nav-toggle should set display: inline-flex
+        // (or block / flex) — anything but `none`.
+        expect(mobileBlock).toMatch(
+            /\n\s*\.nav-toggle\s*\{[^}]*display:\s*(?:inline-flex|flex|block|inline-block)/
+        );
     });
 });
