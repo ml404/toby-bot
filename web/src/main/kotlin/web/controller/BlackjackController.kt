@@ -12,6 +12,7 @@ import database.service.BlackjackService.MultiLeaveOutcome
 import database.service.BlackjackService.MultiStartOutcome
 import database.service.BlackjackService.SoloActionOutcome
 import database.service.BlackjackService.SoloDealOutcome
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.CasinoOutcomeMapper
@@ -33,6 +35,8 @@ import web.casino.StakeBounds
 import web.casino.renderMinigamePage
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -83,14 +87,25 @@ class BlackjackController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val discordId = user.discordIdOrNull()
         val guilds = if (discordId != null) {
             economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/blackjack/$it/solo" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "blackjack-guilds"
     }
 

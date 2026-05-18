@@ -2,6 +2,7 @@ package web.controller
 
 import database.dto.ConfigDto
 import database.dto.UserDto
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -16,9 +17,12 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ModerationWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
@@ -38,6 +42,8 @@ class ModerationController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model
     ): String {
         val discordId = user.discordIdOrNull()
@@ -45,10 +51,18 @@ class ModerationController(
             moderationWebService.getModeratableGuilds(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/moderation/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
         model.addAttribute("discordId", user.discordIdString())
         model.addAttribute("inviteUrl", inviteUrl)
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "moderation-guilds"
     }
 

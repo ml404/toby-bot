@@ -1,5 +1,6 @@
 package web.controller
 
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -11,6 +12,8 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ExcuseWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
@@ -30,9 +33,19 @@ class ExcuseWebController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val guilds = excuseWebService.getMutualGuilds(client.accessToken.tokenValue)
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/excuses/$it" }
+
         val counts = excuseWebService.getApprovedCountsForGuilds(guilds.map { it.id.toLong() })
             .mapKeys { it.key.toString() }
 
@@ -41,6 +54,7 @@ class ExcuseWebController(
         model.addAttribute("username", user.displayName())
         model.addAttribute("discordId", user.discordIdString())
         model.addAttribute("inviteUrl", inviteUrl)
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "excuse-guilds"
     }
 

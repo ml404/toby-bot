@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}">
 
     <div class="coinflip-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🪙 Coinflip • ' + ${guildName}">🪙 Coinflip</h1>
         <p class="muted">Fair 50/50 double-or-nothing. Pick a side, set a stake. Bet between
             <span th:text="${minStake}">10</span> and

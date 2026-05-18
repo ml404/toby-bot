@@ -1,5 +1,6 @@
 package web.controller
 
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
@@ -8,7 +9,10 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import web.service.EconomyWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -34,6 +38,8 @@ class LotteryGuildsController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         val discordId = user.discordIdOrNull()
@@ -41,8 +47,16 @@ class LotteryGuildsController(
             economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/casino/$it/lottery" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "lottery-guilds"
     }
 }

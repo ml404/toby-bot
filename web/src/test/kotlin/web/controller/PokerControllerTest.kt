@@ -13,6 +13,8 @@ import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -20,9 +22,14 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
+import org.springframework.security.oauth2.core.OAuth2AccessToken
 import org.springframework.security.oauth2.core.user.OAuth2User
+import org.springframework.ui.Model
+import web.service.EconomyGuildCard
 import web.service.EconomyWebService
 import web.service.PokerWebService
+import web.util.DefaultGuildCookie
 
 class PokerControllerTest {
 
@@ -86,6 +93,51 @@ class PokerControllerTest {
         every { pokerWebService.snapshot(tableId, discordId) } returns sampleView(guildId = 999L)
         val response = controller.state(guildId, tableId, user)
         assertEquals(404, response.statusCode.value())
+    }
+
+    // -- guildList auto-redirect tests --
+
+    private fun setMutualGuilds(vararg ids: Long) {
+        every {
+            economyWebService.getGuildsWhereUserCanView(any(), discordId)
+        } returns ids.map {
+            EconomyGuildCard(id = it.toString(), name = "g$it", iconUrl = null, price = null, coins = 0, credits = 0)
+        }
+    }
+
+    private fun pokerClient(): OAuth2AuthorizedClient {
+        val token: OAuth2AccessToken = mockk { every { tokenValue } returns "tkn" }
+        return mockk { every { accessToken } returns token }
+    }
+
+    @Test
+    fun `guildList auto-redirects to single mutual guild lobby`() {
+        setMutualGuilds(777L)
+        val req: HttpServletRequest = mockk(relaxed = true) { every { cookies } returns null }
+        val result = controller.guildList(pokerClient(), user, pick = false, request = req, model = mockk(relaxed = true))
+        assertEquals("redirect:/poker/777", result)
+    }
+
+    @Test
+    fun `guildList auto-redirects to anchored guild when cookie set`() {
+        setMutualGuilds(111L, 222L)
+        val req: HttpServletRequest = mockk(relaxed = true) {
+            every { cookies } returns arrayOf(Cookie(DefaultGuildCookie.COOKIE_NAME, "222"))
+        }
+        val result = controller.guildList(pokerClient(), user, pick = false, request = req, model = mockk(relaxed = true))
+        assertEquals("redirect:/poker/222", result)
+    }
+
+    @Test
+    fun `guildList renders picker when pick=true bypasses redirect`() {
+        setMutualGuilds(111L, 222L)
+        val req: HttpServletRequest = mockk(relaxed = true) {
+            every { cookies } returns arrayOf(Cookie(DefaultGuildCookie.COOKIE_NAME, "222"))
+        }
+        val model: Model = mockk(relaxed = true)
+        val result = controller.guildList(pokerClient(), user, pick = true, request = req, model = model)
+        assertEquals("poker-guilds", result)
+        verify { model.addAttribute("defaultGuildId", 222L) }
     }
 
     @Test

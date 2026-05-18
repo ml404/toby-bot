@@ -118,6 +118,53 @@
 }
 .lb-top-name { font-weight: 600; display: inline-flex; gap: 6px; align-items: center; }
 
+/* -- Default-guild star button (casino-guilds, leaderboards, intro picker) -- */
+/* Wrapper card lets the whole-card link AND the star button coexist; the
+   link is `lb-guild-card-link` so the .lb-guild-card hover/border styling
+   still applies to the outer wrapper. */
+.lb-guild-card-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding-bottom: 44px;
+}
+.lb-guild-card-wrap .lb-guild-card-link {
+    color: var(--text);
+    text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.lb-guild-card-wrap .default-guild-form {
+    position: absolute;
+    bottom: var(--space-3);
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    z-index: 2;
+}
+.default-guild-form { margin: 0; }
+.default-guild-toggle {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.default-guild-toggle:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.default-guild-toggle.is-default {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
 /* -- Stats strip -- */
 .lb-stats {
     display: grid;

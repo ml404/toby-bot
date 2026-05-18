@@ -12,7 +12,7 @@
                data-pool-size=${poolSize}, data-draws=${draws}">
 
     <div class="keno-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🎯 Keno • ' + ${guildName}">🎯 Keno</h1>
         <p class="muted">
             Pick <span th:text="${minSpots}">1</span>-<span th:text="${maxSpots}">10</span> numbers from the

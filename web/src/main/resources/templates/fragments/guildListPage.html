@@ -22,7 +22,7 @@
 -->
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
       th:fragment="singleAction(pageTitle, cssPath, emoji, headingTitle, description,
-                                 actionHref, actionLabel,
+                                 actionHref, actionLabel, pickerPath,
                                  emptyEmoji, emptyHeading, emptyBody)">
 <head th:replace="~{fragments/head :: head(${pageTitle}, ${cssPath})}"></head>
 <body>
@@ -38,6 +38,7 @@
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
         <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
             <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, ${pickerPath + '?pick=true'})}"></div>
             <div class="lb-guild-top">
                 <span class="muted">Your wallet:</span>
                 <span th:text="${g.credits} + ' credits'">0 credits</span>
@@ -61,7 +62,7 @@
 
 <html xmlns:th="http://www.thymeleaf.org" lang="en"
       th:fragment="dualAction(pageTitle, cssPath, emoji, headingTitle, description,
-                               primaryHref, primaryLabel, secondaryHref, secondaryLabel,
+                               primaryHref, primaryLabel, secondaryHref, secondaryLabel, pickerPath,
                                emptyEmoji, emptyHeading, emptyBody)">
 <head th:replace="~{fragments/head :: head(${pageTitle}, ${cssPath})}"></head>
 <body>
@@ -77,6 +78,7 @@
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
         <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
             <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, ${pickerPath + '?pick=true'})}"></div>
             <div class="lb-guild-top">
                 <span class="muted">Your wallet:</span>
                 <span th:text="${g.credits} + ' credits'">0 credits</span>

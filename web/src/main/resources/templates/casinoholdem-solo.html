@@ -9,7 +9,7 @@
       th:attr="data-guild-id=${guildId}, data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}, data-min-stake=${minStake}, data-max-stake=${maxStake}, data-call-multiple=${callMultiple}, data-my-discord-id=${myDiscordId}">
 
     <div class="che-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="|🃏 Casino Hold'em • ${guildName}|">🃏 Casino Hold'em</h1>
         <p class="muted">
             Bet between <span th:text="${minStake}">10</span> and

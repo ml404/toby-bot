@@ -18,6 +18,7 @@
     <div class="lb-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
         <div class="lb-guild-card lb-guild-card-static" th:each="g : ${guilds}">
             <div th:replace="~{fragments/guildCard :: header(${g})}"></div>
+            <div th:replace="~{fragments/defaultGuildStar :: star(${g.id}, ${defaultGuildId}, ${intendedGame != null ? '/casino/guilds?game=' + intendedGame + '&pick=true' : '/casino/guilds?pick=true'})}"></div>
             <div class="lb-guild-top">
                 <span class="muted">Your wallet:</span>
                 <span th:text="${g.credits} + ' credits'">0 credits</span>

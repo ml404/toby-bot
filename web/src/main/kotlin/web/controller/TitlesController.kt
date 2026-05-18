@@ -7,15 +7,19 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.BuyWithTobyOutcome
 import web.service.TitlesWebService
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -48,6 +52,8 @@ class TitlesController(
     fun guildList(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model
     ): String {
         val discordId = user.discordIdOrNull()
@@ -55,8 +61,16 @@ class TitlesController(
             titlesWebService.getMemberGuilds(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/titles/$it" }
+
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
         return "titles-guilds"
     }
 

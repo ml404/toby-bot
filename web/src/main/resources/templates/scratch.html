@@ -10,7 +10,7 @@
                data-toby-coins=${tobyCoins}, data-market-price=${marketPrice}">
 
     <div class="scratch-header">
-        <a class="back-link" th:href="@{/casino/guilds}">&larr; All casino servers</a>
+        <a class="back-link" th:href="@{/casino/guilds(pick=true)}">&larr; All casino servers</a>
         <h1 th:text="'🎟️ Scratch • ' + ${guildName}">🎟️ Scratch</h1>
         <p class="muted">Buy a <span th:text="${cellCount}">9</span>-cell scratchcard. Match
             <span th:text="${matchThreshold}">5</span>+ of any symbol to win;

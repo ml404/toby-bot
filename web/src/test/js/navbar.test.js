@@ -69,18 +69,22 @@ describe('navbar fragment', () => {
         );
     });
 
-    test('Casino dropdown lists every minigame and points at the picker', () => {
+    test('Casino dropdown lists every minigame and points at the picker with a game query', () => {
+        // Each entry carries `?game=<slug>` so the picker can deep-link past
+        // itself when the user only shares one server with the bot (or has
+        // anchored one as default). Without the slug the picker still
+        // renders and acts as the per-guild game index.
         const casino = html.match(
             /<div class="nav-dropdown">[\s\S]*?Casino[\s\S]*?<\/div>\s*<\/div>/
         );
         expect(casino).not.toBeNull();
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Slots/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Coinflip/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Dice/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*High-Low/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Scratch/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Keno/);
-        expect(casino[0]).toMatch(/href="\/casino\/guilds"[^>]*>[^<]*Baccarat/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=slots"[^>]*>[^<]*Slots/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=coinflip"[^>]*>[^<]*Coinflip/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=dice"[^>]*>[^<]*Dice/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=highlow"[^>]*>[^<]*High-Low/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=scratch"[^>]*>[^<]*Scratch/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=keno"[^>]*>[^<]*Keno/);
+        expect(casino[0]).toMatch(/href="\/casino\/guilds\?game=baccarat"[^>]*>[^<]*Baccarat/);
         // Coming-soon placeholder is gone now that the games ship.
         expect(casino[0]).not.toMatch(/coming soon/i);
     });
