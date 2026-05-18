@@ -4,6 +4,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
+import jakarta.servlet.http.HttpServletRequest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -30,6 +31,9 @@ class ExcuseWebControllerTest {
     private val mockClient = mockk<OAuth2AuthorizedClient>(relaxed = true)
     private val mockModel = mockk<Model>(relaxed = true)
     private val mockRa = mockk<RedirectAttributes>(relaxed = true)
+    private val mockRequest = mockk<HttpServletRequest>(relaxed = true).also {
+        every { it.cookies } returns null
+    }
 
     private val discordId = "111"
     private val guildId = 222L
@@ -53,11 +57,13 @@ class ExcuseWebControllerTest {
 
     @Test
     fun `guildList renders the excuse-guilds template with counts`() {
-        val guilds = listOf(GuildInfo("1", "Guild One", null))
+        // Two guilds + pick=true bypasses the auto-redirect so we can observe
+        // the full template render path (with the new pick / request params).
+        val guilds = listOf(GuildInfo("1", "Guild One", null), GuildInfo("2", "Guild Two", null))
         every { excuseWebService.getMutualGuilds("mock-token") } returns guilds
-        every { excuseWebService.getApprovedCountsForGuilds(listOf(1L)) } returns mapOf(1L to 5)
+        every { excuseWebService.getApprovedCountsForGuilds(listOf(1L, 2L)) } returns mapOf(1L to 5)
 
-        val view = controller.guildList(mockClient, mockUser, mockModel)
+        val view = controller.guildList(mockClient, mockUser, pick = true, request = mockRequest, model = mockModel)
 
         assertEquals("excuse-guilds", view)
         verify { mockModel.addAttribute("guilds", guilds) }

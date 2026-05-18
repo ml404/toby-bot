@@ -5,6 +5,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import io.mockk.verify
+import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpSession
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,6 +31,9 @@ class IntroWebControllerTest {
     private val mockModel = mockk<Model>(relaxed = true)
     private val mockRa = mockk<RedirectAttributes>(relaxed = true)
     private val mockSession = mockk<HttpSession>(relaxed = true)
+    private val mockRequest = mockk<HttpServletRequest>(relaxed = true).also {
+        every { it.cookies } returns null
+    }
 
     private val discordId = "111"
     private val guildId = 222L
@@ -54,10 +58,12 @@ class IntroWebControllerTest {
 
     @Test
     fun `guildList adds guilds and username to model`() {
-        val guilds = listOf(GuildInfo("1", "Guild One", null))
+        // Two guilds + pick=true bypasses the auto-redirect so the template
+        // render path stays observable here.
+        val guilds = listOf(GuildInfo("1", "Guild One", null), GuildInfo("2", "Guild Two", null))
         every { introWebService.getMutualGuilds("mock-token") } returns guilds
 
-        val view = controller.guildList(mockClient, mockUser, mockModel)
+        val view = controller.guildList(mockClient, mockUser, pick = true, request = mockRequest, model = mockModel)
 
         assertEquals("guilds", view)
         verify { mockModel.addAttribute("guilds", guilds) }
