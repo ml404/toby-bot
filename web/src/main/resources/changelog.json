@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Award XP for web casino/poker/duel/economy actions",
+    "summary": "Web gameplay surfaces (casino, blackjack, poker, duels, lottery, the economy market, tips) previously bypassed the XP system entirely — playing slots in Discord awarded 5 XP per slash invocation, but the same action through the browser awarded zero. This change closes the gap. New `WebGameplayXpInterceptor` — a Spring `HandlerInterceptor` that, after a successful (2xx) POST to a gameplay/economy route, calls `XpAwardService.award(...)` with the same 5 XP grant Discord uses…",
+    "emoji": "✨",
+    "prNumber": 481
+  },
+  {
+    "date": "May 2026",
     "title": "Render Discord level-up as a tier-colored embed",
     "summary": "Discord level-up announcement is now a tier-colored embed that mirrors the web profile card (`templates/profile.html` + `static/css/profile.css`): tier color (Bronze/Silver/Gold/Diamond), level badge in the title, an XP progress bar, and total lifetime XP. Numbers come from `LevelCurve.progress(totalXp)` — the same source the profile page uses — so the embed and the profile show the exact same `xpIntoLevel` / `xpForNextLevel` / total at the moment of the level-up. `LevelUp…",
     "emoji": "✨",
