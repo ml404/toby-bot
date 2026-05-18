@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Redesign mobile navbar as a slide-in drawer",
+    "summary": "The mobile navbar was broken (screenshot below): the hamburger ended up *below* the open menu because `.nav-toggle` sat after `.nav-links` in the DOM with `flex-wrap: wrap`. The drawer felt detached from the page (no backdrop, no scroll lock, no close affordance) and every link looked identical with no grouping or active-page indication. **Mobile redesign:** Hamburger moved before `.nav-links` so it can no longer wrap below the open menu. `.nav-links` becomes a fixed-posit…",
+    "emoji": "✨",
+    "prNumber": 488
+  },
+  {
+    "date": "May 2026",
     "title": "Add pick=true to remaining \"All servers\" back-links",
     "summary": "Adds `?pick=true` to the \"← All servers\" back-link on 11 per-guild pages (poker-lobby, blackjack-lobby/solo, lottery, profile, economy, titles, tip, duel, music-player, moderation). Without the query param the picker auto-redirect introduced in #486 bounces the user straight back to the page they just left, leaving them no way to re-anchor a different server from page chrome. Adds the back-link to `intros.html`, `excuses.html`, `teams.html` which had no in-page change-serv…",
     "emoji": "🎟️",
