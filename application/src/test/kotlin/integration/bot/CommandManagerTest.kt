@@ -23,8 +23,6 @@ import bot.toby.command.commands.economy.TipCommand
 import bot.toby.command.commands.economy.TitleCommand
 import bot.toby.command.commands.economy.TobyCoinCommand
 import bot.toby.command.commands.economy.WheelOfFortuneCommand
-import bot.toby.command.commands.fetch.DbdRandomKillerCommand
-import bot.toby.command.commands.fetch.Kf2RandomMapCommand
 import bot.toby.command.commands.fetch.MemeCommand
 import bot.toby.command.commands.misc.*
 import bot.toby.command.commands.moderation.*
@@ -132,8 +130,6 @@ class CommandManagerTest {
             UserInfoCommand::class.java,
             LevelCommand::class.java,
             RandomCommand::class.java,
-            Kf2RandomMapCommand::class.java,
-            DbdRandomKillerCommand::class.java,
             ExcuseCommand::class.java,
             SocialCreditCommand::class.java,
             JackpotAdminCommand::class.java,
@@ -163,8 +159,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(65, commandManager.allCommands.size)
-        Assertions.assertEquals(65, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(63, commandManager.allCommands.size)
+        Assertions.assertEquals(63, commandManager.allSlashCommands.size)
     }
 
     @Test
