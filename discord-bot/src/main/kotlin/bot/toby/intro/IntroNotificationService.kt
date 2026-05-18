@@ -5,9 +5,11 @@ import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.InputData
 import bot.toby.util.isUrl
 import common.logging.DiscordLogger
+import common.notification.NotificationChannelKind
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.MusicDto
 import database.service.MusicFileService
+import database.service.UserNotificationPrefService
 import bot.toby.helpers.UserDtoHelper
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +40,11 @@ class IntroNotificationService(
     private val eventWaiter: EventWaiter,
     private val validationService: IntroValidationService,
     private val mediaLoader: IntroMediaLoader,
+    // Nullable + default null so legacy callers / unit tests that
+    // construct this service manually keep compiling. Null = no gate
+    // (matches pre-refactor behaviour). Spring autowires the real bean
+    // in production via IntroHelper's chained construction.
+    private val notificationPrefService: UserNotificationPrefService? = null,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -46,6 +53,18 @@ class IntroNotificationService(
 
     fun promptUserForMusicInfo(user: User, guild: Guild) {
         logger.setGuildAndUserContext(guild, user)
+        // Honour the per-user INTRO_PROMPT opt-out. Default is opt-in so
+        // existing servers keep nudging new members; users who don't want
+        // intro prompts run `/notify set INTRO_PROMPT off` and we silently
+        // skip the DM (no waiter is set up either). Pref service is
+        // nullable for legacy/test callers — null means "no gate".
+        val gateActive = notificationPrefService
+            ?.isOptedIn(user.idLong, guild.idLong, NotificationChannelKind.INTRO_PROMPT)
+            ?: true
+        if (!gateActive) {
+            logger.info { "User opted out of INTRO_PROMPT; skipping prompt for guild '${guild.name}'." }
+            return
+        }
         logger.info { "Prompting user to set an intro for the server that they don't have one on" }
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage(
