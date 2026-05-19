@@ -1,5 +1,6 @@
 package web.template
 
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -58,20 +59,47 @@ class LotteryPlayerTemplateTest {
     }
 
     @Test
-    fun `player lottery template renders the next-threshold hint expressions per lever`() {
-        // The hint copy is computed view-side as `nextBulkHint /
-        // nextMultiplierHint`. Pin both expressions so a hint-block
-        // refactor doesn't accidentally drop one side and leave a
-        // half-rendered panel in prod.
-        for (hint in listOf(
-            "inc.nextBulkHint",
-            "inc.nextMultiplierHint",
-        )) {
-            assertTrue(
-                lotteryHtml.contains(hint),
-                "expected $hint reference in the player lottery template",
-            )
-        }
+    fun `player lottery template renders the multiplier next-threshold hint expression`() {
+        // The multiplier lever is correctly cumulative — "hold X more
+        // tickets to reach 1.25×" — so a personalised hint there is
+        // meaningful. Pin the expression so a future hint-block
+        // refactor doesn't silently lose it.
+        assertTrue(
+            lotteryHtml.contains("inc.nextMultiplierHint"),
+            "expected inc.nextMultiplierHint reference in the player lottery template",
+        )
+    }
+
+    @Test
+    fun `player lottery template has no bulk-tier personalised hint expression`() {
+        // Bulk bonus is per-purchase, not cumulative. A previous
+        // implementation rendered "Buy N more in one purchase to earn
+        // +B free" with N = tier.buy - myTickets, which was wrong:
+        // existing holdings don't shrink the threshold. The active-
+        // rules list above already conveys what each tier requires;
+        // no personalised hint should appear anywhere in the template.
+        assertFalse(
+            lotteryHtml.contains("nextBulkHint"),
+            "bulk-tier personalised hint was removed because the gap math is " +
+                "incorrect for a per-purchase reward; do not re-introduce " +
+                "without changing the semantics first",
+        )
+    }
+
+    @Test
+    fun `player lottery template renders 'paid + bonus' breakdown when myBonusTickets is non-zero`() {
+        // The "Your tickets" line shows just `myTickets` when the
+        // player has no bulk-bonus tickets, and "X paid + Y bonus"
+        // when they do. Pin the conditional expression so a refactor
+        // can't silently lose the breakdown on initial page paint.
+        assertTrue(
+            lotteryHtml.contains("snapshot.weighted.myBonusTickets > 0"),
+            "expected the 'Your tickets' line to branch on myBonusTickets > 0",
+        )
+        assertTrue(
+            lotteryHtml.contains("paid +") && lotteryHtml.contains("bonus"),
+            "expected the 'paid + bonus' breakdown copy in the template",
+        )
     }
 
     @Test

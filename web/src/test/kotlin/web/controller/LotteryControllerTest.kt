@@ -189,6 +189,80 @@ class LotteryControllerTest {
         assertTrue(body.error!!.contains("100") && body.error!!.contains("5000"))
     }
 
+    @Test
+    fun `buyWeighted ok surfaces bonusTicketsGranted and totalBonusTickets when service awards them`() {
+        // Regression guard for the silent-drop bug: the service already
+        // awards bonus tickets on bulk-qualifying buys, but the web
+        // response originally stripped them, leaving the client with
+        // no way to tell a +3 bonus from a +0 buy.
+        every { lotteryWebService.buyWeighted(guildId, discordId, 10) } returns
+            BuyOutcome.Ok(
+                ticketCount = 10,
+                totalSpent = 1_000L,
+                newBalance = 9_000L,
+                newPool = 2_000L,
+                bonusTicketsGranted = 3L,
+                totalBonusTickets = 3L,
+            )
+
+        val response = controller.buyWeighted(guildId, BuyWeightedRequest(count = 10), user)
+
+        assertTrue(response.statusCode.is2xxSuccessful)
+        val body = response.body!!
+        assertEquals(true, body.ok)
+        assertEquals(3L, body.bonusTicketsGranted)
+        assertEquals(3L, body.totalBonusTickets)
+        assertNull(body.milestoneBonuses, "no milestones fired → no list in the response")
+    }
+
+    @Test
+    fun `buyWeighted ok carries milestoneBonuses when the service fired any`() {
+        // Each milestone in the response carries its threshold and the
+        // credit top-up; the client toasts one per entry.
+        every { lotteryWebService.buyWeighted(guildId, discordId, 50) } returns
+            BuyOutcome.Ok(
+                ticketCount = 50,
+                totalSpent = 5_000L,
+                newBalance = 5_000L,
+                newPool = 5_100L,
+                bonusTicketsGranted = 0L,
+                totalBonusTickets = 0L,
+                milestoneBonuses = listOf(
+                    database.service.JackpotLotteryService.MilestoneBonus(threshold = 50L, creditsAdded = 100L),
+                ),
+            )
+
+        val response = controller.buyWeighted(guildId, BuyWeightedRequest(count = 50), user)
+
+        val body = response.body!!
+        assertEquals(true, body.ok)
+        assertEquals(1, body.milestoneBonuses?.size)
+        assertEquals(50L, body.milestoneBonuses?.first()?.threshold)
+        assertEquals(100L, body.milestoneBonuses?.first()?.creditsAdded)
+    }
+
+    @Test
+    fun `buyWeighted ok omits bonus fields cleanly when nothing was awarded`() {
+        // Base case: a normal buy with no bulk-tier qualification and
+        // no milestone crossings should leave all three new fields
+        // null so the JS toast falls back to its base copy without
+        // printing "+0 bonus from bulk-buy" garbage.
+        every { lotteryWebService.buyWeighted(guildId, discordId, 1) } returns
+            BuyOutcome.Ok(
+                ticketCount = 1,
+                totalSpent = 100L,
+                newBalance = 9_900L,
+                newPool = 1_100L,
+            )
+
+        val response = controller.buyWeighted(guildId, BuyWeightedRequest(count = 1), user)
+
+        val body = response.body!!
+        assertNull(body.bonusTicketsGranted, "no bulk bonus → null, not zero")
+        assertNull(body.totalBonusTickets, "no cumulative bonus → null, not zero")
+        assertNull(body.milestoneBonuses, "no milestones → null, not empty list")
+    }
+
     // ---- LotteryViewModel.from --------------------------------
 
     @Test
@@ -324,10 +398,14 @@ class LotteryControllerTest {
     }
 
     @Test
-    fun `LotteryViewModel computes nextBulkHint as the gap to the next unmatched tier`() {
-        // Player holds 4 tickets, lowest tier requires 10. Hint
-        // should surface "buy 6 more for +3 free". The +1 tier sits
-        // above 4 so the next-tier rule fires there.
+    fun `LotteryViewModel surfaces bulk tiers in the active rules list but exposes no per-viewer hint`() {
+        // Bulk bonus is per-purchase: a single buy must satisfy
+        // tier.buy on its own, so holding 4 tickets doesn't shrink
+        // the "buy at least 10" threshold to "buy 6 more". An older
+        // implementation computed gap = tier.buy - myTickets and
+        // produced misleading copy — this test pins the contract that
+        // the bulk lever exposes ONLY the active-rules list, no
+        // personalised "buy gap more" hint.
         val incentives = web.view.LotteryIncentivesView(
             bulkTiers = listOf(
                 web.view.BulkBonusTierView(buy = 10L, bonus = 3L),
@@ -339,17 +417,26 @@ class LotteryControllerTest {
         val vm = LotteryViewModel.from(
             weightedSnapshot(myTickets = 4, incentives = incentives)
         )
-        val hint = vm.weighted!!.incentives!!.nextBulkHint
-        assertNotNull(hint)
-        assertEquals(6L, hint!!.gap)
-        assertEquals(3L, hint.bonus)
-        assertEquals(10L, hint.threshold)
+        val panel = vm.weighted!!.incentives
+        assertNotNull(panel)
+        // Active rules cover the per-purchase requirement for every
+        // configured tier.
+        assertEquals(2, panel!!.bulkTiers.size)
+        assertEquals(10L, panel.bulkTiers.first().buy)
+        // The panel shape has no `nextBulkHint` field at all — Kotlin
+        // would fail compilation if a refactor re-introduced one.
+        // Multiplier / milestone hints stay correctly cumulative.
+        assertNull(panel.nextMultiplierHint, "no multiplier tiers configured → no multiplier hint")
+        assertNull(panel.milestoneProgress, "no milestones configured → no progress")
     }
 
     @Test
-    fun `LotteryViewModel returns null nextBulkHint when player already holds top tier`() {
-        // Player holds 30 tickets; tier ceiling is 25. No further
-        // "buy N more" hint to dangle — return null.
+    fun `LotteryViewModel still surfaces bulk tiers regardless of player ticket count`() {
+        // Regression guard against a future refactor that conditions
+        // bulk-tier visibility on myTickets (e.g. only showing tiers
+        // the player hasn't yet "qualified for"). All configured tiers
+        // must surface to every viewer — that's the whole point of
+        // exposing the rules.
         val incentives = web.view.LotteryIncentivesView(
             bulkTiers = listOf(
                 web.view.BulkBonusTierView(buy = 10L, bonus = 3L),
@@ -358,10 +445,10 @@ class LotteryControllerTest {
             multiplierTiers = emptyList(),
             poolMilestones = emptyList(),
         )
-        val vm = LotteryViewModel.from(
+        val panel = LotteryViewModel.from(
             weightedSnapshot(myTickets = 30, incentives = incentives)
-        )
-        assertNull(vm.weighted!!.incentives!!.nextBulkHint)
+        ).weighted!!.incentives!!
+        assertEquals(2, panel.bulkTiers.size)
     }
 
     @Test

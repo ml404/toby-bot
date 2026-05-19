@@ -177,10 +177,37 @@
                     return;
                 }
                 if (poolEl) poolEl.textContent = body.newPool;
-                if (myEl) myEl.textContent = body.ticketCount;
+                // "Your tickets" now renders "X paid + Y bonus" when
+                // the buyer has any bulk-bonus tickets — keeps parity
+                // with the moderation page and the Discord status copy.
+                if (myEl) {
+                    if (body.totalBonusTickets && body.totalBonusTickets > 0) {
+                        myEl.textContent = `${body.ticketCount} paid + ${body.totalBonusTickets} bonus`;
+                    } else {
+                        myEl.textContent = body.ticketCount;
+                    }
+                }
                 if (balanceEl) TobyBalance.update(balanceEl, body.newBalance);
                 if (typeof toast === 'function') {
-                    toast(`Bought ${count} tickets — total ${body.ticketCount} held.`, 'success');
+                    // Base success copy + optional bulk-bonus and
+                    // milestone callouts. Building the message in
+                    // pieces so a regression on the response shape
+                    // (missing field, zero bonus) silently degrades
+                    // to the base copy rather than printing
+                    // "undefined" into the toast.
+                    let msg = `Bought ${count} tickets — total ${body.ticketCount} held.`;
+                    if (body.bonusTicketsGranted && body.bonusTicketsGranted > 0) {
+                        msg += ` 🎁 +${body.bonusTicketsGranted} bonus from bulk-buy!`;
+                    }
+                    toast(msg, 'success');
+                    if (Array.isArray(body.milestoneBonuses)) {
+                        body.milestoneBonuses.forEach(m => {
+                            toast(
+                                `🚀 Milestone @${m.threshold} tickets sold → +${m.creditsAdded} credits to the pool!`,
+                                'success'
+                            );
+                        });
+                    }
                 }
             } catch (err) {
                 if (typeof toast === 'function') {

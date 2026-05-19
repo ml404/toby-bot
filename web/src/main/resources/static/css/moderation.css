@@ -41,14 +41,38 @@ details.config-section.is-hidden { display: none; }
    styled to look like the old in-page tabs so the visual continuity is
    preserved. The .active class is set on the link matching the
    currently rendered page. */
+/* On mobile the 8-tab bar wrapped to two rows and the last tab got
+   stranded at the right edge (no `justify-content`, so tabs packed
+   left-tight on row 2 and any leftover slid against the trailing
+   border). Switching to a single horizontal strip that scrolls is the
+   standard mobile-tab pattern and sidesteps the wrap-strand artefact
+   entirely. At ≥600px we revert to wrap so a merely-narrow desktop
+   window keeps the multi-row layout. */
 .mod-subnav {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
     border-bottom: 1px solid var(--border);
     margin-bottom: var(--space-5);
 }
+.mod-subnav::-webkit-scrollbar { height: 4px; }
+.mod-subnav::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+}
+@media (min-width: 600px) {
+    .mod-subnav {
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+}
 .mod-subnav-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
     color: var(--text-muted);
     padding: var(--space-2) var(--space-4);
     text-decoration: none;
