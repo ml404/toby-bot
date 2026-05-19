@@ -98,9 +98,37 @@ class LotteryAnnouncerTest {
     private fun captureMessageBuilder(): () -> MessageCreateData {
         val builder = slot<() -> MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), capture(builder), any())
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = capture(builder),
+                onSent = any(),
+                mentions = any(),
+            )
         } just runs
         return { builder.captured.invoke() }
+    }
+
+    /**
+     * Capture the mentions arg the announcer passes to the router.
+     * The announcer always passes a non-null ChannelMentions (with an
+     * empty userIds list for no-winners cycles), so a non-nullable
+     * slot keeps mockk's `capture(...)` overload resolution happy.
+     */
+    private fun captureMentions(): io.mockk.CapturingSlot<bot.toby.notify.ChannelMentions> {
+        val mentions = slot<bot.toby.notify.ChannelMentions>()
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = any(),
+                onSent = any(),
+                mentions = capture(mentions),
+            )
+        } just runs
+        return mentions
     }
 
     // ---- routing ----
@@ -122,14 +150,61 @@ class LotteryAnnouncerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = any(),
+                mentions = any(),
             )
         }
     }
 
     @Test
+    fun `announceCycle passes LOTTERY_DRAW_WITH_MY_TICKET mentions with winner ids`() {
+        val mentions = captureMentions()
+        val payouts = listOf(
+            database.service.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+            database.service.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
+        )
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts, totalPaid = 800L, drained = 1_000L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+        val m = mentions.captured
+        assertEquals(
+            common.notification.NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET, m.kind
+        )
+        assertEquals(listOf(1L, 2L), m.userIds)
+    }
+
+    @Test
+    fun `NoTickets cycle passes mentions with empty userIds (no winners to filter)`() {
+        val mentions = captureMentions()
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+        val m = mentions.captured
+        assertEquals(emptyList<Long>(), m.userIds, "no winners → empty mention list")
+    }
+
+    @Test
     fun `recordAnnouncement is called via onSent with the lottery id and sent message`() {
         val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = any(),
+                onSent = capture(onSent),
+                mentions = any(),
+            )
+        } just runs
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
@@ -158,7 +233,16 @@ class LotteryAnnouncerTest {
     @Test
     fun `onSent skips recordAnnouncement when openOutcome is Skipped`() {
         val onSent = slot<(Message) -> Unit>()
-        every { router.sendChannel(any(), any(), any(), any(), capture(onSent)) } just runs
+        every {
+            router.sendChannel(
+                guildId = any(),
+                route = any(),
+                originChannelId = any(),
+                message = any(),
+                onSent = capture(onSent),
+                mentions = any(),
+            )
+        } just runs
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",

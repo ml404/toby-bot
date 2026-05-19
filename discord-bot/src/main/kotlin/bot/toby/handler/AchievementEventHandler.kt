@@ -2,6 +2,7 @@ package bot.toby.handler
 
 import bot.toby.notify.NotificationRouter
 import common.events.AchievementUnlockedEvent
+import common.events.BlackjackNaturalEvent
 import common.events.DuelResolvedEvent
 import common.events.IntroSetEvent
 import common.events.LevelUpEvent
@@ -122,6 +123,19 @@ class AchievementEventHandler(
             discordId = event.discordId,
             guildId = event.guildId,
             code = "intro_set"
+        )
+    }
+
+    @EventListener
+    fun onBlackjackNatural(event: BlackjackNaturalEvent) {
+        // One-shot: natural blackjack on the deal. BlackjackService
+        // only publishes when `evaluate()` returns PLAYER_BLACKJACK,
+        // which is guaranteed natural-on-the-deal (split-hand 21 and
+        // post-hit 21 both return PLAYER_WIN instead).
+        achievementService.unlock(
+            discordId = event.discordId,
+            guildId = event.guildId,
+            code = "blackjack_natural"
         )
     }
 

@@ -1,6 +1,7 @@
 package bot.toby.command.commands.misc
 
 import common.notification.NotificationChannelKind
+import common.notification.Surface
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
@@ -22,15 +23,17 @@ class NotifyCommand @Autowired constructor(
 
     override val name: String = "notify"
     override val description: String =
-        "Manage which Toby Bot DMs you. Defaults are sensible — only opt in to the noisier ones if you want."
+        "Manage notifications. Each kind has per-surface preferences (DM, channel ping, push)."
 
     override val subCommands: List<SubcommandData> = listOf(
-        SubcommandData("list", "Show your current notification preferences."),
-        SubcommandData("set", "Turn a notification kind on or off.")
+        SubcommandData("list", "Show your current notification preferences across DM, channel, and push."),
+        SubcommandData("set", "Turn a notification kind on or off for a specific surface.")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_KIND, "Which notification to change.", true)
                     .addChoices(NotificationChannelKind.entries.map { Choice(it.displayName, it.name) }),
-                OptionData(OptionType.BOOLEAN, OPT_ON, "true = receive DMs, false = stop.", true)
+                OptionData(OptionType.STRING, OPT_SURFACE, "DM, CHANNEL, or PUSH.", true)
+                    .addChoices(Surface.entries.map { Choice(it.name, it.name) }),
+                OptionData(OptionType.BOOLEAN, OPT_ON, "true = receive on this surface, false = don't.", true)
             )
     )
 
@@ -55,18 +58,23 @@ class NotifyCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val discordId = event.user.idLong
-        val rows = prefService.listForUser(discordId, guildId).associateBy { it.channelKind }
+        // Index explicit rows by (kind, surface) for O(1) lookup below.
+        val rows = prefService.listForUser(discordId, guildId)
+            .associateBy { it.channelKind to it.surface }
         val body = buildString {
             NotificationChannelKind.entries.forEach { kind ->
-                val explicit = rows[kind.name]?.optIn
-                val effective = explicit ?: kind.defaultOptIn
-                val marker = if (effective) "✅" else "🚫"
-                val tag = if (explicit == null) " *(default)*" else ""
-                append(marker).append(" **").append(kind.displayName).append("**")
-                append(tag).append('\n')
+                append("**").append(kind.displayName).append("**\n")
                 append("> ").append(kind.description).append('\n')
+                kind.supportedSurfaces.forEach { surface ->
+                    val explicit = rows[kind.name to surface.name]?.optIn
+                    val effective = explicit ?: kind.defaultOptIn(surface)
+                    val marker = if (effective) "✅" else "🚫"
+                    val defaultTag = if (explicit == null) " *(default)*" else ""
+                    append(marker).append(' ').append(surface.name).append(defaultTag).append('\n')
+                }
+                append('\n')
             }
-            append("\nUse `/notify set <kind> <on/off>` to change a preference.")
+            append("Use `/notify set <kind> <surface> <on/off>` to change a preference.")
         }
         val embed = EmbedBuilder()
             .setTitle("Notification preferences")
@@ -82,25 +90,40 @@ class NotifyCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val kindCode = event.getOption(OPT_KIND)?.asString
+        val surfaceCode = event.getOption(OPT_SURFACE)?.asString
         val on = event.getOption(OPT_ON)?.asBoolean
-        if (kindCode == null || on == null) {
-            event.hook.replyEphemeralAndDelete("Missing kind or on/off value.", deleteDelay)
+        if (kindCode == null || surfaceCode == null || on == null) {
+            event.hook.replyEphemeralAndDelete("Missing kind, surface, or on/off value.", deleteDelay)
             return
         }
         val kind = NotificationChannelKind.fromCode(kindCode) ?: run {
             event.hook.replyEphemeralAndDelete("Unknown notification kind: $kindCode", deleteDelay)
             return
         }
-        prefService.setPref(event.user.idLong, guildId, kind, on)
+        val surface = runCatching { Surface.valueOf(surfaceCode.uppercase()) }.getOrNull() ?: run {
+            event.hook.replyEphemeralAndDelete("Unknown surface: $surfaceCode", deleteDelay)
+            return
+        }
+        if (!kind.supports(surface)) {
+            event.hook.replyEphemeralAndDelete(
+                "**${kind.displayName}** doesn't support the **${surface.name}** surface. " +
+                    "Supported: ${kind.supportedSurfaces.joinToString { it.name }}.",
+                deleteDelay
+            )
+            return
+        }
+        prefService.setPref(event.user.idLong, guildId, kind, surface, on)
         val verb = if (on) "enabled" else "disabled"
         event.hook.replyEphemeralAndDelete(
-            "**${kind.displayName}** $verb. You can change this again with `/notify set`.",
+            "**${kind.displayName}** on **${surface.name}** $verb. " +
+                "Change again with `/notify set`.",
             deleteDelay
         )
     }
 
     companion object {
         private const val OPT_KIND = "kind"
+        private const val OPT_SURFACE = "surface"
         private const val OPT_ON = "on"
     }
 }

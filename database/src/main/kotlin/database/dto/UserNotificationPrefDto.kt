@@ -9,7 +9,8 @@ import java.time.Instant
     NamedQuery(
         name = "UserNotificationPrefDto.get",
         query = "select p from UserNotificationPrefDto p " +
-                "where p.discordId = :discordId and p.guildId = :guildId and p.channelKind = :channelKind"
+                "where p.discordId = :discordId and p.guildId = :guildId " +
+                "and p.channelKind = :channelKind and p.surface = :surface"
     ),
     NamedQuery(
         name = "UserNotificationPrefDto.getByUser",
@@ -34,6 +35,10 @@ class UserNotificationPrefDto(
     @Column(name = "channel_kind")
     var channelKind: String = "",
 
+    @Id
+    @Column(name = "surface", nullable = false)
+    var surface: String = "DM",
+
     @Column(name = "opt_in", nullable = false)
     var optIn: Boolean = false,
 
@@ -44,5 +49,6 @@ class UserNotificationPrefDto(
 data class UserNotificationPrefId(
     var discordId: Long = 0,
     var guildId: Long = 0,
-    var channelKind: String = ""
+    var channelKind: String = "",
+    var surface: String = "DM",
 ) : Serializable

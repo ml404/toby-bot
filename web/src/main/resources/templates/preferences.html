@@ -9,6 +9,15 @@
     <h1 class="mb-3">Settings</h1>
 
     <section class="lb-stat" style="text-align:left;">
+        <h2 style="margin-top:0;">Notification preferences</h2>
+        <p class="muted">
+            Pick which notifications you want, per surface (DM, channel ping,
+            push). Each server has its own matrix.
+            <a th:href="@{/preferences/notifications}">Manage notifications →</a>
+        </p>
+    </section>
+
+    <section class="lb-stat" style="text-align:left;">
         <h2 style="margin-top:0;">Default server</h2>
         <p class="muted">
             Pick a default server and TobyBot will skip the "choose a server"

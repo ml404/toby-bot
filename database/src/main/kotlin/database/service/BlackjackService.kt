@@ -1,5 +1,6 @@
 package database.service
 
+import common.events.BlackjackNaturalEvent
 import database.blackjack.Blackjack
 import database.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
@@ -12,6 +13,7 @@ import database.dto.ConfigDto
 import database.persistence.BlackjackHandLogPersistence
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -59,7 +61,14 @@ class BlackjackService @Autowired constructor(
      * pays out correctly, the audit row just doesn't appear.
      */
     @Autowired(required = false) private val handLogPersistence: BlackjackHandLogPersistence? = null,
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    /**
+     * Optional event publisher (nullable + default null so legacy test
+     * constructors keep compiling). When wired by Spring, a player slot
+     * resolving to [Blackjack.Result.PLAYER_BLACKJACK] publishes a
+     * [BlackjackNaturalEvent] that the achievement engine subscribes to.
+     */
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface SoloDealOutcome {
@@ -641,6 +650,15 @@ class BlackjackService @Autowired constructor(
         for ((idx, slot) in seat.hands.withIndex()) {
             val result = blackjack.evaluate(slot.cards, table.dealer, fromSplit = slot.fromSplit)
             slot.status = terminalStatusFor(result, slot.status)
+            // Natural-on-the-deal: only PLAYER_BLACKJACK can fire here.
+            // `evaluate` returns PLAYER_WIN (not PLAYER_BLACKJACK) for
+            // split-hand 21s and post-hit 21s, so this branch always
+            // means "two-card Ace+10-value on the original deal".
+            if (result == Blackjack.Result.PLAYER_BLACKJACK) {
+                eventPublisher?.publishEvent(
+                    BlackjackNaturalEvent(discordId = seat.discordId, guildId = guildId)
+                )
+            }
             val multiplier = blackjack.multiplier(result, payoutMult)
             val handPayout = (slot.stake * multiplier).toLong()
             totalPayout += handPayout
@@ -1379,6 +1397,14 @@ class BlackjackService @Autowired constructor(
             r == Blackjack.Result.PLAYER_WIN || r == Blackjack.Result.PLAYER_BLACKJACK
         }
         val bjEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_BLACKJACK }
+        // One BlackjackNaturalEvent per natural-on-the-deal seat. Same
+        // guarantees as the solo path: `evaluate` only returns
+        // PLAYER_BLACKJACK on a two-card hand with fromSplit=false.
+        bjEntries.forEach { entry ->
+            eventPublisher?.publishEvent(
+                BlackjackNaturalEvent(discordId = entry.seat.discordId, guildId = t.guildId)
+            )
+        }
         val regularEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_WIN }
         val pushTotal = pushEntries.sumOf { it.slot.stake }
         val winnerStakeTotal = winnerEntries.sumOf { it.slot.stake }

@@ -3,6 +3,8 @@ package bot.toby.notify
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
+import common.notification.Surface
 import database.service.ConfigService
 import database.service.UserNotificationPrefService
 import net.dv8tion.jda.api.JDA
@@ -13,22 +15,29 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Single delivery gate for all user-targeted notifications.
  *
- * - [sendDm] gates DM dispatch on the per-user `user_notification_pref`
- *   row; the underlying action (tip, duel, level-up, achievement) is
- *   unaffected when the DM is dropped.
- * - [sendChannel] resolves the appropriate text channel for a
+ * Surfaces:
+ * - [sendDm] — opens a private channel and sends a Discord DM. Gated
+ *   by per-user `(kind, Surface.DM)` opt-in.
+ * - [sendChannel] — resolves the appropriate text channel for a
  *   [ChannelRouteKey] (config-key chain + system-channel fallback) and
- *   posts there. Channel routing does NOT consult the user pref store —
- *   admins disable a kind by clearing the configured channel id.
+ *   posts there. Channel posts are admin-gated by config; per-user
+ *   `(kind, Surface.CHANNEL)` opt-in suppresses the user's `<@id>`
+ *   mention via JDA's `mentionUsers(...)` allow-list when [mentions]
+ *   is supplied. The post still happens; opted-out users see the
+ *   content but don't get a notification.
+ * - [sendPush] — provider-agnostic push notification. No adapter is
+ *   wired today; the call drops with a one-shot "no push adapter wired"
+ *   WARN once per process so a misconfigured guild doesn't flood logs.
+ *   The future provider PR plugs in here.
  *
- * Both methods are best-effort. Dispatch failures (closed DMs, missing
- * channel permissions, JDA errors) are logged but never propagate, so a
- * synchronous caller (e.g. an event listener) never stalls or throws on
- * Discord REST hiccups.
+ * All methods are best-effort. Dispatch failures are logged but never
+ * propagate, so a synchronous caller (e.g. an event listener) never
+ * stalls or throws on Discord REST hiccups.
  */
 @Component
 class NotificationRouter(
@@ -37,11 +46,12 @@ class NotificationRouter(
     private val configService: ConfigService,
 ) {
     private val logger = DiscordLogger.createLogger(this::class.java)
+    private val pushAdapterMissingLogged = AtomicBoolean(false)
 
     /**
-     * Send a DM to [discordId] only if they're opted in to [kind] for
-     * [guildId]. [message] is computed lazily so we don't build embed
-     * data for users who won't see it.
+     * Send a DM to [discordId] only if they're opted in to [kind] on the
+     * DM surface for [guildId]. [message] is computed lazily so we don't
+     * build embed data for users who won't see it.
      */
     fun sendDm(
         discordId: Long,
@@ -49,7 +59,7 @@ class NotificationRouter(
         kind: NotificationChannelKind,
         message: () -> MessageCreateData
     ) {
-        if (!prefService.isOptedIn(discordId, guildId, kind)) return
+        if (!prefService.isOptedIn(discordId, guildId, kind, Surface.DM)) return
 
         val user = runCatching { jda.retrieveUserById(discordId).complete() }
             .getOrElse { err ->
@@ -82,21 +92,17 @@ class NotificationRouter(
 
     /**
      * Post [message] to the text channel chosen for [route] in [guildId].
-     * Resolution order (first writable wins):
-     *   1. `route.primaryConfigKey` — channel id from `ConfigService`.
-     *   2. Each `route.fallbackConfigKeys` in order.
-     *   3. [originChannelId] if supplied (e.g. the channel that earned
-     *      a level-up).
-     *   4. `guild.systemChannel` if [ChannelRouteKey.systemChannelFallback]
-     *      is true.
+     * Resolution chain: `route.primaryConfigKey` → each
+     * `route.fallbackConfigKeys` in order → [originChannelId] when
+     * supplied → `guild.systemChannel` (if route allows). Returns
+     * silently when no channel resolves.
      *
-     * Returns silently when no channel resolves — the caller's logic
-     * doesn't need to know. Pass [onSent] to react to the sent message
-     * (e.g. capture the message id for later edits — used by
-     * `LotteryAnnouncer.recordAnnouncement` and
-     * `WebDuelOfferNotifier.scheduleTimeoutCleanup`). [message] is built
-     * lazily so we don't pay the embed-construction cost when no channel
-     * is resolvable.
+     * When [mentions] is supplied the router filters `mentions.userIds`
+     * by per-user `(mentions.kind, Surface.CHANNEL)` opt-in and calls
+     * `.mentionUsers(*filtered.toLongArray())` on the action — opted-out
+     * users see the content but don't get notified. `EVERYONE` / `HERE`
+     * allowed-mention types set by the caller's payload are preserved
+     * (JDA's `mentionUsers` only restricts the USER set).
      */
     fun sendChannel(
         guildId: Long,
@@ -104,6 +110,7 @@ class NotificationRouter(
         originChannelId: Long? = null,
         message: () -> MessageCreateData,
         onSent: ((Message) -> Unit)? = null,
+        mentions: ChannelMentions? = null,
     ) {
         val guild = jda.getGuildById(guildId) ?: run {
             logger.warn("sendChannel for guild $guildId but bot is not in that guild; skipping ($route).")
@@ -123,7 +130,14 @@ class NotificationRouter(
             }
 
         runCatching {
-            channel.sendMessage(payload).queue(
+            var action = channel.sendMessage(payload)
+            if (mentions != null) {
+                val whitelist = mentions.userIds
+                    .filter { uid -> prefService.isOptedIn(uid, guildId, mentions.kind, Surface.CHANNEL) }
+                    .toLongArray()
+                action = action.mentionUsers(*whitelist)
+            }
+            action.queue(
                 { sent ->
                     onSent?.let { cb ->
                         runCatching { cb(sent) }.onFailure {
@@ -138,6 +152,41 @@ class NotificationRouter(
         }.onFailure {
             logger.warn("$route channel dispatch failed: ${it.message}")
         }
+    }
+
+    /**
+     * Push-notification entry point. No adapter is wired today — the
+     * call short-circuits after the opt-in check and logs "no push
+     * adapter wired" exactly once per process the first time a
+     * deliverable push lands. User opt-ins persist forward-compatibly,
+     * so the provider-adapter PR plugs in here without surprise pushes.
+     *
+     * [message] is built lazily — only when [kind] supports PUSH AND
+     * the user is opted in. No-supported-surface returns silently
+     * without logging.
+     */
+    fun sendPush(
+        discordId: Long,
+        guildId: Long,
+        kind: NotificationChannelKind,
+        message: () -> PushPayload,
+    ) {
+        if (!kind.supports(Surface.PUSH)) return
+        if (!prefService.isOptedIn(discordId, guildId, kind, Surface.PUSH)) return
+        // Build is intentional — if the caller's payload-builder is
+        // expensive we still want to short-circuit before it runs (the
+        // two guards above). Once we're past them the user wanted this
+        // push, so building is justified even when the adapter is
+        // missing (the adapter PR will use the result).
+        runCatching { message() }
+        if (pushAdapterMissingLogged.compareAndSet(false, true)) {
+            logger.warn(
+                "Push delivery requested for kind $kind (user $discordId guild $guildId) but no " +
+                    "PushAdapter is wired. Subsequent push requests will be dropped silently until " +
+                    "an adapter ships."
+            )
+        }
+        // TODO(push-adapter PR): forward to PushAdapter.deliver(...) when wired.
     }
 
     private fun resolveChannel(
@@ -174,3 +223,15 @@ class NotificationRouter(
     private fun hasSendPerms(guild: Guild, channel: TextChannel): Boolean =
         guild.selfMember.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
 }
+
+/**
+ * Declares which users the caller intends to ping via `<@id>` mentions
+ * inside a channel post. The router filters this list by per-user
+ * `(kind, Surface.CHANNEL)` opt-in and constrains JDA's user-mention
+ * whitelist accordingly — opted-out users see the post text but don't
+ * get notified.
+ */
+data class ChannelMentions(
+    val kind: NotificationChannelKind,
+    val userIds: List<Long>,
+)
