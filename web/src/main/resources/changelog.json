@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Drop broken icon asset from sw.js so macOS Firefox renders",
+    "summary": "macOS Firefox test push from `/api/push/test` showed the full happy path server-side: ``` WebPushAdapter: delivering to 2 endpoint(s) for 313049624636162059. WebPushAdapter: HTTP 201 from .../wpush/v2/gAAAAABqDCEy…; marking used. WebPushAdapter: HTTP 201 from .../wpush/v2/gAAAAABqDFP2…; marking used. POST /api/push/test … status=200 ``` …but no banner ever rendered on the laptop. The next log line is the smoking gun: ``` GET /images/toby-icon.png … status=404 ``` `sw.js` s…",
+    "emoji": "🔨",
+    "prNumber": 507
+  },
+  {
+    "date": "May 2026",
     "title": "Reward buying more tickets via three configurable incentives",
     "summary": "Some users had figured out that buying a single TICKET_WEIGHTED lottery ticket was enough to satisfy `LOTTERY_DAILY_MIN_BUYERS` and be entered — making one-ticket entries the optimal play. Rather than punishing that (e.g. raising minimums), this PR adds three additive, positive incentives that make committing more attractive than splitting. Existing `LOTTERY_DAILY_MIN_BUYERS` safeguard is untouched. All three levers are default-off so nothing changes for existing guilds un…",
     "emoji": "🎰",
