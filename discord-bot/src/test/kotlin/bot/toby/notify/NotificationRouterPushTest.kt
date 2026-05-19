@@ -14,15 +14,15 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 /**
- * Coverage for [NotificationRouter.sendPush]. Today no push adapter is
- * wired — the method is the extension point the provider-adapter PR
- * plugs into. These tests pin the contract:
+ * Coverage for [NotificationRouter.sendPush]. Two wiring modes:
  *
- *  - kinds that don't support PUSH are silent (no opt-in check, no log)
- *  - opted-out users are silent
- *  - opted-in users trigger the "no push adapter wired" WARN once per
- *    process and then drop subsequent calls silently
- *  - payload builder is invoked only after opt-in passes (laziness)
+ *  - no adapter registered (dev/CI without VAPID keys) → opted-in
+ *    push lands the one-shot "no push adapter wired" WARN and drops.
+ *  - adapter registered (WebPushAdapter present) → opted-in push is
+ *    forwarded; opted-out and unsupported pairs are still silent.
+ *
+ * In both modes the payload builder is invoked lazily — only after
+ * the supports + opt-in guards pass.
  */
 class NotificationRouterPushTest {
 
@@ -40,7 +40,8 @@ class NotificationRouterPushTest {
         configService = mockk(relaxed = true)
     }
 
-    private fun newRouter() = NotificationRouter(jda, prefService, configService)
+    private fun newRouter(adapter: PushAdapter? = null) =
+        NotificationRouter(jda, prefService, configService, adapter)
 
     /** Counts how many times the payload-builder runs. */
     private class CountingBuilder : () -> PushPayload {
@@ -51,15 +52,19 @@ class NotificationRouterPushTest {
         }
     }
 
+    // ---------- guards (apply with or without adapter) ----------
+
     @Test
     fun `kind without PUSH support short-circuits without checking opt-in`() {
         // INTRO_PROMPT is DM-only.
         val builder = CountingBuilder()
+        val adapter = mockk<PushAdapter>(relaxed = true)
 
-        newRouter().sendPush(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, builder)
+        newRouter(adapter).sendPush(discordId, guildId, NotificationChannelKind.INTRO_PROMPT, builder)
 
         assertEquals(0, builder.calls, "builder must not be invoked when surface unsupported")
         verify(exactly = 0) { prefService.isOptedIn(any(), any(), any(), any()) }
+        verify(exactly = 0) { adapter.deliver(any(), any()) }
     }
 
     @Test
@@ -68,25 +73,26 @@ class NotificationRouterPushTest {
             prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
         } returns false
         val builder = CountingBuilder()
+        val adapter = mockk<PushAdapter>(relaxed = true)
 
-        newRouter().sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, builder)
+        newRouter(adapter).sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, builder)
 
         assertEquals(0, builder.calls)
+        verify(exactly = 0) { adapter.deliver(any(), any()) }
     }
 
+    // ---------- adapter NOT wired ----------
+
     @Test
-    fun `opted-in user invokes the builder and triggers the missing-adapter warning`() {
+    fun `opted-in user with no adapter invokes the builder and triggers the missing-adapter warning`() {
         every {
             prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
         } returns true
         val builder = CountingBuilder()
 
-        newRouter().sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, builder)
+        newRouter(adapter = null).sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, builder)
 
         assertEquals(1, builder.calls, "builder runs once when opt-in passes")
-        // No assertion on log output here — DiscordLogger is package-private.
-        // The behavioural promise is verified by `logs once per process`
-        // below.
     }
 
     @Test
@@ -94,20 +100,61 @@ class NotificationRouterPushTest {
         every {
             prefService.isOptedIn(any(), guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
         } returns true
-        val router = newRouter()
+        val router = newRouter(adapter = null)
 
-        // Hit the router many times — only ONE missing-adapter log.
-        // Verification is structural: we re-use one router instance and
-        // check that the AtomicBoolean state flips exactly once. We
-        // can't inspect log output directly, but the public contract is
-        // that all calls beyond the first are silent drops. This test
-        // mainly guards against the AtomicBoolean being reset per-call.
         repeat(10) { i ->
             val builder = CountingBuilder()
             router.sendPush(i.toLong() + 1L, guildId, NotificationChannelKind.PRICE_ALERT, builder)
             assertEquals(1, builder.calls, "builder runs for each opt-in passing call")
         }
-        // Reaching this point without throwing is the contract: every
-        // call short-circuits cleanly post-warning.
+        // No throw across 10 calls = the AtomicBoolean flipped exactly once.
+    }
+
+    // ---------- adapter WIRED ----------
+
+    @Test
+    fun `opted-in user with adapter forwards payload to adapter deliver`() {
+        every {
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
+        } returns true
+        val adapter = mockk<PushAdapter>(relaxed = true)
+        val builder = CountingBuilder()
+
+        newRouter(adapter).sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, builder)
+
+        assertEquals(1, builder.calls)
+        verify(exactly = 1) {
+            adapter.deliver(
+                discordId,
+                match<PushPayload> { it.title == "t" && it.body == "b" }
+            )
+        }
+    }
+
+    @Test
+    fun `adapter exception is swallowed and does not propagate to caller`() {
+        every {
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
+        } returns true
+        val adapter = mockk<PushAdapter>().also {
+            every { it.deliver(any(), any()) } throws RuntimeException("simulated")
+        }
+        // No throw = router caught it.
+        newRouter(adapter).sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, CountingBuilder())
+        verify(exactly = 1) { adapter.deliver(discordId, any()) }
+    }
+
+    @Test
+    fun `payload builder failure does not invoke the adapter`() {
+        every {
+            prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
+        } returns true
+        val adapter = mockk<PushAdapter>(relaxed = true)
+
+        newRouter(adapter).sendPush(
+            discordId, guildId, NotificationChannelKind.PRICE_ALERT
+        ) { throw RuntimeException("build broken") }
+
+        verify(exactly = 0) { adapter.deliver(any(), any()) }
     }
 }
