@@ -14,9 +14,13 @@
 .economy-price-value {
     font-size: 2.25rem;
     font-weight: 700;
-    color: var(--heading);
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 .economy-price-change {
@@ -25,8 +29,8 @@
     font-variant-numeric: tabular-nums;
 }
 
-.economy-price-change.up { color: var(--success); }
-.economy-price-change.down { color: var(--danger); }
+.economy-price-change.up { color: var(--buy); }
+.economy-price-change.down { color: var(--sell); }
 
 .economy-price-fee {
     font-size: 0.8rem;
@@ -310,12 +314,12 @@
 }
 .economy-watch-side-buy {
     color: var(--buy);
-    background: rgba(87, 242, 135, 0.12);
+    background: var(--buy-soft);
     border-color: rgba(87, 242, 135, 0.45);
 }
 .economy-watch-side-sell {
     color: var(--sell);
-    background: rgba(237, 66, 69, 0.12);
+    background: var(--sell-soft);
     border-color: rgba(237, 66, 69, 0.45);
 }
 
@@ -355,9 +359,12 @@
 .economy-watch-status.status-armed { color: #c8d0e0; }
 .economy-watch-status.status-fire-now {
     color: var(--buy);
-    background: rgba(87, 242, 135, 0.14);
+    background: var(--buy-soft);
     border-color: rgba(87, 242, 135, 0.35);
     animation: economy-watch-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .economy-watch-status.status-fire-now { animation: none; }
 }
 .economy-watch-status.status-fired {
     color: #FAA61A;

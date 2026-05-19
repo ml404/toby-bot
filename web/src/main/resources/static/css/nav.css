@@ -14,8 +14,14 @@
    (body.nav-open).
    ============================================================ */
 
+/* Top nav surface. Adds a soft horizontal accent sheen at the bottom
+   (1px gradient strip overlaid via ::after) so the divider reads as a
+   designed line, not a default 1px border. The hairline is decorative
+   and pointer-events:none so it never intercepts clicks on nav items. */
 body > nav {
-    background: var(--bg-elevated);
+    background:
+        linear-gradient(180deg, rgba(88,101,242,0.03), transparent 70%),
+        var(--bg-elevated);
     padding: 14px 24px;
     display: flex;
     justify-content: space-between;
@@ -24,6 +30,17 @@ body > nav {
     gap: var(--space-3);
     position: relative;
     z-index: 10;
+}
+body > nav::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: var(--gradient-accent);
+    opacity: 0.35;
+    pointer-events: none;
 }
 .brand {
     font-weight: 700;

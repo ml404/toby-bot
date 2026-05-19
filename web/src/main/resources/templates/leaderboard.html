@@ -37,7 +37,7 @@
              th:if="${not #lists.isEmpty(view.podium)}"
              th:with="isMonth=${view.sort.name() == 'THIS_MONTH'}">
         <!-- Render in order: 2nd, 1st, 3rd so 1st appears centered and elevated -->
-        <div class="lb-podium-card lb-podium-2" th:if="${#lists.size(view.podium) >= 2}">
+        <div class="lb-podium-card lb-podium-2" data-reveal th:if="${#lists.size(view.podium) >= 2}">
             <div class="lb-podium-rank">2</div>
             <div class="lb-podium-medal">🥈</div>
             <img th:if="${view.podium[1].avatarUrl != null}"
@@ -63,7 +63,7 @@
             <div class="lb-podium-voice" th:text="${view.podium[1].voiceThisMonthDisplay} + ' voice'">0m voice</div>
         </div>
 
-        <div class="lb-podium-card lb-podium-1" th:if="${#lists.size(view.podium) >= 1}">
+        <div class="lb-podium-card lb-podium-1" data-reveal th:if="${#lists.size(view.podium) >= 1}">
             <div class="lb-podium-rank">1</div>
             <div class="lb-podium-medal">🥇</div>
             <img th:if="${view.podium[0].avatarUrl != null}"
@@ -89,7 +89,7 @@
             <div class="lb-podium-voice" th:text="${view.podium[0].voiceThisMonthDisplay} + ' voice'">0m voice</div>
         </div>
 
-        <div class="lb-podium-card lb-podium-3" th:if="${#lists.size(view.podium) >= 3}">
+        <div class="lb-podium-card lb-podium-3" data-reveal th:if="${#lists.size(view.podium) >= 3}">
             <div class="lb-podium-rank">3</div>
             <div class="lb-podium-medal">🥉</div>
             <img th:if="${view.podium[2].avatarUrl != null}"

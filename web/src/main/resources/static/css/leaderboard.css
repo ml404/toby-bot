@@ -219,19 +219,35 @@
     gap: 6px;
     position: relative;
 }
+/* Podium cards use the medal tokens for tone, plus a subtle radial
+   sheen via background-image so 1st-place has visible "metal" without
+   needing a gradient overlay. The reveal animation fires on page
+   load via data-reveal so the three cards fade up rather than popping. */
 .lb-podium-1 {
-    border-color: #FFD700;
-    box-shadow: 0 0 0 1px #FFD70033, 0 4px 20px #00000044;
+    border-color: var(--medal-gold);
+    box-shadow:
+        0 0 0 1px rgba(255, 215, 0, 0.2),
+        var(--glow-gold),
+        0 4px 20px rgba(0, 0, 0, 0.28);
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(255, 215, 0, 0.08) 0%, transparent 60%),
+        var(--bg-elevated);
     padding-top: calc(var(--space-4) + 10px);
     padding-bottom: calc(var(--space-5) + 10px);
     order: 2;
 }
 .lb-podium-2 {
-    border-color: #C0C0C0;
+    border-color: var(--medal-silver);
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(192, 192, 192, 0.06) 0%, transparent 60%),
+        var(--bg-elevated);
     order: 1;
 }
 .lb-podium-3 {
-    border-color: #CD7F32;
+    border-color: var(--medal-bronze);
+    background:
+        radial-gradient(120% 80% at 50% 0%, rgba(205, 127, 50, 0.06) 0%, transparent 60%),
+        var(--bg-elevated);
     order: 3;
 }
 .lb-podium-rank {
@@ -258,9 +274,9 @@
 }
 .lb-podium-1 .lb-podium-name { font-size: 1.15rem; }
 .lb-podium-credits { color: var(--text); font-size: 0.95rem; }
-.lb-podium-credits strong { color: #FFD700; font-size: 1.1rem; }
+.lb-podium-credits strong { color: var(--medal-gold); font-size: 1.1rem; }
 .lb-podium-month {
-    color: #2ECC71;
+    color: var(--success);
     font-size: 0.85rem;
     font-weight: 600;
 }
