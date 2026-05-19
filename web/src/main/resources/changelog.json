@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Ratchet level/streak progress + regroup /achievements display by category",
+    "summary": "Two complaints addressed: 1. **Progress on `level_*` (and `streak_*`) achievements is wrong.** The catalog gives these milestones `threshold = 5/25/50` (and `3/7/30`), so the locked display tries to show `(progress/threshold)` — but the handler called `achievementService.unlock(...)` on milestone-cross, which skips the progress table entirely. Result: locked level/streak entries always rendered as `(0/5)`, `(0/25)`, etc., regardless of the user's actual level or streak. Co…",
+    "emoji": "🔨",
+    "prNumber": 498
+  },
+  {
+    "date": "May 2026",
     "title": "Surface settings + notification preferences in navbar",
     "summary": "The notification-preferences feature shipped end-to-end in #491/#493 (backend service, REST endpoints in `EngagementApiController`, MVC controller, templates, JS), but the only navbar path to `/preferences` was the small default-server star chip in the nav-identity block — whose label is the current default-server name and whose tooltip says \"click to change default server.\" Nothing in the navbar said Settings, Preferences, or Notifications, so the matrix was effectively i…",
     "emoji": "✨",
