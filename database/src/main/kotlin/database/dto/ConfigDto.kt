@@ -303,6 +303,50 @@ class ConfigDto(
         // visible nudge to buy tickets; admins can dial it down per-server.
         LOTTERY_PING_MODE("LOTTERY_PING_MODE"),
 
+        // Bulk-buy bonus tiers for TICKET_WEIGHTED lotteries. Each tier
+        // is a (buy threshold, bonus tickets) pair: a single
+        // /lottery buy N call that hits the highest matching `BUY`
+        // grants `BONUS` free tickets credited to the user's
+        // bonus_tickets total. Splitting the same N across multiple
+        // smaller buys earns nothing — that's the anti-strategy hook.
+        // All zero by default → feature disabled. A tier with BUY=0 is
+        // ignored. Configurable per-guild via the web moderation page.
+        LOTTERY_BULK_TIER1_BUY("LOTTERY_BULK_TIER1_BUY"),
+        LOTTERY_BULK_TIER1_BONUS("LOTTERY_BULK_TIER1_BONUS"),
+        LOTTERY_BULK_TIER2_BUY("LOTTERY_BULK_TIER2_BUY"),
+        LOTTERY_BULK_TIER2_BONUS("LOTTERY_BULK_TIER2_BONUS"),
+        LOTTERY_BULK_TIER3_BUY("LOTTERY_BULK_TIER3_BUY"),
+        LOTTERY_BULK_TIER3_BONUS("LOTTERY_BULK_TIER3_BONUS"),
+
+        // Volume-multiplier tiers for TICKET_WEIGHTED lotteries. Each
+        // tier is a (total-tickets threshold, multiplier in basis
+        // points) pair: at draw time, a user holding >= `TOTAL` tickets
+        // has every one of their tickets weighted by `BP/10000`
+        // (10000 = 1×, 12500 = 1.25×, etc). Bonus tickets and
+        // multiplier stack. All zero by default. BP is clamped to
+        // [10000, 50000] (1× to 5×) so a typo can't catastrophise.
+        LOTTERY_MULT_TIER1_TOTAL("LOTTERY_MULT_TIER1_TOTAL"),
+        LOTTERY_MULT_TIER1_BP("LOTTERY_MULT_TIER1_BP"),
+        LOTTERY_MULT_TIER2_TOTAL("LOTTERY_MULT_TIER2_TOTAL"),
+        LOTTERY_MULT_TIER2_BP("LOTTERY_MULT_TIER2_BP"),
+        LOTTERY_MULT_TIER3_TOTAL("LOTTERY_MULT_TIER3_TOTAL"),
+        LOTTERY_MULT_TIER3_BP("LOTTERY_MULT_TIER3_BP"),
+
+        // Pool-growth milestone tiers for TICKET_WEIGHTED lotteries.
+        // Each tier is a (guild-wide ticket-count threshold, % of the
+        // current jackpot pool to absorb) pair. When the lottery's
+        // running ticket count crosses a threshold for the first time
+        // (recorded in milestones_fired), that % of the jackpot is
+        // pulled into the lottery pool. Builds shared FOMO. All zero
+        // by default. PCT is clamped to [0, 50] so a single milestone
+        // can never drain more than half the jackpot in one buy.
+        LOTTERY_MILESTONE1_TICKETS("LOTTERY_MILESTONE1_TICKETS"),
+        LOTTERY_MILESTONE1_PCT("LOTTERY_MILESTONE1_PCT"),
+        LOTTERY_MILESTONE2_TICKETS("LOTTERY_MILESTONE2_TICKETS"),
+        LOTTERY_MILESTONE2_PCT("LOTTERY_MILESTONE2_PCT"),
+        LOTTERY_MILESTONE3_TICKETS("LOTTERY_MILESTONE3_TICKETS"),
+        LOTTERY_MILESTONE3_PCT("LOTTERY_MILESTONE3_PCT"),
+
         // Daily streak XP reward shape. Computed as
         // `min(base + per_day_bonus * (streak - 1), max)` inside
         // DefaultLoginStreakService. Streak rewards bypass DAILY_XP_CAP.

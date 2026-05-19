@@ -308,6 +308,101 @@ class ModerationTemplateRowsTest {
         )
     }
 
+    @Test
+    fun `lottery template surfaces every participation incentive tier as an editable row`() {
+        // Same regression class as the blackjack / poker / jackpot
+        // groups above: the 18 incentive keys (3 tiers × 2 fields ×
+        // 3 levers) were added to ConfigDto.Configurations to drive
+        // the new "Participation incentives" UI, and the moderation
+        // page must carry a `<input>` row for each so admins can edit
+        // them. The bidirectional guard below picks up missing rows
+        // too, but this presence check pins the wiring per-key with a
+        // clearer failure message.
+        val keys = listOf(
+            ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER3_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER3_BONUS,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER1_TOTAL,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER2_TOTAL,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER2_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER3_TOTAL,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER3_BP,
+            ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS,
+            ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE2_TICKETS,
+            ConfigDto.Configurations.LOTTERY_MILESTONE2_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE3_TICKETS,
+            ConfigDto.Configurations.LOTTERY_MILESTONE3_PCT,
+        )
+        for (key in keys) {
+            assertTrue(
+                lotteryHtml.contains("data-key=\"${key.name}\""),
+                "lottery.html should have a config-row for ${key.name} in the Participation incentives section"
+            )
+        }
+    }
+
+    @Test
+    fun `lottery template has a participation incentives details block carrying all three levers`() {
+        // The new section sits inside its own collapsible block so
+        // admins can scan past it when tuning the daily prize
+        // parameters. The block's headings group the tiers by lever
+        // (bulk / multiplier / milestone) — losing any of them would
+        // flatten the section back to a wall of identical-looking
+        // numeric inputs.
+        val sectionStart = lotteryHtml.indexOf("<summary>Participation incentives")
+        assertTrue(sectionStart >= 0, "expected a Participation incentives section header")
+        val sectionEnd = lotteryHtml.indexOf("</details>", sectionStart)
+        assertTrue(sectionEnd > sectionStart, "Participation incentives section not terminated")
+        val sectionHtml = lotteryHtml.substring(sectionStart, sectionEnd)
+        for (heading in listOf(
+            "Bulk bonus tickets",
+            "Volume weight multiplier",
+            "Pool-growth milestones",
+        )) {
+            assertTrue(
+                sectionHtml.contains(heading),
+                "expected '$heading' subhead inside the Participation incentives section",
+            )
+        }
+        // All 18 tier inputs must live inside this section (not
+        // scattered across the page).
+        for (key in listOf(
+            "LOTTERY_BULK_TIER1_BUY",
+            "LOTTERY_MULT_TIER1_BP",
+            "LOTTERY_MILESTONE1_PCT",
+        )) {
+            assertTrue(
+                sectionHtml.contains("data-key=\"$key\""),
+                "$key should live inside the Participation incentives section",
+            )
+        }
+    }
+
+    @Test
+    fun `lottery template renders active rules summary backed by overview lotteryIncentives`() {
+        // The "Active rules" lines (one per lever) read the resolved
+        // tier projection off `overview.lotteryIncentives`. If the
+        // backing field is renamed or removed, every active-rules
+        // expression in the template fails at page render. Pin the
+        // three Thymeleaf expressions so a backend rename forces a
+        // matching template update.
+        for (expr in listOf(
+            "overview.lotteryIncentives.bulkTiers",
+            "overview.lotteryIncentives.multiplierTiers",
+            "overview.lotteryIncentives.poolMilestones",
+        )) {
+            assertTrue(
+                lotteryHtml.contains(expr),
+                "lottery.html should reference $expr to render the Active rules summary",
+            )
+        }
+    }
+
     /**
      * Bidirectional guard: every [ConfigDto.Configurations] enum case
      * (minus an explicit allowlist of internal keys) must appear as a

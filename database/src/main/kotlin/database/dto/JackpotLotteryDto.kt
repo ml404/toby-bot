@@ -108,6 +108,27 @@ class JackpotLotteryDto(
      */
     @Column(name = "announced_pool_amount")
     var announcedPoolAmount: Long? = null,
+
+    /**
+     * Stable digest (SHA-256 hex) of the participation-incentive tiers
+     * that were live at the most recent announce/refresh. Lets the
+     * refresh job detect a mid-lottery config edit (web UI tier
+     * change) and re-render the "Active incentives" embed field even
+     * when [announcedPoolAmount] hasn't moved. Null before the first
+     * announce; cleared together with [announcedPoolAmount] when the
+     * announcement reference is dropped.
+     */
+    @Column(name = "announced_incentives_digest", length = 64)
+    var announcedIncentivesDigest: String? = null,
+
+    /**
+     * Highest guild-wide ticket-count milestone that has already paid
+     * out on this lottery. Set on each `/lottery buy` to the highest
+     * threshold the new running total crossed, so each milestone fires
+     * exactly once per lottery row. 0 means no milestone has fired.
+     */
+    @Column(name = "milestones_fired", nullable = false)
+    var milestonesFired: Long = 0,
 ) : Serializable {
 
     companion object {

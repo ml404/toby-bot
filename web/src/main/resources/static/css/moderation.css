@@ -224,6 +224,19 @@ details.config-section.is-hidden { display: none; }
 .config-section .config-grid {
     padding: 0 var(--space-4) var(--space-4);
 }
+/* Sub-headings inside a .config-section that hosts more than one
+   sub-grid (e.g. the lottery incentives section with three tier
+   groups). Keeps the section visually grouped while letting each
+   sub-grid breathe vertically. */
+.config-section .config-subhead {
+    margin: var(--space-4) var(--space-4) var(--space-2);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.config-section .config-subhead + p.muted {
+    margin: 0 var(--space-4) var(--space-2);
+}
 .config-grid {
     display: grid;
     gap: var(--space-3);

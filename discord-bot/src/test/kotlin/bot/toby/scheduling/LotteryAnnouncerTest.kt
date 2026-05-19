@@ -326,12 +326,20 @@ class LotteryAnnouncerTest {
         }
         onSent.captured.invoke(sent)
 
+        // WEIGHTED mode captures a live incentives digest at announce
+        // time so the next refresh tick can detect a tier edit without
+        // a redundant edit for the unchanged baseline. With no tiers
+        // configured the digest is still non-null (SHA-256 of the
+        // empty-tier payload), and the announcer always persists it
+        // alongside the pool watermark.
+        val expectedDigest = announcer.incentivesDigest(guildId)
         verify(exactly = 1) {
             jackpotLotteryService.recordAnnouncement(
                 lotteryId = 42L,
                 channelId = 777L,
                 messageId = 9999L,
                 pool = 500L,
+                incentivesDigest = expectedDigest,
             )
         }
     }
@@ -357,7 +365,9 @@ class LotteryAnnouncerTest {
         )
         onSent.captured.invoke(mockk(relaxed = true))
 
-        verify(exactly = 0) { jackpotLotteryService.recordAnnouncement(any(), any(), any(), any()) }
+        verify(exactly = 0) {
+            jackpotLotteryService.recordAnnouncement(any(), any(), any(), any(), any())
+        }
     }
 
     // ---- embed body + pings ----
@@ -531,6 +541,129 @@ class LotteryAnnouncerTest {
         assertTrue(data.content.contains("<@1>"))
     }
 
+    // ---- participation-incentive surfacing ----
+
+    @Test
+    fun `weighted open embed renders 'None' for the active incentives field when nothing configured`() {
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .firstOrNull { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+        assertTrue(incentives != null, "weighted embed always carries the active-incentives field")
+        assertEquals("None", incentives!!.value)
+    }
+
+    @Test
+    fun `weighted open embed lists only configured incentive tiers`() {
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY, "25")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS, "8")
+        // Tier 3 left unset → must not appear in the embed.
+        stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS, "50")
+        stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT, "10")
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+            .value!!
+        assertTrue(incentives.contains("buy ≥10"))
+        assertTrue(incentives.contains("buy ≥25"))
+        assertTrue(incentives.contains("@50 tickets"))
+        assertFalse(incentives.contains("Tier 3"), "unset tiers are not surfaced")
+    }
+
+    @Test
+    fun `number-match open embed omits the active incentives field`() {
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "NUMBER_MATCH",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .firstOrNull { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+        assertTrue(incentives == null, "incentives apply to TICKET_WEIGHTED only")
+    }
+
+    @Test
+    fun `weighted result embed reports bonus impact and milestone fired`() {
+        val build = captureMessageBuilder()
+        val payouts = listOf(
+            JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 30, amount = 800L),
+        )
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts,
+                totalPaid = 800L,
+                drained = 1_000L,
+                bonusTicketsAwarded = 11L,
+                highestMilestoneFired = 50L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val yesterday = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
+            .value!!
+        assertTrue(yesterday.contains("11"), "bonus ticket count surfaced: $yesterday")
+        assertTrue(yesterday.contains("50"), "milestone threshold surfaced: $yesterday")
+        assertTrue(yesterday.lowercase().contains("milestone"))
+    }
+
+    @Test
+    fun `weighted result embed omits bonus impact line when nothing happened`() {
+        val build = captureMessageBuilder()
+        val payouts = listOf(
+            JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+        )
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts, totalPaid = 500L, drained = 500L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val yesterday = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
+            .value!!
+        assertFalse(yesterday.contains("Milestones"), "no milestone fired, no line surfaced")
+        assertFalse(yesterday.contains("Bulk bonus impact"), "no bonuses awarded, no line surfaced")
+    }
+
     // ---- refreshAnnouncement (unchanged code path; not routed through NotificationRouter) ----
 
     private fun openLottery(
@@ -540,6 +673,7 @@ class LotteryAnnouncerTest {
         announcementMessageId: Long? = 999L,
         announcementChannelId: Long? = 777L,
         mode: String = JackpotLotteryDto.MODE_NUMBER_MATCH,
+        announcedIncentivesDigest: String? = null,
     ) = JackpotLotteryDto(
         id = id,
         guildId = guildId,
@@ -550,6 +684,7 @@ class LotteryAnnouncerTest {
         it.announcementMessageId = announcementMessageId
         it.announcementChannelId = announcementChannelId
         it.announcedPoolAmount = announcedPoolAmount
+        it.announcedIncentivesDigest = announcedIncentivesDigest
     }
 
     @Nested
@@ -562,7 +697,7 @@ class LotteryAnnouncerTest {
             announcer.refreshAnnouncement(guild, lottery)
 
             verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
-            verify(exactly = 0) { jackpotLotteryService.updateAnnouncedPool(any(), any()) }
+            verify(exactly = 0) { jackpotLotteryService.updateAnnouncementWatermarks(any(), any(), any()) }
         }
 
         @Test
@@ -641,7 +776,9 @@ class LotteryAnnouncerTest {
             val yesterdayField = editedEmbedSlot.captured.fields.first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
             assertTrue(yesterdayField.value!!.contains("No tickets"), "yesterday's field should be preserved")
 
-            verify(exactly = 1) { jackpotLotteryService.updateAnnouncedPool(1L, 1_500L) }
+            verify(exactly = 1) {
+                jackpotLotteryService.updateAnnouncementWatermarks(1L, 1_500L, any())
+            }
         }
 
         @Test
@@ -704,6 +841,114 @@ class LotteryAnnouncerTest {
         }
 
         @Test
+        fun `weighted refresh fires when only the incentive config changed (pool flat)`() {
+            // Lottery already had a baseline announce with no incentives
+            // configured. Admin then enables a bulk tier via the web UI;
+            // pool didn't move but the embed must update on the next tick.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**1000** credits in the pool · Ticket: **50** · Mode: **Top-3 weighted** · Closes 24h.",
+                    false,
+                )
+                .addField(LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD, "None", false)
+                .build()
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            // Pool flat (1000 == 1000), so the only reason to refresh is
+            // the incentives digest changing. Baseline digest = null;
+            // live digest is non-null because tier 1 is now active.
+            val lottery = openLottery(
+                poolAmount = 1_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+                announcedIncentivesDigest = null,
+            )
+            announcer.refreshAnnouncement(guild, lottery)
+
+            val incentives = editedEmbedSlot.captured.fields
+                .first { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+                .value!!
+            assertTrue(incentives.contains("buy ≥10"), "live tier surfaces: $incentives")
+            assertFalse(incentives == "None", "stale baseline value must be replaced")
+            verify(exactly = 1) {
+                jackpotLotteryService.updateAnnouncementWatermarks(1L, 1_000L, any())
+            }
+        }
+
+        @Test
+        fun `weighted refresh short-circuits when pool and digest both match`() {
+            // Same TICKET_WEIGHTED setup as above but the persisted
+            // digest already matches the live config — no edit needed.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+
+            val liveDigest = announcer.incentivesDigest(guildId)
+            val lottery = openLottery(
+                poolAmount = 1_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+                announcedIncentivesDigest = liveDigest,
+            )
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
+            verify(exactly = 0) {
+                jackpotLotteryService.updateAnnouncementWatermarks(any(), any(), any())
+            }
+        }
+
+        @Test
+        fun `incentivesDigest is deterministic for the same configured tiers`() {
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS, "50")
+            stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT, "10")
+
+            val first = announcer.incentivesDigest(guildId)
+            val second = announcer.incentivesDigest(guildId)
+            assertEquals(first, second)
+            assertTrue(first.length == 64, "SHA-256 hex is 64 chars, got ${first.length}")
+        }
+
+        @Test
+        fun `incentivesDigest changes when any tier value changes`() {
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            val before = announcer.incentivesDigest(guildId)
+
+            // Move the bonus from 3 to 5 — different config, different digest.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "5")
+            val after = announcer.incentivesDigest(guildId)
+
+            assertFalse(before == after, "edited tier must produce a different digest")
+        }
+
+        @Test
         fun `clears announcement ref on UNKNOWN_MESSAGE error`() {
             every { guild.getTextChannelById(777L) } returns channel
 
@@ -723,7 +968,7 @@ class LotteryAnnouncerTest {
             announcer.refreshAnnouncement(guild, lottery)
 
             verify(exactly = 1) { jackpotLotteryService.clearAnnouncement(1L) }
-            verify(exactly = 0) { jackpotLotteryService.updateAnnouncedPool(any(), any()) }
+            verify(exactly = 0) { jackpotLotteryService.updateAnnouncementWatermarks(any(), any(), any()) }
         }
     }
 }

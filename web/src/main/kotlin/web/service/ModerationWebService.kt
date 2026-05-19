@@ -7,6 +7,7 @@ import database.dto.UserDto
 import database.dto.LevelRoleRewardDto
 import database.service.ConfigService
 import database.service.LevelRoleRewardService
+import database.service.LotteryHelper
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
 import database.service.UbiDailyService
@@ -156,6 +157,22 @@ class ModerationWebService(
             cfg.name to configService.getConfigByName(cfg.configValue, guild.id)?.value
         }
 
+        // Resolve the incentive tier triples through LotteryHelper so the
+        // template, the buy-time service, and the announcer all share one
+        // definition of "active" — no risk of the web summary saying
+        // "Tier 2 is on" while the embed silently ignores it.
+        val guildIdLong = guild.id.toLongOrNull()
+        val incentives = if (guildIdLong == null) LotteryIncentivesView.empty() else {
+            LotteryIncentivesView(
+                bulkTiers = LotteryHelper.bulkBonusTiers(configService, guildIdLong)
+                    .map { (buy, bonus) -> BulkBonusTierView(buy = buy, bonus = bonus) },
+                multiplierTiers = LotteryHelper.volumeMultiplierTiers(configService, guildIdLong)
+                    .map { (total, bp) -> MultiplierTierView(total = total, bp = bp) },
+                poolMilestones = LotteryHelper.poolMilestones(configService, guildIdLong)
+                    .map { (tickets, pct) -> PoolMilestoneView(tickets = tickets, pct = pct) },
+            )
+        }
+
         return GuildOverview(
             guildId = guild.id,
             guildName = guild.name,
@@ -163,7 +180,8 @@ class ModerationWebService(
             voiceChannels = voiceChannels,
             textChannels = textChannels,
             categories = categories,
-            config = configByKey
+            config = configByKey,
+            lotteryIncentives = incentives,
         )
     }
 
@@ -989,6 +1007,69 @@ class ModerationWebService(
                 }
                 v
             }
+            // Bulk-buy bonus tiers (TICKET_WEIGHTED only). Both halves
+            // accept any non-negative whole number; 0 on `BUY` disables
+            // that tier cleanly. Capped at a generous 100k so a typo
+            // can't conjure absurd values, but big enough that a future
+            // mega-server isn't blocked.
+            ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER3_BUY,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER3_BONUS -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number (0 disables this tier; max 100000)."
+                if (n !in 0L..100_000L) return "Value must be between 0 and 100,000."
+                n.toString()
+            }
+            // Volume-multiplier tier thresholds — whole-number ticket
+            // counts, 0 disables. Capped at 100k for the same reason as
+            // the bulk thresholds.
+            ConfigDto.Configurations.LOTTERY_MULT_TIER1_TOTAL,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER2_TOTAL,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER3_TOTAL -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number (0 disables this tier; max 100000)."
+                if (n !in 0L..100_000L) return "Value must be between 0 and 100,000."
+                n.toString()
+            }
+            // Volume-multiplier basis points. 10000 = 1×, 12500 = 1.25×,
+            // 50000 = 5×. We reject sub-1× values so a tier can't
+            // *reduce* a player's weight; 0 is a special "treat as
+            // unset" sentinel the helper coerces upward to identity.
+            ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER2_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER3_BP -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number basis-point value (10000 = 1×, max 50000 = 5×)."
+                if (n != 0 && n !in 10_000..50_000) {
+                    return "Value must be 0 (unset) or between 10000 and 50000."
+                }
+                n.toString()
+            }
+            // Pool-milestone ticket thresholds. 0 disables. 100k cap
+            // matches the bulk thresholds.
+            ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS,
+            ConfigDto.Configurations.LOTTERY_MILESTONE2_TICKETS,
+            ConfigDto.Configurations.LOTTERY_MILESTONE3_TICKETS -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number (0 disables this tier; max 100000)."
+                if (n !in 0L..100_000L) return "Value must be between 0 and 100,000."
+                n.toString()
+            }
+            // Pool-milestone % of jackpot. Capped at 50 so a single
+            // milestone can never drain more than half the jackpot in
+            // one purchase — protects the pool from typo-shaped
+            // catastrophe.
+            ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE2_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE3_PCT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number percentage (0-50)."
+                if (n !in 0..50) return "Value must be between 0 and 50."
+                n.toString()
+            }
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID,
             ConfigDto.Configurations.ACHIEVEMENT_ANNOUNCE_CHANNEL -> {
@@ -1378,8 +1459,35 @@ data class GuildOverview(
     val voiceChannels: List<VoiceChannelInfo>,
     val textChannels: List<TextChannelInfo>,
     val categories: List<CategoryInfo> = emptyList(),
-    val config: Map<String, String?>
+    val config: Map<String, String?>,
+    val lotteryIncentives: LotteryIncentivesView = LotteryIncentivesView.empty(),
 )
+
+/**
+ * Resolved view of the participation-incentive config for the lottery
+ * page. Each list contains only the tiers that are actually active
+ * (threshold > 0) — the template uses `.size` and `.isEmpty()` to
+ * render the "Active rules" summary, so unset/zero tiers vanish.
+ *
+ * Sourced from the same [database.service.LotteryHelper] getters that
+ * [database.service.JackpotLotteryService.buyTickets] and
+ * [bot.toby.scheduling.LotteryAnnouncer] read, so the web summary
+ * can't drift from runtime behaviour.
+ */
+data class LotteryIncentivesView(
+    val bulkTiers: List<BulkBonusTierView>,
+    val multiplierTiers: List<MultiplierTierView>,
+    val poolMilestones: List<PoolMilestoneView>,
+) {
+    companion object {
+        fun empty(): LotteryIncentivesView =
+            LotteryIncentivesView(emptyList(), emptyList(), emptyList())
+    }
+}
+
+data class BulkBonusTierView(val buy: Long, val bonus: Long)
+data class MultiplierTierView(val total: Long, val bp: Int)
+data class PoolMilestoneView(val tickets: Long, val pct: Long)
 
 data class ModeratedMember(
     val id: String,

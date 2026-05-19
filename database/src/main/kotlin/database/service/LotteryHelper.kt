@@ -192,4 +192,126 @@ object LotteryHelper {
             else -> DEFAULT_PING_MODE
         }
     }
+
+    // ===================================================================
+    // Participation-incentive tiers (TICKET_WEIGHTED only).
+    //
+    // Three independent levers wired through three config-pair triples.
+    // Each tier is a (threshold, payoff) pair stored as separate config
+    // rows so admins can edit and audit each value individually in the
+    // web UI. A tier with a 0/missing threshold is treated as disabled.
+    // Tiers are always returned sorted ascending so callers can iterate
+    // and pick "the highest matched tier" with a single scan.
+    // ===================================================================
+
+    /** Multiplier basis-point identity — 10000 bp = 1.0×. */
+    const val MULTIPLIER_BP_IDENTITY: Int = 10_000
+
+    /** Clamp ceiling for a multiplier tier — 5.0×. */
+    const val MULTIPLIER_BP_MAX: Int = 50_000
+
+    /** Clamp ceiling for a single milestone — half the jackpot. */
+    const val MILESTONE_PCT_MAX: Int = 50
+
+    /** Bulk-buy bonus tiers (purchase ≥ first → +second free tickets). */
+    fun bulkBonusTiers(configService: ConfigService, guildId: Long): List<Pair<Long, Long>> {
+        val pairs = listOf(
+            ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY to ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY to ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS,
+            ConfigDto.Configurations.LOTTERY_BULK_TIER3_BUY to ConfigDto.Configurations.LOTTERY_BULK_TIER3_BONUS,
+        )
+        return pairs.mapNotNull { (buyKey, bonusKey) ->
+            val buy = readLong(configService, buyKey, guildId) ?: return@mapNotNull null
+            if (buy <= 0L) return@mapNotNull null
+            val bonus = (readLong(configService, bonusKey, guildId) ?: 0L).coerceAtLeast(0L)
+            buy to bonus
+        }.sortedBy { it.first }
+    }
+
+    /** Volume-multiplier tiers (total-tickets ≥ first → bp/10000× weight). */
+    fun volumeMultiplierTiers(configService: ConfigService, guildId: Long): List<Pair<Long, Int>> {
+        val pairs = listOf(
+            ConfigDto.Configurations.LOTTERY_MULT_TIER1_TOTAL to ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER2_TOTAL to ConfigDto.Configurations.LOTTERY_MULT_TIER2_BP,
+            ConfigDto.Configurations.LOTTERY_MULT_TIER3_TOTAL to ConfigDto.Configurations.LOTTERY_MULT_TIER3_BP,
+        )
+        return pairs.mapNotNull { (totalKey, bpKey) ->
+            val total = readLong(configService, totalKey, guildId) ?: return@mapNotNull null
+            if (total <= 0L) return@mapNotNull null
+            val bp = (readLong(configService, bpKey, guildId)?.toInt() ?: MULTIPLIER_BP_IDENTITY)
+                .coerceIn(MULTIPLIER_BP_IDENTITY, MULTIPLIER_BP_MAX)
+            total to bp
+        }.sortedBy { it.first }
+    }
+
+    /** Pool-growth milestones (guild-wide tickets ≥ first → second % of jackpot rolled into pool). */
+    fun poolMilestones(configService: ConfigService, guildId: Long): List<Pair<Long, Long>> {
+        val pairs = listOf(
+            ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS to ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE2_TICKETS to ConfigDto.Configurations.LOTTERY_MILESTONE2_PCT,
+            ConfigDto.Configurations.LOTTERY_MILESTONE3_TICKETS to ConfigDto.Configurations.LOTTERY_MILESTONE3_PCT,
+        )
+        return pairs.mapNotNull { (ticketsKey, pctKey) ->
+            val tickets = readLong(configService, ticketsKey, guildId) ?: return@mapNotNull null
+            if (tickets <= 0L) return@mapNotNull null
+            val pct = (readLong(configService, pctKey, guildId) ?: 0L).coerceIn(0L, MILESTONE_PCT_MAX.toLong())
+            tickets to pct
+        }.sortedBy { it.first }
+    }
+
+    private fun readLong(configService: ConfigService, key: ConfigDto.Configurations, guildId: Long): Long? =
+        configService.getConfigByName(key.configValue, guildId.toString())?.value?.trim()?.toLongOrNull()
+
+    /**
+     * Bulk bonus to award for a single `/lottery buy` of [count]
+     * tickets, given pre-sorted [tiers] (ascending by threshold). The
+     * highest tier whose threshold ≤ count wins; tiers below it are
+     * subsumed (we don't sum across tiers). Returns 0 when no tier
+     * matches or tiers is empty.
+     */
+    fun bulkBonusFor(count: Long, tiers: List<Pair<Long, Long>>): Long {
+        if (count <= 0L) return 0L
+        var bonus = 0L
+        for ((threshold, payoff) in tiers) {
+            if (count >= threshold) bonus = payoff
+            else break
+        }
+        return bonus
+    }
+
+    /**
+     * Multiplier (in basis points) for a user holding [totalTickets].
+     * Highest matching tier wins; below the smallest threshold the
+     * multiplier is [MULTIPLIER_BP_IDENTITY] (1×). Returns identity for
+     * an empty tier list.
+     */
+    fun multiplierBpFor(totalTickets: Long, tiers: List<Pair<Long, Int>>): Int {
+        if (totalTickets <= 0L) return MULTIPLIER_BP_IDENTITY
+        var bp = MULTIPLIER_BP_IDENTITY
+        for ((threshold, payoff) in tiers) {
+            if (totalTickets >= threshold) bp = payoff
+            else break
+        }
+        return bp
+    }
+
+    /**
+     * Milestones to fire on a `/lottery buy` that takes the guild-wide
+     * ticket count from [prevTotal] to [newTotal]. Returns each
+     * `(threshold, pct)` whose `threshold` is strictly greater than
+     * [alreadyFiredHighest] and is in `(prevTotal, newTotal]`. Sorted
+     * ascending so the caller can advance `milestones_fired` to the
+     * last entry's threshold.
+     */
+    fun milestonesBetween(
+        prevTotal: Long,
+        newTotal: Long,
+        milestones: List<Pair<Long, Long>>,
+        alreadyFiredHighest: Long,
+    ): List<Pair<Long, Long>> {
+        if (newTotal <= prevTotal) return emptyList()
+        return milestones.filter { (threshold, _) ->
+            threshold > alreadyFiredHighest && threshold in (prevTotal + 1)..newTotal
+        }
+    }
 }

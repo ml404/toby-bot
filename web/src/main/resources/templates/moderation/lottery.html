@@ -222,6 +222,238 @@
                 </div>
             </details>
 
+            <details class="config-section" open>
+                <summary>Participation incentives (TICKET_WEIGHTED only)</summary>
+                <p class="muted mb-2">
+                    Rewards for buying more tickets, so a single-ticket entry isn't
+                    optimal play. Only affect TICKET_WEIGHTED lotteries — the
+                    NUMBER_MATCH daily already caps users at one ticket per draw.
+                    Set any threshold to <strong>0</strong> to disable that tier.
+                </p>
+
+                <h4 class="config-subhead">Bulk bonus tickets</h4>
+                <p class="muted mb-2" th:if="${overview.lotteryIncentives.bulkTiers.isEmpty()}">
+                    <em>No bulk bonus tiers active.</em> Configure at least one tier
+                    below to start awarding free tickets for committed buys.
+                </p>
+                <p class="muted mb-2" th:if="${!overview.lotteryIncentives.bulkTiers.isEmpty()}">
+                    <strong>Active:</strong>
+                    <span th:each="t, iter : ${overview.lotteryIncentives.bulkTiers}"
+                          th:text="|buy &ge; ${t.buy} → +${t.bonus} free${iter.last ? '' : ' · '}|"></span>
+                </p>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER1_BUY">
+                        <label>
+                            Tier 1 — buy at least
+                            <span class="config-hint">
+                                Threshold ticket count in a single /lottery buy. 0 disables.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER1_BUY']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER1_BONUS">
+                        <label>
+                            Tier 1 — bonus tickets
+                            <span class="config-hint">Free tickets awarded when tier 1 fires.</span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER1_BONUS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER2_BUY">
+                        <label>Tier 2 — buy at least</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER2_BUY']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER2_BONUS">
+                        <label>Tier 2 — bonus tickets</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER2_BONUS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER3_BUY">
+                        <label>Tier 3 — buy at least</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER3_BUY']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_BULK_TIER3_BONUS">
+                        <label>Tier 3 — bonus tickets</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_BULK_TIER3_BONUS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+
+                <h4 class="config-subhead">Volume weight multiplier</h4>
+                <p class="muted mb-2" th:if="${overview.lotteryIncentives.multiplierTiers.isEmpty()}">
+                    <em>No multiplier tiers active.</em> Configure thresholds below
+                    so big-volume buyers' tickets count for more in the draw.
+                </p>
+                <p class="muted mb-2" th:if="${!overview.lotteryIncentives.multiplierTiers.isEmpty()}">
+                    <strong>Active:</strong>
+                    <span th:each="t, iter : ${overview.lotteryIncentives.multiplierTiers}"
+                          th:text="|hold &ge; ${t.total} → ${#numbers.formatDecimal(t.bp / 10000.0, 1, 2)}×${iter.last ? '' : ' · '}|"></span>
+                </p>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER1_TOTAL">
+                        <label>
+                            Tier 1 — total tickets held
+                            <span class="config-hint">
+                                When a buyer's total ticket count reaches this number,
+                                every one of their tickets counts for the multiplier below.
+                                0 disables.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MULT_TIER1_TOTAL']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER1_BP">
+                        <label>
+                            Tier 1 — multiplier (basis points)
+                            <span class="config-hint">
+                                10000 = 1× (no boost), 12500 = 1.25×, 15000 = 1.5×, max 50000 = 5×.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="50000" step="500"
+                               th:value="${overview.config['LOTTERY_MULT_TIER1_BP']}"
+                               placeholder="10000"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER2_TOTAL">
+                        <label>Tier 2 — total tickets held</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MULT_TIER2_TOTAL']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER2_BP">
+                        <label>Tier 2 — multiplier (basis points)</label>
+                        <input type="number" min="0" max="50000" step="500"
+                               th:value="${overview.config['LOTTERY_MULT_TIER2_BP']}"
+                               placeholder="10000"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER3_TOTAL">
+                        <label>Tier 3 — total tickets held</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MULT_TIER3_TOTAL']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MULT_TIER3_BP">
+                        <label>Tier 3 — multiplier (basis points)</label>
+                        <input type="number" min="0" max="50000" step="500"
+                               th:value="${overview.config['LOTTERY_MULT_TIER3_BP']}"
+                               placeholder="10000"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+
+                <h4 class="config-subhead">Pool-growth milestones</h4>
+                <p class="muted mb-2" th:if="${overview.lotteryIncentives.poolMilestones.isEmpty()}">
+                    <em>No milestones active.</em> Configure thresholds below so the
+                    jackpot tops up the prize pool when collective participation hits each mark.
+                </p>
+                <p class="muted mb-2" th:if="${!overview.lotteryIncentives.poolMilestones.isEmpty()}">
+                    <strong>Active:</strong>
+                    <span th:each="t, iter : ${overview.lotteryIncentives.poolMilestones}"
+                          th:text="|@${t.tickets} tickets → +${t.pct}% of jackpot${iter.last ? '' : ' · '}|"></span>
+                </p>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_MILESTONE1_TICKETS">
+                        <label>
+                            Tier 1 — guild-wide tickets sold
+                            <span class="config-hint">
+                                When total tickets bought this lottery first crosses this
+                                count, the jackpot tops up the prize pool by the % below.
+                                0 disables.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MILESTONE1_TICKETS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MILESTONE1_PCT">
+                        <label>
+                            Tier 1 — % of jackpot
+                            <span class="config-hint">Max 50% per milestone.</span>
+                        </label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['LOTTERY_MILESTONE1_PCT']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MILESTONE2_TICKETS">
+                        <label>Tier 2 — guild-wide tickets sold</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MILESTONE2_TICKETS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MILESTONE2_PCT">
+                        <label>Tier 2 — % of jackpot</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['LOTTERY_MILESTONE2_PCT']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MILESTONE3_TICKETS">
+                        <label>Tier 3 — guild-wide tickets sold</label>
+                        <input type="number" min="0" max="100000"
+                               th:value="${overview.config['LOTTERY_MILESTONE3_TICKETS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_MILESTONE3_PCT">
+                        <label>Tier 3 — % of jackpot</label>
+                        <span class="config-input-group">
+                            <input type="number" min="0" max="50"
+                                   th:value="${overview.config['LOTTERY_MILESTONE3_PCT']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <span class="config-suffix">%</span>
+                        </span>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
             <div class="lottery-admin-actions">
                 <div class="lottery-admin-actions-text">
                     <strong>Force draw now</strong>

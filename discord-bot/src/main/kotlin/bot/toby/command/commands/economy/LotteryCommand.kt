@@ -4,8 +4,10 @@ import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
+import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.JackpotLotteryService.BuyOutcome
+import database.service.LotteryHelper
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -33,6 +35,7 @@ import java.time.Instant
 @Component
 class LotteryCommand @Autowired constructor(
     private val jackpotLotteryService: JackpotLotteryService,
+    private val configService: ConfigService,
 ) : EconomyCommand {
 
     override val name: String = "lottery"
@@ -74,9 +77,7 @@ class LotteryCommand @Autowired constructor(
         }
         when (val r = jackpotLotteryService.buyTickets(guildId, user.discordId, count)) {
             is BuyOutcome.Ok -> event.hook.replyAndDelete(
-                "Bought **$count** tickets. You now hold **${r.ticketCount}** tickets " +
-                    "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
-                    "Your balance: **${r.newBalance}** credits.",
+                buildBuyReply(count, r, guildId),
                 deleteDelay,
             )
             BuyOutcome.NoOpenLottery ->
@@ -114,17 +115,100 @@ class LotteryCommand @Autowired constructor(
             else -> "${remaining.toMinutes().coerceAtLeast(0)}m remaining (informational)"
         }
 
+        val mineCount = (mine?.ticketCount ?: 0).toLong()
+        val mineBonus = mine?.bonusTickets ?: 0L
+        val ownedLine = if (mineBonus > 0L) "**$mineCount** paid + **$mineBonus** bonus"
+        else "**$mineCount**"
+
         event.hook.replyAndDelete(
             "**Lottery status**\n" +
                 "Prize pool: **${lottery.poolAmount}** credits\n" +
                 "Ticket price: **${lottery.ticketPrice}** credits each\n" +
                 "Tickets sold: **$totalTickets** (across ${tickets.size} buyers)\n" +
                 "Winners: **${lottery.winnerCount}**\n" +
-                "Your tickets: **${mine?.ticketCount ?: 0}**\n" +
+                "Your tickets: $ownedLine\n" +
                 "Closes at: $remainingLabel\n\n" +
-                "Top holders:\n$top",
+                "Top holders:\n$top" +
+                renderIncentivesBlock(guildId, mineCount, totalTickets, lottery.milestonesFired),
             deleteDelay,
         )
+    }
+
+    /**
+     * Render the `/lottery buy` reply with bonus and milestone callouts
+     * appended only when they actually fired — a baseline buy reads
+     * exactly like the pre-incentive copy.
+     */
+    private fun buildBuyReply(count: Int, r: BuyOutcome.Ok, guildId: Long): String {
+        val lines = mutableListOf<String>()
+        val totalOwned = if (r.totalBonusTickets > 0L)
+            "**${r.ticketCount}** paid + **${r.totalBonusTickets}** bonus tickets"
+        else "**${r.ticketCount}** tickets"
+        lines += "Bought **$count** tickets. You now hold $totalOwned " +
+            "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
+            "Your balance: **${r.newBalance}** credits."
+        if (r.bonusTicketsGranted > 0L) {
+            lines += "🎁 Bulk-buy bonus: **+${r.bonusTicketsGranted}** free tickets credited."
+        }
+        if (r.milestoneBonuses.isNotEmpty()) {
+            val parts = r.milestoneBonuses.joinToString(", ") {
+                "**${it.threshold}** tickets sold → **+${it.creditsAdded}** credits"
+            }
+            lines += "🚀 Milestone reached! Jackpot top-up: $parts."
+        }
+        return lines.joinToString("\n")
+    }
+
+    /**
+     * Append a compact "Active incentives" / "Next thresholds" block to
+     * `/lottery status`. Read straight off [LotteryHelper] so the bot
+     * surface matches the web "Active rules" summary and the announcer
+     * embed without anything in between.
+     */
+    private fun renderIncentivesBlock(
+        guildId: Long,
+        userTickets: Long,
+        totalTickets: Long,
+        milestonesFired: Long,
+    ): String {
+        val bulk = LotteryHelper.bulkBonusTiers(configService, guildId)
+        val mult = LotteryHelper.volumeMultiplierTiers(configService, guildId)
+        val milestones = LotteryHelper.poolMilestones(configService, guildId)
+        if (bulk.isEmpty() && mult.isEmpty() && milestones.isEmpty()) return ""
+
+        val sb = StringBuilder("\n\n**Active incentives**")
+        if (bulk.isNotEmpty()) {
+            sb.append("\n• Bulk bonus: ")
+            sb.append(bulk.joinToString(", ") { (buy, bonus) -> "buy ≥$buy → +$bonus free" })
+            val nextBulk = bulk.firstOrNull { it.first > userTickets }
+            if (nextBulk != null) {
+                val gap = nextBulk.first - userTickets
+                sb.append(" _(next: buy $gap more in one purchase for +${nextBulk.second})_")
+            }
+        }
+        if (mult.isNotEmpty()) {
+            sb.append("\n• Volume multiplier: ")
+            sb.append(mult.joinToString(", ") { (total, bp) ->
+                "hold ≥$total → ${"%.2f".format(bp / 10000.0)}×"
+            })
+            val nextMult = mult.firstOrNull { it.first > userTickets }
+            if (nextMult != null) {
+                val gap = nextMult.first - userTickets
+                sb.append(" _(hold ${gap} more to reach ${"%.2f".format(nextMult.second / 10000.0)}×)_")
+            }
+        }
+        if (milestones.isNotEmpty()) {
+            sb.append("\n• Pool milestones: ")
+            sb.append(milestones.joinToString(", ") { (tickets, pct) -> "@$tickets tickets → +$pct% of jackpot" })
+            val nextMilestone = milestones.firstOrNull {
+                it.first > milestonesFired && it.first > totalTickets
+            }
+            if (nextMilestone != null) {
+                val gap = nextMilestone.first - totalTickets
+                sb.append(" _(next fires in $gap more tickets sold)_")
+            }
+        }
+        return sb.toString()
     }
 
     private fun replyError(event: SlashCommandInteractionEvent, message: String, deleteDelay: Int) {
