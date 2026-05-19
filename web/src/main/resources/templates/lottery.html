@@ -191,7 +191,10 @@
                 </span>
                 <span class="lottery-meta-item">
                     Your tickets:
-                    <strong id="weighted-my-tickets" th:text="${snapshot.weighted.myTickets}">0</strong>
+                    <strong id="weighted-my-tickets"
+                            th:text="${snapshot.weighted.myBonusTickets > 0}
+                                     ? |${snapshot.weighted.myTickets} paid + ${snapshot.weighted.myBonusTickets} bonus|
+                                     : ${snapshot.weighted.myTickets}">0</strong>
                 </span>
                 <span class="lottery-meta-item lottery-countdown"
                       th:attr="data-closes-at=${snapshot.weighted.closesAtMillis}">
@@ -241,11 +244,11 @@
                         buy at least 10 in one purchase → +3 free tickets
                     </li>
                 </ul>
-                <p class="lottery-incentive-hint"
-                   th:if="${inc.nextBulkHint != null}"
-                   th:text="|Buy ${inc.nextBulkHint.gap} more in one purchase to earn +${inc.nextBulkHint.bonus} free tickets.|">
-                    Buy 6 more in one purchase to earn +3 free tickets.
-                </p>
+                <!-- Intentionally no personalised "buy N more" hint for
+                     bulk tiers: the bonus is per-purchase, so the
+                     active-rules list above already conveys every
+                     threshold the player needs to hit on a single buy. -->
+
             </div>
 
             <div class="lottery-incentive-block"
@@ -369,9 +372,9 @@
                     <li th:each="t : ${inc.bulkTiers}"
                         th:text="|buy at least ${t.buy} in one purchase → +${t.bonus} free tickets|"></li>
                 </ul>
-                <p class="lottery-incentive-hint"
-                   th:if="${inc.nextBulkHint != null}"
-                   th:text="|Buy ${inc.nextBulkHint.gap} more in one purchase to earn +${inc.nextBulkHint.bonus} free tickets.|"></p>
+                <!-- No personalised bulk hint — see comment on the
+                     WEIGHTED-daily section above for rationale. -->
+
             </div>
 
             <div class="lottery-incentive-block"

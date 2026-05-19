@@ -129,6 +129,11 @@ class LotteryController(
                     totalSpent = outcome.totalSpent,
                     newBalance = outcome.newBalance,
                     newPool = outcome.newPool,
+                    bonusTicketsGranted = outcome.bonusTicketsGranted.takeIf { it > 0L },
+                    totalBonusTickets = outcome.totalBonusTickets.takeIf { it > 0L },
+                    milestoneBonuses = outcome.milestoneBonuses
+                        .map { MilestoneBonusView(threshold = it.threshold, creditsAdded = it.creditsAdded) }
+                        .takeIf { it.isNotEmpty() },
                 )
             )
 
@@ -168,7 +173,37 @@ data class BuyWeightedResponse(
     val totalSpent: Long? = null,
     val newBalance: Long? = null,
     val newPool: Long? = null,
+    /**
+     * Bulk-buy bonus tickets credited on this single purchase. Null
+     * (rather than 0) when nothing was awarded so the client can
+     * cleanly skip the bonus toast without a falsy-zero check.
+     */
+    val bonusTicketsGranted: Long? = null,
+    /**
+     * Cumulative bonus tickets the buyer holds on this lottery after
+     * the purchase. Mirrors `JackpotLotteryTicketDto.bonusTickets` so
+     * the client can render the "X paid + Y bonus" breakdown without
+     * a separate snapshot round-trip.
+     */
+    val totalBonusTickets: Long? = null,
+    /**
+     * Pool-growth milestones that fired during this purchase. Each
+     * entry is `{threshold, creditsAdded}` — same shape as the
+     * service's [database.service.JackpotLotteryService.MilestoneBonus].
+     * Null when no milestones fired (the client doesn't need an empty
+     * list to know there's nothing to render).
+     */
+    val milestoneBonuses: List<MilestoneBonusView>? = null,
 ) : CasinoResponseLike
+
+/**
+ * View projection of a single pool-growth milestone that fired during
+ * a weighted ticket buy. Mirrors
+ * [database.service.JackpotLotteryService.MilestoneBonus] but lives in
+ * the controller layer so the response shape doesn't leak the service
+ * type into the JSON contract.
+ */
+data class MilestoneBonusView(val threshold: Long, val creditsAdded: Long)
 
 /**
  * View-friendly projection of the lottery snapshot. Strips DTO
@@ -233,22 +268,28 @@ data class LotteryViewModel(
     /**
      * What the player sees in the "Participation incentives" panel on
      * the lottery page. Only carries data that has something to render:
-     * `nextBulkHint` / `nextMultiplierHint` are null when the viewer
-     * already holds the top tier (no further "buy N more" to dangle),
-     * and `milestoneProgress` is null when no future milestone is
-     * configured (the panel just shows active rules in that case).
+     * `nextMultiplierHint` is null when the viewer already holds the
+     * top multiplier tier, and `milestoneProgress` is null when no
+     * future milestone is configured (the panel just shows active
+     * rules in that case).
+     *
+     * Note: there is intentionally no `nextBulkHint`. Bulk bonus is
+     * awarded **per-purchase** — one `/lottery buy N` call must
+     * satisfy `N >= tier.buy` on its own, regardless of how many
+     * tickets the player already holds. A previous version computed
+     * `gap = tier.buy - myTickets` and produced misleading copy like
+     * "buy 5 more in one purchase for +3 free" when the actual
+     * requirement was buy-10-or-nothing. The active-rules listing
+     * already shows every tier's threshold, which is the only
+     * information that's meaningful for a per-purchase reward.
      */
     data class WeightedIncentivesPanel(
         val bulkTiers: List<web.view.BulkBonusTierView>,
         val multiplierTiers: List<web.view.MultiplierTierView>,
         val poolMilestones: List<web.view.PoolMilestoneView>,
-        val nextBulkHint: NextBulkHint?,
         val nextMultiplierHint: NextMultiplierHint?,
         val milestoneProgress: MilestoneProgress?,
     )
-
-    /** Smallest unmatched bulk tier — "buy [gap] more in one purchase for +[bonus] free". */
-    data class NextBulkHint(val gap: Long, val bonus: Long, val threshold: Long)
 
     /** Smallest unmatched multiplier tier, with the bp pre-formatted to a human "1.25×" decimal. */
     data class NextMultiplierHint(val gap: Long, val multiplier: String, val threshold: Long)
@@ -344,10 +385,10 @@ data class LotteryViewModel(
          * render an empty card.
          *
          * Hint derivation:
-         *  - Next bulk tier: smallest `buy` threshold strictly greater
-         *    than the viewer's current ticket count. The hint copy
-         *    "buy [gap] more in one purchase" reflects the per-purchase
-         *    nature of the bulk bonus (splitting doesn't count).
+         *  - Bulk tiers carry no personalised "next" hint. Bulk bonus
+         *    is per-purchase, so a single buy must satisfy `tier.buy`
+         *    on its own; existing holdings don't shrink the threshold.
+         *    The active-rules listing covers what the player needs.
          *  - Next multiplier tier: smallest `total` threshold strictly
          *    greater than the viewer's total. Multiplier rendered as
          *    a 1.25× / 1.5× decimal so the template doesn't have to.
@@ -365,15 +406,6 @@ data class LotteryViewModel(
             val incentives = snap.weightedIncentives
             if (incentives.isEmpty) return null
 
-            val nextBulk = incentives.bulkTiers
-                .firstOrNull { it.buy > myTickets }
-                ?.let { tier ->
-                    NextBulkHint(
-                        gap = tier.buy - myTickets,
-                        bonus = tier.bonus,
-                        threshold = tier.buy,
-                    )
-                }
             val nextMultiplier = incentives.multiplierTiers
                 .firstOrNull { it.total > myTickets }
                 ?.let { tier ->
@@ -397,7 +429,6 @@ data class LotteryViewModel(
                 bulkTiers = incentives.bulkTiers,
                 multiplierTiers = incentives.multiplierTiers,
                 poolMilestones = incentives.poolMilestones,
-                nextBulkHint = nextBulk,
                 nextMultiplierHint = nextMultiplier,
                 milestoneProgress = nextMilestone,
             )

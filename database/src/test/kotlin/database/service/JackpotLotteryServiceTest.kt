@@ -907,6 +907,33 @@ class JackpotLotteryServiceTest {
     }
 
     @Test
+    fun `buyTickets accumulates bonusTickets on the same ticket row across multiple bulk-qualifying buys`() {
+        // The user-reported "extra tickets didn't work" investigation
+        // showed the service correctly accumulates bulk bonuses on an
+        // existing ticket row, but there was no test pinning that
+        // multi-buy behaviour. This test buys twice in a row and
+        // asserts the ticket row ends with `bonusTickets = 6`, not 3
+        // (the second buy must add to bonusTickets, not overwrite).
+        stubBulkTier1(buy = 10L, bonus = 3L)
+        openWeightedLottery()
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 100_000L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+        val existing = JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 0, spent = 0L)
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns existing
+
+        val first = service.buyTickets(guildId, discordId = 7L, ticketCount = 10)
+        assertTrue(first is JackpotLotteryService.BuyOutcome.Ok)
+        val second = service.buyTickets(guildId, discordId = 7L, ticketCount = 10)
+        assertTrue(second is JackpotLotteryService.BuyOutcome.Ok)
+        second as JackpotLotteryService.BuyOutcome.Ok
+
+        assertEquals(20, existing.ticketCount)
+        assertEquals(6L, existing.bonusTickets, "two qualifying buys → 3 + 3 = 6 bonus tickets accumulated")
+        assertEquals(3L, second.bonusTicketsGranted, "the per-buy grant on the second buy is 3, not the cumulative 6")
+        assertEquals(6L, second.totalBonusTickets, "totalBonusTickets reflects the cumulative ticket-row value")
+    }
+
+    @Test
     fun `effectiveWeight collapses to ticketCount when multiplier tiers empty`() {
         val ticket = JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 12, spent = 0L)
         assertEquals(12L, service.effectiveWeight(ticket, emptyList()))
