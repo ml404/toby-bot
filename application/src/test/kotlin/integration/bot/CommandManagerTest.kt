@@ -16,6 +16,7 @@ import bot.toby.command.commands.economy.KenoCommand
 import bot.toby.command.commands.economy.LotteryCommand
 import bot.toby.command.commands.economy.PlinkoCommand
 import bot.toby.command.commands.economy.PokerCommand
+import bot.toby.command.commands.economy.PriceAlertCommand
 import bot.toby.command.commands.economy.RouletteCommand
 import bot.toby.command.commands.economy.ScratchCommand
 import bot.toby.command.commands.economy.SlotsCommand
@@ -137,6 +138,7 @@ class CommandManagerTest {
             EightBallCommand::class.java,
             TitleCommand::class.java,
             TobyCoinCommand::class.java,
+            PriceAlertCommand::class.java,
             SlotsCommand::class.java,
             CoinflipCommand::class.java,
             DiceCommand::class.java,
@@ -162,8 +164,8 @@ class CommandManagerTest {
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(66, commandManager.allCommands.size)
-        Assertions.assertEquals(66, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(67, commandManager.allCommands.size)
+        Assertions.assertEquals(67, commandManager.allSlashCommands.size)
     }
 
     @Test
