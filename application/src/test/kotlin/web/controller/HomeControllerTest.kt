@@ -30,6 +30,7 @@ class HomeControllerTest {
         gameCount = 15,
         minigameCount = 12,
         minigameNames = "slots, dice",
+        configKeyCount = 58,
     )
 
     @BeforeEach
