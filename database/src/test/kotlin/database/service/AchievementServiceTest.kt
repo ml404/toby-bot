@@ -140,6 +140,129 @@ class AchievementServiceTest {
         assertEquals(4L, views["p"]?.progress)
     }
 
+    // ---------- setProgress ----------
+
+    @Test
+    fun `setProgress sets absolute value and does not unlock when below threshold`() {
+        val a = persistence.save(
+            AchievementDto(code = "sp_below", name = "B", description = "d", category = "c", xpReward = 10, threshold = 10)
+        )
+
+        val result = service.setProgress(discordId, guildId, "sp_below", value = 4L)
+
+        assertFalse(result.unlocked)
+        assertEquals(4L, result.newProgress)
+        assertEquals(4L, persistence.getProgress(discordId, guildId, a.id!!)?.progress)
+        assertTrue(eventPublisher.unlockEvents.isEmpty())
+        assertFalse(persistence.owns(discordId, guildId, a.id!!))
+    }
+
+    @Test
+    fun `setProgress unlocks exactly once when value reaches the threshold`() {
+        val a = persistence.save(
+            AchievementDto(code = "sp_reach", name = "R", description = "d", category = "c", xpReward = 25, creditReward = 50, threshold = 5)
+        )
+
+        val result = service.setProgress(discordId, guildId, "sp_reach", value = 5L)
+
+        assertTrue(result.unlocked)
+        assertFalse(result.alreadyUnlocked)
+        assertEquals(5L, result.newProgress)
+        assertEquals(1, eventPublisher.unlockEvents.size)
+        assertEquals(25L, userService.current(discordId, guildId)?.xp)
+        assertEquals(50L, userService.current(discordId, guildId)?.socialCredit)
+        assertTrue(persistence.owns(discordId, guildId, a.id!!))
+    }
+
+    @Test
+    fun `setProgress clamps values above the threshold`() {
+        val a = persistence.save(
+            AchievementDto(code = "sp_clamp_high", name = "H", description = "d", category = "c", xpReward = 10, threshold = 5)
+        )
+
+        val result = service.setProgress(discordId, guildId, "sp_clamp_high", value = 99L)
+
+        assertTrue(result.unlocked)
+        assertEquals(5L, result.newProgress)
+        assertEquals(1, eventPublisher.unlockEvents.size)
+        assertEquals(10L, userService.current(discordId, guildId)?.xp)
+        assertTrue(persistence.owns(discordId, guildId, a.id!!))
+    }
+
+    @Test
+    fun `setProgress is a no-op once unlocked — streak-broke does not retract`() {
+        persistence.save(
+            AchievementDto(code = "sp_idem", name = "I", description = "d", category = "c", xpReward = 10, threshold = 3)
+        )
+        service.setProgress(discordId, guildId, "sp_idem", value = 3L)
+        val xpAfterFirst = userService.current(discordId, guildId)?.xp
+        eventPublisher.unlockEvents.clear()
+
+        val again = service.setProgress(discordId, guildId, "sp_idem", value = 1L)
+
+        assertFalse(again.unlocked)
+        assertTrue(again.alreadyUnlocked)
+        assertEquals(xpAfterFirst, userService.current(discordId, guildId)?.xp)
+        assertTrue(eventPublisher.unlockEvents.isEmpty())
+    }
+
+    @Test
+    fun `setProgress accepts a decrease for not-yet-unlocked rows`() {
+        val a = persistence.save(
+            AchievementDto(code = "sp_dec", name = "D", description = "d", category = "c", xpReward = 0, threshold = 10)
+        )
+
+        service.setProgress(discordId, guildId, "sp_dec", value = 7L)
+        assertEquals(7L, persistence.getProgress(discordId, guildId, a.id!!)?.progress)
+
+        val after = service.setProgress(discordId, guildId, "sp_dec", value = 3L)
+        assertFalse(after.unlocked)
+        assertEquals(3L, after.newProgress)
+        assertEquals(3L, persistence.getProgress(discordId, guildId, a.id!!)?.progress)
+    }
+
+    @Test
+    fun `setProgress clamps negative values to zero`() {
+        val a = persistence.save(
+            AchievementDto(code = "sp_neg", name = "N", description = "d", category = "c", threshold = 5)
+        )
+
+        val result = service.setProgress(discordId, guildId, "sp_neg", value = -5L)
+
+        assertFalse(result.unlocked)
+        assertEquals(0L, result.newProgress)
+        assertEquals(0L, persistence.getProgress(discordId, guildId, a.id!!)?.progress)
+    }
+
+    @Test
+    fun `setProgress on an unknown code is a no-op`() {
+        val result = service.setProgress(discordId, guildId, "no_such_code", value = 5L)
+        assertFalse(result.unlocked)
+        assertNull(result.achievement)
+        assertTrue(eventPublisher.unlockEvents.isEmpty())
+    }
+
+    @Test
+    fun `setProgress publishes the same AchievementUnlockedEvent payload as unlock`() {
+        persistence.save(
+            AchievementDto(
+                code = "sp_event", name = "Event", description = "desc",
+                category = "c", icon = "🎯", xpReward = 10, threshold = 2
+            )
+        )
+
+        service.setProgress(discordId, guildId, "sp_event", value = 2L, channelId = 555L)
+
+        val event = eventPublisher.unlockEvents.single()
+        assertEquals("sp_event", event.achievementCode)
+        assertEquals("Event", event.name)
+        assertEquals("desc", event.description)
+        assertEquals("🎯", event.icon)
+        assertEquals(555L, event.channelId)
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
     @Test
     fun `streak rewards bypass the daily cap via countsAgainstDailyCap=false`() {
         // Exhaust the user's daily XP cap.

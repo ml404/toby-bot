@@ -36,6 +36,24 @@ interface AchievementService {
     ): ProgressResult
 
     /**
+     * Set progress to an absolute value. Use this for ratchet-style
+     * achievements where the source event carries the current absolute
+     * state (current level, current streak), not a delta. Values are
+     * clamped to `[0, threshold]`; reaching the threshold triggers the
+     * unlock path (reward + event) exactly once. Idempotent once
+     * unlocked. Unlike [progress] this accepts decreases — important
+     * for streak-broke semantics where the display should reflect the
+     * user's *current* streak, not their high-water mark.
+     */
+    fun setProgress(
+        discordId: Long,
+        guildId: Long,
+        code: String,
+        value: Long,
+        channelId: Long? = null
+    ): ProgressResult
+
+    /**
      * Snapshot for the user's profile / `/achievements` view. Includes
      * locked entries (unless hidden) so the user sees what's available.
      */
