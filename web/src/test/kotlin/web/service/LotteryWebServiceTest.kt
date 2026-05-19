@@ -124,4 +124,56 @@ class LotteryWebServiceTest {
         assertEquals(50L, snap.weightedIncentives.poolMilestones.first().tickets)
         assertEquals(10L, snap.weightedIncentives.poolMilestones.first().pct)
     }
+
+    @Test
+    fun `snapshot ranks top holders by ticketCount + bonusTickets so big-bonus buyers don't fall off the leaderboard`() {
+        // Three buyers: A holds 20 paid, B holds 10 paid + 15 bonus
+        // (effective 25), C holds 15 paid. Without the bonus-aware
+        // sort, B ranks third (10 < 15 < 20). With it, B is first.
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.ticketsForOpenWeighted(guildId) } returns listOf(
+            database.dto.JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 1L, ticketCount = 20, spent = 2_000L,
+                bonusTickets = 0L,
+            ),
+            database.dto.JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 2L, ticketCount = 10, spent = 1_000L,
+                bonusTickets = 15L,
+            ),
+            database.dto.JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 3L, ticketCount = 15, spent = 1_500L,
+                bonusTickets = 0L,
+            ),
+        )
+
+        val snap = service.snapshot(guildId, discordId)
+
+        val ranked = snap.weightedTopHolders.map { it.discordId }
+        assertEquals(listOf(2L, 1L, 3L), ranked, "effective weights: 25, 20, 15")
+    }
+
+    @Test
+    fun `snapshot TopHolder carries bonusTickets through to the view model`() {
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.ticketsForOpenWeighted(guildId) } returns listOf(
+            database.dto.JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 7L, ticketCount = 10, spent = 1_000L,
+                bonusTickets = 3L,
+            ),
+        )
+
+        val snap = service.snapshot(guildId, discordId)
+
+        val holder = snap.weightedTopHolders.single()
+        assertEquals(10, holder.ticketCount)
+        assertEquals(3L, holder.bonusTickets)
+    }
 }

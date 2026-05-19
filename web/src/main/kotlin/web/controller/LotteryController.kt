@@ -316,6 +316,10 @@ data class LotteryViewModel(
     data class TopHolder(
         val discordId: Long,
         val ticketCount: Int,
+        /** Bulk-bonus tickets the holder has accumulated. The template
+         *  renders "X paid + Y bonus" when this is non-zero, matching
+         *  the "Your tickets" line treatment. */
+        val bonusTickets: Long,
         val name: String,
         val avatarUrl: String?,
         val title: String?,
@@ -355,7 +359,7 @@ data class LotteryViewModel(
                     myBonusTickets = myBonus,
                     mySpent = snap.weightedMyTicket?.spent ?: 0L,
                     topHolders = snap.weightedTopHolders.map {
-                        TopHolder(it.discordId, it.ticketCount, it.name, it.avatarUrl, it.title)
+                        TopHolder(it.discordId, it.ticketCount, it.bonusTickets, it.name, it.avatarUrl, it.title)
                     },
                     incentives = incentives,
                 )

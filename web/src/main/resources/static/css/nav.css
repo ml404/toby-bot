@@ -335,7 +335,12 @@ nav {
 
         transform: translateX(100%);
         transition: transform 0.22s ease-out;
-        z-index: 50;
+        /* Stacking floor that beats any per-page chrome — the
+           `.mod-subnav` tab bar was visibly punching through the
+           drawer at z-index 50 because page-level rules can hit
+           higher values. 1000 leaves plenty of headroom above the
+           next-highest in-app rule (60 at line 306). */
+        z-index: 1000;
     }
     .nav-links.open { transform: translateX(0); }
 
@@ -465,13 +470,14 @@ nav {
         min-height: var(--tap-min);
     }
 
-    /* Backdrop. */
+    /* Backdrop. Sits one step below the drawer so the drawer is
+       clearly on top, but well above any per-page chrome. */
     .nav-backdrop {
         display: block;
         position: fixed;
         inset: 0;
         background: rgba(10, 10, 20, 0.55);
-        z-index: 40;
+        z-index: 999;
         animation: nav-backdrop-fade-in 0.18s ease-out;
     }
     .nav-backdrop[hidden] { display: none; }

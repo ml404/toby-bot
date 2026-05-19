@@ -77,6 +77,14 @@ class LotteryWebService(
     data class TopHolder(
         val discordId: Long,
         val ticketCount: Int,
+        /**
+         * Bulk-bonus tickets the holder has accumulated on this
+         * lottery. Surfaced alongside `ticketCount` so the player
+         * page renders the same "X paid + Y bonus" breakdown the
+         * "Your tickets" line already uses, and so the leaderboard
+         * sort can use effective weight rather than just paid count.
+         */
+        val bonusTickets: Long,
         val name: String,
         val avatarUrl: String?,
         val title: String?,
@@ -93,7 +101,15 @@ class LotteryWebService(
         val weightedOpen = jackpotLotteryService.getOpenWeighted(guildId)
         val weightedTickets = jackpotLotteryService.ticketsForOpenWeighted(guildId)
         val weightedMyTicket = weightedTickets.firstOrNull { it.discordId == discordId }
-        val weightedTopRaw = weightedTickets.sortedByDescending { it.ticketCount }.take(5)
+        // Sort by effective ticket weight (paid + bonus) so a buyer who
+        // earned bulk bonuses isn't ranked below a smaller-spending
+        // holder. Mirrors the per-ticket draw weight at the conceptual
+        // level (the multiplier tier isn't applied here — top-5 is a
+        // display ordering, not the actual draw, and the multiplier
+        // gets baked into the real draw via JackpotLotteryService).
+        val weightedTopRaw = weightedTickets
+            .sortedByDescending { it.ticketCount + it.bonusTickets }
+            .take(5)
         val displays = memberLookupHelper.resolveAll(guildId, weightedTopRaw.map { it.discordId })
         val weightedTop = weightedTopRaw.map { ticket ->
             val display = displays[ticket.discordId]
@@ -109,6 +125,7 @@ class LotteryWebService(
             TopHolder(
                 discordId = ticket.discordId,
                 ticketCount = ticket.ticketCount,
+                bonusTickets = ticket.bonusTickets,
                 name = display?.name ?: memberLookupHelper.fallbackName(ticket.discordId),
                 avatarUrl = display?.avatarUrl,
                 title = title,

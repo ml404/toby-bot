@@ -285,16 +285,29 @@ class LotteryAnnouncer @Autowired constructor(
         val freshIncentives = if (mode == LotteryHelper.MODE_WEIGHTED) {
             renderActiveIncentives(guildId)
         } else null
+        var sawIncentivesField = false
         previous.fields.forEach { field ->
             when (field.name) {
                 TODAYS_DRAW_FIELD -> builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
-                ACTIVE_INCENTIVES_FIELD -> if (freshIncentives != null) {
-                    builder.addField(ACTIVE_INCENTIVES_FIELD, freshIncentives, false)
-                } else {
-                    builder.addField(field)
+                ACTIVE_INCENTIVES_FIELD -> {
+                    sawIncentivesField = true
+                    if (freshIncentives != null) {
+                        builder.addField(ACTIVE_INCENTIVES_FIELD, freshIncentives, false)
+                    } else {
+                        builder.addField(field)
+                    }
                 }
                 else -> builder.addField(field)
             }
+        }
+        // Backfill the Active incentives field on legacy embeds that
+        // were posted before the feature existed (or before tiers were
+        // configured). Without this, an old open lottery would never
+        // gain the field — the 5-minute refresh only updates what's
+        // already there. Only applies to TICKET_WEIGHTED draws since
+        // NUMBER_MATCH embeds intentionally never carry the field.
+        if (!sawIncentivesField && freshIncentives != null) {
+            builder.addField(ACTIVE_INCENTIVES_FIELD, freshIncentives, false)
         }
         return builder.build()
     }

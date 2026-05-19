@@ -302,7 +302,9 @@
                     <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
                     <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
                     <span class="lottery-ticket-pill">
-                        <strong th:text="${h.ticketCount}">0</strong>
+                        <strong th:text="${h.bonusTickets > 0}
+                                         ? |${h.ticketCount} paid + ${h.bonusTickets} bonus|
+                                         : ${h.ticketCount}">0</strong>
                         <span class="muted">tickets</span>
                     </span>
                 </li>
@@ -419,7 +421,9 @@
                     <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
                     <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
                     <span class="lottery-ticket-pill">
-                        <strong th:text="${h.ticketCount}">0</strong>
+                        <strong th:text="${h.bonusTickets > 0}
+                                         ? |${h.ticketCount} paid + ${h.bonusTickets} bonus|
+                                         : ${h.ticketCount}">0</strong>
                         <span class="muted">tickets</span>
                     </span>
                 </li>
