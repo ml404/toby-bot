@@ -1,6 +1,5 @@
 package bot.toby.leveling
 
-import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
@@ -63,14 +62,13 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun announce(guild: Guild, event: LevelUpEvent, member: Member?) {
+        // The leveler's mention sits in the embed description, and embed
+        // mentions don't ping — so no per-user CHANNEL opt-in filtering
+        // is needed here (mirrors AchievementEventHandler.postPublicShoutout).
         notificationRouter.sendChannel(
             guildId = guild.idLong,
             route = ChannelRouteKey.LEVEL_UP,
             originChannelId = event.channelId,
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.LEVEL_UP,
-                userIds = listOf(event.discordId),
-            ),
             message = {
                 MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
             },

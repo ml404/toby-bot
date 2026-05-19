@@ -1,6 +1,5 @@
 package bot.toby.leveling
 
-import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
@@ -84,10 +83,10 @@ class LevelUpListenerTest {
                 originChannelId = 99L,
                 message = any(),
                 onSent = null,
-                mentions = ChannelMentions(
-                    kind = NotificationChannelKind.LEVEL_UP,
-                    userIds = listOf(discordId),
-                ),
+                // The leveler's mention is in the embed description, which
+                // doesn't ping per Discord rules — so no ChannelMentions
+                // filtering is needed (matches achievement shoutout).
+                mentions = null,
             )
         }
         val embed = builder.captured.invoke().embeds.single()
@@ -112,7 +111,7 @@ class LevelUpListenerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = null,
-                mentions = any(),
+                mentions = null,
             )
         }
     }
