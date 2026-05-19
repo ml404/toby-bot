@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Reward buying more tickets via three configurable incentives",
+    "summary": "Some users had figured out that buying a single TICKET_WEIGHTED lottery ticket was enough to satisfy `LOTTERY_DAILY_MIN_BUYERS` and be entered — making one-ticket entries the optimal play. Rather than punishing that (e.g. raising minimums), this PR adds three additive, positive incentives that make committing more attractive than splitting. Existing `LOTTERY_DAILY_MIN_BUYERS` safeguard is untouched. All three levers are default-off so nothing changes for existing guilds un…",
+    "emoji": "🎰",
+    "prNumber": 506
+  },
+  {
+    "date": "May 2026",
     "title": "SOLID/DRY sweep across common, core-api, database, web",
     "summary": "Top-6 focused SOLID/DRY refactor + test-gap sweep spanning all four priority modules. Each refactor lands with the tests it enables; behaviour is preserved (no public API breaks). **Result:** 19 modified / 10 new files. Net **−221 LOC** across modified files. **+44 new tests** (common 9, core-api 13, database 5, web 17). **All 1,704 buildable-module tests pass.**",
     "emoji": "🎰",
