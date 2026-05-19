@@ -6,11 +6,16 @@ import database.service.ConfigService
 import database.service.JackpotLotteryService
 import database.service.LotteryDailyService
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -314,6 +319,49 @@ class LotteryDailyJobTest {
                 any<LotteryAnnouncer.OpenSummary.Ok>(),
             )
         }
+    }
+
+    @Test
+    fun `runDaily threads bonusTicketsAwarded and highestMilestoneFired through to WeightedDrawn`() {
+        // Regression guard for the incentives PR: the daily job is a
+        // pure pass-through for the new DrawOutcome.Ok fields, but
+        // "pure pass-through" is exactly the kind of code that
+        // silently regresses when the announcer payload shape evolves.
+        stubEnabled(true)
+        stubMode("WEIGHTED")
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenWeighted(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { jackpotLotteryService.drawLottery(guildId) } returns
+            JackpotLotteryService.DrawOutcome.Ok(
+                payouts = listOf(
+                    JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 30, amount = 800L),
+                ),
+                totalPaid = 800L,
+                drained = 1_000L,
+                bonusTicketsAwarded = 11L,
+                highestMilestoneFired = 50L,
+            )
+        every { jackpotLotteryService.openLottery(guildId, any(), any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId, poolAmount = 50L),
+                seeded = 50L,
+            )
+        val priorSlot = slot<LotteryAnnouncer.PriorOutcome>()
+        every {
+            lotteryAnnouncer.announceCycle(any(), any(), capture(priorSlot), any())
+        } just runs
+
+        job.runDaily()
+
+        val prior = priorSlot.captured
+        assertTrue(prior is LotteryAnnouncer.PriorOutcome.WeightedDrawn, "WEIGHTED cycle → WeightedDrawn")
+        prior as LotteryAnnouncer.PriorOutcome.WeightedDrawn
+        assertEquals(11L, prior.bonusTicketsAwarded)
+        assertEquals(50L, prior.highestMilestoneFired)
     }
 
     @Test

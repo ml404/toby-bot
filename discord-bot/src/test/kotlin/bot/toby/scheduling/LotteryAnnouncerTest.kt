@@ -326,12 +326,20 @@ class LotteryAnnouncerTest {
         }
         onSent.captured.invoke(sent)
 
+        // WEIGHTED mode captures a live incentives digest at announce
+        // time so the next refresh tick can detect a tier edit without
+        // a redundant edit for the unchanged baseline. With no tiers
+        // configured the digest is still non-null (SHA-256 of the
+        // empty-tier payload), and the announcer always persists it
+        // alongside the pool watermark.
+        val expectedDigest = announcer.incentivesDigest(guildId)
         verify(exactly = 1) {
             jackpotLotteryService.recordAnnouncement(
                 lotteryId = 42L,
                 channelId = 777L,
                 messageId = 9999L,
                 pool = 500L,
+                incentivesDigest = expectedDigest,
             )
         }
     }
@@ -357,7 +365,9 @@ class LotteryAnnouncerTest {
         )
         onSent.captured.invoke(mockk(relaxed = true))
 
-        verify(exactly = 0) { jackpotLotteryService.recordAnnouncement(any(), any(), any(), any()) }
+        verify(exactly = 0) {
+            jackpotLotteryService.recordAnnouncement(any(), any(), any(), any(), any())
+        }
     }
 
     // ---- embed body + pings ----
