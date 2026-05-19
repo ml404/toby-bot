@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Nav drawer stacking, additive embed rebuild, top holders include bonus tickets",
+    "summary": "## Three bugs reported after #509",
+    "emoji": "🎰",
+    "prNumber": 510
+  },
+  {
+    "date": "May 2026",
     "title": "Tab-nav layout + silent web bonus award + broken bulk-buy hint",
     "summary": "## Three bugs reported after PR #508 merged",
     "emoji": "🎰",
