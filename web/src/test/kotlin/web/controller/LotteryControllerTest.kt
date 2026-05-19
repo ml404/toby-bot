@@ -533,6 +533,49 @@ class LotteryControllerTest {
     }
 
     @Test
+    fun `LotteryViewModel TopHolder exposes bonusTickets from the snapshot`() {
+        // The view-model layer must forward bonus tickets so the
+        // template can render the "X paid + Y bonus" breakdown on the
+        // top-holders list. Without this, the controller's TopHolder
+        // would always present 0 bonus regardless of what the service
+        // returned.
+        val snap = LotteryWebService.LotteryPageSnapshot(
+            dailyOpen = null,
+            dailyLatestDrawn = null,
+            dailyMyTicket = null,
+            dailyTicketBuyers = 0,
+            weightedOpen = JackpotLotteryDto(
+                id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 0L,
+                winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+            ),
+            weightedMyTicket = null,
+            weightedTopHolders = listOf(
+                LotteryWebService.TopHolder(
+                    discordId = 7L,
+                    ticketCount = 10,
+                    bonusTickets = 3L,
+                    name = "Whale",
+                    avatarUrl = null,
+                    title = null,
+                ),
+            ),
+            weightedTotalTickets = 13L,
+            pickCount = 5,
+            numberMax = 49,
+            tierPercents = listOf(60, 25, 10, 5),
+            revenueJackpotPct = 30L,
+            dailyMode = "WEIGHTED",
+            dailyEnabled = true,
+        )
+
+        val vm = LotteryViewModel.from(snap)
+        val holder = vm.weighted!!.topHolders.single()
+        assertEquals(10, holder.ticketCount)
+        assertEquals(3L, holder.bonusTickets)
+    }
+
+    @Test
     fun `LotteryViewModel exposes the player's bonus tickets on the weighted view`() {
         // Bonus tickets accumulated from past bulk buys must be
         // visible to the template so the "X paid + Y bonus" copy can

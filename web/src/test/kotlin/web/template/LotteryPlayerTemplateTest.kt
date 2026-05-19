@@ -87,6 +87,24 @@ class LotteryPlayerTemplateTest {
     }
 
     @Test
+    fun `player lottery template renders 'paid + bonus' breakdown on top holders when h_bonusTickets is non-zero`() {
+        // Each top-holder row's ticket pill must match the "Your
+        // tickets" treatment: when the holder has bonus tickets, show
+        // "X paid + Y bonus", else just the paid count. Pin the
+        // expression in both render sites (WEIGHTED daily + Featured
+        // event card) — the conditional appears twice in the template.
+        assertTrue(
+            lotteryHtml.contains("h.bonusTickets > 0"),
+            "expected the top-holders pill to branch on h.bonusTickets > 0",
+        )
+        val occurrences = "h.bonusTickets > 0".toRegex().findAll(lotteryHtml).count()
+        assertTrue(
+            occurrences >= 2,
+            "expected the bonus-tickets conditional in both top-holder render sites; found $occurrences",
+        )
+    }
+
+    @Test
     fun `player lottery template renders 'paid + bonus' breakdown when myBonusTickets is non-zero`() {
         // The "Your tickets" line shows just `myTickets` when the
         // player has no bulk-bonus tickets, and "X paid + Y bonus"

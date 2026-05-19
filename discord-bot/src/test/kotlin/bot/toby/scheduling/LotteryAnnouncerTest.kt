@@ -32,6 +32,7 @@ import net.dv8tion.jda.api.requests.restaction.MessageEditAction
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -946,6 +947,130 @@ class LotteryAnnouncerTest {
             val after = announcer.incentivesDigest(guildId)
 
             assertFalse(before == after, "edited tier must produce a different digest")
+        }
+
+        @Test
+        fun `weighted refresh appends the Active incentives field when the previous embed lacks it`() {
+            // Legacy embed: posted before the incentives feature
+            // existed, so it carries only TODAYS_DRAW_FIELD. After
+            // tiers are configured the next refresh must BACKFILL the
+            // missing field, not silently drop it. Without the
+            // additive rebuild, an existing open weighted lottery
+            // would never gain the field — only fresh daily-cycle
+            // opens would.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**1000** credits in the pool · Ticket: **50** · Mode: **Top-3 weighted** · Closes 24h.",
+                    false,
+                )
+                .build()
+            assertTrue(
+                previousEmbed.fields.none { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD },
+                "preconditions: legacy embed must NOT carry the incentives field",
+            )
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val lottery = openLottery(
+                poolAmount = 1_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+                announcedIncentivesDigest = null,
+            )
+            announcer.refreshAnnouncement(guild, lottery)
+
+            // The rebuilt embed must now carry the field, populated
+            // from live config.
+            val incentivesField = editedEmbedSlot.captured.fields
+                .firstOrNull { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+            assertNotNull(incentivesField, "legacy embed should be backfilled with the incentives field")
+            assertTrue(
+                incentivesField!!.value!!.contains("buy ≥10"),
+                "backfilled field should reflect live tier config: ${incentivesField.value}",
+            )
+            // TODAYS_DRAW field is still updated as before — backfill
+            // is additive, not replacement of the existing update path.
+            assertTrue(
+                editedEmbedSlot.captured.fields.any { it.name == LotteryAnnouncer.TODAYS_DRAW_FIELD },
+                "TODAYS_DRAW field should still be present",
+            )
+        }
+
+        @Test
+        fun `number-match refresh does not append the Active incentives field`() {
+            // Regression guard against the additive rebuild leaking
+            // into NUMBER_MATCH embeds. Those intentionally never
+            // carry the field because incentives don't apply at
+            // runtime (one ticket per user per draw).
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**500** credits in the pool · Ticket: **50** · Mode: **Pick 5 of 49** · Closes 24h.",
+                    false,
+                )
+                .build()
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val lottery = openLottery(
+                poolAmount = 600L,
+                announcedPoolAmount = 500L,
+                mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+                announcedIncentivesDigest = null,
+            )
+            announcer.refreshAnnouncement(guild, lottery)
+
+            assertTrue(
+                editedEmbedSlot.captured.fields.none { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD },
+                "NUMBER_MATCH embeds must never carry the Active incentives field",
+            )
         }
 
         @Test
