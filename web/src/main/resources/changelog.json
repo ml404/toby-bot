@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Wire Web Push adapter for Surface.PUSH",
+    "summary": "Replaces the no-op `sendPush` stub from #493 with a real Web Push (RFC 8030 / 8291 / 8292) delivery path. End-to-end: schema → DTO/persistence/service → adapter → router wiring → REST endpoints → service worker → toggle UI on `/preferences/notifications`. Without VAPID keys configured the adapter bean is not registered (`@ConditionalOnProperty` + `@ConditionalOnBean`), so `NotificationRouter` falls back to the existing one-shot \"no adapter wired\" warn path. Dev/CI environm…",
+    "emoji": "✨",
+    "prNumber": 494
+  },
+  {
+    "date": "May 2026",
     "title": "Per-surface notification preferences + push stub + blackjack_natural hookup",
     "summary": "Today every `user_notification_pref` row is keyed by `(discord_id, guild_id, channel_kind)` — one flag per (user, kind). That collapses DM and channel behaviour into a single toggle for kinds that have both (today only `ACHIEVEMENT_UNLOCK`), and channel posts ignore prefs entirely so tip recipients / duel opponents / lottery winners get pinged regardless of preference. This PR splits the row by surface so a user can opt out independently per surface. Also bundles two defer…",
     "emoji": "🎟️",
