@@ -65,29 +65,18 @@ class Cache(
 
     private fun cleanup() {
         val now = System.currentTimeMillis()
-        var keysToDelete: ArrayList<String>
-
+        // Hold the lock across identify+evict so a concurrent put/get on an entry
+        // we'd mark as stale can't slip in a refreshed lastAccessed between the
+        // scan and the remove. Sweeping is bounded by maxItems.
         synchronized(cacheMap) {
             val itr: MapIterator<String, CachedObject> = cacheMap.mapIterator()
-            keysToDelete = ArrayList((cacheMap.size / 2) + 1)
-            var key: String
-            var c: CachedObject?
             while (itr.hasNext()) {
-                key = itr.next()
-                c = itr.value
-
-                if (c != null && (now > (timeToLiveInMillis + c.lastAccessed))) {
-                    keysToDelete.add(key)
+                itr.next()
+                val c = itr.value
+                if (c != null && now > timeToLiveInMillis + c.lastAccessed) {
+                    itr.remove()
                 }
             }
-        }
-
-        for (key in keysToDelete) {
-            synchronized(cacheMap) {
-                cacheMap.remove(key)
-            }
-
-            Thread.yield()
         }
     }
 }

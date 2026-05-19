@@ -47,16 +47,8 @@ class DefaultJackpotLotteryPersistence : JackpotLotteryPersistence {
         return q.resultList.firstOrNull()
     }
 
-    override fun upsert(lottery: JackpotLotteryDto): JackpotLotteryDto {
-        val saved = if (lottery.id == null) {
-            entityManager.persist(lottery)
-            lottery
-        } else {
-            entityManager.merge(lottery)
-        }
-        entityManager.flush()
-        return saved
-    }
+    override fun upsert(lottery: JackpotLotteryDto): JackpotLotteryDto =
+        entityManager.saveOrMerge(lottery, isNew = { it.id == null })
 
     override fun findById(lotteryId: Long): JackpotLotteryDto? =
         entityManager.find(JackpotLotteryDto::class.java, lotteryId)
@@ -74,14 +66,7 @@ class DefaultJackpotLotteryPersistence : JackpotLotteryPersistence {
             JackpotLotteryTicketDto::class.java,
             JackpotLotteryTicketId(lotteryId = ticket.lotteryId, discordId = ticket.discordId)
         )
-        val saved = if (existing == null) {
-            entityManager.persist(ticket)
-            ticket
-        } else {
-            entityManager.merge(ticket)
-        }
-        entityManager.flush()
-        return saved
+        return entityManager.saveOrMerge(ticket, isNew = { existing == null })
     }
 
     override fun ticketsByLottery(lotteryId: Long): List<JackpotLotteryTicketDto> {
