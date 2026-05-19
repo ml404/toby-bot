@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Surface settings + notification preferences in navbar",
+    "summary": "The notification-preferences feature shipped end-to-end in #491/#493 (backend service, REST endpoints in `EngagementApiController`, MVC controller, templates, JS), but the only navbar path to `/preferences` was the small default-server star chip in the nav-identity block — whose label is the current default-server name and whose tooltip says \"click to change default server.\" Nothing in the navbar said Settings, Preferences, or Notifications, so the matrix was effectively i…",
+    "emoji": "✨",
+    "prNumber": 496
+  },
+  {
+    "date": "May 2026",
     "title": "Wire Web Push adapter for Surface.PUSH",
     "summary": "Replaces the no-op `sendPush` stub from #493 with a real Web Push (RFC 8030 / 8291 / 8292) delivery path. End-to-end: schema → DTO/persistence/service → adapter → router wiring → REST endpoints → service worker → toggle UI on `/preferences/notifications`. Without VAPID keys configured the adapter bean is not registered (`@ConditionalOnProperty` + `@ConditionalOnBean`), so `NotificationRouter` falls back to the existing one-shot \"no adapter wired\" warn path. Dev/CI environm…",
     "emoji": "✨",
