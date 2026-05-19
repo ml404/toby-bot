@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Admin tabs no longer paint over the navbar / drawer / dropdowns",
+    "summary": "The previous attempts (#509 layout, #510 raising the drawer to `z-index: 1000`) didn't fix admin tab overlap because the cause wasn't z-index — it was selector scope. `nav { position: relative; z-index: 10 }` in `nav.css` matched **every** `<nav>` on the page, including `<nav class=\"mod-subnav\">` in `moderationHeader.html`. That made the admin tab strip create its own root-level stacking context at the same z-index as the top navbar but later in the DOM, so it painted over…",
+    "emoji": "🔨",
+    "prNumber": 516
+  },
+  {
+    "date": "May 2026",
     "title": "Web buy/sell watches on the /economy market page",
     "summary": "Surfaces the Discord `/pricealert` feature (#512) on the web dashboard. A watch created from `/economy/{guildId}` writes to the same `user_price_trigger` table the scheduler scans on each market tick, so the firing path is unchanged and either surface can manage the other's rows.",
     "emoji": "💰",
