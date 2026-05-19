@@ -12,12 +12,9 @@ import database.dto.UserPriceTriggerDto
 import database.service.EconomyTradeService
 import database.service.UserNotificationPrefService
 import database.service.UserPriceTriggerService
-import io.mockk.anyVararg
-import io.mockk.clearAllMocks
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.slot
-import io.mockk.verify
+// Wildcard so the `anyVararg()` MockKMatcherScope extension resolves —
+// it's not exposed as a top-level import like `every` / `mockk`.
+import io.mockk.*
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
