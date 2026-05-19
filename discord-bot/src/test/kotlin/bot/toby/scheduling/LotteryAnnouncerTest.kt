@@ -1,16 +1,20 @@
 package bot.toby.scheduling
 
 import bot.toby.notify.NotificationRouter
+import bot.toby.notify.PushAdapter
 import common.notification.ChannelRouteKey
+import common.notification.PushPayload
 import database.dto.ConfigDto
 import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
+import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
@@ -64,9 +68,21 @@ class LotteryAnnouncerTest {
     fun setup() {
         configService = mockk(relaxed = true)
         jackpotLotteryService = mockk(relaxed = true)
-        router = mockk(relaxed = true)
-        guild = mockk(relaxed = true)
+        // Spy on a real router so dispatch's enforcement runs (the
+        // LOTTERY cycle wires CHANNEL + PUSH, both required by the kind).
+        val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
+            every { isOptedIn(any(), any(), any(), any()) } returns true
+        }
+        val routerConfigService = mockk<ConfigService>(relaxed = true)
+        val pushAdapter = mockk<PushAdapter>(relaxed = true)
         jda = mockk(relaxed = true)
+        router = spyk(NotificationRouter(jda, prefService, routerConfigService, pushAdapter))
+        every { router.sendDm(any(), any(), any(), any()) } just runs
+        every { router.sendPush(any(), any(), any(), any()) } just runs
+        every {
+            router.sendChannel(any(), any(), any(), any(), any(), any())
+        } just runs
+        guild = mockk(relaxed = true)
         bot = mockk(relaxed = true)
         channel = mockk(relaxed = true)
 
@@ -176,6 +192,96 @@ class LotteryAnnouncerTest {
             common.notification.NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET, m.kind
         )
         assertEquals(listOf(1L, 2L), m.userIds)
+    }
+
+    @Test
+    fun `WeightedDrawn cycle pushes each winner with their own payout amount in the body`() {
+        // Regression guard: LOTTERY_DRAW_WITH_MY_TICKET supports
+        // CHANNEL + PUSH, but historically only the channel post fired.
+        // Multi-recipient dispatch now also fans push out per-winner.
+        val payouts = listOf(
+            database.service.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+            database.service.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
+        )
+        val pushBuilders = mutableMapOf<Long, () -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), any())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            pushBuilders[firstArg()] = arg<() -> PushPayload>(3)
+        }
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts, totalPaid = 800L, drained = 1_000L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        // Each winner got exactly one push targeted at their own id.
+        verify(exactly = 1) {
+            router.sendPush(1L, guildId, common.notification.NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET, any())
+        }
+        verify(exactly = 1) {
+            router.sendPush(2L, guildId, common.notification.NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET, any())
+        }
+        // Payload bodies carry each winner's own payout amount.
+        assert(pushBuilders.getValue(1L).invoke().body.contains("500"))
+        assert(pushBuilders.getValue(2L).invoke().body.contains("300"))
+    }
+
+    @Test
+    fun `MatchDrawn cycle pushes each tier winner with their tier share`() {
+        val tierPayouts = listOf(
+            database.service.JackpotLotteryService.MatchTierPayout(discordId = 7L, matches = 5, share = 600L),
+            database.service.JackpotLotteryService.MatchTierPayout(discordId = 8L, matches = 4, share = 250L),
+            database.service.JackpotLotteryService.MatchTierPayout(discordId = 9L, matches = 3, share = 100L),
+        )
+        val pushBuilders = mutableMapOf<Long, () -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), any())
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            pushBuilders[firstArg()] = arg<() -> PushPayload>(3)
+        }
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED", // mode label only — outcome is MatchDrawn
+            priorOutcome = LotteryAnnouncer.PriorOutcome.MatchDrawn(
+                drawnNumbers = listOf(1, 2, 3, 4, 5),
+                tierPayouts = tierPayouts,
+                totalPaid = 950L,
+                rolledBack = 0L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        assertEquals(setOf(7L, 8L, 9L), pushBuilders.keys)
+        assert(pushBuilders.getValue(7L).invoke().body.contains("600"))
+        assert(pushBuilders.getValue(8L).invoke().body.contains("250"))
+        assert(pushBuilders.getValue(9L).invoke().body.contains("100"))
+    }
+
+    @Test
+    fun `NoTickets cycle still fires the channel broadcast and does not push anyone`() {
+        // No winners → no push fan-out, but the open-draw announcement
+        // still ships to drive ticket purchases.
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+        verify(exactly = 1) {
+            router.sendChannel(any(), any(), any(), any(), any(), any())
+        }
+        verify(exactly = 0) { router.sendPush(any(), any(), any(), any()) }
     }
 
     @Test

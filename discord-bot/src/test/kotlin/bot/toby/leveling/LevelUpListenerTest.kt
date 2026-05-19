@@ -2,20 +2,25 @@ package bot.toby.leveling
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
+import bot.toby.notify.PushAdapter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.dto.LevelRoleRewardDto
 import database.dto.TitleDto
+import database.service.ConfigService
 import database.service.LevelRoleRewardService
 import database.service.TitleService
+import database.service.UserNotificationPrefService
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -41,7 +46,21 @@ class LevelUpListenerTest {
     @BeforeEach
     fun setUp() {
         jda = mockk(relaxed = true)
-        router = mockk(relaxed = true)
+        val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
+            every { isOptedIn(any(), any(), any(), any()) } returns true
+        }
+        val configService = mockk<ConfigService>(relaxed = true)
+        val pushAdapter = mockk<PushAdapter>(relaxed = true)
+        // Spy on a real router so dispatch's enforcement runs against
+        // the listener's wiring (every supported surface must be wired
+        // or dispatch throws). Surface primitives are stubbed so we
+        // don't drag in JDA REST.
+        router = spyk(NotificationRouter(jda, prefService, configService, pushAdapter))
+        every { router.sendDm(any(), any(), any(), any()) } just runs
+        every { router.sendPush(any(), any(), any(), any()) } just runs
+        every {
+            router.sendChannel(any(), any(), any(), any(), any(), any())
+        } just runs
         levelRoleRewardService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         listener = LevelUpListener(jda, levelRoleRewardService, titleService, router)
@@ -143,6 +162,44 @@ class LevelUpListenerTest {
                 kind = NotificationChannelKind.LEVEL_UP,
                 message = any(),
             )
+        }
+    }
+
+    @Test
+    fun `onLevelUp also pushes the leveller — regression guard for forgotten push surface`() {
+        // LEVEL_UP supports DM + CHANNEL + PUSH. Dispatch enforcement
+        // requires all three; pin that the push surface fires.
+        guildOnly()
+        captureAnnouncementEmbed()
+
+        listener.onLevelUp(
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = 99L)
+        )
+
+        verify(exactly = 1) {
+            router.sendPush(discordId, guildId, NotificationChannelKind.LEVEL_UP, any())
+        }
+    }
+
+    @Test
+    fun `onLevelUp push payload names the new level and total XP`() {
+        guildOnly()
+        captureAnnouncementEmbed()
+        val builder = slot<() -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), capture(builder))
+        } just runs
+
+        listener.onLevelUp(
+            LevelUpEvent(discordId, guildId, oldLevel = 4, newLevel = 5, totalXp = 1234L, channelId = 99L)
+        )
+
+        val payload = builder.captured.invoke()
+        assert(payload.title.contains("LVL 5")) {
+            "expected new level in push title, got: ${payload.title}"
+        }
+        assert(payload.body.contains("1,234")) {
+            "expected formatted total XP in push body, got: ${payload.body}"
         }
     }
 

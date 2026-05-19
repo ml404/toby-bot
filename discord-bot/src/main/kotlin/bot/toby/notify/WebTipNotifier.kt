@@ -3,8 +3,10 @@ package bot.toby.notify
 import bot.toby.command.commands.economy.TipEmbeds
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.service.TipService.TipOutcome
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import web.event.WebTipSentEvent
@@ -23,6 +25,7 @@ import web.event.WebTipSentEvent
 @Component
 class WebTipNotifier(
     private val notificationRouter: NotificationRouter,
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
     @EventListener
     fun on(event: WebTipSentEvent) {
@@ -36,23 +39,36 @@ class WebTipNotifier(
             sentTodayAfter = event.sentTodayAfter,
             dailyCap = event.dailyCap
         )
-        notificationRouter.sendChannel(
+        notificationRouter.dispatch(
+            kind = NotificationChannelKind.TIP_RECEIVED,
+            discordId = event.recipientDiscordId,
             guildId = event.guildId,
-            route = ChannelRouteKey.SYSTEM,
-            message = {
+        ) {
+            channel(
+                route = ChannelRouteKey.SYSTEM,
+                // Router suppresses the recipient's user-ping when they've
+                // opted out of (TIP_RECEIVED, CHANNEL). Post still happens.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.TIP_RECEIVED,
+                    userIds = listOf(event.recipientDiscordId),
+                ),
+            ) {
                 // setContent on the message (not the embed description) so the
                 // <@recipient> mention actually pings — embed-mention pings are silent.
                 MessageCreateBuilder()
                     .setEmbeds(TipEmbeds.okEmbed(outcome))
                     .setContent("<@${event.recipientDiscordId}>")
                     .build()
-            },
-            // Router suppresses the recipient's user-ping when they've
-            // opted out of (TIP_RECEIVED, CHANNEL). Post still happens.
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.TIP_RECEIVED,
-                userIds = listOf(event.recipientDiscordId),
-            ),
-        )
+            }
+            push {
+                val note = event.note?.takeIf { it.isNotBlank() }?.let { " — \"$it\"" } ?: ""
+                PushPayload(
+                    title = "💰 You received ${event.amount} credits",
+                    body = "<@${event.senderDiscordId}> tipped you$note.",
+                    deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                        ?.let { "$it/profile/${event.guildId}" },
+                )
+            }
+        }
     }
 }

@@ -2,13 +2,18 @@ package bot.toby.notify
 
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.duel.PendingDuelRegistry
+import database.service.ConfigService
+import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -51,7 +56,18 @@ class WebDuelOfferNotifierTest {
 
     @BeforeEach
     fun setup() {
-        router = mockk(relaxed = true)
+        val jda = mockk<JDA>(relaxed = true)
+        val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
+            every { isOptedIn(any(), any(), any(), any()) } returns true
+        }
+        val configService = mockk<ConfigService>(relaxed = true)
+        val pushAdapter = mockk<PushAdapter>(relaxed = true)
+        router = spyk(NotificationRouter(jda, prefService, configService, pushAdapter))
+        every { router.sendDm(any(), any(), any(), any()) } just runs
+        every { router.sendPush(any(), any(), any(), any()) } just runs
+        every {
+            router.sendChannel(any(), any(), any(), any(), any(), any())
+        } just runs
         pendingDuelRegistry = mockk(relaxed = true)
         every { pendingDuelRegistry.ttl } returns Duration.ofMinutes(3)
         scheduler = mockk(relaxed = true)
@@ -119,6 +135,32 @@ class WebDuelOfferNotifierTest {
             "Opponent mention must live in setContent, not the embed"
         }
         assertEquals(1, data.components.size, "ActionRow with Accept/Decline must be attached")
+    }
+
+    @Test
+    fun `on also pushes the opponent — regression guard for forgotten push surface`() {
+        notifier.on(event())
+        verify(exactly = 1) {
+            router.sendPush(opponentId, guildId, NotificationChannelKind.DUEL_OFFER, any())
+        }
+    }
+
+    @Test
+    fun `push payload carries the initiator mention and stake`() {
+        val builder = slot<() -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), capture(builder))
+        } just runs
+
+        notifier.on(event())
+
+        val payload = builder.captured.invoke()
+        assert(payload.body.contains("<@$initiatorId>")) {
+            "expected initiator mention in push body, got: ${payload.body}"
+        }
+        assert(payload.title.contains("$stake")) {
+            "expected stake amount in push title, got: ${payload.title}"
+        }
     }
 
     @Test

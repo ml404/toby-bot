@@ -5,6 +5,7 @@ import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.dto.JackpotLotteryDto
 import database.service.ConfigService
 import database.service.JackpotLotteryService
@@ -86,10 +87,46 @@ class LotteryAnnouncer @Autowired constructor(
     ) {
         val lotteryId = (openOutcome as? OpenSummary.Ok)?.lotteryId
         val poolAmount = (openOutcome as? OpenSummary.Ok)?.poolAmount
-        notificationRouter.sendChannel(
+        val winners = winnerPingIds(priorOutcome)
+        val payoutByWinner = payoutByWinner(priorOutcome)
+        // Multi-recipient dispatch: channel{} broadcasts one message
+        // pinging every winner; push{} fans out per-winner with each
+        // user's own payout in the body. When there are no winners the
+        // channel post still fires and the push loop is a no-op.
+        notificationRouter.dispatch(
+            kind = NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET,
+            discordIds = winners,
             guildId = guild.idLong,
-            route = ChannelRouteKey.LOTTERY,
-            message = {
+        ) {
+            channel(
+                route = ChannelRouteKey.LOTTERY,
+                onSent = { sent ->
+                    if (lotteryId != null && poolAmount != null) {
+                        runCatching {
+                            jackpotLotteryService.recordAnnouncement(
+                                lotteryId = lotteryId,
+                                channelId = sent.channel.idLong,
+                                messageId = sent.idLong,
+                                pool = poolAmount,
+                            )
+                        }.onFailure {
+                            logger.warn(
+                                "Could not persist lottery announcement reference for " +
+                                    "lottery $lotteryId (guild ${guild.idLong}): ${it.message}"
+                            )
+                        }
+                    }
+                },
+                // Router suppresses any winner's user-ping when they've
+                // opted out of (LOTTERY_DRAW_WITH_MY_TICKET, CHANNEL). Wide
+                // ping (@here/@everyone) is unaffected. winners is empty
+                // when there are no winners — a non-null mentions with an
+                // empty list is the correct signal.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET,
+                    userIds = winners,
+                ),
+            ) {
                 val embed = buildEmbed(guild, mode, priorOutcome, openOutcome)
                 val content = buildAnnouncementContent(guild, priorOutcome)
                 val actionRow = announcementActionRow(mode, guild.idLong)
@@ -99,34 +136,27 @@ class LotteryAnnouncer @Autowired constructor(
                 if (content.isNotBlank()) builder.setContent(content)
                 if (actionRow != null) builder.setComponents(actionRow)
                 builder.build()
-            },
-            onSent = { sent ->
-                if (lotteryId != null && poolAmount != null) {
-                    runCatching {
-                        jackpotLotteryService.recordAnnouncement(
-                            lotteryId = lotteryId,
-                            channelId = sent.channel.idLong,
-                            messageId = sent.idLong,
-                            pool = poolAmount,
-                        )
-                    }.onFailure {
-                        logger.warn(
-                            "Could not persist lottery announcement reference for " +
-                                "lottery $lotteryId (guild ${guild.idLong}): ${it.message}"
-                        )
-                    }
-                }
-            },
-            // Router suppresses any winner's user-ping when they've
-            // opted out of (LOTTERY_DRAW_WITH_MY_TICKET, CHANNEL). Wide
-            // ping (@here/@everyone) is unaffected. winnerPingIds is
-            // empty when there are no winners — passing a non-null
-            // mentions with an empty list is the correct signal.
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.LOTTERY_DRAW_WITH_MY_TICKET,
-                userIds = winnerPingIds(priorOutcome),
-            ),
-        )
+            }
+            push { winnerId ->
+                val amount = payoutByWinner[winnerId]
+                PushPayload(
+                    title = "🎰 You won the lottery!",
+                    body = amount?.let { "Payout: $it credits" }
+                        ?: "Check the lottery channel for details.",
+                    deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                        ?.let { "$it/profile/${guild.idLong}" },
+                )
+            }
+        }
+    }
+
+    /** Flatten the prior outcome into `discordId → credit amount paid`. */
+    private fun payoutByWinner(prior: PriorOutcome?): Map<Long, Long> = when (prior) {
+        is PriorOutcome.MatchDrawn ->
+            prior.tierPayouts.associate { it.discordId to it.share }
+        is PriorOutcome.WeightedDrawn ->
+            prior.payouts.associate { it.discordId to it.amount }
+        else -> emptyMap()
     }
 
     /**

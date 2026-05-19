@@ -1,13 +1,17 @@
 package bot.toby.scheduling
 
 import bot.toby.notify.NotificationRouter
+import bot.toby.notify.PushAdapter
 import common.notification.NotificationChannelKind
 import database.dto.LoginStreakDto
+import database.service.ConfigService
 import database.service.LoginStreakService
+import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.spyk
 import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -49,8 +53,21 @@ class StreakReminderJobTest {
     fun setup() {
         jda = mockk(relaxed = true)
         loginStreakService = mockk(relaxed = true)
-        notificationRouter = mockk(relaxed = true)
+        // Spy on a real router so `dispatch` runs its missing-surface
+        // enforcement and forwards to spied primitives we can verify.
+        val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
+            every { isOptedIn(any(), any(), any(), any()) } returns true
+        }
+        val configService = mockk<ConfigService>(relaxed = true)
+        val pushAdapter = mockk<PushAdapter>(relaxed = true)
+        notificationRouter = spyk(
+            NotificationRouter(jda, prefService, configService, pushAdapter)
+        )
         every { notificationRouter.sendDm(any(), any(), any(), any()) } just runs
+        every { notificationRouter.sendPush(any(), any(), any(), any()) } just runs
+        every {
+            notificationRouter.sendChannel(any(), any(), any(), any(), any(), any())
+        } just runs
     }
 
     /** Build the job with a JDA cache containing the supplied guild ids. */
@@ -172,6 +189,32 @@ class StreakReminderJobTest {
         // grew a side-effect that bypasses the router's opt-in gate.
         verify(exactly = 1) {
             loginStreakService.findActiveStreaksDueForReminder(100L, today)
+        }
+    }
+
+    @Test
+    fun `runHourly also pushes every at-risk user — regression guard for forgotten push surface`() {
+        // STREAK_REMINDER supports DM + PUSH. Before dispatch enforcement,
+        // the job DM'd at-risk users but never pushed — opted-in browsers
+        // got nothing. Dispatch now requires both, and this test pins
+        // that the push surface fires alongside DM.
+        every {
+            loginStreakService.findActiveStreaksDueForReminder(100L, today)
+        } returns listOf(
+            LoginStreakDto(
+                discordId = 1L, guildId = 100L,
+                currentStreak = 5, longestStreak = 5,
+                lastClaimDate = today.minusDays(1), totalClaims = 5L,
+            )
+        )
+
+        buildJob(100L).runHourly()
+
+        verify(exactly = 1) {
+            notificationRouter.sendDm(1L, 100L, NotificationChannelKind.STREAK_REMINDER, any())
+        }
+        verify(exactly = 1) {
+            notificationRouter.sendPush(1L, 100L, NotificationChannelKind.STREAK_REMINDER, any())
         }
     }
 

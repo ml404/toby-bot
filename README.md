@@ -13,6 +13,9 @@ Toby Bot is a feature-rich Discord bot built using Kotlin and powered by various
 - **Spring Boot:** Leveraging the Spring Boot framework to efficiently configure and deploy the bot.
 - **JDA:** Utilising JDA, a robust Java library for interacting with the Discord API.
 - **JPA and Hibernate:** Storing and managing data in a relational database for efficient data management.
+- **Web dashboard + OAuth2:** Companion web UI (Spring MVC + Thymeleaf) for profile, achievements, notification preferences, and admin moderation. Logs in via Discord OAuth2.
+- **Per-surface notifications:** Each notification kind (achievement unlock, level-up, duel offer, tip received, streak reminder, lottery draw) ships across three surfaces — DM, channel post, and Web Push — independently opt-in per user. The router enforces "every supported surface is wired" at dispatch time so a kind can never silently drop a surface again.
+- **Web Push (RFC 8030/8291/8292):** Browser push notifications via VAPID. A service worker handles delivery and deep-links the recipient back into the dashboard.
 
 ## Prerequisites
 
@@ -46,7 +49,7 @@ Ensure you have the following prerequisites set up before getting started:
 4. Start the bot:
 
    ```shell
-   java -jar application/build/libs/application-6.1-SNAPSHOT.jar -Dspring.profiles.active=prod
+   java -jar application/build/libs/application-7.1-SNAPSHOT.jar -Dspring.profiles.active=prod
    ```
 
 ## Running with Docker
@@ -59,12 +62,14 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
    |---|---|---|
    | `TOKEN` | Yes | Discord bot token |
    | `DATABASE_URL` | Yes | PostgreSQL URL (`postgresql://user:pass@host:5432/db`) |
+   | `DISCORD_CLIENT_ID` | Yes (web) | Discord OAuth2 client id for the web dashboard login flow. |
+   | `DISCORD_CLIENT_SECRET` | Yes (web) | Discord OAuth2 client secret. Pair with `DISCORD_CLIENT_ID`. |
+   | `APP_BASE_URL` | No | Public base URL of the web dashboard (e.g. `https://www.toby-bot.co.uk`). Used to build deep links inside Web Push notifications and any other outbound message that needs an absolute URL. When unset, push payloads omit the deep link. |
+   | `TOBY_VAPID_PUBLIC_KEY` | No | VAPID public key (base64url) for Web Push. Generate a keypair with `npx web-push generate-vapid-keys`. The public key is served to browsers at `GET /api/push/vapid-public-key`. When unset, the `WebPushAdapter` bean is not registered and the router silently drops push (everything else keeps working). |
+   | `TOBY_VAPID_PRIVATE_KEY` | No | VAPID private key (base64url). Pair with `TOBY_VAPID_PUBLIC_KEY`; never commit. |
+   | `TOBY_VAPID_SUBJECT` | No | `mailto:` or `https://` contact URL required by RFC 8292. Defaults to `mailto:admin@example.invalid`; override in production. |
    | `YOUTUBE_API_KEY` | No | YouTube Data API key |
    | `GOOGLE_REFRESH_TOKEN` | No | OAuth2 refresh token for YouTube playback. See [lavaplayer-youtube OAuth2 docs](https://github.com/lavalink-devs/youtube-source#oauth-tokens) for how to mint one. Authenticated requests are far less likely to be IP-blocked. |
-   | `YOUTUBE_PROXY_HOST` | No | Hostname of an HTTP proxy to route YouTube traffic through (both lavaplayer playback and YouTube Data API). Use a rotating residential proxy provider (Webshare, IPRoyal, Bright Data, etc.) to avoid YouTube IP blocks without manually restarting the dyno. |
-   | `YOUTUBE_PROXY_PORT` | No | Port for the proxy above. Required if `YOUTUBE_PROXY_HOST` is set. |
-   | `YOUTUBE_PROXY_USER` | No | Username for proxy basic auth. Optional. |
-   | `YOUTUBE_PROXY_PASS` | No | Password for proxy basic auth. Optional. |
 
    **Option A — `.env` file** (copy the example and fill in your values):
 
@@ -86,6 +91,38 @@ Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
 - Invite your Toby Bot to your Discord server and grant the required permissions.
 - Interact with the bot using the commands and features provided by the project.
+
+## Enabling Web Push
+
+Toby Bot ships Web Push (RFC 8030 / 8291 / 8292) for users who opt in via `/preferences/notifications` in the web dashboard.
+
+1. Generate a VAPID keypair (any P-256 ECDSA keypair will do):
+
+   ```shell
+   npx web-push generate-vapid-keys
+   ```
+
+2. Export the keys as env vars (Heroku config var, Docker secret, `.env` file, etc.):
+
+   ```
+   TOBY_VAPID_PUBLIC_KEY=<publicKey>
+   TOBY_VAPID_PRIVATE_KEY=<privateKey>
+   TOBY_VAPID_SUBJECT=mailto:admin@your-domain
+   ```
+
+   Spring's relaxed binding maps these to `toby.vapid.public-key` etc. When both keys are present the `WebPushAdapter` bean is registered and `NotificationRouter.sendPush` forwards opted-in pushes through it. When either is unset the adapter never registers — the rest of the bot keeps working unchanged.
+
+3. (Optional) set `APP_BASE_URL` so push payloads include a deep link back to the user's profile/achievements page in the dashboard.
+
+4. Smoke test after redeploy:
+
+   ```shell
+   curl -s https://your-host/api/push/vapid-public-key
+   ```
+
+   200 with the configured public key in the body means the keys are wired. 404 means the env vars aren't loaded yet.
+
+5. End-to-end: log in via Discord, toggle Push on for any event in `/preferences/notifications`, then trigger the event — a notification should land in the browser.
 
 ## Support the Project
 

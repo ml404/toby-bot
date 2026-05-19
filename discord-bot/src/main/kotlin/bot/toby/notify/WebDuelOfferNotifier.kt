@@ -4,6 +4,7 @@ import bot.toby.command.commands.economy.DuelEmbeds
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.configuration.RegistryScheduler
 import database.duel.PendingDuelRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
@@ -12,6 +13,7 @@ import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import web.event.WebDuelOfferedEvent
@@ -42,6 +44,7 @@ class WebDuelOfferNotifier(
     private val notificationRouter: NotificationRouter,
     private val pendingDuelRegistry: PendingDuelRegistry,
     private val scheduler: ScheduledExecutorService = RegistryScheduler.instance,
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
     private val logger = DiscordLogger.createLogger(this::class.java)
 
@@ -55,10 +58,22 @@ class WebDuelOfferNotifier(
             DuelEmbeds.declineButtonId(event.duelId, event.opponentDiscordId),
             "Decline"
         )
-        notificationRouter.sendChannel(
+        notificationRouter.dispatch(
+            kind = NotificationChannelKind.DUEL_OFFER,
+            discordId = event.opponentDiscordId,
             guildId = event.guildId,
-            route = ChannelRouteKey.SYSTEM,
-            message = {
+        ) {
+            channel(
+                route = ChannelRouteKey.SYSTEM,
+                onSent = { sent -> scheduleTimeoutCleanup(event, sent) },
+                // Router suppresses the opponent's user-ping when they've
+                // opted out of (DUEL_OFFER, CHANNEL). Buttons still render
+                // and the embed still shows; they just don't get notified.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.DUEL_OFFER,
+                    userIds = listOf(event.opponentDiscordId),
+                ),
+            ) {
                 // setContent on the message (not the embed description) so the
                 // <@opponent> mention actually pings — embed-mention pings are silent.
                 MessageCreateBuilder()
@@ -73,16 +88,16 @@ class WebDuelOfferNotifier(
                     .setContent("<@${event.opponentDiscordId}>")
                     .setComponents(ActionRow.of(accept, decline))
                     .build()
-            },
-            onSent = { sent -> scheduleTimeoutCleanup(event, sent) },
-            // Router suppresses the opponent's user-ping when they've
-            // opted out of (DUEL_OFFER, CHANNEL). Buttons still render
-            // and the embed still shows; they just don't get notified.
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.DUEL_OFFER,
-                userIds = listOf(event.opponentDiscordId),
-            ),
-        )
+            }
+            push {
+                PushPayload(
+                    title = "⚔️ Duel offer (${event.stake} credits)",
+                    body = "<@${event.initiatorDiscordId}> challenged you. Respond before it expires.",
+                    deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                        ?.let { "$it/profile/${event.guildId}" },
+                )
+            }
+        }
     }
 
     private fun scheduleTimeoutCleanup(event: WebDuelOfferedEvent, sent: Message) {
