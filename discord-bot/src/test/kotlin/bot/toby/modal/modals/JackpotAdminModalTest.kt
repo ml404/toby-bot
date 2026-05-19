@@ -63,7 +63,12 @@ class JackpotAdminModalTest {
 
         ctx = mockk {
             every { this@mockk.event } returns this@JackpotAdminModalTest.event
-            every { this@mockk.guild } returns guild
+            // Qualify the RHS — inside `mockk<ModalContext> { … }` the
+            // receiver is the ctx mock, which has its own `guild`
+            // property. An unqualified `guild` would resolve to the
+            // un-stubbed mock getter rather than the outer test field
+            // and blow up with "no answer provided for ModalContext.getGuild()".
+            every { this@mockk.guild } returns this@JackpotAdminModalTest.guild
         }
 
         @Suppress("UNCHECKED_CAST")
