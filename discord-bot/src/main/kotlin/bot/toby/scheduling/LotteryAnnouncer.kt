@@ -24,6 +24,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.awt.Color
+import java.security.MessageDigest
 
 /**
  * Posts a "yesterday's draw / today's draw" combined summary to a
@@ -102,12 +103,22 @@ class LotteryAnnouncer @Autowired constructor(
                 route = ChannelRouteKey.LOTTERY,
                 onSent = { sent ->
                     if (lotteryId != null && poolAmount != null) {
+                        // Capture the incentives digest at announce
+                        // time so the next refresh tick can detect a
+                        // tier edit without firing a redundant edit
+                        // for the unchanged baseline. Digest only
+                        // applies to TICKET_WEIGHTED — NUMBER_MATCH
+                        // embeds don't carry the field.
+                        val initialDigest = if (mode == LotteryHelper.MODE_WEIGHTED) {
+                            incentivesDigest(guild.idLong)
+                        } else null
                         runCatching {
                             jackpotLotteryService.recordAnnouncement(
                                 lotteryId = lotteryId,
                                 channelId = sent.channel.idLong,
                                 messageId = sent.idLong,
                                 pool = poolAmount,
+                                incentivesDigest = initialDigest,
                             )
                         }.onFailure {
                             logger.warn(
@@ -175,8 +186,19 @@ class LotteryAnnouncer @Autowired constructor(
         val lotteryId = lottery.id ?: return
         val messageId = lottery.announcementMessageId ?: return
         val channelId = lottery.announcementChannelId ?: return
-        val announcedPool = lottery.announcedPoolAmount
-        if (announcedPool == lottery.poolAmount) return
+        // Two reasons to refresh: the pool moved (existing trigger) or
+        // an admin edited an incentive tier in the web UI since we
+        // last announced (new trigger — covers the case where the
+        // pool is flat but the displayed tiers are stale). The digest
+        // is computed off live config so it changes the moment a tier
+        // is saved; we persist it on each successful edit to match.
+        val mode = runtimeMode(lottery.mode)
+        val freshDigest = if (mode == LotteryHelper.MODE_WEIGHTED) {
+            incentivesDigest(guild.idLong)
+        } else null
+        val poolChanged = lottery.announcedPoolAmount != lottery.poolAmount
+        val incentivesChanged = lottery.announcedIncentivesDigest != freshDigest
+        if (!poolChanged && !incentivesChanged) return
 
         val channel = guild.getTextChannelById(channelId) ?: run {
             logger.warn(
@@ -194,16 +216,22 @@ class LotteryAnnouncer @Autowired constructor(
                 runCatching { jackpotLotteryService.clearAnnouncement(lotteryId) }
                 return@queue
             }
-            val rebuilt = rebuildWithUpdatedTodaysDraw(previous, lottery)
-            val actionRow = announcementActionRow(runtimeMode(lottery.mode), guild.idLong)
+            val rebuilt = rebuildEmbed(previous, lottery, guild.idLong)
+            val actionRow = announcementActionRow(mode, guild.idLong)
             existing.editMessageEmbeds(rebuilt)
                 .setComponents(listOfNotNull(actionRow))
                 .queue({
-                runCatching { jackpotLotteryService.updateAnnouncedPool(lotteryId, lottery.poolAmount) }
+                runCatching {
+                    jackpotLotteryService.updateAnnouncementWatermarks(
+                        lotteryId = lotteryId,
+                        pool = lottery.poolAmount,
+                        incentivesDigest = freshDigest,
+                    )
+                }
                     .onFailure {
                         logger.warn(
                             "Edited lottery announcement $messageId but failed to persist new " +
-                                "pool watermark: ${it.message}"
+                                "announcement watermarks: ${it.message}"
                         )
                     }
             }, { failure ->
@@ -228,33 +256,44 @@ class LotteryAnnouncer @Autowired constructor(
     }
 
     /**
-     * Re-render the "Today's draw" field on [previous] with values from
-     * the live [lottery] row. Other fields and the embed chrome
-     * (title / colour / footer) are preserved verbatim — the only thing
-     * that should drift between announce and refresh is the pool value.
+     * Re-render the live fields on [previous] with values from the
+     * current [lottery] row and config. The "Today's draw" field always
+     * gets the fresh pool; for TICKET_WEIGHTED draws the "Active
+     * incentives" field is also re-sourced from live config so a
+     * mid-lottery tier edit propagates here. Other fields (yesterday's
+     * recap, chrome) and embed structure are preserved verbatim.
      */
-    private fun rebuildWithUpdatedTodaysDraw(
+    private fun rebuildEmbed(
         previous: MessageEmbed,
         lottery: JackpotLotteryDto,
+        guildId: Long,
     ): MessageEmbed {
         val builder = EmbedBuilder(previous).clearFields()
+        // [renderOpenSummary] expects the runtime mode string from
+        // [LotteryHelper] (e.g. "WEIGHTED"), but [lottery.mode] holds
+        // the DTO column value ("TICKET_WEIGHTED" / "NUMBER_MATCH").
+        // Translate explicitly so a refreshed weighted draw doesn't
+        // fall through to the "Pick 5 of 49" else branch.
+        val mode = runtimeMode(lottery.mode)
         val freshSummary = OpenSummary.Ok(
             lotteryId = lottery.id,
             seeded = 0L,                         // unused in renderOpenSummary
             ticketPrice = lottery.ticketPrice,
             poolAmount = lottery.poolAmount,
         )
-        // [renderOpenSummary] expects the runtime mode string from
-        // [LotteryHelper] (e.g. "WEIGHTED"), but [lottery.mode] holds
-        // the DTO column value ("TICKET_WEIGHTED" / "NUMBER_MATCH").
-        // Translate explicitly so a refreshed weighted draw doesn't
-        // fall through to the "Pick 5 of 49" else branch.
-        val freshTodayBody = renderOpenSummary(runtimeMode(lottery.mode), freshSummary)
+        val freshTodayBody = renderOpenSummary(mode, freshSummary)
+        val freshIncentives = if (mode == LotteryHelper.MODE_WEIGHTED) {
+            renderActiveIncentives(guildId)
+        } else null
         previous.fields.forEach { field ->
-            if (field.name == TODAYS_DRAW_FIELD) {
-                builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
-            } else {
-                builder.addField(field)
+            when (field.name) {
+                TODAYS_DRAW_FIELD -> builder.addField(TODAYS_DRAW_FIELD, freshTodayBody, false)
+                ACTIVE_INCENTIVES_FIELD -> if (freshIncentives != null) {
+                    builder.addField(ACTIVE_INCENTIVES_FIELD, freshIncentives, false)
+                } else {
+                    builder.addField(field)
+                }
+                else -> builder.addField(field)
             }
         }
         return builder.build()
@@ -375,6 +414,26 @@ class LotteryAnnouncer @Autowired constructor(
             }
         )
         return builder.build()
+    }
+
+    /**
+     * Stable digest (SHA-256 hex, 64 chars — exactly the column
+     * width) of the active incentive tiers for [guildId]. Same tiers
+     * always produce the same digest, so the refresh job can compare
+     * against the persisted watermark in O(1) and skip the Discord
+     * round-trip on quiet ticks. Cheap enough to run on every
+     * 5-minute tick.
+     */
+    internal fun incentivesDigest(guildId: Long): String {
+        val bulk = LotteryHelper.bulkBonusTiers(configService, guildId)
+        val mult = LotteryHelper.volumeMultiplierTiers(configService, guildId)
+        val ms = LotteryHelper.poolMilestones(configService, guildId)
+        val payload = "b:" + bulk.joinToString(",") { "${it.first}:${it.second}" } +
+            "|m:" + mult.joinToString(",") { "${it.first}:${it.second}" } +
+            "|p:" + ms.joinToString(",") { "${it.first}:${it.second}" }
+        return MessageDigest.getInstance("SHA-256")
+            .digest(payload.toByteArray())
+            .joinToString("") { "%02x".format(it) }
     }
 
     /**

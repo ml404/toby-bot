@@ -1031,6 +1031,69 @@ class JackpotLotteryServiceTest {
         verify(exactly = 0) { jackpotService.resetPool(guildId) }
     }
 
+    // ===================================================================
+    // Announcement watermarking (pool + incentives digest)
+    // ===================================================================
+
+    @Test
+    fun `recordAnnouncement persists the incentives digest alongside the pool`() {
+        val lottery = JackpotLotteryDto(
+            id = 99L, guildId = guildId, ticketPrice = 100L, poolAmount = 5_000L,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED, status = JackpotLotteryDto.STATUS_OPEN,
+        )
+        every { lotteryPersistence.findById(99L) } returns lottery
+
+        service.recordAnnouncement(
+            lotteryId = 99L,
+            channelId = 777L,
+            messageId = 999L,
+            pool = 5_000L,
+            incentivesDigest = "deadbeef",
+        )
+
+        assertEquals(777L, lottery.announcementChannelId)
+        assertEquals(999L, lottery.announcementMessageId)
+        assertEquals(5_000L, lottery.announcedPoolAmount)
+        assertEquals("deadbeef", lottery.announcedIncentivesDigest)
+        verify(exactly = 1) { lotteryPersistence.upsert(lottery) }
+    }
+
+    @Test
+    fun `updateAnnouncementWatermarks bumps both pool and digest`() {
+        val lottery = JackpotLotteryDto(
+            id = 99L, guildId = guildId, mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        ).apply {
+            announcedPoolAmount = 1_000L
+            announcedIncentivesDigest = "old"
+        }
+        every { lotteryPersistence.findById(99L) } returns lottery
+
+        service.updateAnnouncementWatermarks(99L, pool = 1_500L, incentivesDigest = "new")
+
+        assertEquals(1_500L, lottery.announcedPoolAmount)
+        assertEquals("new", lottery.announcedIncentivesDigest)
+    }
+
+    @Test
+    fun `clearAnnouncement clears the digest along with the pool and ids`() {
+        val lottery = JackpotLotteryDto(
+            id = 99L, guildId = guildId, mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        ).apply {
+            announcementChannelId = 777L
+            announcementMessageId = 999L
+            announcedPoolAmount = 5_000L
+            announcedIncentivesDigest = "deadbeef"
+        }
+        every { lotteryPersistence.findById(99L) } returns lottery
+
+        service.clearAnnouncement(99L)
+
+        assertEquals(null, lottery.announcementChannelId)
+        assertEquals(null, lottery.announcementMessageId)
+        assertEquals(null, lottery.announcedPoolAmount)
+        assertEquals(null, lottery.announcedIncentivesDigest)
+    }
+
     @Test
     fun `drawLottery still returns BelowMinBuyers when distinct buyers fall short despite bonuses`() {
         stubMinBuyers(2)

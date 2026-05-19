@@ -671,11 +671,18 @@ class JackpotLotteryService(
      * message ships. No-op when [lotteryId] no longer points at a row
      * (the close-then-reopen tick already moved on).
      */
-    fun recordAnnouncement(lotteryId: Long, channelId: Long, messageId: Long, pool: Long) {
+    fun recordAnnouncement(
+        lotteryId: Long,
+        channelId: Long,
+        messageId: Long,
+        pool: Long,
+        incentivesDigest: String? = null,
+    ) {
         val lottery = lotteryPersistence.findById(lotteryId) ?: return
         lottery.announcementChannelId = channelId
         lottery.announcementMessageId = messageId
         lottery.announcedPoolAmount = pool
+        lottery.announcedIncentivesDigest = incentivesDigest
         lotteryPersistence.upsert(lottery)
     }
 
@@ -689,16 +696,21 @@ class JackpotLotteryService(
         lottery.announcementChannelId = null
         lottery.announcementMessageId = null
         lottery.announcedPoolAmount = null
+        lottery.announcedIncentivesDigest = null
         lotteryPersistence.upsert(lottery)
     }
 
     /**
-     * Bump the announced-pool watermark after a successful refresh edit
-     * so subsequent ticks short-circuit until the pool grows again.
+     * Bump the announce-time watermarks (pool + incentives digest)
+     * after a successful refresh edit so subsequent ticks short-circuit
+     * until something actually changes. The digest covers the
+     * participation-incentive tiers the embed displays — a mid-lottery
+     * tier edit in the web UI bumps it even when the pool is flat.
      */
-    fun updateAnnouncedPool(lotteryId: Long, pool: Long) {
+    fun updateAnnouncementWatermarks(lotteryId: Long, pool: Long, incentivesDigest: String?) {
         val lottery = lotteryPersistence.findById(lotteryId) ?: return
         lottery.announcedPoolAmount = pool
+        lottery.announcedIncentivesDigest = incentivesDigest
         lotteryPersistence.upsert(lottery)
     }
 
