@@ -66,14 +66,19 @@ interface Command : Loggable, Named {
          *
          * All four shapes route through [sendAndDelete] so the queue +
          * deletion side lives in one place; only the JDA action factory
-         * differs per shape.
+         * differs per shape. `setEphemeral` is only called when
+         * `ephemeral=true` so non-ephemeral variants don't unnecessarily
+         * touch the action (matches the pre-refactor behaviour callers
+         * and JDA test mocks expect).
          */
         private inline fun InteractionHook.sendAndDelete(
             ephemeral: Boolean,
             deleteDelay: Int,
             action: InteractionHook.() -> net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>
         ) {
-            action().setEphemeral(ephemeral).queue(invokeDeleteOnMessageResponse(deleteDelay))
+            val req = action()
+            val finalReq = if (ephemeral) req.setEphemeral(true) else req
+            finalReq.queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
 
         fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) =

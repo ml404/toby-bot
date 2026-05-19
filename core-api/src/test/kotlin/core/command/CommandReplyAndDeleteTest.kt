@@ -12,8 +12,6 @@ import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.function.Consumer
@@ -33,7 +31,10 @@ class CommandReplyAndDeleteTest {
     }
 
     @Test
-    fun `replyAndDelete sends plain message, not ephemeral`() {
+    fun `replyAndDelete sends plain message and does not touch setEphemeral`() {
+        // Non-ephemeral variants must not call setEphemeral — the original
+        // helper didn't, and downstream tests mock JDA actions without
+        // stubbing setEphemeral(false). See discord-bot IntroHelperTest etc.
         val hook = mockk<InteractionHook>(relaxed = true)
         val action = stubAction()
         every { hook.sendMessage("hello") } returns action
@@ -41,7 +42,7 @@ class CommandReplyAndDeleteTest {
         hook.replyAndDelete("hello", deleteDelay = 5)
 
         verify(exactly = 1) { hook.sendMessage("hello") }
-        verify(exactly = 1) { action.setEphemeral(false) }
+        verify(exactly = 0) { action.setEphemeral(any()) }
         verify(exactly = 1) { action.queue(any<Consumer<Message>>()) }
     }
 
@@ -59,7 +60,7 @@ class CommandReplyAndDeleteTest {
     }
 
     @Test
-    fun `replyEmbedAndDelete sends an embed, not ephemeral`() {
+    fun `replyEmbedAndDelete sends an embed and does not touch setEphemeral`() {
         val hook = mockk<InteractionHook>(relaxed = true)
         val embed = mockk<MessageEmbed>(relaxed = true)
         val action = stubAction()
@@ -68,7 +69,7 @@ class CommandReplyAndDeleteTest {
         hook.replyEmbedAndDelete(embed, deleteDelay = 3)
 
         verify(exactly = 1) { hook.sendMessageEmbeds(embed) }
-        verify(exactly = 1) { action.setEphemeral(false) }
+        verify(exactly = 0) { action.setEphemeral(any()) }
         verify(exactly = 1) { action.queue(any<Consumer<Message>>()) }
     }
 
@@ -124,7 +125,5 @@ class CommandReplyAndDeleteTest {
         hook.replyEmbedAndDelete(embed, 0)
 
         verify(exactly = 0) { hook.sendMessage(any<String>()) }
-        assertFalse(false) // tidy
-        assertNotNull(embed)
     }
 }
