@@ -70,7 +70,33 @@ internal class PreferencesControllerTest {
         every { introWebService.getMutualGuilds(tokenValue) } returns listOf(guildInfo(111L), guildInfo(222L))
         val model: Model = mockk(relaxed = true)
 
-        val view = controller.page(client = client, user = user, request = cookieReq, model = model)
+        val view = controller.page(client = client, user = user, pick = false, request = cookieReq, model = model)
+
+        // Cookie points at a guild the user is in → auto-redirect to that
+        // guild's notification matrix; the hub itself isn't rendered.
+        assertEquals("redirect:/preferences/notifications/222", view)
+    }
+
+    @Test
+    fun `page returns empty guild list for anonymous user`() {
+        val model: Model = mockk(relaxed = true)
+
+        val view = controller.page(client = client, user = null, pick = false, request = request, model = model)
+
+        assertEquals("preferences", view)
+        verify(exactly = 0) { introWebService.getMutualGuilds(any()) }
+    }
+
+    @Test
+    fun `page renders hub when pick=true even with anchor`() {
+        val cookieReq: HttpServletRequest = mockk(relaxed = true) {
+            every { isSecure } returns false
+            every { cookies } returns arrayOf(Cookie(DefaultGuildCookie.COOKIE_NAME, "222"))
+        }
+        every { introWebService.getMutualGuilds(tokenValue) } returns listOf(guildInfo(111L), guildInfo(222L))
+        val model: Model = mockk(relaxed = true)
+
+        val view = controller.page(client = client, user = user, pick = true, request = cookieReq, model = model)
 
         assertEquals("preferences", view)
         verify { model.addAttribute("defaultGuildId", 222L) }
@@ -78,13 +104,37 @@ internal class PreferencesControllerTest {
     }
 
     @Test
-    fun `page returns empty guild list for anonymous user`() {
+    fun `page redirects to single mutual guild's matrix when no anchor`() {
+        every { introWebService.getMutualGuilds(tokenValue) } returns listOf(guildInfo(777L))
         val model: Model = mockk(relaxed = true)
 
-        val view = controller.page(client = client, user = null, request = request, model = model)
+        val view = controller.page(client = client, user = user, pick = false, request = request, model = model)
+
+        assertEquals("redirect:/preferences/notifications/777", view)
+    }
+
+    @Test
+    fun `page renders hub for multi-guild user without anchor`() {
+        every { introWebService.getMutualGuilds(tokenValue) } returns listOf(guildInfo(111L), guildInfo(222L))
+        val model: Model = mockk(relaxed = true)
+
+        val view = controller.page(client = client, user = user, pick = false, request = request, model = model)
 
         assertEquals("preferences", view)
-        verify(exactly = 0) { introWebService.getMutualGuilds(any()) }
+    }
+
+    @Test
+    fun `page ignores stale cookie pointing to non-shared guild`() {
+        val cookieReq: HttpServletRequest = mockk(relaxed = true) {
+            every { isSecure } returns false
+            every { cookies } returns arrayOf(Cookie(DefaultGuildCookie.COOKIE_NAME, "999"))
+        }
+        every { introWebService.getMutualGuilds(tokenValue) } returns listOf(guildInfo(111L), guildInfo(222L))
+        val model: Model = mockk(relaxed = true)
+
+        val view = controller.page(client = client, user = user, pick = false, request = cookieReq, model = model)
+
+        assertEquals("preferences", view)
     }
 
     @Test

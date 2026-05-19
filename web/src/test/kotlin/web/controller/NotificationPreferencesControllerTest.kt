@@ -6,6 +6,8 @@ import database.dto.UserNotificationPrefDto
 import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk
+import jakarta.servlet.http.Cookie
+import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
 import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
+import web.util.DefaultGuildCookie
 import web.util.GuildMembership
 
 class NotificationPreferencesControllerTest {
@@ -29,6 +32,7 @@ class NotificationPreferencesControllerTest {
     private lateinit var controller: NotificationPreferencesController
     private lateinit var user: OAuth2User
     private lateinit var guild: Guild
+    private lateinit var request: HttpServletRequest
 
     @BeforeEach
     fun setup() {
@@ -47,6 +51,11 @@ class NotificationPreferencesControllerTest {
         }
         every { jda.getGuildById(guildId) } returns guild
         every { membership.isMember(discordId, guildId) } returns true
+        request = mockk(relaxed = true) { every { cookies } returns null }
+    }
+
+    private fun cookieFor(id: Long) {
+        every { request.cookies } returns arrayOf(Cookie(DefaultGuildCookie.COOKIE_NAME, id.toString()))
     }
 
     @Test
@@ -161,11 +170,14 @@ class NotificationPreferencesControllerTest {
 
     @Test
     fun `picker redirects to login for unauthenticated`() {
-        assertEquals("redirect:/login", controller.picker(user = null, model = ConcurrentModel()))
+        assertEquals(
+            "redirect:/login",
+            controller.picker(user = null, pick = false, request = request, model = ConcurrentModel())
+        )
     }
 
     @Test
-    fun `picker renders guild list for authenticated user`() {
+    fun `picker renders guild list for multi-guild user without anchor`() {
         val otherGuild = mockk<Guild>(relaxed = true) {
             every { id } returns "999"
             every { idLong } returns 999L
@@ -177,7 +189,7 @@ class NotificationPreferencesControllerTest {
         every { otherGuild.getMemberById(discordId) } returns mockk(relaxed = true)
 
         val model = ConcurrentModel()
-        val view = controller.picker(user, model)
+        val view = controller.picker(user, pick = false, request = request, model = model)
         assertEquals("preferences-notifications-picker", view)
 
         @Suppress("UNCHECKED_CAST")
@@ -196,15 +208,81 @@ class NotificationPreferencesControllerTest {
             every { iconUrl } returns null
             every { getMemberById(discordId) } returns null
         }
-        every { jda.guilds } returns listOf(guild, stranger)
+        // Add a third guild so the user has >1 mutual — otherwise the
+        // single-mutual-guild auto-redirect (which is intentional) fires
+        // and the picker never renders.
+        val other = mockk<Guild>(relaxed = true) {
+            every { id } returns "888"
+            every { name } returns "Other"
+            every { iconUrl } returns null
+            every { getMemberById(discordId) } returns mockk(relaxed = true)
+        }
+        every { jda.guilds } returns listOf(guild, stranger, other)
         every { guild.getMemberById(discordId) } returns mockk(relaxed = true)
 
         val model = ConcurrentModel()
-        controller.picker(user, model)
+        controller.picker(user, pick = false, request = request, model = model)
 
         @Suppress("UNCHECKED_CAST")
         val guilds = model.getAttribute("guilds") as List<NotificationPreferencesController.PickerGuild>
-        assertEquals(1, guilds.size)
-        assertEquals("Test Guild", guilds[0].name)
+        assertEquals(2, guilds.size)
+        assertTrue(guilds.none { it.name == "Stranger" })
+    }
+
+    @Test
+    fun `picker redirects to single mutual guild's matrix`() {
+        every { jda.guilds } returns listOf(guild)
+        every { guild.getMemberById(discordId) } returns mockk(relaxed = true)
+
+        val view = controller.picker(user, pick = false, request = request, model = ConcurrentModel())
+        assertEquals("redirect:/preferences/notifications/$guildId", view)
+    }
+
+    @Test
+    fun `picker redirects to anchored guild when cookie set`() {
+        val otherGuild = mockk<Guild>(relaxed = true) {
+            every { id } returns "999"
+            every { name } returns "Other"
+            every { iconUrl } returns null
+            every { getMemberById(discordId) } returns mockk(relaxed = true)
+        }
+        every { jda.guilds } returns listOf(guild, otherGuild)
+        every { guild.getMemberById(discordId) } returns mockk(relaxed = true)
+        cookieFor(999L)
+
+        val view = controller.picker(user, pick = false, request = request, model = ConcurrentModel())
+        assertEquals("redirect:/preferences/notifications/999", view)
+    }
+
+    @Test
+    fun `picker renders picker list when pick=true even with anchor`() {
+        val otherGuild = mockk<Guild>(relaxed = true) {
+            every { id } returns "999"
+            every { name } returns "Other"
+            every { iconUrl } returns null
+            every { getMemberById(discordId) } returns mockk(relaxed = true)
+        }
+        every { jda.guilds } returns listOf(guild, otherGuild)
+        every { guild.getMemberById(discordId) } returns mockk(relaxed = true)
+        cookieFor(999L)
+
+        val view = controller.picker(user, pick = true, request = request, model = ConcurrentModel())
+        assertEquals("preferences-notifications-picker", view)
+    }
+
+    @Test
+    fun `picker ignores stale cookie pointing to non-shared guild`() {
+        val otherGuild = mockk<Guild>(relaxed = true) {
+            every { id } returns "999"
+            every { name } returns "Other"
+            every { iconUrl } returns null
+            every { getMemberById(discordId) } returns mockk(relaxed = true)
+        }
+        every { jda.guilds } returns listOf(guild, otherGuild)
+        every { guild.getMemberById(discordId) } returns mockk(relaxed = true)
+        cookieFor(12345L)
+
+        val view = controller.picker(user, pick = false, request = request, model = ConcurrentModel())
+        assertEquals("preferences-notifications-picker", view)
     }
 }
