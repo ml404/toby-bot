@@ -736,4 +736,353 @@ class JackpotLotteryServiceTest {
         // No drawn numbers persisted, no payouts — caller cancels + refunds.
         verify(exactly = 0) { userService.updateUser(any()) }
     }
+
+    // ===================================================================
+    // Participation incentives (TICKET_WEIGHTED only)
+    // ===================================================================
+
+    /** Stub a single bulk-buy bonus tier (or clear if buy <= 0). */
+    private fun stubBulkTier1(buy: Long, bonus: Long) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY.configValue,
+            value = buy.toString(),
+            guildId = guildId.toString()
+        )
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS.configValue,
+            value = bonus.toString(),
+            guildId = guildId.toString()
+        )
+    }
+
+    private fun stubMultTier1(total: Long, bp: Int) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_MULT_TIER1_TOTAL.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_MULT_TIER1_TOTAL.configValue,
+            value = total.toString(),
+            guildId = guildId.toString()
+        )
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP.configValue,
+            value = bp.toString(),
+            guildId = guildId.toString()
+        )
+    }
+
+    private fun stubMilestone1(tickets: Long, pct: Long) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS.configValue,
+            value = tickets.toString(),
+            guildId = guildId.toString()
+        )
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT.configValue,
+            value = pct.toString(),
+            guildId = guildId.toString()
+        )
+    }
+
+    private fun openWeightedLottery(pool: Long = 0L): JackpotLotteryDto {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = pool,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        return lottery
+    }
+
+    @Test
+    fun `buyTickets grants no bulk bonus when tiers are unset`() {
+        openWeightedLottery()
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 10_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 10)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(0L, r.bonusTicketsGranted)
+        assertEquals(0L, r.totalBonusTickets)
+        assertTrue(r.milestoneBonuses.isEmpty())
+    }
+
+    @Test
+    fun `buyTickets grants bulk bonus when a single purchase hits the threshold`() {
+        stubBulkTier1(buy = 10L, bonus = 3L)
+        openWeightedLottery()
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 10_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 10)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(3L, r.bonusTicketsGranted)
+        assertEquals(3L, r.totalBonusTickets)
+    }
+
+    @Test
+    fun `buyTickets splitting buys across 1-ticket purchases earns no bonus (anti-strategy)`() {
+        stubBulkTier1(buy = 10L, bonus = 3L)
+        openWeightedLottery()
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 10_000L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+        val existing = JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 0, spent = 0L)
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns existing
+
+        repeat(10) {
+            val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 1)
+            assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+            r as JackpotLotteryService.BuyOutcome.Ok
+            assertEquals(0L, r.bonusTicketsGranted, "single-ticket buys never hit the bulk threshold")
+        }
+        assertEquals(10, existing.ticketCount)
+        assertEquals(0L, existing.bonusTickets)
+    }
+
+    @Test
+    fun `buyTickets picks the highest matching bulk tier`() {
+        stubBulkTier1(buy = 5L, bonus = 1L)
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY.configValue,
+            value = "20",
+            guildId = guildId.toString()
+        )
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS.configValue,
+                guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS.configValue,
+            value = "8",
+            guildId = guildId.toString()
+        )
+        openWeightedLottery()
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 10_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 25)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(8L, r.bonusTicketsGranted, "tier2 wins; tier1 is subsumed")
+    }
+
+    @Test
+    fun `effectiveWeight collapses to ticketCount when multiplier tiers empty`() {
+        val ticket = JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 12, spent = 0L)
+        assertEquals(12L, service.effectiveWeight(ticket, emptyList()))
+    }
+
+    @Test
+    fun `effectiveWeight adds bonusTickets and multiplier uplift`() {
+        val ticket = JackpotLotteryTicketDto(
+            lotteryId = 1L, discordId = 7L, ticketCount = 20, spent = 0L,
+            bonusTickets = 5L,
+        )
+        // tier: hold ≥15 → 1.5× (15000 bp). 20 paid * 0.5 = +10 multiplier weight.
+        val weight = service.effectiveWeight(ticket, listOf(15L to 15_000))
+        assertEquals(20L + 5L + 10L, weight)
+    }
+
+    @Test
+    fun `drawLottery weights a high-volume buyer more than their raw ticket count`() {
+        stubMultTier1(total = 15L, bp = 15_000)  // 1.5×
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_000L,
+            winnerCount = 1, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        // Buyer A holds 1 paid ticket (weight 1). Buyer B holds 20 paid
+        // tickets, qualifies for 1.5× (effective weight 30). Combined
+        // total weight 31; B should win ~30/31 of seeded RNG draws.
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 1L, ticketCount = 1, spent = 100L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 2L, ticketCount = 20, spent = 2_000L),
+        )
+        (1L..2L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.Ok)
+        r as JackpotLotteryService.DrawOutcome.Ok
+        assertEquals(1, r.payouts.size)
+        // With seed 42 and combined effective weight 31, the first roll
+        // lands inside buyer B's slice — this asserts deterministic
+        // behaviour, not just probability.
+        assertEquals(2L, r.payouts.single().discordId)
+    }
+
+    @Test
+    fun `buyTickets fires a milestone when guild-wide total crosses the threshold`() {
+        stubMilestone1(tickets = 50L, pct = 10L)
+        val lottery = openWeightedLottery(pool = 0L)
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 100_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+        // After upsert, ticketsByLottery reflects this user's new row:
+        // running guild-wide ticket count = 50, prevTotal = 0.
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 50, spent = 5_000L),
+        )
+        every { jackpotService.getPool(guildId) } returns 1_000L
+        every { jackpotService.resetPool(guildId) } returns 1_000L
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 50)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(1, r.milestoneBonuses.size, "one milestone fires")
+        assertEquals(50L, r.milestoneBonuses.single().threshold)
+        assertEquals(100L, r.milestoneBonuses.single().creditsAdded, "10% of 1000 = 100")
+        assertEquals(50L, lottery.milestonesFired)
+        // Pool = cost (5000) + milestone (100).
+        assertEquals(5_100L, lottery.poolAmount)
+    }
+
+    @Test
+    fun `buyTickets does not refire a milestone already recorded on the lottery`() {
+        stubMilestone1(tickets = 50L, pct = 10L)
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 5_100L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+            milestonesFired = 50L,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 100_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 50, spent = 5_000L)
+        // After this buy: total = 60, well past the 50 threshold but
+        // we already fired at 50, so nothing new should trigger.
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 60, spent = 6_000L),
+        )
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 10)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertTrue(r.milestoneBonuses.isEmpty(), "milestone already fired earlier")
+        verify(exactly = 0) { jackpotService.resetPool(guildId) }
+    }
+
+    @Test
+    fun `buyTickets skips a milestone cleanly when jackpot is empty`() {
+        stubMilestone1(tickets = 50L, pct = 10L)
+        openWeightedLottery(pool = 0L)
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 100_000L }
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 7L, ticketCount = 50, spent = 5_000L),
+        )
+        every { jackpotService.getPool(guildId) } returns 0L
+
+        val r = service.buyTickets(guildId, discordId = 7L, ticketCount = 50)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertTrue(r.milestoneBonuses.isEmpty(), "empty jackpot delivers no top-up")
+        // Purchase itself still succeeded — only the milestone was a no-op.
+        verify(exactly = 0) { jackpotService.resetPool(guildId) }
+    }
+
+    @Test
+    fun `drawLottery still returns BelowMinBuyers when distinct buyers fall short despite bonuses`() {
+        stubMinBuyers(2)
+        stubBulkTier1(buy = 5L, bonus = 3L)  // bonus active but irrelevant
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 2_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 7L, ticketCount = 10, spent = 1_000L,
+                bonusTickets = 3L,
+            ),
+        )
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.BelowMinBuyers,
+            "the participation gate is independent of the bonus path")
+    }
+
+    @Test
+    fun `drawLottery reports bonusTicketsAwarded and highestMilestoneFired in the outcome`() {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 3_000L,
+            winnerCount = 1, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+            milestonesFired = 50L,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 1L, ticketCount = 30, spent = 3_000L, bonusTickets = 8L,
+            ),
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 2L, ticketCount = 20, spent = 2_000L, bonusTickets = 3L,
+            ),
+        )
+        (1L..2L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.Ok)
+        r as JackpotLotteryService.DrawOutcome.Ok
+        assertEquals(11L, r.bonusTicketsAwarded, "8 + 3 across both buyers")
+        assertEquals(50L, r.highestMilestoneFired)
+    }
 }

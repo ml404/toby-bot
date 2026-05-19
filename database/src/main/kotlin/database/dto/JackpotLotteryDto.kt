@@ -108,6 +108,15 @@ class JackpotLotteryDto(
      */
     @Column(name = "announced_pool_amount")
     var announcedPoolAmount: Long? = null,
+
+    /**
+     * Highest guild-wide ticket-count milestone that has already paid
+     * out on this lottery. Set on each `/lottery buy` to the highest
+     * threshold the new running total crossed, so each milestone fires
+     * exactly once per lottery row. 0 means no milestone has fired.
+     */
+    @Column(name = "milestones_fired", nullable = false)
+    var milestonesFired: Long = 0,
 ) : Serializable {
 
     companion object {

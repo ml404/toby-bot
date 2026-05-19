@@ -279,6 +279,11 @@ class LotteryAnnouncer @Autowired constructor(
             val payouts: List<JackpotLotteryService.WinnerPayout>,
             val totalPaid: Long,
             val drained: Long,
+            /** Total bulk-buy bonus tickets awarded across all buyers this draw. */
+            val bonusTicketsAwarded: Long = 0L,
+            /** Highest pool-growth milestone threshold that fired during
+             *  this lottery (0 = no milestone fired or none configured). */
+            val highestMilestoneFired: Long = 0L,
         ) : PriorOutcome
 
         data class BelowMinBuyers(val have: Int, val need: Int) : PriorOutcome
@@ -354,6 +359,15 @@ class LotteryAnnouncer @Autowired constructor(
             )
         }
         builder.addField(TODAYS_DRAW_FIELD, renderOpenSummary(mode, openOutcome), false)
+        // Incentives apply to TICKET_WEIGHTED draws only — the daily
+        // NUMBER_MATCH already caps each user at one ticket per draw.
+        if (mode == LotteryHelper.MODE_WEIGHTED) {
+            builder.addField(
+                ACTIVE_INCENTIVES_FIELD,
+                renderActiveIncentives(guild.idLong),
+                false,
+            )
+        }
         builder.setFooter(
             when (mode) {
                 LotteryHelper.MODE_WEIGHTED -> "Top-3 weighted draw • 50/30/20 share"
@@ -361,6 +375,34 @@ class LotteryAnnouncer @Autowired constructor(
             }
         )
         return builder.build()
+    }
+
+    /**
+     * Render the per-guild "Active incentives" field body. Reads from
+     * [LotteryHelper] so the embed matches the web moderation page's
+     * "Active rules" summary one-for-one. Returns `"None"` when
+     * everything is at default — never an empty field, so an admin
+     * who's looking at the embed knows the absence is real.
+     */
+    private fun renderActiveIncentives(guildId: Long): String {
+        val bulk = LotteryHelper.bulkBonusTiers(configService, guildId)
+        val mult = LotteryHelper.volumeMultiplierTiers(configService, guildId)
+        val milestones = LotteryHelper.poolMilestones(configService, guildId)
+        if (bulk.isEmpty() && mult.isEmpty() && milestones.isEmpty()) return "None"
+        val lines = mutableListOf<String>()
+        if (bulk.isNotEmpty()) {
+            lines += "🎁 Bulk bonus: " +
+                bulk.joinToString(", ") { (buy, bonus) -> "buy ≥$buy → **+$bonus** free" }
+        }
+        if (mult.isNotEmpty()) {
+            lines += "📈 Volume multiplier: " +
+                mult.joinToString(", ") { (total, bp) -> "hold ≥$total → **${"%.2f".format(bp / 10000.0)}×**" }
+        }
+        if (milestones.isNotEmpty()) {
+            lines += "🚀 Pool milestones: " +
+                milestones.joinToString(", ") { (tickets, pct) -> "@$tickets tickets → **+$pct%** jackpot" }
+        }
+        return lines.joinToString("\n")
     }
 
     private fun renderPriorOutcome(prior: PriorOutcome): String = when (prior) {
@@ -378,7 +420,7 @@ class LotteryAnnouncer @Autowired constructor(
             "Winning numbers: **$numbers**\n$winners"
         }
         is PriorOutcome.WeightedDrawn -> {
-            if (prior.payouts.isEmpty()) {
+            val body = if (prior.payouts.isEmpty()) {
                 "No payouts — pool of **${prior.drained}** rolled back to jackpot."
             } else {
                 prior.payouts
@@ -388,6 +430,8 @@ class LotteryAnnouncer @Autowired constructor(
                     }
                     .joinToString("\n")
             }
+            val impact = renderBonusImpact(prior)
+            if (impact.isEmpty()) body else "$body\n$impact"
         }
         is PriorOutcome.BelowMinBuyers ->
             "Only **${prior.have}** buyer(s) — need **${prior.need}**. Refunded; seed returned to jackpot."
@@ -403,6 +447,24 @@ class LotteryAnnouncer @Autowired constructor(
         }
         OpenSummary.Skipped ->
             "Today's draw was not opened — see logs / moderation tab."
+    }
+
+    /**
+     * Compact "Bonus impact" line(s) for a weighted-draw result embed:
+     * total bulk bonuses awarded across all buyers, plus any pool
+     * milestones that fired with their jackpot top-ups. Empty when
+     * neither happened — caller appends a leading newline only when
+     * the body is non-empty.
+     */
+    private fun renderBonusImpact(prior: PriorOutcome.WeightedDrawn): String {
+        val lines = mutableListOf<String>()
+        if (prior.bonusTicketsAwarded > 0L) {
+            lines += "🎁 Bulk bonus impact: **${prior.bonusTicketsAwarded}** free tickets awarded across all buyers."
+        }
+        if (prior.highestMilestoneFired > 0L) {
+            lines += "🚀 Milestones fired up to **${prior.highestMilestoneFired}** tickets sold — pool topped up from the jackpot."
+        }
+        return lines.joinToString("\n")
     }
 
     private fun winnerPingIds(prior: PriorOutcome?): List<Long> = when (prior) {
@@ -489,5 +551,6 @@ class LotteryAnnouncer @Autowired constructor(
         // exactly with what [buildEmbed] writes.
         const val TODAYS_DRAW_FIELD = "Today's draw"
         const val YESTERDAYS_DRAW_FIELD = "Yesterday's draw"
+        const val ACTIVE_INCENTIVES_FIELD = "Active incentives"
     }
 }

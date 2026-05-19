@@ -196,6 +196,8 @@ class LotteryDailyJob @Autowired constructor(
                     payouts = drawResult.payouts,
                     totalPaid = drawResult.totalPaid,
                     drained = drawResult.drained,
+                    bonusTicketsAwarded = drawResult.bonusTicketsAwarded,
+                    highestMilestoneFired = drawResult.highestMilestoneFired,
                 )
             }
             JackpotLotteryService.DrawOutcome.NoTickets -> {

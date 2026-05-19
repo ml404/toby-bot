@@ -1945,6 +1945,103 @@ class ModerationWebServiceTest {
         verify(exactly = 1) { titleService.updateRequiredLevel(7L, 5) }
     }
 
+    // ---- lottery participation incentives ----
+
+    @Test
+    fun `updateConfig accepts a valid bulk-buy threshold and bonus`() {
+        mockMember(ownerId, isOwner = true)
+        assertNull(service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10"))
+        assertNull(service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3"))
+        verify { configService.upsertConfig("LOTTERY_BULK_TIER1_BUY", "10", guildId.toString()) }
+        verify { configService.upsertConfig("LOTTERY_BULK_TIER1_BONUS", "3", guildId.toString()) }
+    }
+
+    @Test
+    fun `updateConfig accepts 0 on bulk-buy threshold as 'tier disabled'`() {
+        mockMember(ownerId, isOwner = true)
+        assertNull(service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY, "0"))
+    }
+
+    @Test
+    fun `updateConfig rejects negative or non-numeric bulk-buy values`() {
+        mockMember(ownerId, isOwner = true)
+        assertNotNull(
+            service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "-1")
+        )
+        assertNotNull(
+            service.updateConfig(ownerId, guildId, ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "wibble")
+        )
+        verify(exactly = 0) {
+            configService.upsertConfig("LOTTERY_BULK_TIER1_BUY", any(), any())
+        }
+    }
+
+    @Test
+    fun `updateConfig clamps multiplier BP to the 10000 to 50000 range`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.LOTTERY_MULT_TIER1_BP
+
+        // 0 is the special unset sentinel — accepted, helper coerces upward at read time.
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "10000"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "12500"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "50000"))
+        // Outside the range — rejected.
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "9999"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "50001"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "abc"))
+    }
+
+    @Test
+    fun `updateConfig rejects milestone PCT above 50`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "0"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "10"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "50"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "51"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"))
+    }
+
+    @Test
+    fun `getGuildOverview surfaces only the active incentive tiers`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.ownerIdLong } returns ownerId
+        every { guild.members } returns emptyList()
+        every { guild.voiceChannels } returns emptyList()
+        every { guild.textChannels } returns emptyList()
+        every { guild.categories } returns emptyList()
+        every { userService.listGuildUsers(guildId) } returns emptyList()
+
+        // Tier 1 active, tier 2 left unset, tier 3 explicitly zero
+        // (should be treated as disabled). Same shape for each lever.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY.configValue, guildId.toString()
+            )
+        } returns ConfigDto("LOTTERY_BULK_TIER1_BUY", "10", guildId.toString())
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS.configValue, guildId.toString()
+            )
+        } returns ConfigDto("LOTTERY_BULK_TIER1_BONUS", "3", guildId.toString())
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_BULK_TIER3_BUY.configValue, guildId.toString()
+            )
+        } returns ConfigDto("LOTTERY_BULK_TIER3_BUY", "0", guildId.toString())
+
+        val overview = service.getGuildOverview(guildId)
+        assertNotNull(overview)
+        val incentives = overview!!.lotteryIncentives
+        assertEquals(1, incentives.bulkTiers.size, "only tier 1 is active")
+        assertEquals(10L, incentives.bulkTiers.first().buy)
+        assertEquals(3L, incentives.bulkTiers.first().bonus)
+        assertTrue(incentives.multiplierTiers.isEmpty())
+        assertTrue(incentives.poolMilestones.isEmpty())
+    }
+
     @Test
     fun `getLevelingOverview surfaces missing-role flag for dangling rewards`() {
         every { levelRoleRewardService.listForGuild(guildId) } returns listOf(

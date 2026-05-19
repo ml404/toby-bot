@@ -156,8 +156,16 @@ class JackpotAdminCommand @Autowired constructor(
                     "${idx + 1}. <@${p.discordId}> — **${p.amount}** credits (${p.ticketCount} tickets)"
                 }
                 val body = if (lines.isEmpty()) "_No winners drawn._" else lines.joinToString("\n")
+                val impactBits = mutableListOf<String>()
+                if (result.bonusTicketsAwarded > 0L) {
+                    impactBits += "🎁 ${result.bonusTicketsAwarded} bulk bonus tickets awarded"
+                }
+                if (result.highestMilestoneFired > 0L) {
+                    impactBits += "🚀 milestone up to ${result.highestMilestoneFired} tickets fired"
+                }
+                val impactLine = if (impactBits.isEmpty()) "" else "\n${impactBits.joinToString(" · ")}"
                 event.hook.replyAndDelete(
-                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body",
+                    "Lottery drawn. Total paid: **${result.totalPaid}** of **${result.drained}** credits.\n$body$impactLine",
                     deleteDelay,
                 )
             }

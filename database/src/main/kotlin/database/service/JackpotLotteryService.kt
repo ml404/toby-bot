@@ -62,6 +62,12 @@ class JackpotLotteryService(
             val totalSpent: Long,
             val newBalance: Long,
             val newPool: Long,
+            /** Free tickets awarded for this single purchase (bulk-buy bonus). */
+            val bonusTicketsGranted: Long = 0L,
+            /** User's cumulative bonus tickets on this lottery after the purchase. */
+            val totalBonusTickets: Long = 0L,
+            /** Pool-growth milestones that fired during this purchase. */
+            val milestoneBonuses: List<MilestoneBonus> = emptyList(),
         ) : BuyOutcome
         data object NoOpenLottery : BuyOutcome
         data class InvalidCount(val ticketCount: Int) : BuyOutcome
@@ -69,11 +75,25 @@ class JackpotLotteryService(
         data object UnknownUser : BuyOutcome
     }
 
+    /**
+     * One pool-growth milestone that fired during a [buyTickets] call.
+     * [threshold] is the ticket-count it represents (mirrors the config
+     * row); [creditsAdded] is what landed in the lottery pool (after
+     * clamping to the jackpot's available balance — a near-empty
+     * jackpot can deliver less than the configured %).
+     */
+    data class MilestoneBonus(val threshold: Long, val creditsAdded: Long)
+
     sealed interface DrawOutcome {
         data class Ok(
             val payouts: List<WinnerPayout>,
             val totalPaid: Long,
             val drained: Long,
+            /** Sum of bulk-buy bonus tickets across every buyer at draw time. */
+            val bonusTicketsAwarded: Long = 0L,
+            /** Highest pool-growth milestone that fired during this lottery's
+             *  buy phase (0 = none). Mirrors `JackpotLotteryDto.milestonesFired`. */
+            val highestMilestoneFired: Long = 0L,
         ) : DrawOutcome
         data object NoOpenLottery : DrawOutcome
         data object NoTickets : DrawOutcome
@@ -199,6 +219,15 @@ class JackpotLotteryService(
         userService.updateUser(user)
 
         val lotteryId = lottery.id ?: error("Open lottery has no id")
+
+        // Bulk-buy bonus is computed off *this* purchase's count, so
+        // splitting the same N across multiple smaller buys earns
+        // nothing — that's the whole point of the incentive.
+        val bulkBonus = LotteryHelper.bulkBonusFor(
+            ticketCount.toLong(),
+            LotteryHelper.bulkBonusTiers(configService, guildId),
+        )
+
         val existing = lotteryPersistence.getTicketForUpdate(lotteryId, discordId)
         val updatedTicket = if (existing == null) {
             JackpotLotteryTicketDto(
@@ -206,15 +235,52 @@ class JackpotLotteryService(
                 discordId = discordId,
                 ticketCount = ticketCount,
                 spent = cost,
+                bonusTickets = bulkBonus,
             )
         } else {
             existing.ticketCount += ticketCount
             existing.spent += cost
+            existing.bonusTickets += bulkBonus
             existing
         }
         lotteryPersistence.upsertTicket(updatedTicket)
 
         lottery.poolAmount += cost
+
+        // Pool-growth milestones. The running guild-wide ticket count
+        // is the sum of (paid) ticketCount on every row of this lottery
+        // — bonus tickets don't count toward the FOMO threshold,
+        // they're a reward for crossing it. Skip the extra query when
+        // nothing is configured so a guild that doesn't use milestones
+        // pays no perf cost.
+        val firedBonuses = mutableListOf<MilestoneBonus>()
+        val milestones = LotteryHelper.poolMilestones(configService, guildId)
+        if (milestones.isNotEmpty()) {
+            val newTotalTickets = lotteryPersistence.ticketsByLottery(lotteryId)
+                .sumOf { it.ticketCount.toLong() }
+            val prevTotalTickets = newTotalTickets - ticketCount.toLong()
+            val milestonesToFire = LotteryHelper.milestonesBetween(
+                prevTotal = prevTotalTickets,
+                newTotal = newTotalTickets,
+                milestones = milestones,
+                alreadyFiredHighest = lottery.milestonesFired,
+            )
+            for ((threshold, pct) in milestonesToFire) {
+                val jackpotBefore = jackpotService.getPool(guildId)
+                if (jackpotBefore <= 0L) break  // jackpot drained; remaining milestones get nothing
+                val take = kotlin.math.floor(jackpotBefore * (pct.toDouble() / 100.0))
+                    .toLong()
+                    .coerceAtMost(jackpotBefore)
+                    .coerceAtLeast(0L)
+                if (take <= 0L) continue
+                val drained = drainFromPool(guildId, take)
+                if (drained <= 0L) continue
+                lottery.poolAmount += drained
+                lottery.milestonesFired = threshold
+                firedBonuses += MilestoneBonus(threshold = threshold, creditsAdded = drained)
+            }
+        }
+
         lotteryPersistence.upsert(lottery)
 
         return BuyOutcome.Ok(
@@ -222,6 +288,9 @@ class JackpotLotteryService(
             totalSpent = updatedTicket.spent,
             newBalance = user.socialCredit ?: (balance - cost),
             newPool = lottery.poolAmount,
+            bonusTicketsGranted = bulkBonus,
+            totalBonusTickets = updatedTicket.bonusTickets,
+            milestoneBonuses = firedBonuses,
         )
     }
 
@@ -245,7 +314,8 @@ class JackpotLotteryService(
         }
 
         val winnerSlots = lottery.winnerCount.coerceAtLeast(1)
-        val winners = drawWinners(tickets, winnerSlots, random)
+        val multiplierTiers = LotteryHelper.volumeMultiplierTiers(configService, guildId)
+        val winners = drawWinners(tickets, winnerSlots, random, multiplierTiers)
         val shares = prizeShares(winnerSlots, lottery.poolAmount)
 
         val payouts = mutableListOf<WinnerPayout>()
@@ -272,7 +342,13 @@ class JackpotLotteryService(
         val remainder = drained - totalPaid
         if (remainder > 0L) jackpotService.addToPool(guildId, remainder)
 
-        return DrawOutcome.Ok(payouts = payouts, totalPaid = totalPaid, drained = drained)
+        return DrawOutcome.Ok(
+            payouts = payouts,
+            totalPaid = totalPaid,
+            drained = drained,
+            bonusTicketsAwarded = tickets.sumOf { it.bonusTickets.coerceAtLeast(0L) },
+            highestMilestoneFired = lottery.milestonesFired,
+        )
     }
 
     fun cancelLottery(guildId: Long): CancelOutcome {
@@ -641,31 +717,58 @@ class JackpotLotteryService(
     /**
      * Pick [count] distinct winners by ticket-weighted draw without
      * replacement. Used by TICKET_WEIGHTED draws.
+     *
+     * Each ticket's draw weight is its [effectiveWeight]: paid
+     * ticket_count + accumulated bulk-buy bonus + volume-multiplier
+     * uplift (when [multiplierTiers] is non-empty). When no incentives
+     * are configured the effective weight collapses to ticket_count
+     * and the draw matches the pre-incentive behaviour exactly.
      */
     internal fun drawWinners(
         tickets: List<JackpotLotteryTicketDto>,
         count: Int,
         random: Random,
+        multiplierTiers: List<Pair<Long, Int>> = emptyList(),
     ): List<JackpotLotteryTicketDto> {
         val remaining = tickets.toMutableList()
+        val weights = remaining.map { effectiveWeight(it, multiplierTiers) }.toMutableList()
         val winners = mutableListOf<JackpotLotteryTicketDto>()
         repeat(count) {
             if (remaining.isEmpty()) return@repeat
-            val totalWeight = remaining.sumOf { it.ticketCount.toLong() }
+            val totalWeight = weights.sum()
             if (totalWeight <= 0L) return@repeat
             var roll = random.nextLong(totalWeight)
-            val it = remaining.iterator()
-            while (it.hasNext()) {
-                val t = it.next()
-                if (roll < t.ticketCount) {
-                    winners += t
-                    it.remove()
+            for (i in remaining.indices) {
+                val w = weights[i]
+                if (roll < w) {
+                    winners += remaining.removeAt(i)
+                    weights.removeAt(i)
                     return@repeat
                 }
-                roll -= t.ticketCount
+                roll -= w
             }
         }
         return winners
+    }
+
+    /**
+     * Effective draw weight for [ticket] given the guild's volume
+     * multiplier tiers. Bonus tickets are added 1:1; the multiplier
+     * scales the paid ticket count, *not* the bonus tickets (bonuses
+     * are flat rewards, not weight-stacked further on themselves).
+     * Floors fractional credit, so a 1.25× of 5 tickets is 5 + 1 = 6.
+     */
+    internal fun effectiveWeight(
+        ticket: JackpotLotteryTicketDto,
+        multiplierTiers: List<Pair<Long, Int>>,
+    ): Long {
+        val paid = ticket.ticketCount.toLong()
+        val bonus = ticket.bonusTickets.coerceAtLeast(0L)
+        if (multiplierTiers.isEmpty()) return paid + bonus
+        val bp = LotteryHelper.multiplierBpFor(paid, multiplierTiers)
+        val multiplierBonus = paid * (bp - LotteryHelper.MULTIPLIER_BP_IDENTITY) /
+            LotteryHelper.MULTIPLIER_BP_IDENTITY.toLong()
+        return paid + bonus + multiplierBonus.coerceAtLeast(0L)
     }
 
     /**

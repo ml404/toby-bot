@@ -58,6 +58,16 @@ class JackpotLotteryTicketDto(
      */
     @Column(name = "picked_numbers")
     var pickedNumbers: String? = null,
+
+    /**
+     * Free tickets earned from bulk-buy bonus tiers, accumulated across
+     * every TICKET_WEIGHTED `/lottery buy N` the user makes on this
+     * lottery. Counted as additional weight in the draw alongside the
+     * volume multiplier (see [LotteryHelper] / [JackpotLotteryService.effectiveWeight]).
+     * Always 0 for NUMBER_MATCH tickets.
+     */
+    @Column(name = "bonus_tickets", nullable = false)
+    var bonusTickets: Long = 0,
 ) : Serializable
 
 data class JackpotLotteryTicketId(

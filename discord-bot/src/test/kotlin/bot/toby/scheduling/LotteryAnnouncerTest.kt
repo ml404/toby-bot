@@ -531,6 +531,129 @@ class LotteryAnnouncerTest {
         assertTrue(data.content.contains("<@1>"))
     }
 
+    // ---- participation-incentive surfacing ----
+
+    @Test
+    fun `weighted open embed renders 'None' for the active incentives field when nothing configured`() {
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .firstOrNull { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+        assertTrue(incentives != null, "weighted embed always carries the active-incentives field")
+        assertEquals("None", incentives!!.value)
+    }
+
+    @Test
+    fun `weighted open embed lists only configured incentive tiers`() {
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER2_BUY, "25")
+        stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER2_BONUS, "8")
+        // Tier 3 left unset → must not appear in the embed.
+        stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_TICKETS, "50")
+        stubConfig(ConfigDto.Configurations.LOTTERY_MILESTONE1_PCT, "10")
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+            .value!!
+        assertTrue(incentives.contains("buy ≥10"))
+        assertTrue(incentives.contains("buy ≥25"))
+        assertTrue(incentives.contains("@50 tickets"))
+        assertFalse(incentives.contains("Tier 3"), "unset tiers are not surfaced")
+    }
+
+    @Test
+    fun `number-match open embed omits the active incentives field`() {
+        val build = captureMessageBuilder()
+
+        announcer.announceCycle(
+            guild, mode = "NUMBER_MATCH",
+            priorOutcome = null,
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val incentives = data.embeds.single().fields
+            .firstOrNull { it.name == LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD }
+        assertTrue(incentives == null, "incentives apply to TICKET_WEIGHTED only")
+    }
+
+    @Test
+    fun `weighted result embed reports bonus impact and milestone fired`() {
+        val build = captureMessageBuilder()
+        val payouts = listOf(
+            JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 30, amount = 800L),
+        )
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts,
+                totalPaid = 800L,
+                drained = 1_000L,
+                bonusTicketsAwarded = 11L,
+                highestMilestoneFired = 50L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val yesterday = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
+            .value!!
+        assertTrue(yesterday.contains("11"), "bonus ticket count surfaced: $yesterday")
+        assertTrue(yesterday.contains("50"), "milestone threshold surfaced: $yesterday")
+        assertTrue(yesterday.lowercase().contains("milestone"))
+    }
+
+    @Test
+    fun `weighted result embed omits bonus impact line when nothing happened`() {
+        val build = captureMessageBuilder()
+        val payouts = listOf(
+            JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+        )
+
+        announcer.announceCycle(
+            guild, mode = "WEIGHTED",
+            priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                payouts = payouts, totalPaid = 500L, drained = 500L,
+            ),
+            openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+            ),
+        )
+
+        val data = build()
+        val yesterday = data.embeds.single().fields
+            .first { it.name == LotteryAnnouncer.YESTERDAYS_DRAW_FIELD }
+            .value!!
+        assertFalse(yesterday.contains("Milestones"), "no milestone fired, no line surfaced")
+        assertFalse(yesterday.contains("Bulk bonus impact"), "no bonuses awarded, no line surfaced")
+    }
+
     // ---- refreshAnnouncement (unchanged code path; not routed through NotificationRouter) ----
 
     private fun openLottery(
