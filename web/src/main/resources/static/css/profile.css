@@ -225,3 +225,172 @@
         font-size: 1.35rem;
     }
 }
+
+/* ----- Achievements card ----- */
+.profile-achievements-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+}
+.profile-achievements-count {
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+}
+.profile-achievements-sep {
+    margin: 0 6px;
+    opacity: 0.5;
+}
+
+.profile-achievement-groups {
+    display: grid;
+    gap: var(--space-4);
+}
+.profile-achievement-group + .profile-achievement-group {
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-4);
+}
+
+.profile-achievement-group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text);
+    margin: 0 0 var(--space-3);
+    font-weight: 600;
+}
+.profile-achievement-group-icon {
+    font-size: 1.05rem;
+}
+.profile-achievement-group-count {
+    margin-left: auto;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.75rem;
+    font-weight: 400;
+}
+
+.profile-achievements {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-3);
+}
+.profile-achievement {
+    display: grid;
+    grid-template-columns: auto auto 1fr;
+    grid-template-areas:
+        "marker icon body"
+        ".      .    body";
+    align-items: start;
+    gap: 10px;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    transition: border-color 0.15s, background 0.15s;
+}
+.profile-achievement.is-unlocked {
+    border-color: rgba(255, 200, 87, 0.45);
+    background: linear-gradient(135deg, rgba(255, 200, 87, 0.08), transparent 60%), var(--bg);
+}
+.profile-achievement.is-locked {
+    opacity: 0.78;
+}
+.profile-achievement.is-locked .profile-achievement-icon {
+    filter: grayscale(0.7);
+    opacity: 0.7;
+}
+
+.profile-achievement-marker {
+    grid-area: marker;
+    font-size: 1rem;
+    line-height: 1.2;
+}
+.profile-achievement-icon {
+    grid-area: icon;
+    font-size: 1.4rem;
+    line-height: 1.2;
+}
+.profile-achievement-body {
+    grid-area: body;
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+.profile-achievement-name {
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.25;
+}
+.profile-achievement.is-unlocked .profile-achievement-name {
+    color: #ffd87a;
+}
+.profile-achievement-desc {
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.profile-achievement-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+.profile-achievement-progress-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    min-width: 80px;
+}
+.profile-achievement-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #c9803a 0%, #ffd966 100%);
+    border-radius: 999px;
+    transition: width 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.profile-achievement-progress-text {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+}
+
+.profile-achievement-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-size: 0.75rem;
+    margin-top: 2px;
+}
+.profile-achievement-rewards {
+    display: inline-flex;
+    gap: 8px;
+}
+.profile-achievement-rewards > span {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.profile-achievement.is-locked .profile-achievement-rewards > span {
+    background: var(--border);
+    color: var(--text-muted);
+}
+.profile-achievement-unlocked-at {
+    font-variant-numeric: tabular-nums;
+}
