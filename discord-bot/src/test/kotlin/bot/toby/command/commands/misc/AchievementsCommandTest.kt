@@ -1,21 +1,20 @@
 package bot.toby.command.commands.misc
 
-import bot.toby.command.CommandTest
-import bot.toby.command.CommandTest.Companion.event
-import bot.toby.command.CommandTest.Companion.interactionHook
-import bot.toby.command.CommandTest.Companion.member
-import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import database.dto.AchievementDto
 import database.dto.UserDto
 import database.service.AchievementService
 import database.service.AchievementService.AchievementView
-import io.mockk.clearMocks
+import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import net.dv8tion.jda.api.interactions.InteractionHook
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -24,32 +23,44 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
-class AchievementsCommandTest : CommandTest {
+class AchievementsCommandTest {
 
+    private lateinit var event: SlashCommandInteractionEvent
+    private lateinit var hook: InteractionHook
+    private lateinit var guild: Guild
+    private lateinit var member: Member
     private lateinit var achievementService: AchievementService
     private lateinit var command: AchievementsCommand
-    private lateinit var userDto: UserDto
+    private val userDto: UserDto = mockk(relaxed = true)
 
     @BeforeEach
     fun setUp() {
-        setUpCommonMocks()
+        event = mockk(relaxed = true)
+        hook = mockk(relaxed = true)
+        guild = mockk(relaxed = true)
+        member = mockk(relaxed = true)
         achievementService = mockk(relaxed = true)
-        userDto = mockk(relaxed = true)
-        command = AchievementsCommand(achievementService)
+
+        every { event.hook } returns hook
+        every { event.deferReply(true) } returns mockk(relaxed = true)
+        every { event.guild } returns guild
+        every { event.member } returns member
         every { event.getOption("user") } returns null
-        every { event.deferReply(true) } returns CommandTest.replyCallbackAction
+        every { member.idLong } returns 100L
         every { member.effectiveName } returns "Tester"
+        every { guild.idLong } returns 42L
+
+        command = AchievementsCommand(achievementService)
     }
 
     @AfterEach
     fun tearDown() {
-        tearDownCommonMocks()
-        clearMocks(event, interactionHook)
+        clearAllMocks()
     }
 
     private fun captureEmbed(): MessageEmbed {
         val slot = slot<MessageEmbed>()
-        verify(exactly = 1) { interactionHook.sendMessageEmbeds(capture(slot)) }
+        verify(exactly = 1) { hook.sendMessageEmbeds(capture(slot)) }
         return slot.captured
     }
 
@@ -77,10 +88,8 @@ class AchievementsCommandTest : CommandTest {
 
         runCommand()
 
-        verify(exactly = 1) {
-            interactionHook.sendMessage("This command can only be used in a server.")
-        }
-        verify(exactly = 0) { interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { hook.sendMessage("This command can only be used in a server.") }
+        verify(exactly = 0) { hook.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
