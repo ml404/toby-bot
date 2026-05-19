@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Per-surface notification preferences + push stub + blackjack_natural hookup",
+    "summary": "Today every `user_notification_pref` row is keyed by `(discord_id, guild_id, channel_kind)` — one flag per (user, kind). That collapses DM and channel behaviour into a single toggle for kinds that have both (today only `ACHIEVEMENT_UNLOCK`), and channel posts ignore prefs entirely so tip recipients / duel opponents / lottery winners get pinged regardless of preference. This PR splits the row by surface so a user can opt out independently per surface. Also bundles two defer…",
+    "emoji": "🎟️",
+    "prNumber": 493
+  },
+  {
+    "date": "May 2026",
     "title": "Centralise channel routing through NotificationRouter",
     "summary": "Follow-up to #491. Pulls channel resolution + permission checks out of each notifier and into a single `NotificationRouter.sendChannel(...)` method, gated by a per-route `ChannelRouteKey` enum. Same shape as the existing `sendDm(...)` — one delivery gate per surface, two surfaces (DM, CHANNEL). Also fixes the latent `INTRO_PROMPT` preference bypass: `IntroNotificationService.promptUserForMusicInfo` used to DM unconditionally; now it honours the per-user opt-out.",
     "emoji": "🎟️",
