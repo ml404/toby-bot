@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "/pricealert auto-trade triggers with PRICE_ALERT receipt DM",
+    "summary": "Wires up the `PRICE_ALERT` notification kind, which previously had infrastructure (channel kind, router DM/PUSH surfaces) but no trigger source. Adds `/pricealert add|list|remove`. A trigger captures the **current market price** and a **target threshold** plus the user's chosen side (BUY/SELL) and amount. On every 5-min tick, `TobyCoinPriceTickJob` scans enabled triggers and fires any whose target was reached **from the side the price was on at creation** — so \"buy at 100…",
+    "emoji": "💰",
+    "prNumber": 512
+  },
+  {
+    "date": "May 2026",
     "title": "/jackpotadmin lottery_refresh_embed — manual embed rebuild trigger",
     "summary": "## Why",
     "emoji": "🎰",
