@@ -677,3 +677,246 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
     border-radius: var(--radius-lg);
     margin-top: var(--space-3);
 }
+
+/* ==============================================================
+   Notification preferences matrix
+   --------------------------------------------------------------
+   Desktop: a single elevated card holds the (kind x surface) table,
+   with uppercase muted column headers, row dividers, hover tint,
+   and pill-shaped On/Off toggles keyed off .is-on / .is-off (those
+   are the classes preferences-notifications.js flips).
+   Mobile (<=600px): thead is hidden and each row collapses into its
+   own card. The first cell becomes a block header (name + desc) and
+   each surface cell becomes a flex row labelled with the surface
+   name via td.notif-cell::before { content: attr(data-label); } -
+   that's the fix for "I see 3 toggles with no idea what they do".
+   ============================================================== */
+
+.notif-matrix-wrap {
+    margin-top: var(--space-6);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.notif-matrix {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.notif-matrix thead th {
+    text-align: center;
+    padding: var(--space-3) var(--space-4);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    background: var(--bg);
+    border-bottom: 1px solid var(--border-strong);
+    font-weight: 600;
+}
+.notif-matrix thead th:first-child {
+    text-align: left;
+}
+
+.notif-matrix tbody tr {
+    border-top: 1px solid var(--border);
+    transition: background-color 0.12s;
+}
+.notif-matrix tbody tr:first-child {
+    border-top: 0;
+}
+.notif-matrix tbody tr:hover {
+    background: var(--accent-soft);
+}
+
+.notif-matrix td {
+    padding: var(--space-3) var(--space-4);
+    vertical-align: middle;
+}
+.notif-matrix td.notif-cell {
+    text-align: center;
+    width: 1%;
+    white-space: nowrap;
+}
+.notif-matrix td strong {
+    display: block;
+    font-size: 0.95rem;
+}
+.notif-matrix td .muted {
+    font-size: 0.85rem;
+    margin-top: 2px;
+}
+
+.notif-toggle {
+    min-width: 64px;
+    min-height: 32px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--border);
+    color: var(--text-muted);
+    transition: background-color 0.12s, border-color 0.12s, color 0.12s;
+}
+.notif-toggle.is-on {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.notif-toggle.is-off {
+    background: var(--border);
+    color: var(--text-muted);
+}
+.notif-toggle:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+.notif-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+.notif-toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.notif-placeholder {
+    color: var(--text-muted);
+    font-size: 1rem;
+    user-select: none;
+}
+
+.notif-push-intro {
+    margin-top: var(--space-4);
+}
+
+.push-toggle {
+    margin-top: var(--space-6);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.push-toggle h2 {
+    margin: 0;
+    font-size: 1.1rem;
+}
+.push-toggle p {
+    margin: 0;
+}
+.push-toggle-btn {
+    align-self: flex-start;
+}
+.push-toggle-status:empty {
+    display: none;
+}
+
+@media (max-width: 600px) {
+    .notif-matrix-wrap {
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        overflow: visible;
+        margin-top: var(--space-4);
+    }
+    .notif-matrix {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .notif-matrix thead {
+        display: none;
+    }
+    .notif-matrix tbody,
+    .notif-matrix tr,
+    .notif-matrix td {
+        display: block;
+        width: 100%;
+    }
+    .notif-matrix tr {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-3) var(--space-4);
+        margin-bottom: var(--space-3);
+    }
+
+    .notif-matrix td {
+        padding: var(--space-2) 0;
+        text-align: left;
+        width: auto;
+        white-space: normal;
+    }
+    .notif-matrix td.notif-cell {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-3);
+        border-top: 1px solid var(--border);
+        min-height: var(--tap-min);
+        text-align: left;
+    }
+    .notif-matrix td.notif-cell::before {
+        content: attr(data-label);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-muted);
+        font-weight: 600;
+        flex: 0 0 auto;
+    }
+
+    .notif-matrix td[data-label="Notification"] {
+        display: block;
+        border-bottom: 1px solid var(--border-strong);
+        padding-bottom: var(--space-3);
+        margin-bottom: var(--space-2);
+    }
+    .notif-matrix td[data-label="Notification"]::before {
+        display: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .notif-matrix tr {
+        padding: var(--space-2) var(--space-3);
+    }
+    .notif-matrix td .muted {
+        font-size: 0.8rem;
+    }
+    .notif-toggle {
+        min-width: 56px;
+        min-height: 40px;
+        padding: 4px 12px;
+        font-size: 0.78rem;
+    }
+    .push-toggle {
+        padding: var(--space-4);
+        margin-top: var(--space-5);
+    }
+}
+
+@media (max-width: 380px) {
+    .notif-matrix tr {
+        padding: var(--space-2);
+    }
+    .notif-matrix td.notif-cell::before {
+        font-size: 0.65rem;
+    }
+    .notif-toggle {
+        min-width: 52px;
+        min-height: 40px;
+        font-size: 0.75rem;
+    }
+    .notif-matrix td strong {
+        font-size: 0.92rem;
+    }
+    .notif-matrix td .muted {
+        font-size: 0.78rem;
+    }
+}

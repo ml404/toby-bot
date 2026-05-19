@@ -22,57 +22,59 @@
 
     <a class="back-link" th:href="@{/preferences/notifications}">&larr; Pick a different server</a>
 
-    <table class="notif-matrix" style="margin-top:24px; width:100%; border-collapse:collapse;">
-        <thead>
-            <tr>
-                <th style="text-align:left;">Notification</th>
-                <th th:each="surfaceName : ${surfaces}"
-                    style="text-align:center; padding:8px;"
-                    th:text="${surfaceName}">DM</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr th:each="row : ${matrix}"
-                class="notif-row"
-                th:attr="data-kind=${row.kind}">
-                <td style="padding:8px;">
-                    <strong th:text="${row.displayName}">Kind</strong>
-                    <div class="muted" th:text="${row.description}">desc</div>
-                </td>
-                <td th:each="cell : ${row.cells}"
-                    style="text-align:center; padding:8px;">
-                    <!-- Placeholder cell: kind doesn't support this surface. -->
-                    <span th:if="${cell.class.simpleName == 'Placeholder'}"
-                          class="notif-placeholder muted"
-                          th:attr="data-surface=${cell.surface}">—</span>
-                    <!-- Toggle cell: clickable on/off. -->
-                    <button th:if="${cell.class.simpleName == 'Toggle'}"
-                            type="button"
-                            class="notif-toggle"
-                            th:classappend="${cell.optIn} ? ' is-on' : ' is-off'"
-                            th:attr="data-kind=${row.kind},
-                                     data-surface=${cell.surface},
-                                     data-opt-in=${cell.optIn},
-                                     data-default=${cell.isDefault}"
-                            th:text="${cell.optIn} ? 'On' : 'Off'">Off</button>
-                </td>
-            </tr>
-        </tbody>
-    </table>
+    <div class="notif-matrix-wrap">
+        <table class="notif-matrix">
+            <thead>
+                <tr>
+                    <th>Notification</th>
+                    <th th:each="surfaceName : ${surfaces}"
+                        th:text="${surfaceName}">DM</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="row : ${matrix}"
+                    class="notif-row"
+                    th:attr="data-kind=${row.kind}">
+                    <td data-label="Notification">
+                        <strong th:text="${row.displayName}">Kind</strong>
+                        <div class="muted" th:text="${row.description}">desc</div>
+                    </td>
+                    <td th:each="cell : ${row.cells}"
+                        class="notif-cell"
+                        th:attr="data-label=${cell.surface}, data-surface=${cell.surface}">
+                        <!-- Placeholder cell: kind doesn't support this surface. -->
+                        <span th:if="${cell.class.simpleName == 'Placeholder'}"
+                              class="notif-placeholder muted"
+                              th:attr="data-surface=${cell.surface}">—</span>
+                        <!-- Toggle cell: clickable on/off. -->
+                        <button th:if="${cell.class.simpleName == 'Toggle'}"
+                                type="button"
+                                class="notif-toggle"
+                                th:classappend="${cell.optIn} ? ' is-on' : ' is-off'"
+                                th:attr="data-kind=${row.kind},
+                                         data-surface=${cell.surface},
+                                         data-opt-in=${cell.optIn},
+                                         data-default=${cell.isDefault}"
+                                th:text="${cell.optIn} ? 'On' : 'Off'">Off</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-    <p class="muted" style="margin-top:16px;">
+    <p class="muted notif-push-intro">
         <span class="notif-push-footnote">PUSH is delivered via web push. Enable browser push for this device below, then opt in to any kind's PUSH column above.</span>
     </p>
 
-    <section data-push-toggle class="push-toggle" style="margin-top:24px; padding:16px; border:1px solid var(--border-color, #444); border-radius:8px;">
-        <h2 style="margin-top:0;">Browser push</h2>
+    <section data-push-toggle class="push-toggle">
+        <h2>Browser push</h2>
         <p class="muted">
             Toggle web-push notifications for this device. Each device
             (laptop, phone, etc.) needs its own opt-in — your per-kind
             PUSH preferences above are shared across all your devices.
         </p>
-        <button type="button" class="push-toggle-btn">Enable browser push</button>
-        <p class="push-toggle-status muted" style="margin-top:8px;"></p>
+        <button type="button" class="btn-primary push-toggle-btn">Enable browser push</button>
+        <p class="push-toggle-status muted"></p>
     </section>
 </main>
 
