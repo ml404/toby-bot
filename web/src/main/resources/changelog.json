@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Align admin DM/channel settings with notification prefs",
+    "summary": "Three seams between the older admin pages (per-feature channel pickers, \"DM-only\" toggles) and the per-surface notification-preferences system that landed in V37. **Achievement shoutout label was misleading.** The admin UI said *\"Leave blank to keep unlocks DM-only\"*, but `AchievementEventHandler.onAchievementUnlocked()` always fires the DM (gated by the user's `ACHIEVEMENT_UNLOCK`/`Surface.DM` pref) and the channel post is additive. Updated the hint text and the empty-opt…",
+    "emoji": "🛡️",
+    "prNumber": 502
+  },
+  {
+    "date": "May 2026",
     "title": "Auto-route /preferences + /preferences/notifications past the picker when anchored",
     "summary": "Follow-up to #496. The Settings and Notifications navbar entries from that PR landed users on the `/preferences` hub or the notifications guild-picker even when they had already anchored a default guild via `DefaultGuildCookie`. That's an extra click vs. the rest of the app — `/leaderboards`, `/profile/guilds`, `/casino/guilds`, `/intro/guilds` etc. already skip their pickers using the shared `DefaultGuildRedirect.pick(...)` helper. This PR applies the same helper to both…",
     "emoji": "✨",
