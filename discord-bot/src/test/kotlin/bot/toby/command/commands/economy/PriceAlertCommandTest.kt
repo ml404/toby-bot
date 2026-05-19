@@ -3,6 +3,7 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.interactionHook
+import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import common.notification.NotificationChannelKind
 import common.notification.Surface
@@ -17,7 +18,6 @@ import database.service.UserPriceTriggerService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
-import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -108,14 +108,15 @@ internal class PriceAlertCommandTest : CommandTest {
         } returns created
 
         // Capture the embed sent back so we can assert the direction
-        // copy. JDA's `sendMessageEmbeds(MessageEmbed, MessageEmbed...)`
-        // has a vararg tail; the matcher must spell out `*anyVararg()`
-        // or it falls through to the looser stub in CommandTest which
-        // doesn't capture.
+        // copy. Stub through the chained `event.hook.sendMessageEmbeds`
+        // (matches the working pattern in LevelCommandTest /
+        // JackpotAdminCommandTest); the companion `interactionHook`
+        // reference doesn't get matched by mockk on this codebase even
+        // though `event.hook` is stubbed to return it.
         val embedSlot = slot<MessageEmbed>()
         every {
-            interactionHook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
-        } returns mockk<WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
+            event.hook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
+        } returns webhookMessageCreateAction
 
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
 
@@ -176,7 +177,7 @@ internal class PriceAlertCommandTest : CommandTest {
         // failure branch does the same). We can't easily assert the
         // text content without overriding `sendMessage`, but we can
         // verify that the call hit the service and reached `queue()`.
-        verify(atLeast = 1) { interactionHook.sendMessage(any<String>()) }
+        verify(atLeast = 1) { event.hook.sendMessage(any<String>()) }
     }
 
     @Test
@@ -242,8 +243,13 @@ internal class PriceAlertCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
 
+        // Positive assertion through the chained `event.hook` matcher
+        // (matches the working LevelCommandTest pattern). The negative
+        // assertion goes through the leaf `interactionHook` ref so the
+        // chain doesn't also count the `event.hook` getter that the
+        // sendMessage call site rightly invoked.
+        verify(atLeast = 1) { event.hook.sendMessage(any<String>()) }
         verify(exactly = 0) { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
-        verify(atLeast = 1) { interactionHook.sendMessage(any<String>()) }
     }
 
     @Test
@@ -265,8 +271,8 @@ internal class PriceAlertCommandTest : CommandTest {
         )
         val embedSlot = slot<MessageEmbed>()
         every {
-            interactionHook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
-        } returns mockk<WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
+            event.hook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
+        } returns webhookMessageCreateAction
 
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
 
