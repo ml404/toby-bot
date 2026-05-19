@@ -1,7 +1,6 @@
 package bot.toby.modal.modals
 
 import bot.toby.scheduling.LotteryAnnouncer
-import common.logging.DiscordLogger
 import core.modal.Modal
 import core.modal.ModalContext
 import database.service.JackpotLotteryService
@@ -31,7 +30,7 @@ class JackpotAdminModal(
 ) : Modal {
     override val name = MODAL_NAME
 
-    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+    // `logger` is inherited from `Modal : Loggable`.
 
     override fun handle(ctx: ModalContext, deleteDelay: Int) {
         val event = ctx.event
