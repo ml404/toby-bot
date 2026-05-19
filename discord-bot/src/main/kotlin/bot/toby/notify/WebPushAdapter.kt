@@ -40,10 +40,13 @@ import java.security.Security
  * production implementation is built lazily on first push). The seam
  * lets unit tests pass a fake transport via the secondary constructor.
  *
- * BouncyCastle is registered eagerly on first push because `PushService`
- * requires it for EC key parsing and AES-128-GCM payload encryption.
- * `addProvider` is idempotent — a no-op if a provider with the same
- * name is already installed.
+ * BouncyCastle is registered eagerly at [DefaultPushTransport]
+ * construction time because `nl.martijndwars.webpush.Notification(...)`
+ * parses the recipient's `p256dh` as an EC public key inside its
+ * constructor — which runs *before* the lazy [PushService] is touched.
+ * Doing the registration there means the very first push delivery
+ * already has the provider available. `addProvider` is idempotent —
+ * a no-op if a provider with the same name is already installed.
  */
 @Component
 @ConditionalOnProperty(prefix = "toby.vapid", name = ["public-key", "private-key"])
@@ -77,7 +80,14 @@ class WebPushAdapter(
                 logger.warn("WebPushAdapter: failed to look up subscriptions for $discordId: ${it.message}")
                 return
             }
-        if (targets.isEmpty()) return
+        if (targets.isEmpty()) {
+            logger.info {
+                "WebPushAdapter: no persisted subscriptions for $discordId; dropping push. " +
+                    "User likely toggled the PUSH preference but never granted browser " +
+                    "permission / clicked 'Enable browser push' on the prefs page."
+            }
+            return
+        }
 
         val body = runCatching {
             objectMapper.writeValueAsBytes(
@@ -92,6 +102,7 @@ class WebPushAdapter(
             return
         }
 
+        logger.info { "WebPushAdapter: delivering to ${targets.size} endpoint(s) for $discordId." }
         targets.forEach { sub ->
             val status = runCatching { transport.send(sub.endpoint, sub.p256dh, sub.auth, body) }
                 .getOrElse { err ->
@@ -100,6 +111,9 @@ class WebPushAdapter(
                 }
             when {
                 status in 200..299 -> {
+                    logger.info {
+                        "WebPushAdapter: HTTP $status from ${sub.endpoint.take(80)}…; marking used."
+                    }
                     runCatching { subscriptions.markUsed(sub.endpoint) }
                         .onFailure { logger.warn("markUsed failed for ${sub.endpoint}: ${it.message}") }
                 }
@@ -128,9 +142,16 @@ interface PushTransport {
 
 /**
  * Production [PushTransport] backed by martijndwars's web-push library.
- * Lazy-initialises [PushService] so failed VAPID parsing (e.g. an
- * operator pastes the wrong key) defers the throw to the first push
- * rather than crashing the application context.
+ *
+ * Two-phase init:
+ *  - `init {}` registers BouncyCastle as a JCA provider eagerly. The
+ *    web-push `Notification(endpoint, p256dh, auth, body)` constructor
+ *    parses the recipient's `p256dh` as an EC public key using BC, and
+ *    that parse happens *before* the [pushService] field is touched. If
+ *    BC isn't already a registered provider at that point, every push
+ *    throws `NoSuchProviderException: no such provider: BC`.
+ *  - [pushService] stays `by lazy` so a malformed VAPID keypair throws
+ *    on first push rather than blocking ApplicationContext refresh.
  */
 class DefaultPushTransport(
     private val publicKey: String,
@@ -138,8 +159,14 @@ class DefaultPushTransport(
     private val subject: String,
 ) : PushTransport {
 
-    private val pushService: PushService by lazy {
+    init {
+        // `addProvider` is idempotent (returns -1 if a provider with the
+        // same name is already installed), so repeated transport
+        // constructions in tests / redeploys stay safe.
         Security.addProvider(BouncyCastleProvider())
+    }
+
+    private val pushService: PushService by lazy {
         PushService(publicKey, privateKey, subject)
     }
 

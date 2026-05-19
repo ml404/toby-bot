@@ -60,6 +60,7 @@ class NotificationRouter(
 ) {
     private val logger = DiscordLogger.createLogger(this::class.java)
     private val pushAdapterMissingLogged = AtomicBoolean(false)
+    private val pushAdapterFirstUseLogged = AtomicBoolean(false)
 
     /**
      * Send a DM to [discordId] only if they're opted in to [kind] on the
@@ -184,8 +185,18 @@ class NotificationRouter(
         kind: NotificationChannelKind,
         message: () -> PushPayload,
     ) {
-        if (!kind.supports(Surface.PUSH)) return
-        if (!prefService.isOptedIn(discordId, guildId, kind, Surface.PUSH)) return
+        if (!kind.supports(Surface.PUSH)) {
+            logger.info {
+                "Skip push for $kind: kind does not declare PUSH as a supported surface."
+            }
+            return
+        }
+        if (!prefService.isOptedIn(discordId, guildId, kind, Surface.PUSH)) {
+            logger.info {
+                "Skip push for $discordId ($kind, guild $guildId): user has not opted into PUSH."
+            }
+            return
+        }
         val payload = runCatching { message() }
             .getOrElse { err ->
                 logger.warn("Failed to build $kind push payload for $discordId: ${err.message}")
@@ -202,7 +213,17 @@ class NotificationRouter(
             }
             return
         }
+        logger.info {
+            "Delivering $kind push to $discordId in guild $guildId via ${adapter::class.simpleName}."
+        }
         runCatching { adapter.deliver(discordId, payload) }
+            .onSuccess {
+                if (pushAdapterFirstUseLogged.compareAndSet(false, true)) {
+                    logger.info {
+                        "PushAdapter active: first delivery via ${adapter::class.simpleName} succeeded."
+                    }
+                }
+            }
             .onFailure { err ->
                 logger.warn("PushAdapter.deliver failed for $discordId ($kind): ${err.message}")
             }
