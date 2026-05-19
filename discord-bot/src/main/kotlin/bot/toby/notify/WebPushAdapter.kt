@@ -7,6 +7,7 @@ import database.service.PushSubscriptionService
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import org.bouncycastle.jce.provider.BouncyCastleProvider
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
@@ -55,8 +56,11 @@ class WebPushAdapter(
     /**
      * Production constructor used by Spring. Builds a [DefaultPushTransport]
      * from the VAPID env vars; tests use the primary constructor with a
-     * fake [PushTransport] directly.
+     * fake [PushTransport] directly. `@Autowired` is required so Spring
+     * picks this constructor instead of the primary (no `PushTransport`
+     * bean is published).
      */
+    @Autowired
     constructor(
         subscriptions: PushSubscriptionService,
         objectMapper: ObjectMapper,

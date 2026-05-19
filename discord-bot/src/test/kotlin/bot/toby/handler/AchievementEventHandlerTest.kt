@@ -2,6 +2,7 @@ package bot.toby.handler
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
+import bot.toby.notify.PushAdapter
 import common.events.AchievementUnlockedEvent
 import common.events.BlackjackNaturalEvent
 import common.events.DuelResolvedEvent
@@ -13,13 +14,21 @@ import common.events.TipSentEvent
 import common.events.VoiceSessionLoggedEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.service.AchievementService
+import database.service.ConfigService
+import database.service.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.spyk
 import io.mockk.verify
+import net.dv8tion.jda.api.JDA
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -46,7 +55,22 @@ class AchievementEventHandlerTest {
     @BeforeEach
     fun setup() {
         achievementService = mockk(relaxed = true)
-        router = mockk(relaxed = true)
+        // Spy on a real router so `dispatch` runs its enforcement
+        // (missing-supported-surface throws) and forwards to spied
+        // primitives we can verify. The primitives are stubbed so we
+        // don't drag in JDA REST for unit tests.
+        val jda = mockk<JDA>(relaxed = true)
+        val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
+            every { isOptedIn(any(), any(), any(), any()) } returns true
+        }
+        val configService = mockk<ConfigService>(relaxed = true)
+        val pushAdapter = mockk<PushAdapter>(relaxed = true)
+        router = spyk(NotificationRouter(jda, prefService, configService, pushAdapter))
+        every { router.sendDm(any(), any(), any(), any()) } just runs
+        every { router.sendPush(any(), any(), any(), any()) } just runs
+        every {
+            router.sendChannel(any(), any(), any(), any(), any(), any())
+        } just runs
         handler = AchievementEventHandler(achievementService, router)
     }
 
@@ -268,6 +292,92 @@ class AchievementEventHandlerTest {
                     userIds = listOf(discordId),
                 ),
             )
+        }
+    }
+
+    @Test
+    fun `achievement unlock also routes a push notification via ACHIEVEMENT_UNLOCK with PUSH opt-in gating`() {
+        // Regression: pre-fix the handler only called sendDm/sendChannel,
+        // so users who opted into Surface.PUSH for ACHIEVEMENT_UNLOCK got
+        // nothing in their browser when an achievement fired.
+        val event = AchievementUnlockedEvent(
+            discordId = discordId, guildId = guildId,
+            achievementId = 1L, achievementCode = "tip_giver",
+            name = "Generous", description = "Tip another user for the first time.",
+            icon = "🎁", channelId = null,
+        )
+        handler.onAchievementUnlocked(event)
+
+        verify(exactly = 1) {
+            router.sendPush(
+                discordId = discordId,
+                guildId = guildId,
+                kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
+                message = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `achievement push payload carries the achievement name, description, and a null deep link when base url is unset`() {
+        val event = AchievementUnlockedEvent(
+            discordId = discordId, guildId = guildId,
+            achievementId = 1L, achievementCode = "tip_giver",
+            name = "Generous", description = "Tip another user for the first time.",
+            icon = "🎁", channelId = null,
+        )
+        val captured = slot<() -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), capture(captured))
+        } just runs
+
+        handler.onAchievementUnlocked(event)
+
+        val payload = captured.captured.invoke()
+        assertEquals("🎁 Achievement unlocked — Generous", payload.title)
+        assertEquals("Tip another user for the first time.", payload.body)
+        assertNull(payload.deepLink) // setUp uses 2-arg ctor → webBaseUrl=""
+    }
+
+    @Test
+    fun `achievement push payload sets deep link to profile page when app base url is configured`() {
+        val handlerWithBaseUrl = AchievementEventHandler(
+            achievementService = achievementService,
+            notificationRouter = router,
+            webBaseUrl = "https://www.toby-bot.co.uk",
+        )
+        val event = AchievementUnlockedEvent(
+            discordId = discordId, guildId = guildId,
+            achievementId = 1L, achievementCode = "tip_giver",
+            name = "Generous", description = "desc", icon = null, channelId = null,
+        )
+        val captured = slot<() -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), capture(captured))
+        } just runs
+
+        handlerWithBaseUrl.onAchievementUnlocked(event)
+
+        val payload = captured.captured.invoke()
+        assertEquals("https://www.toby-bot.co.uk/profile/$guildId", payload.deepLink)
+    }
+
+    @Test
+    fun `achievement push uses default rosette icon when event icon is null`() {
+        val event = AchievementUnlockedEvent(
+            discordId = discordId, guildId = guildId,
+            achievementId = 1L, achievementCode = "x",
+            name = "Quiet One", description = "d", icon = null, channelId = null,
+        )
+        val captured = slot<() -> PushPayload>()
+        every {
+            router.sendPush(any(), any(), any(), capture(captured))
+        } just runs
+
+        handler.onAchievementUnlocked(event)
+
+        assert(captured.captured.invoke().title.startsWith("🏅 ")) {
+            "expected default rosette icon when event.icon is null"
         }
     }
 

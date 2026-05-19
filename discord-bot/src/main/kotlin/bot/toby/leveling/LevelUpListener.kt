@@ -7,6 +7,7 @@ import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.dto.TitleDto
 import database.service.LevelRoleRewardService
 import database.service.TitleService
@@ -19,6 +20,7 @@ import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Lazy
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Service
@@ -42,6 +44,7 @@ class LevelUpListener @Autowired constructor(
     private val levelRoleRewardService: LevelRoleRewardService,
     private val titleService: TitleService,
     private val notificationRouter: NotificationRouter,
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -56,42 +59,46 @@ class LevelUpListener @Autowired constructor(
             "User ${event.discordId} levelled up: ${event.oldLevel} -> ${event.newLevel}"
         }
         val member = runCatching { guild.getMemberById(event.discordId) }.getOrNull()
-        announce(guild, event, member)
-        sendLevelUpDm(event, member)
+        dispatchLevelUpNotifications(event, member)
         assignRoleRewards(guild, event)
         unlockTitles(event)
     }
 
-    private fun announce(guild: Guild, event: LevelUpEvent, member: Member?) {
-        notificationRouter.sendChannel(
-            guildId = guild.idLong,
-            route = ChannelRouteKey.LEVEL_UP,
-            originChannelId = event.channelId,
-            message = {
+    private fun dispatchLevelUpNotifications(event: LevelUpEvent, member: Member?) {
+        notificationRouter.dispatch(
+            kind = NotificationChannelKind.LEVEL_UP,
+            discordId = event.discordId,
+            guildId = event.guildId,
+        ) {
+            channel(
+                route = ChannelRouteKey.LEVEL_UP,
+                originChannelId = event.channelId,
+                // Router suppresses the leveler's user-ping when they've
+                // opted out of (LEVEL_UP, CHANNEL). Channel post still
+                // happens; they just don't get notified.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(event.discordId),
+                ),
+            ) {
                 // setContent on the message (not just the embed description) so the
                 // <@leveler> mention actually pings — embed-mention pings are silent.
                 MessageCreateBuilder()
                     .setEmbeds(buildLevelUpEmbed(event, member))
                     .setContent("<@${event.discordId}>")
                     .build()
-            },
-            // Router suppresses the leveler's user-ping when they've
-            // opted out of (LEVEL_UP, CHANNEL). Channel post still
-            // happens; they just don't get notified.
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.LEVEL_UP,
-                userIds = listOf(event.discordId),
-            ),
-        )
-    }
-
-    private fun sendLevelUpDm(event: LevelUpEvent, member: Member?) {
-        notificationRouter.sendDm(
-            discordId = event.discordId,
-            guildId = event.guildId,
-            kind = NotificationChannelKind.LEVEL_UP,
-        ) {
-            MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
+            }
+            dm {
+                MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
+            }
+            push {
+                PushPayload(
+                    title = "Level Up — LVL ${event.newLevel}",
+                    body = "${tierName(event.newLevel)} tier — ${formatXp(event.totalXp)} total XP.",
+                    deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                        ?.let { "$it/profile/${event.guildId}" },
+                )
+            }
         }
     }
 

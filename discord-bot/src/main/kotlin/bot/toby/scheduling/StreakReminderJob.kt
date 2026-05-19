@@ -3,11 +3,13 @@ package bot.toby.scheduling
 import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.service.LoginStreakService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -33,7 +35,8 @@ class StreakReminderJob @Autowired constructor(
     private val jda: JDA,
     private val loginStreakService: LoginStreakService,
     private val notificationRouter: NotificationRouter,
-    private val clock: Clock = Clock.systemUTC()
+    private val clock: Clock = Clock.systemUTC(),
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
@@ -59,21 +62,31 @@ class StreakReminderJob @Autowired constructor(
 
         var dispatched = 0
         due.forEach { row ->
-            notificationRouter.sendDm(
+            notificationRouter.dispatch(
+                kind = NotificationChannelKind.STREAK_REMINDER,
                 discordId = row.discordId,
                 guildId = guildId,
-                kind = NotificationChannelKind.STREAK_REMINDER
             ) {
-                MessageCreateBuilder().setEmbeds(
-                    EmbedBuilder()
-                        .setTitle("🔥 Don't lose your ${row.currentStreak}-day streak")
-                        .setDescription(
-                            "Your daily streak resets at midnight UTC. " +
-                                "Run `/daily` (or claim from the dashboard) to keep it alive."
-                        )
-                        .setColor(Color(0xF59E0B))
-                        .build()
-                ).build()
+                dm {
+                    MessageCreateBuilder().setEmbeds(
+                        EmbedBuilder()
+                            .setTitle("🔥 Don't lose your ${row.currentStreak}-day streak")
+                            .setDescription(
+                                "Your daily streak resets at midnight UTC. " +
+                                    "Run `/daily` (or claim from the dashboard) to keep it alive."
+                            )
+                            .setColor(Color(0xF59E0B))
+                            .build()
+                    ).build()
+                }
+                push {
+                    PushPayload(
+                        title = "🔥 Don't lose your ${row.currentStreak}-day streak",
+                        body = "Claim today's /daily before midnight UTC to keep it alive.",
+                        deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                            ?.let { "$it/profile/$guildId" },
+                    )
+                }
             }
             dispatched++
         }

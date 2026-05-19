@@ -13,9 +13,11 @@ import common.events.TipSentEvent
 import common.events.VoiceSessionLoggedEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushPayload
 import database.service.AchievementService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.awt.Color
@@ -38,6 +40,7 @@ import java.awt.Color
 class AchievementEventHandler(
     private val achievementService: AchievementService,
     private val notificationRouter: NotificationRouter,
+    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
 
     @EventListener
@@ -155,27 +158,37 @@ class AchievementEventHandler(
 
     @EventListener
     fun onAchievementUnlocked(event: AchievementUnlockedEvent) {
-        notificationRouter.sendDm(
+        notificationRouter.dispatch(
+            kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
             discordId = event.discordId,
             guildId = event.guildId,
-            kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK
         ) {
-            val embed = EmbedBuilder()
-                .setTitle("${event.icon ?: "🏅"} Achievement unlocked — ${event.name}")
-                .setDescription(event.description)
-                .setColor(Color(0xFFC857))
-                .build()
-            MessageCreateBuilder().setEmbeds(embed).build()
-        }
-
-        postPublicShoutout(event)
-    }
-
-    private fun postPublicShoutout(event: AchievementUnlockedEvent) {
-        notificationRouter.sendChannel(
-            guildId = event.guildId,
-            route = ChannelRouteKey.ACHIEVEMENT_SHOUTOUT,
-            message = {
+            dm {
+                val embed = EmbedBuilder()
+                    .setTitle("${event.icon ?: "🏅"} Achievement unlocked — ${event.name}")
+                    .setDescription(event.description)
+                    .setColor(Color(0xFFC857))
+                    .build()
+                MessageCreateBuilder().setEmbeds(embed).build()
+            }
+            push {
+                PushPayload(
+                    title = "${event.icon ?: "🏅"} Achievement unlocked — ${event.name}",
+                    body = event.description,
+                    deepLink = webBaseUrl.takeIf { it.isNotBlank() }
+                        ?.let { "$it/profile/${event.guildId}" },
+                )
+            }
+            channel(
+                route = ChannelRouteKey.ACHIEVEMENT_SHOUTOUT,
+                // Router suppresses the unlocker's user-ping when they've
+                // opted out of (ACHIEVEMENT_UNLOCK, CHANNEL). The shoutout
+                // post still happens; they just don't get notified.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
+                    userIds = listOf(event.discordId),
+                ),
+            ) {
                 // setContent on the message (not just the embed description) so the
                 // <@unlocker> mention actually pings — embed-mention pings are silent.
                 MessageCreateBuilder()
@@ -188,15 +201,8 @@ class AchievementEventHandler(
                     )
                     .setContent("<@${event.discordId}>")
                     .build()
-            },
-            // Router suppresses the unlocker's user-ping when they've
-            // opted out of (ACHIEVEMENT_UNLOCK, CHANNEL). The shoutout
-            // post still happens; they just don't get notified.
-            mentions = ChannelMentions(
-                kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
-                userIds = listOf(event.discordId),
-            ),
-        )
+            }
+        }
     }
 
     companion object {
