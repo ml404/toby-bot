@@ -94,7 +94,7 @@
     align-items: center;
     gap: 2px;
     pointer-events: none;
-    color: #fff;
+    color: var(--heading);
     font-variant-numeric: tabular-nums;
 }
 .roulette-landed-label {
@@ -113,9 +113,9 @@
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 215, 0, 0.4);
 }
-.roulette-landed-pocket.color-red    { background: #c0392b; border-color: #f1c40f; }
-.roulette-landed-pocket.color-black  { background: #1a1a1a; border-color: #f1c40f; }
-.roulette-landed-pocket.color-green  { background: #1f7a3a; border-color: #f1c40f; }
+.roulette-landed-pocket.color-red    { background: #c0392b; border-color: var(--jackpot); }
+.roulette-landed-pocket.color-black  { background: #1a1a1a; border-color: var(--jackpot); }
+.roulette-landed-pocket.color-green  { background: #1f7a3a; border-color: var(--jackpot); }
 
 @media (prefers-reduced-motion: reduce) {
     /* No spinning wheel for users who asked for fewer effects — JS
@@ -174,7 +174,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 999px;
-    color: #fff;
+    color: var(--heading);
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
@@ -232,7 +232,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -256,7 +256,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -265,7 +265,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.roulette-balance strong { color: #fff; }
+.roulette-balance strong { color: var(--heading); }
 
 .roulette-result {
     min-height: 1.5em;
@@ -273,7 +273,7 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
-.roulette-result-win  { color: #57F287; }
+.roulette-result-win  { color: var(--buy); }
 .roulette-result-lose { color: #a0a0b0; }
 
 /* ─── Payouts table ───────────────────────────────────────────────────── */

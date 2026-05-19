@@ -66,7 +66,7 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
-.slots-result-win { color: #57F287; }
+.slots-result-win { color: var(--buy); }
 .slots-result-lose { color: #a0a0b0; }
 
 .slots-bet {
@@ -90,7 +90,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -99,7 +99,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.slots-balance strong { color: #fff; }
+.slots-balance strong { color: var(--heading); }
 
 .slots-payouts {
     margin-top: var(--space-5);

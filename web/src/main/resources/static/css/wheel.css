@@ -2,7 +2,7 @@
 
 .wheel-header { margin-bottom: var(--space-5); }
 .wheel-header h1 { margin: var(--space-2) 0; }
-.wheel-header strong { color: #fff; }
+.wheel-header strong { color: var(--heading); }
 
 .wheel-table {
     display: flex;
@@ -99,7 +99,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.wheel-result-win { color: #57F287; }
+.wheel-result-win { color: var(--buy); }
 .wheel-result-lose { color: #a0a0b0; }
 
 .wheel-bet {
@@ -157,7 +157,7 @@
 }
 .wheel-pick input[type="radio"]:checked + span {
     border-color: var(--wheel-pick-tint);
-    color: #fff;
+    color: var(--heading);
     background: var(--casino-active-tile-bg);
     box-shadow: 0 0 12px var(--wheel-pick-tint, var(--casino-gold));
 }
@@ -179,7 +179,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -189,7 +189,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.wheel-balance strong { color: #fff; }
+.wheel-balance strong { color: var(--heading); }
 
 .wheel-rules, .wheel-weights {
     margin-top: var(--space-5);
@@ -212,7 +212,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.wheel-rules strong { color: #fff; }
+.wheel-rules strong { color: var(--heading); }
 .wheel-weights-table-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

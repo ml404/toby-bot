@@ -2,7 +2,7 @@
 
 .hr-header { margin-bottom: var(--space-5); }
 .hr-header h1 { margin: var(--space-2) 0; }
-.hr-header strong { color: #fff; }
+.hr-header strong { color: var(--heading); }
 
 .hr-table {
     display: flex;
@@ -41,7 +41,7 @@
     text-overflow: ellipsis;
 }
 .hr-lane-name {
-    color: #fff;
+    color: var(--heading);
     margin-left: 4px;
 }
 
@@ -89,7 +89,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.hr-result-win { color: #57F287; }
+.hr-result-win { color: var(--buy); }
 .hr-result-lose { color: #a0a0b0; }
 
 .hr-bet {
@@ -169,7 +169,7 @@
     font-size: 0.95rem;
 }
 .hr-horse-name span:first-child {
-    color: #fff;
+    color: var(--heading);
     margin-right: 4px;
 }
 .hr-horse-odds {
@@ -179,7 +179,7 @@
 }
 .hr-horse input[type="radio"]:checked ~ .hr-horse-emoji ~ .hr-horse-name,
 .hr-horse input[type="radio"]:checked ~ .hr-horse-emoji ~ .hr-horse-odds {
-    color: #fff;
+    color: var(--heading);
 }
 .hr-horse:has(input[type="radio"]:checked) {
     border-color: var(--casino-gold);
@@ -214,7 +214,7 @@
     box-shadow: var(--casino-active-glow);
 }
 .hr-bet-type:has(input[type="radio"]:checked) > span:first-of-type {
-    color: #fff;
+    color: var(--heading);
 }
 
 .hr-stake-label {
@@ -229,7 +229,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -240,7 +240,7 @@
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
-.hr-balance strong { color: #fff; }
+.hr-balance strong { color: var(--heading); }
 
 .hr-payouts,
 .hr-rules {
@@ -285,7 +285,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.hr-rules strong { color: #fff; }
+.hr-rules strong { color: var(--heading); }
 
 @media (max-width: 600px) {
     /* Compact track: shorter labels (just "H1"), tighter rail height so

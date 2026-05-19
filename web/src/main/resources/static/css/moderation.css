@@ -182,7 +182,7 @@ details.config-section.is-hidden { display: none; }
 
 .btn-danger {
     background: var(--danger-bg);
-    color: #fff;
+    color: var(--heading);
     border: 1px solid var(--danger-border);
     padding: 4px 12px;
     border-radius: var(--radius-sm);
@@ -312,7 +312,7 @@ details.config-section.is-hidden { display: none; }
     margin: var(--space-2) var(--space-4) var(--space-3);
     padding: var(--space-3);
     background: rgba(241, 196, 15, 0.08);
-    border-left: 3px solid #f1c40f;
+    border-left: 3px solid var(--jackpot);
     border-radius: 4px;
     color: var(--text);
     font-size: 0.9rem;

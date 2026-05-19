@@ -111,7 +111,7 @@
     margin-top: 0.4rem;
 }
 
-.che-rules strong { color: #fff; }
+.che-rules strong { color: var(--heading); }
 
 .che-paytable {
     width: 100%;

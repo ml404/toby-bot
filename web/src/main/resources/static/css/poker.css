@@ -170,7 +170,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.poker-rules strong { color: #fff; }
+.poker-rules strong { color: var(--heading); }
 
 /* ------------------------------------------------------------------- */
 /* Responsive — phones                                                  */

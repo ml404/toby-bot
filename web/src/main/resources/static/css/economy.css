@@ -14,9 +14,13 @@
 .economy-price-value {
     font-size: 2.25rem;
     font-weight: 700;
-    color: #fff;
     letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
 }
 
 .economy-price-change {
@@ -25,8 +29,8 @@
     font-variant-numeric: tabular-nums;
 }
 
-.economy-price-change.up { color: var(--success); }
-.economy-price-change.down { color: var(--danger); }
+.economy-price-change.up { color: var(--buy); }
+.economy-price-change.down { color: var(--sell); }
 
 .economy-price-fee {
     font-size: 0.8rem;
@@ -148,7 +152,7 @@
 }
 
 .economy-preview-value { font-variant-numeric: tabular-nums; }
-.economy-preview-value.insufficient { color: #ED4245; }
+.economy-preview-value.insufficient { color: var(--sell); }
 
 .economy-chart-legend {
     margin-top: var(--space-2);
@@ -156,8 +160,8 @@
     text-align: right;
 }
 
-.economy-trade-buy { color: #57F287; font-weight: 600; }
-.economy-trade-sell { color: #ED4245; font-weight: 600; }
+.economy-trade-buy { color: var(--buy); font-weight: 600; }
+.economy-trade-sell { color: var(--sell); font-weight: 600; }
 
 .economy-recent-trades-card {
     margin-top: var(--space-4);
@@ -309,13 +313,13 @@
     border: 1px solid currentColor;
 }
 .economy-watch-side-buy {
-    color: #57F287;
-    background: rgba(87, 242, 135, 0.12);
+    color: var(--buy);
+    background: var(--buy-soft);
     border-color: rgba(87, 242, 135, 0.45);
 }
 .economy-watch-side-sell {
-    color: #ED4245;
-    background: rgba(237, 66, 69, 0.12);
+    color: var(--sell);
+    background: var(--sell-soft);
     border-color: rgba(237, 66, 69, 0.45);
 }
 
@@ -324,14 +328,14 @@
     display: inline-flex;
     align-items: baseline;
     gap: 4px;
-    color: #fff;
+    color: var(--heading);
     font-weight: 700;
     font-size: 1.05rem;
 }
 .economy-watch-target-value { font-variant-numeric: tabular-nums; }
 .economy-watch-arrow { font-size: 0.95rem; line-height: 1; }
-.economy-watch-arrow-down { color: #ED4245; }
-.economy-watch-arrow-up { color: #57F287; }
+.economy-watch-arrow-down { color: var(--sell); }
+.economy-watch-arrow-up { color: var(--buy); }
 
 .economy-watch-from {
     color: var(--text-muted);
@@ -354,10 +358,13 @@
 }
 .economy-watch-status.status-armed { color: #c8d0e0; }
 .economy-watch-status.status-fire-now {
-    color: #57F287;
-    background: rgba(87, 242, 135, 0.14);
+    color: var(--buy);
+    background: var(--buy-soft);
     border-color: rgba(87, 242, 135, 0.35);
     animation: economy-watch-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+    .economy-watch-status.status-fire-now { animation: none; }
 }
 .economy-watch-status.status-fired {
     color: #FAA61A;
@@ -387,7 +394,7 @@
 .btn-icon:hover {
     background: rgba(237, 66, 69, 0.1);
     border-color: rgba(237, 66, 69, 0.5);
-    color: #ED4245;
+    color: var(--sell);
 }
 .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 .economy-watch-remove-text { display: none; }

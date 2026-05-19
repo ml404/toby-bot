@@ -3,15 +3,54 @@
    that wants the themed-section / hero / footer treatment).
    ========================================================================== */
 
-/* HERO */
+/* HERO
+   ---
+   .hero is a positioned container so .hero-aurora can absolutely paint
+   the radial-gradient haze behind the content. .hero-inner is a two-up
+   row on desktop (copy + mascot) that collapses to copy-only on phones.
+   Mascot is decorative — alt="" + aria-hidden so screen readers skip it
+   — and floats gently when reduced-motion is off. */
 .hero {
-    text-align: center;
-    padding: 80px 24px 48px;
+    position: relative;
+    padding: 96px 24px 56px;
+    overflow: hidden;
+}
+.hero-aurora {
+    position: absolute;
+    inset: -10% -10% 0 -10%;
+    background: var(--gradient-hero);
+    pointer-events: none;
+    z-index: 0;
+}
+.hero-inner {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    align-items: center;
+    gap: 48px;
+}
+.hero-copy { text-align: left; max-width: 640px; }
+.hero-mascot {
+    width: 220px;
+    height: auto;
+    justify-self: end;
+    filter: drop-shadow(0 6px 24px rgba(88, 101, 242, 0.25));
+    animation: hero-mascot-float 6s var(--ease-in-out) infinite alternate;
+}
+@keyframes hero-mascot-float {
+    from { transform: translateY(-4px); }
+    to   { transform: translateY(4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .hero-mascot { animation: none; }
 }
 .hero-badge {
     display: inline-block;
     background: rgba(88, 101, 242, 0.15);
-    color: #7289fa;
+    color: var(--accent-light);
     border: 1px solid rgba(88, 101, 242, 0.3);
     border-radius: 999px;
     padding: 4px 16px;
@@ -22,40 +61,69 @@
     margin-bottom: 20px;
 }
 .hero h1 {
-    font-size: clamp(2rem, 5vw, 3.2rem);
-    color: #fff;
-    margin-bottom: 16px;
-    line-height: 1.2;
+    font-size: clamp(2rem, 5vw, 3.4rem);
+    color: var(--heading);
+    margin-bottom: 18px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
 }
-.hero h1 span { color: var(--accent); }
+/* Gradient sweep on the accent word — uses the canonical token so a
+   palette tweak in base.css ripples here automatically. */
+.hero h1 span {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
 .hero p {
     font-size: 1.1rem;
     color: var(--text-muted);
     max-width: 620px;
-    margin: 0 auto 32px;
+    margin: 0 0 32px;
     line-height: 1.6;
 }
 .hero-actions {
     display: flex;
     gap: 16px;
-    justify-content: center;
     flex-wrap: wrap;
     margin-bottom: 16px;
 }
-.btn-primary {
-    display: inline-block;
-    background: var(--accent);
-    color: #fff;
+/* Local hero-button overrides — public pages wanted bigger CTAs than
+   the in-app .btn-primary defaults from base.css. Keeps the same
+   visual contract (background, hover) but with a more prominent
+   click target and a soft glow at rest so the hero feels alive. */
+.hero .btn-primary,
+.final-cta .btn-primary,
+.login-card .btn-discord {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-accent);
+    color: var(--on-accent);
     text-decoration: none;
     padding: 14px 28px;
     border-radius: var(--radius-md);
     font-size: 1rem;
     font-weight: 600;
-    transition: background 0.2s;
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    box-shadow: 0 8px 24px rgba(88, 101, 242, 0.28);
+    border: none;
 }
-.btn-primary:hover { background: #4752c4; }
-.btn-secondary {
-    display: inline-block;
+.hero .btn-primary:hover,
+.final-cta .btn-primary:hover,
+.login-card .btn-discord:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 30px rgba(88, 101, 242, 0.40);
+}
+.hero .btn-primary:active,
+.final-cta .btn-primary:active,
+.login-card .btn-discord:active { transform: translateY(0); }
+.hero .btn-secondary,
+.final-cta .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
     color: var(--text);
     text-decoration: none;
@@ -64,27 +132,39 @@
     border: 1px solid var(--border-strong);
     font-size: 1rem;
     font-weight: 600;
-    transition: border-color 0.2s, color 0.2s;
+    transition: border-color var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
 }
-.btn-secondary:hover { border-color: var(--accent); color: #fff; }
+.hero .btn-secondary:hover,
+.final-cta .btn-secondary:hover {
+    border-color: var(--accent);
+    color: var(--heading);
+    background: var(--accent-soft);
+}
 .hero-aside {
     font-size: 0.85rem;
     color: var(--text-dim);
 }
-.hero-aside a { color: #7289fa; text-decoration: none; }
+.hero-aside a { color: var(--accent-light); text-decoration: none; }
 .hero-aside a:hover { text-decoration: underline; }
 
-/* LIVE STATS STRIP */
+/* LIVE STATS STRIP
+   Gradient hairline borders top + bottom — `border-image` with the
+   --gradient-accent token gives the strip a quiet frame without needing
+   extra wrapper elements. */
 .stats-strip {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 48px;
-    padding: 24px;
-    max-width: 720px;
+    padding: 28px 24px;
+    max-width: 760px;
     margin: 0 auto;
-    border-top: 1px solid var(--border);
-    border-bottom: 1px solid var(--border);
+    border-top: 1px solid transparent;
+    border-bottom: 1px solid transparent;
+    border-image: var(--gradient-accent) 1;
+    border-image-slice: 1;
+    background:
+        radial-gradient(80% 100% at 50% 50%, rgba(88,101,242,0.06) 0%, transparent 70%);
 }
 .stat {
     text-align: center;
@@ -92,9 +172,9 @@
 }
 .stat-value {
     display: block;
-    font-size: 2rem;
+    font-size: 2.2rem;
     font-weight: 700;
-    color: var(--accent);
+    color: var(--accent-light);
     font-variant-numeric: tabular-nums;
     line-height: 1.1;
 }
@@ -105,6 +185,73 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-top: 6px;
+}
+
+/* HOW-IT-WORKS STRIP — 3 numbered steps with connector dashes between
+   them on desktop. The connectors are pure CSS pseudo-elements drawn
+   off the .howto-step boundary, hidden when wrapped to phone columns. */
+.howto-section { padding-top: 32px; }
+.howto-strip {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+    position: relative;
+}
+.howto-step {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 24px 22px;
+    transition:
+        border-color var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
+}
+.howto-step:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: var(--glow-accent);
+}
+.howto-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--gradient-accent);
+    color: var(--on-accent);
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 12px;
+    box-shadow: 0 4px 12px rgba(88,101,242,0.35);
+}
+.howto-step h3 {
+    font-size: 1.05rem;
+    color: var(--heading);
+    margin-bottom: 6px;
+}
+.howto-step p {
+    color: var(--text-muted);
+    font-size: 0.93rem;
+    line-height: 1.5;
+    margin: 0;
+}
+.howto-step:not(:last-child)::after {
+    /* Dashed connector pointing to the next step. Sits in the gap so
+       it never overlaps the card chrome. */
+    content: "";
+    position: absolute;
+    top: 38px;
+    right: -16px;
+    width: 14px;
+    height: 0;
+    border-top: 2px dashed var(--border-strong);
+    pointer-events: none;
 }
 
 /* THEMED SECTIONS */
@@ -121,7 +268,7 @@
 /* .section-eyebrow lives in base.css now (used across admin + public). */
 .section h2 {
     font-size: 1.7rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 8px;
     line-height: 1.25;
 }
@@ -132,27 +279,71 @@
     max-width: 56ch;
 }
 
-/* FEATURE CARDS — used inside .section .feature-grid */
+/* FEATURE CARDS — used inside .section .feature-grid.
+   The hover state now uses a gradient outline glow + lift so the
+   "this is clickable" affordance is unmistakable. We compose two
+   shadows: a directional drop for depth, and a soft tinted glow for
+   the accent halo. */
 .feature-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 20px;
 }
 .feature-card {
+    position: relative;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 24px 20px;
-    transition: border-color 0.2s, transform 0.15s;
+    transition:
+        border-color var(--dur-base) var(--ease-out),
+        transform var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
     display: block;
     text-decoration: none;
     color: inherit;
+    overflow: hidden;
 }
-.feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }
-.feature-icon { font-size: 1.8rem; margin-bottom: 12px; }
+.feature-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-accent);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    opacity: 0;
+    transition: opacity var(--dur-base) var(--ease-out);
+    pointer-events: none;
+}
+.feature-card:hover,
+.feature-card:focus-visible {
+    border-color: transparent;
+    transform: translateY(-3px);
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.35),
+        var(--glow-accent);
+}
+.feature-card:hover::before,
+.feature-card:focus-visible::before { opacity: 1; }
+.feature-icon {
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+    transition: transform var(--dur-base) var(--ease-out);
+    display: inline-block;
+}
+.feature-card:hover .feature-icon { transform: translateY(-2px) scale(1.05); }
+@media (prefers-reduced-motion: reduce) {
+    .feature-card:hover .feature-icon { transform: none; }
+    .feature-card:hover { transform: none; }
+}
 .feature-card h3 {
     font-size: 1rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 8px;
 }
 .feature-card p {
@@ -166,9 +357,53 @@
     margin-top: 10px;
     font-size: 0.72rem;
     font-weight: 600;
-    color: #7289fa;
+    color: var(--accent-light);
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+/* BY-THE-NUMBERS STRIP — narrow band of pill-cells between the
+   Engagement and Management sections. Splits up the feature-grid
+   rhythm and surfaces the craft-signal homeStats numbers (config
+   keys, command count, minigame count). */
+.numbers-strip {
+    margin: 24px auto;
+    padding: 0 24px;
+    max-width: 1100px;
+}
+.numbers-strip-inner {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    padding: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background:
+        linear-gradient(0deg, rgba(88,101,242,0.04), rgba(88,101,242,0.04)),
+        var(--bg-elevated);
+}
+.numbers-cell {
+    text-align: center;
+    padding: 8px 6px;
+    border-radius: var(--radius-md);
+    transition: background var(--dur-base) var(--ease-out);
+}
+.numbers-cell:hover { background: var(--accent-soft); }
+.numbers-value {
+    display: block;
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--heading);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+.numbers-label {
+    display: block;
+    font-size: 0.74rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
 }
 
 /* TECH STACK STRIP */
@@ -208,31 +443,60 @@
        without adding a wrapping element. Hidden on wrap by flex-gap. */
 }
 
-/* FINAL CTA — repeats hero buttons at the bottom of the page */
+/* FINAL CTA — mirrors the hero treatment so the page bookends. The
+   aurora is hosted on the section itself; .final-cta-inner stays
+   width-constrained and centred. */
 .final-cta {
-    padding: 56px 24px 80px;
+    position: relative;
+    padding: 72px 24px 96px;
     text-align: center;
+    overflow: hidden;
+}
+.hero-aurora-cta {
+    inset: 0 -10% -10% -10%;
+    background: radial-gradient(80% 60% at 50% 100%, rgba(88,101,242,0.18) 0%, transparent 65%);
+}
+.final-cta-inner {
+    position: relative;
+    z-index: 1;
     max-width: 720px;
     margin: 0 auto;
 }
 .final-cta h2 {
-    font-size: 1.6rem;
-    color: #fff;
+    font-size: 1.7rem;
+    color: var(--heading);
     margin-bottom: 12px;
+    letter-spacing: -0.01em;
 }
 .final-cta p {
     color: var(--text-muted);
     margin-bottom: 28px;
     line-height: 1.55;
 }
+.final-cta .hero-actions {
+    justify-content: center;
+}
 
-/* SITE FOOTER */
+/* SITE FOOTER
+   Same gradient hairline trick as the top navbar — a 1px gradient strip
+   reads as a designed divider rather than a default border. */
 .site-footer {
-    border-top: 1px solid var(--border);
-    padding: 32px 24px;
+    position: relative;
+    padding: 36px 24px;
     text-align: center;
     color: var(--text-dim);
     font-size: 0.82rem;
+}
+.site-footer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--gradient-accent);
+    opacity: 0.35;
+    pointer-events: none;
 }
 .site-footer-inner {
     max-width: 800px;
@@ -241,7 +505,7 @@
     gap: 8px;
 }
 .site-footer-line { margin: 0; }
-.site-footer a { color: #7289fa; text-decoration: none; }
+.site-footer a { color: var(--accent-light); text-decoration: none; }
 .site-footer a:hover { text-decoration: underline; }
 .site-footer-source { font-size: 0.85rem; }
 .site-footer-stack {
@@ -280,11 +544,11 @@
 .changelog-header { margin-bottom: 32px; }
 .changelog-header h1 {
     font-size: 1.8rem;
-    color: #fff;
+    color: var(--heading);
     margin: 8px 0 8px;
 }
 .changelog-header .muted { color: var(--text-muted); line-height: 1.5; }
-.changelog-header a { color: #7289fa; text-decoration: none; }
+.changelog-header a { color: var(--accent-light); text-decoration: none; }
 .changelog-header a:hover { text-decoration: underline; }
 .changelog-timeline {
     list-style: none;
@@ -320,7 +584,7 @@
 .changelog-emoji { font-size: 1.05rem; }
 .changelog-title {
     font-size: 1.05rem;
-    color: #fff;
+    color: var(--heading);
     margin: 0 0 6px;
 }
 .changelog-summary {
@@ -333,30 +597,34 @@
 .changelog-pr {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.78rem;
-    color: #7289fa;
+    color: var(--accent-light);
     text-decoration: none;
 }
 .changelog-pr:hover { text-decoration: underline; }
 
 /* LOGIN PAGE — centred card with feature teaser */
 .login-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: calc(100vh - 220px);
     padding: 48px 24px;
+    overflow: hidden;
 }
 .login-card {
+    position: relative;
+    z-index: 1;
     background: var(--bg-elevated);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     padding: 48px 40px;
     text-align: center;
     max-width: 420px;
     width: 100%;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
-.login-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: #fff; }
+.login-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--heading); }
 .login-card .lede { color: var(--text-muted); margin-bottom: 24px; line-height: 1.55; }
 .login-card ul {
     list-style: none;
@@ -383,13 +651,13 @@
     border-radius: 8px;
     font-size: 1rem;
 }
-.login-card .btn-discord:hover { background: #4752c4; }
+.login-card .btn-discord:hover { background: var(--accent-hover); }
 .login-error {
-    background: #4a1a1a;
-    border: 1px solid #c0392b;
-    color: #e74c3c;
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    color: var(--danger);
     padding: 10px 16px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-bottom: 20px;
     font-size: 0.9rem;
 }
@@ -398,28 +666,52 @@
     font-size: 0.82rem;
     color: var(--text-dim);
 }
-.login-aside a { color: #7289fa; text-decoration: none; }
+.login-aside a { color: var(--accent-light); text-decoration: none; }
 .login-aside a:hover { text-decoration: underline; }
 
-/* RESPONSIVE */
+/* RESPONSIVE — canonical breakpoints from base.css (--bp-tablet 768,
+   --bp-mobile 600, --bp-small 480, --bp-tiny 380). Stylelint enforces
+   this allowlist. */
+@media (max-width: 768px) {
+    /* Drop the decorative mascot column on tablet and below — it
+       competes with hero copy and the centred two-up looks tighter. */
+    .hero-inner {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+    .hero-mascot { display: none; }
+    .hero-copy { text-align: center; margin: 0 auto; }
+    .hero-actions { justify-content: center; }
+    .hero p { margin-left: auto; margin-right: auto; }
+    .howto-strip { grid-template-columns: minmax(0, 1fr); }
+    .howto-step:not(:last-child)::after { display: none; }
+    .numbers-strip-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 600px) {
-    .stats-strip { gap: 24px; padding: 16px 12px; }
+    .hero { padding: 72px 20px 40px; }
+    .stats-strip { gap: 24px; padding: 18px 12px; }
     .stat-value { font-size: 1.6rem; }
     .section { padding: 44px 20px; }
     .section h2 { font-size: 1.4rem; }
+    .numbers-value { font-size: 1.55rem; }
 }
 @media (max-width: 480px) {
-    .hero { padding: 48px 16px 32px; }
+    .hero { padding: 56px 16px 32px; }
     .hero p { font-size: 1rem; }
     .hero-actions { flex-direction: column; align-items: stretch; gap: 10px; }
     .hero-actions a { width: 100%; text-align: center; }
     .stats-strip { gap: 12px; padding: 14px 12px; }
     .stat { min-width: 80px; flex: 1 1 40%; }
-    .stat-value { font-size: 1.4rem; }
+    .stat-value { font-size: 1.45rem; }
     .section { padding: 36px 16px; }
     .feature-grid { gap: 12px; }
     .feature-card { padding: 20px 16px; }
-    .final-cta { padding: 36px 16px 56px; }
+    .numbers-strip { padding: 0 16px; }
+    .numbers-strip-inner { padding: 14px; gap: 10px; }
+    .numbers-value { font-size: 1.4rem; }
+    .howto-strip { gap: 16px; }
+    .howto-step { padding: 20px 18px; }
+    .final-cta { padding: 48px 16px 64px; }
     .site-footer { padding: 24px 16px; }
     .login-card { padding: 32px 20px; }
     .login-card h1 { font-size: 1.5rem; }
@@ -430,4 +722,5 @@
     .stats-strip { gap: 8px; }
     .stat-value { font-size: 1.2rem; }
     .stat-label { font-size: 0.72rem; }
+    .numbers-strip-inner { grid-template-columns: minmax(0, 1fr); }
 }

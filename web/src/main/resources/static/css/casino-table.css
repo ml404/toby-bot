@@ -48,7 +48,7 @@
  */
 
 :root {
-    --casino-gold: #f1c40f;
+    --casino-gold: var(--jackpot);
     --casino-active-glow:
         0 0 0 2px var(--casino-gold),
         0 0 18px rgba(241, 196, 15, 0.45);

@@ -35,7 +35,7 @@
 }
 .scratch-cell:hover:not(:disabled) {
     transform: translateY(-2px);
-    border-color: #f1c40f;
+    border-color: var(--jackpot);
 }
 .scratch-cell:active:not(:disabled) {
     transform: translateY(0) scale(0.96);
@@ -70,7 +70,7 @@
 .scratch-cell-face {
     opacity: 0;
     background: #0f1830;
-    color: #fff;
+    color: var(--heading);
     border-radius: 10px;
 }
 .scratch-cell.revealed {
@@ -87,7 +87,7 @@
 }
 .scratch-cell.win-cell .scratch-cell-face {
     background: #1a3322;
-    border: 2px solid #57F287;
+    border: 2px solid var(--buy);
 }
 /* Winning cells pulse with the same gold halo blackjack/poker uses for
    the active actor — turns the "you won" scratchcard into a celebration
@@ -126,7 +126,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.scratch-result-win { color: #57F287; }
+.scratch-result-win { color: var(--buy); }
 .scratch-result-lose { color: #a0a0b0; }
 .scratch-result strong { color: inherit; }
 
@@ -150,7 +150,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -159,7 +159,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.scratch-balance strong { color: #fff; }
+.scratch-balance strong { color: var(--heading); }
 
 .scratch-rules {
     margin-top: var(--space-5);

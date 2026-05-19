@@ -14,8 +14,14 @@
    (body.nav-open).
    ============================================================ */
 
+/* Top nav surface. Adds a soft horizontal accent sheen at the bottom
+   (1px gradient strip overlaid via ::after) so the divider reads as a
+   designed line, not a default 1px border. The hairline is decorative
+   and pointer-events:none so it never intercepts clicks on nav items. */
 body > nav {
-    background: var(--bg-elevated);
+    background:
+        linear-gradient(180deg, rgba(88,101,242,0.03), transparent 70%),
+        var(--bg-elevated);
     padding: 14px 24px;
     display: flex;
     justify-content: space-between;
@@ -25,10 +31,21 @@ body > nav {
     position: relative;
     z-index: 10;
 }
+body > nav::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: var(--gradient-accent);
+    opacity: 0.35;
+    pointer-events: none;
+}
 .brand {
     font-weight: 700;
     font-size: 1.2rem;
-    color: #fff;
+    color: var(--heading);
     text-decoration: none;
     max-width: calc(100% - 64px);
     overflow: hidden;
@@ -85,7 +102,7 @@ body > nav {
     border-radius: var(--radius-sm);
     transition: color 0.15s, background 0.15s, box-shadow 0.15s;
 }
-.nav-item:hover { color: #fff; background: var(--accent-soft); }
+.nav-item:hover { color: var(--heading); background: var(--accent-soft); }
 .nav-item-icon {
     display: none;
     width: 20px;
@@ -99,7 +116,7 @@ body > nav {
     align-items: center;
     justify-content: center;
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
     text-decoration: none;
     padding: 8px 18px;
     border-radius: var(--radius-sm);
@@ -107,7 +124,7 @@ body > nav {
     font-weight: 600;
     transition: background 0.2s;
 }
-.btn-discord:hover { background: var(--accent-hover); color: #fff; }
+.btn-discord:hover { background: var(--accent-hover); color: var(--heading); }
 .btn-logout {
     background: transparent;
     border: 1px solid var(--border-strong);
@@ -135,7 +152,7 @@ body > nav {
     white-space: nowrap;
     text-overflow: ellipsis;
 }
-.nav-default-guild:hover { border-color: #fff; color: #fff; }
+.nav-default-guild:hover { border-color: var(--heading); color: var(--heading); }
 .nav-default-guild-empty { color: var(--text-dim); }
 .nav-default-guild-empty:hover { color: #c5c5d2; border-color: var(--text-dim); }
 
@@ -160,7 +177,7 @@ body > nav {
 .nav-drawer-brand {
     font-weight: 700;
     font-size: 1.1rem;
-    color: #fff;
+    color: var(--heading);
 }
 .nav-drawer-close {
     width: 40px;
@@ -174,7 +191,7 @@ body > nav {
     font-family: inherit;
     line-height: 1;
 }
-.nav-drawer-close:hover { border-color: var(--accent); color: #fff; }
+.nav-drawer-close:hover { border-color: var(--accent); color: var(--heading); }
 
 .nav-backdrop { display: none; }
 
@@ -182,7 +199,7 @@ body > nav {
    doesn't shift. Mobile rule below replaces this with a left-rail accent. */
 .nav-item[aria-current="page"],
 .nav-dropdown.is-active-parent > .nav-dropdown-toggle {
-    color: #fff;
+    color: var(--heading);
     box-shadow: inset 0 -2px 0 var(--accent);
 }
 
@@ -221,7 +238,7 @@ body > nav {
 }
 .nav-dropdown-toggle:hover,
 .nav-dropdown.open > .nav-dropdown-toggle {
-    color: #fff;
+    color: var(--heading);
     background: var(--accent-soft);
 }
 .nav-dropdown-caret {
@@ -272,9 +289,9 @@ body > nav {
     transition: background 0.15s, color 0.15s;
     white-space: nowrap;
 }
-.nav-dropdown-menu a:hover { background: var(--accent-soft); color: #fff; }
+.nav-dropdown-menu a:hover { background: var(--accent-soft); color: var(--heading); }
 .nav-dropdown-menu a[aria-current="page"] {
-    color: #fff;
+    color: var(--heading);
     background: var(--accent-soft);
     box-shadow: inset 3px 0 0 var(--accent);
 }
@@ -372,7 +389,7 @@ body > nav {
     }
     .nav-identity-name {
         font-weight: 600;
-        color: #fff;
+        color: var(--heading);
         font-size: 0.95rem;
     }
     .nav-identity .nav-default-guild {
@@ -419,7 +436,7 @@ body > nav {
     .nav-item[aria-current="page"],
     .nav-dropdown.is-active-parent > .nav-dropdown-toggle {
         background: var(--accent-soft);
-        color: #fff;
+        color: var(--heading);
         box-shadow: inset 3px 0 0 var(--accent);
     }
 

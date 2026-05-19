@@ -173,7 +173,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.bj-rules strong { color: #fff; }
+.bj-rules strong { color: var(--heading); }
 
 /* ------------------------------------------------------------------- */
 /* Responsive — phones                                                  */

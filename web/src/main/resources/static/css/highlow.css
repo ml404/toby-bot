@@ -2,7 +2,7 @@
 
 .highlow-header { margin-bottom: var(--space-5); }
 .highlow-header h1 { margin: var(--space-2) 0; }
-.highlow-header strong { color: #fff; }
+.highlow-header strong { color: var(--heading); }
 
 /* casino-felt covers the green-felt frame; this class only owns the
    stack layout for cards + form + buttons. */
@@ -61,7 +61,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.highlow-result-win { color: #57F287; }
+.highlow-result-win { color: var(--buy); }
 .highlow-result-lose { color: #a0a0b0; }
 .highlow-result strong { color: inherit; }
 
@@ -101,8 +101,8 @@
     transition: border-color 0.2s, color 0.2s, background 0.2s;
 }
 .highlow-direction input[type="radio"]:checked + span {
-    border-color: #f1c40f;
-    color: #fff;
+    border-color: var(--jackpot);
+    color: var(--heading);
     background: #1a2240;
 }
 .highlow-direction input[type="radio"]:focus-visible + span {
@@ -143,7 +143,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -153,7 +153,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.highlow-balance strong { color: #fff; }
+.highlow-balance strong { color: var(--heading); }
 
 .highlow-rules {
     margin-top: var(--space-5);
@@ -176,7 +176,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.highlow-rules strong { color: #fff; }
+.highlow-rules strong { color: var(--heading); }
 
 @media (max-width: 600px) {
     .highlow-card-face { width: 3.6rem; height: 5.2rem; font-size: 1.6rem; }

@@ -28,7 +28,7 @@
 }
 .guild-icon-placeholder {
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
     font-size: 1.5rem; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
 }
@@ -95,7 +95,7 @@
     font-size: 1rem;
     padding: 10px 20px;
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
     border: 0;
     border-radius: var(--radius-md);
     cursor: pointer;

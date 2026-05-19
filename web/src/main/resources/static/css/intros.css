@@ -96,9 +96,9 @@
     transition: background 0.15s, color 0.15s;
     padding: 0;
 }
-.btn-play:hover { background: var(--accent); color: #fff; }
+.btn-play:hover { background: var(--accent); color: var(--heading); }
 .btn-play.playing { border-color: var(--danger); color: var(--danger); }
-.btn-play.playing:hover { background: var(--danger); color: #fff; }
+.btn-play.playing:hover { background: var(--danger); color: var(--heading); }
 
 .btn-link-icon {
     color: var(--text-muted);
@@ -194,7 +194,7 @@
     font-size: 0.75rem;
     margin-right: 6px;
 }
-.url-preview .duration-badge.too-long { background: var(--danger); color: #fff; }
+.url-preview .duration-badge.too-long { background: var(--danger); color: var(--heading); }
 
 .form-row-split {
     display: grid;

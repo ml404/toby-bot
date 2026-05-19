@@ -19,7 +19,7 @@ body {
 .legal-header { margin-bottom: 40px; }
 .legal-header h1 {
     font-size: 2rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 8px;
 }
 .legal-header .updated {
@@ -30,7 +30,7 @@ body {
 .legal-section { margin-bottom: 36px; }
 .legal-section h2 {
     font-size: 1rem;
-    color: #fff;
+    color: var(--heading);
     font-weight: 600;
     margin-bottom: 12px;
     padding-bottom: 8px;
@@ -50,4 +50,4 @@ body {
     flex-direction: column;
     gap: 6px;
 }
-.legal-section a { color: #7289fa; }
+.legal-section a { color: var(--accent-light); }

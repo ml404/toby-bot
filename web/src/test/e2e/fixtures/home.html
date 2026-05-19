@@ -49,12 +49,19 @@
     </div>
 </nav>
 <section class="hero">
-    <span class="hero-badge">v2.7 · open source</span>
-    <h1>A Discord bot with a <span>twist</span></h1>
-    <p>Casino games, server moderation, and a live leaderboard — all powered by the same dashboard you're looking at.</p>
-    <div class="hero-actions">
-        <a class="btn-primary" href="#">Add to Discord</a>
-        <a class="btn-secondary" href="#">Browse commands</a>
+    <div class="hero-aurora" aria-hidden="true"></div>
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <span class="hero-badge">v2.7 · open source</span>
+            <h1>A Discord bot with a <span>twist</span></h1>
+            <p>Casino games, server moderation, and a live leaderboard — all powered by the same dashboard you're looking at.</p>
+            <div class="hero-actions">
+                <a class="btn-primary" href="#">Add to Discord</a>
+                <a class="btn-secondary" href="#">Browse commands</a>
+            </div>
+        </div>
+        <!-- Mascot is hidden on tablet/mobile; omitted from the fixture
+             to keep the responsive tests independent of an SVG asset. -->
     </div>
 </section>
 <div class="stats-strip">
@@ -63,6 +70,15 @@
     <div class="stat"><span class="stat-value">98%</span><span class="stat-label">Uptime</span></div>
     <div class="stat"><span class="stat-value">2.4M</span><span class="stat-label">TOBY won</span></div>
 </div>
+<section class="section howto-section">
+    <span class="section-eyebrow">How it works</span>
+    <h2>Three steps</h2>
+    <ol class="howto-strip">
+        <li class="howto-step"><span class="howto-num">1</span><h3>Invite</h3><p>One click.</p></li>
+        <li class="howto-step"><span class="howto-num">2</span><h3>Earn</h3><p>Hang out, get credit.</p></li>
+        <li class="howto-step"><span class="howto-num">3</span><h3>Play</h3><p>Trade or spin.</p></li>
+    </ol>
+</section>
 <section class="section">
     <span class="section-eyebrow">Casino &amp; Coin</span>
     <h2>Place your bets</h2>
@@ -71,6 +87,14 @@
         <div class="feature-card"><div class="feature-icon">🪙</div><h3>Coinflip</h3><p>Heads, tails, double or nothing.</p></div>
         <div class="feature-card"><div class="feature-icon">🃏</div><h3>Blackjack</h3><p>Hit, stand, split, double — solo or at the table.</p></div>
         <div class="feature-card"><div class="feature-icon">🎰</div><h3>Slots</h3><p>Three reels, jackpot multiplier on triples.</p></div>
+    </div>
+</section>
+<section class="numbers-strip">
+    <div class="numbers-strip-inner">
+        <div class="numbers-cell"><span class="numbers-value">11</span><span class="numbers-label">Games</span></div>
+        <div class="numbers-cell"><span class="numbers-value">9</span><span class="numbers-label">Minigames</span></div>
+        <div class="numbers-cell"><span class="numbers-value">120</span><span class="numbers-label">Commands</span></div>
+        <div class="numbers-cell"><span class="numbers-value">58</span><span class="numbers-label">Config keys</span></div>
     </div>
 </section>
 <footer class="site-footer">
