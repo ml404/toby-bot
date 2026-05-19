@@ -1,6 +1,7 @@
 package web.service
 
 import core.managers.CommandManager
+import database.dto.ConfigDto
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.catalog.GameCatalog
@@ -32,6 +33,7 @@ class HomeStatsService(
         val gameCount: Int,
         val minigameCount: Int,
         val minigameNames: String,
+        val configKeyCount: Int,
     )
 
     private data class Cached(val stats: HomeStats, val expiresAtNanos: Long)
@@ -60,6 +62,7 @@ class HomeStatsService(
         gameCount = GameCatalog.total,
         minigameCount = GameCatalog.minigameCount,
         minigameNames = GameCatalog.minigameNames,
+        configKeyCount = ConfigDto.Configurations.values().size,
     )
 
     companion object {

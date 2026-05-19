@@ -10,42 +10,73 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <!-- Hero -->
-<section class="hero">
-    <div class="hero-badge">Discord Bot</div>
-    <h1>Your server&rsquo;s <span>best companion</span></h1>
-    <p>A live per-server coin economy, a [[${homeStats.gameCount}]]-game casino with a shared jackpot pool,
-        music and intro songs, monthly leaderboards, and a full browser-based admin —
-        all in one Discord bot.</p>
-    <div class="hero-actions">
-        <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
-        <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
+<section class="hero" aria-labelledby="hero-title">
+    <div class="hero-aurora" aria-hidden="true"></div>
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <div class="hero-badge">Discord Bot</div>
+            <h1 id="hero-title">Your server&rsquo;s <span>best companion</span></h1>
+            <p>A live per-server coin economy, a [[${homeStats.gameCount}]]-game casino with a shared jackpot pool,
+                music and intro songs, monthly leaderboards, and a full browser-based admin &mdash;
+                all in one Discord bot.</p>
+            <div class="hero-actions">
+                <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
+                <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
+            </div>
+            <p class="hero-aside">
+                <a th:href="@{/changelog}">What&rsquo;s new &rarr;</a>
+            </p>
+        </div>
+        <img class="hero-mascot" src="/images/mascot.svg" alt="" aria-hidden="true" loading="eager" decoding="async">
     </div>
-    <p class="hero-aside">
-        <a th:href="@{/changelog}">What&rsquo;s new &rarr;</a>
-    </p>
 </section>
 
 <!-- Live stats -->
 <section class="stats-strip" aria-label="TobyBot at a glance">
     <div class="stat">
-        <span class="stat-value" th:text="${homeStats.serverCount}">0</span>
+        <span class="stat-value" data-count-up th:text="${homeStats.serverCount}">0</span>
         <span class="stat-label">Servers</span>
     </div>
     <div class="stat">
-        <span class="stat-value" th:text="${homeStats.commandCount}">0</span>
+        <span class="stat-value" data-count-up th:text="${homeStats.commandCount}">0</span>
         <span class="stat-label">Commands</span>
     </div>
     <div class="stat">
-        <span class="stat-value" th:text="${homeStats.gameCount}">0</span>
+        <span class="stat-value" data-count-up th:text="${homeStats.gameCount}">0</span>
         <span class="stat-label">Games</span>
     </div>
 </section>
 
+<!-- How it works — closes the "what's the loop?" gap right after the hero. -->
+<section class="section howto-section" aria-labelledby="howto-title">
+    <header class="section-header">
+        <span class="section-eyebrow">How it works</span>
+        <h2 id="howto-title">Three steps from join to jackpot</h2>
+    </header>
+    <ol class="howto-strip">
+        <li class="howto-step" data-reveal>
+            <span class="howto-num">1</span>
+            <h3>Invite TobyBot</h3>
+            <p>One-click install. Every feature is per-server configurable and starts in a safe default.</p>
+        </li>
+        <li class="howto-step" data-reveal>
+            <span class="howto-num">2</span>
+            <h3>Earn credit</h3>
+            <p>Hang out in voice, chat, run commands. Daily caps keep it fair; UBI keeps non-voice users in the loop.</p>
+        </li>
+        <li class="howto-step" data-reveal>
+            <span class="howto-num">3</span>
+            <h3>Play &amp; trade</h3>
+            <p>Spin the casino, trade TOBY on a live market, climb the leaderboard, or buy a vanity title.</p>
+        </li>
+    </ol>
+</section>
+
 <!-- Casino & coin -->
-<section class="section">
+<section class="section" aria-labelledby="casino-title">
     <header class="section-header">
         <span class="section-eyebrow">Casino &amp; Coin</span>
-        <h2>A coin economy that actually loops</h2>
+        <h2 id="casino-title">A coin economy that actually loops</h2>
         <p class="section-lede">
             Earn social credit by hanging out, trade it for TOBY coin on a live
             per-server market, then risk it all (or just some of it) on a
@@ -53,33 +84,33 @@
         </p>
     </header>
     <div class="feature-grid">
-        <a class="feature-card" href="/economy/guilds">
+        <a class="feature-card" href="/economy/guilds" data-reveal>
             <div class="feature-icon">&#128176;</div>
             <h3>TOBY market</h3>
-            <p>Live per-server price tick every 5 minutes. Buy low, sell high — your wallet shows up on the leaderboard.</p>
+            <p>Live per-server price tick every 5 minutes. Buy low, sell high &mdash; your wallet shows up on the leaderboard.</p>
         </a>
-        <a class="feature-card" href="/casino/guilds">
+        <a class="feature-card" href="/casino/guilds" data-reveal>
             <div class="feature-icon">&#127920;</div>
             <h3>Casino games</h3>
             <p>[[${homeStats.minigameCount}]] quick-play minigames ([[${homeStats.minigameNames}]]) plus seated Poker and Blackjack tables.</p>
             <span class="feature-card-tag">[[${homeStats.gameCount}]] games</span>
         </a>
-        <a class="feature-card" href="/lottery/guilds">
+        <a class="feature-card" href="/lottery/guilds" data-reveal>
             <div class="feature-icon">&#127903;&#65039;</div>
             <h3>Daily lottery</h3>
             <p>Auto-draws at 00:00 UTC, seeded from the jackpot pool. Pick-5-of-49 or weighted-top-3, configurable per server.</p>
         </a>
-        <a class="feature-card" href="/commands/wiki">
+        <a class="feature-card" href="/commands/wiki" data-reveal>
             <div class="feature-icon">&#128293;</div>
             <h3>Shared jackpot pool</h3>
             <p>Every casino loss tributes to a per-server pool that any winning roll can claim. RTP-gated so high-RTP games don&rsquo;t double-dip.</p>
         </a>
-        <a class="feature-card" href="/tip/guilds">
+        <a class="feature-card" href="/tip/guilds" data-reveal>
             <div class="feature-icon">&#128184;</div>
             <h3>Tip &amp; duel</h3>
-            <p>Send credit to a friend with a message, or stake them in a coin-flip duel — winner takes the pot.</p>
+            <p>Send credit to a friend with a message, or stake them in a coin-flip duel &mdash; winner takes the pot.</p>
         </a>
-        <a class="feature-card" href="/titles/guilds">
+        <a class="feature-card" href="/titles/guilds" data-reveal>
             <div class="feature-icon">&#127942;</div>
             <h3>Titles</h3>
             <p>Spend credit (or pay with TOBY in one click) on vanity titles that grant a matching Discord role when equipped.</p>
@@ -88,10 +119,10 @@
 </section>
 
 <!-- Server engagement -->
-<section class="section">
+<section class="section" aria-labelledby="engagement-title">
     <header class="section-header">
         <span class="section-eyebrow">Engagement</span>
-        <h2>Make your server worth showing up to</h2>
+        <h2 id="engagement-title">Make your server worth showing up to</h2>
         <p class="section-lede">
             Voice-time and message activity earn XP and credit &mdash; feeding levels,
             monthly leaderboards, per-user profiles, and personalised intro songs.
@@ -100,22 +131,22 @@
         </p>
     </header>
     <div class="feature-grid">
-        <a class="feature-card" href="/leaderboards">
+        <a class="feature-card" href="/leaderboards" data-reveal>
             <div class="feature-icon">&#128200;</div>
             <h3>Leaderboards</h3>
             <p>Monthly social-credit standings with a podium, TobyCoin wallet rankings, and a This-month / Total toggle.</p>
         </a>
-        <a class="feature-card" href="/profile/guilds">
+        <a class="feature-card" href="/profile/guilds" data-reveal>
             <div class="feature-icon">&#129489;</div>
             <h3>Profile</h3>
             <p>Per-server view of your social credit, equipped title, owned permissions, and recent activity.</p>
         </a>
-        <a class="feature-card" href="/intro/guilds">
+        <a class="feature-card" href="/intro/guilds" data-reveal>
             <div class="feature-icon">&#127925;</div>
             <h3>Intro songs</h3>
             <p>Set a custom track that plays whenever you join voice. YouTube links or MP3 uploads, capped per user.</p>
         </a>
-        <a class="feature-card" href="/profile/guilds">
+        <a class="feature-card" href="/profile/guilds" data-reveal>
             <div class="feature-icon">&#11088;</div>
             <h3>Levels &amp; XP</h3>
             <p>Earn XP from messages, slash commands, voice intros, and voice sessions. Level up to unlock role rewards and gated vanity titles; check your progress with <code>/level</code> or on your profile.</p>
@@ -123,36 +154,58 @@
     </div>
 </section>
 
+<!-- By the numbers — surfaces the homeStats DTO as a visible craft signal. -->
+<section class="numbers-strip" aria-label="TobyBot by the numbers">
+    <div class="numbers-strip-inner">
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${homeStats.gameCount}">0</span>
+            <span class="numbers-label">Casino games</span>
+        </div>
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${homeStats.minigameCount}">0</span>
+            <span class="numbers-label">Quick-play minigames</span>
+        </div>
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${homeStats.commandCount}">0</span>
+            <span class="numbers-label">Slash commands</span>
+        </div>
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${homeStats.configKeyCount}">0</span>
+            <span class="numbers-label">Per-server config keys</span>
+        </div>
+    </div>
+</section>
+
 <!-- Server management -->
-<section class="section">
+<section class="section" aria-labelledby="management-title">
     <header class="section-header">
         <span class="section-eyebrow">Server Management</span>
-        <h2>Admin from the browser, not slash commands</h2>
+        <h2 id="management-title">Admin from the browser, not slash commands</h2>
         <p class="section-lede">
             A seven-tab moderation web UI: search across every server config, toggle
             user permissions, run Discord moderation actions, move voice-channel
-            members, post emoji-reaction polls, and handle casino remediation —
+            members, post emoji-reaction polls, and handle casino remediation &mdash;
             without typing a single <code>/setconfig</code>.
         </p>
     </header>
     <div class="feature-grid">
-        <a class="feature-card" href="/moderation/guilds">
+        <a class="feature-card" href="/moderation/guilds" data-reveal>
             <div class="feature-icon">&#128737;</div>
             <h3>Moderation toolkit</h3>
-            <p>Ban, unban, timeout, kick, purge messages, lock channels and set slowmode — from the dashboard or as slash commands, with full permission and role-hierarchy checks.</p>
+            <p>Ban, unban, timeout, kick, purge messages, lock channels and set slowmode &mdash; from the dashboard or as slash commands, with full permission and role-hierarchy checks.</p>
             <span class="feature-card-tag">New</span>
         </a>
-        <a class="feature-card" href="/moderation/guilds">
+        <a class="feature-card" href="/moderation/guilds" data-reveal>
             <div class="feature-icon">&#128296;</div>
             <h3>Config &amp; permissions</h3>
-            <p>Search across ~58 config keys, toggle per-user music/meme/dig/superuser permissions, adjust social credit — all in one place.</p>
+            <p>Search across <span th:text="${homeStats.configKeyCount}">58</span>+ config keys, toggle per-user music/meme/dig/superuser permissions, adjust social credit &mdash; all in one place.</p>
         </a>
-        <a class="feature-card" href="/moderation/guilds">
+        <a class="feature-card" href="/moderation/guilds" data-reveal>
             <div class="feature-icon">&#128226;</div>
             <h3>Polls &amp; voice ops</h3>
             <p>Post emoji-reaction polls, move voice-channel members between channels, and create read-only announce channels with one click.</p>
         </a>
-        <a class="feature-card" href="/moderation/guilds">
+        <a class="feature-card" href="/moderation/guilds" data-reveal>
             <div class="feature-icon">&#129534;</div>
             <h3>Anti-autoclicker</h3>
             <p>Per-pixel click-pattern detection ramps the house edge for suspect sessions; legitimate play never trips the gate.</p>
@@ -161,18 +214,18 @@
 </section>
 
 <!-- Tabletop & tools -->
-<section class="section">
+<section class="section" aria-labelledby="tabletop-title">
     <header class="section-header">
         <span class="section-eyebrow">Tabletop &amp; Tools</span>
-        <h2>Sundries that earn their keep</h2>
+        <h2 id="tabletop-title">Sundries that earn their keep</h2>
     </header>
     <div class="feature-grid">
-        <a class="feature-card" href="/dnd">
+        <a class="feature-card" href="/dnd" data-reveal>
             <div class="feature-icon">&#127922;</div>
             <h3>D&amp;D lookups</h3>
             <p>Search spells, conditions, rules and class features from the SRD without leaving the browser.</p>
         </a>
-        <a class="feature-card" href="/utils">
+        <a class="feature-card" href="/utils" data-reveal>
             <div class="feature-icon">&#128296;</div>
             <h3>Utilities</h3>
             <p>Meme generator, dice roller, magic 8-ball, random chooser, and other small tools.</p>
@@ -182,16 +235,19 @@
 
 <!-- Final CTA -->
 <section class="final-cta">
-    <h2>Ready to add TobyBot to your server?</h2>
-    <p>Free to install, every feature is per-server configurable, and the
-        full source is on GitHub if you want to read or fork it.</p>
-    <div class="hero-actions">
-        <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
-        <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
+    <div class="hero-aurora hero-aurora-cta" aria-hidden="true"></div>
+    <div class="final-cta-inner">
+        <h2>Ready to add TobyBot to your server?</h2>
+        <p>Free to install, every feature is per-server configurable, and the
+            full source is on GitHub if you want to read or fork it.</p>
+        <div class="hero-actions">
+            <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
+            <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
+        </div>
+        <p class="hero-aside">
+            <a href="https://ko-fi.com/fratlayton" rel="noopener" target="_blank">Like TobyBot? Support development on Ko-fi &rarr;</a>
+        </p>
     </div>
-    <p class="hero-aside">
-        <a href="https://ko-fi.com/fratlayton" rel="noopener" target="_blank">Like TobyBot? Support development on Ko-fi &rarr;</a>
-    </p>
 </section>
 
 <footer th:replace="~{fragments/footer :: footer}"></footer>
