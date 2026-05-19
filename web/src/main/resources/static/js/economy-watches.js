@@ -37,17 +37,19 @@
     function statusFor(watch, currentPrice) {
         if (!watch.enabled && watch.firedAt) {
             const d = new Date(watch.firedAt);
-            return 'fired ' + d.toLocaleString();
+            return { text: 'fired ' + d.toLocaleString(), cls: 'fired' };
         }
-        if (!watch.enabled) return 'disabled';
-        // "would fire on next tick" hint when the current price has already
-        // crossed the threshold from the side it started on.
+        if (!watch.enabled) return { text: 'disabled', cls: 'disabled' };
         if (currentPrice != null) {
             const created = watch.priceAtCreation;
             const t = watch.threshold;
-            if ((created - t) * (currentPrice - t) <= 0) return 'armed · would fire now';
+            // "would fire on next tick" — current price already past the
+            // threshold from the side it started on at creation.
+            if ((created - t) * (currentPrice - t) <= 0) {
+                return { text: 'would fire now', cls: 'fire-now' };
+            }
         }
-        return 'armed';
+        return { text: 'armed', cls: '' };
     }
 
     function renderWatches(watches, currentPrice) {
@@ -62,27 +64,47 @@
             li.className = 'economy-watch-row';
             li.dataset.watchId = String(w.id);
 
-            const arrow = w.threshold < w.priceAtCreation ? '↓' : '↑';
-            const summary = document.createElement('div');
-            summary.className = 'economy-watch-summary';
-            summary.textContent =
-                '#' + w.id + ' · ' + w.side + ' ' + w.amount + ' ' +
-                arrow + ' ' + fmtPrice(w.threshold) +
-                ' (created at ' + fmtPrice(w.priceAtCreation) + ')';
+            const main = document.createElement('div');
+            main.className = 'economy-watch-main';
 
-            const status = document.createElement('span');
-            status.className = 'economy-watch-status muted';
-            status.textContent = statusFor(w, currentPrice);
+            const side = document.createElement('span');
+            const sideCls = w.side === 'SELL' ? 'economy-watch-side-sell' : 'economy-watch-side-buy';
+            side.className = 'economy-watch-side ' + sideCls;
+            side.textContent = w.side + ' ' + w.amount;
+
+            const target = document.createElement('span');
+            target.className = 'economy-watch-target';
+            const arrowChar = w.threshold < w.priceAtCreation ? '↓' : '↑';
+            const arrow = document.createElement('span');
+            arrow.className = 'economy-watch-arrow';
+            arrow.textContent = arrowChar;
+            arrow.setAttribute('aria-hidden', 'true');
+            target.appendChild(arrow);
+            target.appendChild(document.createTextNode(fmtPrice(w.threshold)));
+
+            main.appendChild(side);
+            main.appendChild(target);
+
+            const status = statusFor(w, currentPrice);
+            const statusEl = document.createElement('span');
+            statusEl.className = 'economy-watch-status' + (status.cls ? ' ' + status.cls : '');
+            statusEl.textContent = status.text;
 
             const remove = document.createElement('button');
             remove.type = 'button';
             remove.className = 'btn-ghost economy-watch-remove';
             remove.textContent = 'Remove';
             remove.dataset.watchId = String(w.id);
+            remove.setAttribute('aria-label', 'Remove watch #' + w.id);
 
-            li.appendChild(summary);
-            li.appendChild(status);
+            const sub = document.createElement('div');
+            sub.className = 'economy-watch-sub';
+            sub.textContent = '#' + w.id + ' · created at ' + fmtPrice(w.priceAtCreation);
+
+            li.appendChild(main);
+            li.appendChild(statusEl);
             li.appendChild(remove);
+            li.appendChild(sub);
             listEl.appendChild(li);
         });
     }

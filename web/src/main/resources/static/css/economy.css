@@ -236,3 +236,122 @@
     .economy-price { text-align: left; }
     .economy-price-value { font-size: 1.8rem; }
 }
+
+/* ---- Price watches ---- */
+#economy-watches-card { margin-top: var(--space-5); }
+
+.economy-watch-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: var(--space-3);
+    align-items: end;
+    margin: 0 0 var(--space-4) 0;
+}
+.economy-watch-form .form-group { margin-bottom: 0; min-width: 0; }
+.economy-watch-form input,
+.economy-watch-form select { width: 100%; }
+.economy-watch-form button[type="submit"] { white-space: nowrap; }
+
+.economy-watch-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.economy-watch-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1, 4px);
+    align-items: center;
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+}
+.economy-watch-row:last-child { border-bottom: none; }
+
+.economy-watch-main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    font-variant-numeric: tabular-nums;
+    min-width: 0;
+}
+
+.economy-watch-side {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    line-height: 1;
+}
+.economy-watch-side-buy { color: #57F287; }
+.economy-watch-side-sell { color: #ED4245; }
+
+.economy-watch-target {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #fff;
+}
+.economy-watch-target .economy-watch-arrow { margin-right: 2px; }
+
+.economy-watch-sub {
+    grid-column: 1 / -1;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.economy-watch-status {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--surface-elevated, rgba(255, 255, 255, 0.04));
+    white-space: nowrap;
+}
+.economy-watch-status.fire-now { color: var(--success, #57F287); }
+.economy-watch-status.fired,
+.economy-watch-status.disabled { color: var(--text-muted); opacity: 0.85; }
+
+.economy-watch-remove { white-space: nowrap; }
+
+.economy-watch-empty { margin: var(--space-3) 0 0 0; }
+
+@media (max-width: 600px) {
+    .economy-watch-form {
+        grid-template-columns: 1fr 1fr;
+    }
+    .economy-watch-form button[type="submit"] {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    /* Stack the row: main info / status / remove on three lines so the
+       remove button gets a real tap target and the threshold no longer
+       fights for width with everything else. */
+    .economy-watch-row {
+        grid-template-columns: 1fr auto;
+        align-items: start;
+    }
+    .economy-watch-main { grid-column: 1 / -1; }
+    .economy-watch-status {
+        grid-column: 1;
+        grid-row: 2;
+        justify-self: start;
+    }
+    .economy-watch-remove {
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
+    }
+    .economy-watch-sub { grid-row: 3; }
+}
