@@ -124,31 +124,33 @@
 
     <section class="economy-card" id="economy-watches-card" aria-label="Price watches">
         <h2>Price watches</h2>
-        <p class="hint">
-            Set a target price; when the market hits it, your auto-trade
-            runs and you get a DM receipt. One-shot — re-arm by creating again.
+        <p class="hint economy-watch-intro">
+            Set a target price. When the market hits it, an auto-trade
+            runs and you get a DM receipt. One-shot — re-arm by adding again.
         </p>
         <form id="economy-watch-form" class="economy-watch-form" novalidate>
             <div class="form-group">
                 <label for="economy-watch-price">Target price</label>
-                <input id="economy-watch-price" type="number" min="0.01" step="0.0001" required>
+                <input id="economy-watch-price" type="number" min="0.01" step="0.0001"
+                       placeholder="e.g. 80.0000" required>
             </div>
             <div class="form-group">
-                <label for="economy-watch-side">Side</label>
+                <label for="economy-watch-side">When reached</label>
                 <select id="economy-watch-side" required>
-                    <option value="BUY">BUY when reached</option>
-                    <option value="SELL">SELL when reached</option>
+                    <option value="BUY">BUY</option>
+                    <option value="SELL">SELL</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="economy-watch-amount">Amount (coins)</label>
-                <input id="economy-watch-amount" type="number" min="1" step="1" required>
+                <label for="economy-watch-amount">Amount</label>
+                <input id="economy-watch-amount" type="number" min="1" step="1"
+                       placeholder="coins" required>
             </div>
             <button type="submit" class="btn" id="economy-watch-submit">Add watch</button>
         </form>
         <ul class="economy-watch-list" id="economy-watch-list" aria-live="polite"></ul>
-        <p class="economy-watch-empty hint" id="economy-watch-empty" hidden>
-            No active price watches.
+        <p class="economy-watch-empty" id="economy-watch-empty" hidden>
+            No active price watches yet — add one above and we'll keep an eye on the market.
         </p>
     </section>
 </main>
