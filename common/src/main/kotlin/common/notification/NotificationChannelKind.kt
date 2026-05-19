@@ -55,7 +55,7 @@ enum class NotificationChannelKind(
     ),
     PRICE_ALERT(
         displayName = "TobyCoin price alert",
-        description = "Off by default — DM on large TobyCoin price moves.",
+        description = "Off by default — DM receipts when a /pricealert trigger auto-executes a buy or sell on your behalf.",
         perSurfaceDefaults = mapOf(Surface.DM to false, Surface.PUSH to false),
     ),
     INTRO_PROMPT(

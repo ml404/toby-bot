@@ -34,6 +34,28 @@ class NotificationChannelKindTest {
         }
     }
 
+    @Test
+    fun `PRICE_ALERT description tells the user it's an auto-trade receipt`() {
+        // The string surfaces in /notify, the web API, and the
+        // notification-preferences page — all three rely on the enum's
+        // description as their source of truth. A stale "DM on large
+        // price moves" copy misleads the user into thinking PRICE_ALERT
+        // is a heads-up rather than a receipt of a trade the bot just
+        // ran on their behalf.
+        val desc = NotificationChannelKind.PRICE_ALERT.description.lowercase()
+        assertTrue(
+            desc.contains("/pricealert") || desc.contains("pricealert"),
+            "PRICE_ALERT description must point users at the /pricealert " +
+                    "command source: ${NotificationChannelKind.PRICE_ALERT.description}"
+        )
+        assertTrue(
+            desc.contains("buy") && desc.contains("sell"),
+            "PRICE_ALERT description must mention both buy and sell so " +
+                    "the user understands the receipt scope: " +
+                    NotificationChannelKind.PRICE_ALERT.description
+        )
+    }
+
     // ---- per-surface defaults (new shape) ----
 
     @Test
