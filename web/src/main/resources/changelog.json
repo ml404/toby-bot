@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Tab-nav layout + silent web bonus award + broken bulk-buy hint",
+    "summary": "## Three bugs reported after PR #508 merged",
+    "emoji": "🎰",
+    "prNumber": 509
+  },
+  {
+    "date": "May 2026",
     "title": "Surface incentives on the player page + polish moderation pages",
     "summary": "## Why",
     "emoji": "🎟️",
