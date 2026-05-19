@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "/jackpotadmin lottery_refresh_embed — manual embed rebuild trigger",
+    "summary": "## Why",
+    "emoji": "🎰",
+    "prNumber": 511
+  },
+  {
+    "date": "May 2026",
     "title": "Nav drawer stacking, additive embed rebuild, top holders include bonus tickets",
     "summary": "## Three bugs reported after #509",
     "emoji": "🎰",
