@@ -114,11 +114,11 @@ class NotificationChannelKindTest {
     // ---- DM-only legacy kinds — preserve old defaultOptIn values ----
 
     @Test
-    fun `STREAK_REMINDER, PRICE_ALERT, LEVEL_UP_DM default DM=false (matches pre-refactor defaults)`() {
+    fun `STREAK_REMINDER, PRICE_ALERT, LEVEL_UP default DM=false (matches pre-refactor defaults)`() {
         listOf(
             NotificationChannelKind.STREAK_REMINDER,
             NotificationChannelKind.PRICE_ALERT,
-            NotificationChannelKind.LEVEL_UP_DM,
+            NotificationChannelKind.LEVEL_UP,
         ).forEach { kind ->
             assertTrue(kind.supports(Surface.DM), "${kind.name} must support DM")
             assertFalse(
@@ -126,6 +126,15 @@ class NotificationChannelKindTest {
                 "${kind.name} DM default must stay false to preserve pre-refactor opt-out"
             )
         }
+    }
+
+    @Test
+    fun `LEVEL_UP supports DM, CHANNEL and PUSH with CHANNEL default on (preserves embed ping)`() {
+        val k = NotificationChannelKind.LEVEL_UP
+        assertEquals(setOf(Surface.DM, Surface.CHANNEL, Surface.PUSH), k.supportedSurfaces)
+        assertFalse(k.defaultOptIn(Surface.DM))
+        assertTrue(k.defaultOptIn(Surface.CHANNEL))
+        assertFalse(k.defaultOptIn(Surface.PUSH))
     }
 
     @Test

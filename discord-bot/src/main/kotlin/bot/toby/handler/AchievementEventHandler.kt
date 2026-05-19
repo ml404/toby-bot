@@ -1,5 +1,6 @@
 package bot.toby.handler
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.AchievementUnlockedEvent
 import common.events.BlackjackNaturalEvent
@@ -175,14 +176,26 @@ class AchievementEventHandler(
             guildId = event.guildId,
             route = ChannelRouteKey.ACHIEVEMENT_SHOUTOUT,
             message = {
-                MessageCreateBuilder().setEmbeds(
-                    EmbedBuilder()
-                        .setTitle("${event.icon ?: "🏅"} Achievement unlocked")
-                        .setDescription("<@${event.discordId}> unlocked **${event.name}** — ${event.description}")
-                        .setColor(Color(0xFFC857))
-                        .build()
-                ).build()
+                // setContent on the message (not just the embed description) so the
+                // <@unlocker> mention actually pings — embed-mention pings are silent.
+                MessageCreateBuilder()
+                    .setEmbeds(
+                        EmbedBuilder()
+                            .setTitle("${event.icon ?: "🏅"} Achievement unlocked")
+                            .setDescription("<@${event.discordId}> unlocked **${event.name}** — ${event.description}")
+                            .setColor(Color(0xFFC857))
+                            .build()
+                    )
+                    .setContent("<@${event.discordId}>")
+                    .build()
             },
+            // Router suppresses the unlocker's user-ping when they've
+            // opted out of (ACHIEVEMENT_UNLOCK, CHANNEL). The shoutout
+            // post still happens; they just don't get notified.
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
+                userIds = listOf(event.discordId),
+            ),
         )
     }
 

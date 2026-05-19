@@ -33,10 +33,10 @@ enum class NotificationChannelKind(
         description = "Another user tips you social credit from the web dashboard.",
         perSurfaceDefaults = mapOf(Surface.CHANNEL to true, Surface.PUSH to false),
     ),
-    LEVEL_UP_DM(
-        displayName = "Level-up DM",
-        description = "Off by default — level-ups already post in the configured channel.",
-        perSurfaceDefaults = mapOf(Surface.DM to false, Surface.PUSH to false),
+    LEVEL_UP(
+        displayName = "Level-ups",
+        description = "Channel shoutout when you level up; optional DM (off by default) and push.",
+        perSurfaceDefaults = mapOf(Surface.DM to false, Surface.CHANNEL to true, Surface.PUSH to false),
     ),
     ACHIEVEMENT_UNLOCK(
         displayName = "Achievement unlocks",

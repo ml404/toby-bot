@@ -1,9 +1,11 @@
 package bot.toby.leveling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.dto.LevelRoleRewardDto
 import database.dto.TitleDto
 import database.service.LevelRoleRewardService
@@ -58,7 +60,7 @@ class LevelUpListenerTest {
     private fun captureAnnouncementEmbed(): CapturingSlot<() -> MessageCreateData> {
         val builder = slot<() -> MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), capture(builder), any())
+            router.sendChannel(any(), any(), any(), capture(builder), any(), any())
         } just runs
         return builder
     }
@@ -82,12 +84,23 @@ class LevelUpListenerTest {
                 originChannelId = 99L,
                 message = any(),
                 onSent = null,
+                // The leveler's mention is now in setContent (embed mentions
+                // don't ping), so the router needs ChannelMentions to filter
+                // the @-ping by per-user (LEVEL_UP, CHANNEL) opt-in.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(discordId),
+                ),
             )
         }
-        val embed = builder.captured.invoke().embeds.single()
+        val payload = builder.captured.invoke()
+        val embed = payload.embeds.single()
         assert(embed.title!!.contains("LVL 1"))
         assert(embed.description!!.contains("<@$discordId>"))
         assert(embed.description!!.contains("Level 1"))
+        assert(payload.content == "<@$discordId>") {
+            "expected setContent='<@$discordId>' to drive the ping, got '${payload.content}'"
+        }
     }
 
     @Test
@@ -106,6 +119,29 @@ class LevelUpListenerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = null,
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(discordId),
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `onLevelUp dispatches a LEVEL_UP DM via the router (gating handled in router)`() {
+        guildOnly()
+        captureAnnouncementEmbed()
+
+        listener.onLevelUp(
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = 99L)
+        )
+
+        verify(exactly = 1) {
+            router.sendDm(
+                discordId = discordId,
+                guildId = guildId,
+                kind = NotificationChannelKind.LEVEL_UP,
+                message = any(),
             )
         }
     }
@@ -176,7 +212,7 @@ class LevelUpListenerTest {
         )
 
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
-        verify(exactly = 0) { router.sendChannel(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { router.sendChannel(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -218,7 +254,7 @@ class LevelUpListenerTest {
         guildOnly()
         val captured = mutableListOf<MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), any(), any())
+            router.sendChannel(any(), any(), any(), any(), any(), any())
         } answers {
             @Suppress("UNCHECKED_CAST")
             val build = arg<() -> MessageCreateData>(3)
@@ -255,7 +291,7 @@ class LevelUpListenerTest {
         guildOnly()
         val captured = mutableListOf<MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), any(), any())
+            router.sendChannel(any(), any(), any(), any(), any(), any())
         } answers {
             @Suppress("UNCHECKED_CAST")
             val build = arg<() -> MessageCreateData>(3)
