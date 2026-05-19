@@ -1,5 +1,6 @@
 package web.controller
 
+import database.dto.UserPriceTriggerDto
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -8,6 +9,7 @@ import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2Aut
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -16,11 +18,13 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.CreateWatchResult
 import web.service.EconomyWebService
 import database.service.EconomyTradeService.TradeOutcome
 import database.service.SocialCreditAwardService
 import web.service.PricePoint
 import web.service.TradeMarker
+import web.service.WatchView
 import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
 import web.util.WebGuildAccess
@@ -122,6 +126,109 @@ class EconomyController(
         economyWebService.sell(discordId, guildId, request.amount)
     }
 
+    @GetMapping("/{guildId}/watches")
+    @ResponseBody
+    fun listWatches(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<WatchesListResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                WatchesListResponse(
+                    ok = false,
+                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
+        }
+    ) { discordId ->
+        ResponseEntity.ok(
+            WatchesListResponse(
+                ok = true,
+                watches = economyWebService.listWatches(discordId, guildId).map { WatchEntry.of(it) },
+                price = economyWebService.currentPrice(guildId),
+            )
+        )
+    }
+
+    @PostMapping("/{guildId}/watches")
+    @ResponseBody
+    fun createWatch(
+        @PathVariable guildId: Long,
+        @RequestBody request: CreateWatchRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<CreateWatchResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                CreateWatchResponse(
+                    ok = false,
+                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
+        }
+    ) { discordId ->
+        if (request.side.isBlank() || request.amount == 0L || request.threshold == 0.0) {
+            return@requireMemberForJson ResponseEntity.badRequest().body(
+                CreateWatchResponse(ok = false, error = "Missing field.")
+            )
+        }
+        val side = runCatching { UserPriceTriggerDto.Side.valueOf(request.side) }
+            .getOrElse {
+                return@requireMemberForJson ResponseEntity.badRequest().body(
+                    CreateWatchResponse(ok = false, error = "Side must be BUY or SELL.")
+                )
+            }
+        when (val outcome =
+            economyWebService.createWatch(discordId, guildId, request.threshold, side, request.amount)) {
+            is CreateWatchResult.Ok -> ResponseEntity.ok(
+                CreateWatchResponse(
+                    ok = true,
+                    watch = WatchEntry.of(outcome.watch),
+                    notificationsAutoEnabled = outcome.notificationsAutoEnabled,
+                )
+            )
+            is CreateWatchResult.ParityRejected -> ResponseEntity.badRequest().body(
+                CreateWatchResponse(
+                    ok = false,
+                    error = "Threshold (${"%.4f".format(outcome.threshold)}) is essentially the " +
+                            "current price (${"%.4f".format(outcome.currentPrice)}). Pick a target " +
+                            "meaningfully above or below the current price so the direction is " +
+                            "unambiguous."
+                )
+            )
+            CreateWatchResult.InvalidAmount -> ResponseEntity.badRequest().body(
+                CreateWatchResponse(ok = false, error = "Amount must be a positive number.")
+            )
+        }
+    }
+
+    @DeleteMapping("/{guildId}/watches/{watchId}")
+    @ResponseBody
+    fun deleteWatch(
+        @PathVariable guildId: Long,
+        @PathVariable watchId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<SimpleResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                SimpleResponse(
+                    ok = false,
+                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
+        }
+    ) { discordId ->
+        if (economyWebService.removeWatch(watchId, discordId)) {
+            ResponseEntity.ok(SimpleResponse(ok = true))
+        } else {
+            ResponseEntity.status(404).body(
+                SimpleResponse(ok = false, error = "No watch #$watchId found that you own.")
+            )
+        }
+    }
+
     private fun trade(
         user: OAuth2User,
         guildId: Long,
@@ -195,3 +302,49 @@ data class HistoryResponse(
     val points: List<PricePoint>,
     val trades: List<TradeMarker> = emptyList()
 )
+
+data class CreateWatchRequest(
+    val threshold: Double = 0.0,
+    val side: String = "",
+    val amount: Long = 0,
+)
+
+data class WatchEntry(
+    val id: Long,
+    val side: String,
+    val amount: Long,
+    val threshold: Double,
+    val priceAtCreation: Double,
+    val enabled: Boolean,
+    val firedAt: Long?,
+    val createdAt: Long,
+) {
+    companion object {
+        fun of(view: WatchView) = WatchEntry(
+            id = view.id,
+            side = view.side,
+            amount = view.amount,
+            threshold = view.thresholdPrice,
+            priceAtCreation = view.priceAtCreation,
+            enabled = view.enabled,
+            firedAt = view.firedAt?.toEpochMilli(),
+            createdAt = view.createdAt.toEpochMilli(),
+        )
+    }
+}
+
+data class WatchesListResponse(
+    val ok: Boolean,
+    val watches: List<WatchEntry> = emptyList(),
+    val price: Double? = null,
+    val error: String? = null,
+)
+
+data class CreateWatchResponse(
+    val ok: Boolean,
+    val error: String? = null,
+    val watch: WatchEntry? = null,
+    val notificationsAutoEnabled: Boolean = false,
+)
+
+data class SimpleResponse(val ok: Boolean, val error: String? = null)

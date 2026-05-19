@@ -1,14 +1,20 @@
 package web.service
 
+import common.notification.NotificationChannelKind
+import common.notification.Surface
+import database.dto.UserPriceTriggerDto
 import database.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
+import database.service.UserNotificationPrefService
+import database.service.UserPriceTriggerService
 import database.service.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.abs
 
 @Service
 class EconomyWebService(
@@ -18,7 +24,18 @@ class EconomyWebService(
     private val marketService: TobyCoinMarketService,
     private val userService: UserService,
     private val membership: GuildMembership,
+    private val priceTriggerService: UserPriceTriggerService,
+    private val notificationPrefService: UserNotificationPrefService,
 ) {
+
+    companion object {
+        // Same precision as PriceAlertCommand.PARITY_EPSILON. Reject
+        // threshold == currentPrice (rounded to 4dp) so the firing
+        // direction is unambiguous regardless of which way the next
+        // tick moves. Copy-not-import to keep `web` from depending on
+        // the `discord-bot` module.
+        private const val PARITY_EPSILON = 1e-4
+    }
 
     fun isMember(discordId: Long, guildId: Long): Boolean = membership.isMember(discordId, guildId)
 
@@ -117,6 +134,81 @@ class EconomyWebService(
 
     fun sell(discordId: Long, guildId: Long, amount: Long): EconomyTradeService.TradeOutcome =
         tradeService.sell(discordId, guildId, amount)
+
+    fun listWatches(discordId: Long, guildId: Long): List<WatchView> =
+        priceTriggerService.listForUser(discordId, guildId).map { it.toView() }
+
+    fun createWatch(
+        discordId: Long,
+        guildId: Long,
+        threshold: Double,
+        side: UserPriceTriggerDto.Side,
+        amount: Long,
+    ): CreateWatchResult {
+        if (amount <= 0) return CreateWatchResult.InvalidAmount
+
+        val currentPrice = tradeService.loadOrCreateMarket(guildId).price
+        if (abs(threshold - currentPrice) < PARITY_EPSILON) {
+            return CreateWatchResult.ParityRejected(threshold, currentPrice)
+        }
+
+        val created = priceTriggerService.create(
+            discordId = discordId,
+            guildId = guildId,
+            threshold = threshold,
+            priceAtCreation = currentPrice,
+            side = side,
+            amount = amount,
+        )
+
+        // Auto-enable PRICE_ALERT DM so the receipt is actually
+        // delivered when the trigger fires — same convenience the
+        // Discord command does (PriceAlertCommand.handleAdd).
+        val wasOptedIn = notificationPrefService.isOptedIn(
+            discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.DM
+        )
+        if (!wasOptedIn) {
+            notificationPrefService.setPref(
+                discordId, guildId,
+                NotificationChannelKind.PRICE_ALERT, Surface.DM, optIn = true,
+            )
+        }
+
+        return CreateWatchResult.Ok(created.toView(), notificationsAutoEnabled = !wasOptedIn)
+    }
+
+    fun removeWatch(id: Long, requestingDiscordId: Long): Boolean =
+        priceTriggerService.remove(id, requestingDiscordId)
+
+    fun currentPrice(guildId: Long): Double = tradeService.loadOrCreateMarket(guildId).price
+
+    private fun UserPriceTriggerDto.toView() = WatchView(
+        id = id ?: 0L,
+        side = side,
+        amount = amount,
+        thresholdPrice = thresholdPrice,
+        priceAtCreation = priceAtCreation,
+        enabled = enabled,
+        firedAt = firedAt,
+        createdAt = createdAt,
+    )
+}
+
+data class WatchView(
+    val id: Long,
+    val side: String,
+    val amount: Long,
+    val thresholdPrice: Double,
+    val priceAtCreation: Double,
+    val enabled: Boolean,
+    val firedAt: Instant?,
+    val createdAt: Instant,
+)
+
+sealed class CreateWatchResult {
+    data class Ok(val watch: WatchView, val notificationsAutoEnabled: Boolean) : CreateWatchResult()
+    data class ParityRejected(val threshold: Double, val currentPrice: Double) : CreateWatchResult()
+    data object InvalidAmount : CreateWatchResult()
 }
 
 data class EconomyGuildCard(
