@@ -3,7 +3,6 @@ package bot.toby.command.commands.moderation
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
-import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
@@ -58,8 +57,13 @@ internal class JackpotAdminCommandTest : CommandTest {
     }
 
     private fun captureReply(): io.mockk.CapturingSlot<String> {
+        // Mirror LevelCommandTest's working pattern — stub the chained
+        // `event.hook.sendMessage(...)` rather than the companion-level
+        // `interactionHook` mock. Capture works for both
+        // replyAndDelete (success) and replyEphemeralAndDelete (errors)
+        // because both route through `sendMessage(message)` on the hook.
         val slot = slot<String>()
-        every { interactionHook.sendMessage(capture(slot)) } returns webhookMessageCreateAction
+        every { event.hook.sendMessage(capture(slot)) } returns webhookMessageCreateAction
         return slot
     }
 

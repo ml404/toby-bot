@@ -3,7 +3,6 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
-import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import database.dto.ConfigDto
@@ -79,8 +78,14 @@ internal class LotteryCommandTest : CommandTest {
     }
 
     private fun captureReply(): io.mockk.CapturingSlot<String> {
+        // Mirror LevelCommandTest's working pattern: stub the chained
+        // `event.hook.sendMessage(...)` rather than going through the
+        // companion-level `interactionHook` mock. Both `replyAndDelete`
+        // and `replyEphemeralAndDelete` route through `sendMessage(...)`
+        // on the InteractionHook receiver, so a single capture covers
+        // both success and error paths.
         val slot = slot<String>()
-        every { interactionHook.sendMessage(capture(slot)) } returns webhookMessageCreateAction
+        every { event.hook.sendMessage(capture(slot)) } returns webhookMessageCreateAction
         return slot
     }
 
