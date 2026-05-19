@@ -6,6 +6,8 @@ import database.dto.TobyCoinTradeDto
 import database.dto.UserDto
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
+import database.service.UserNotificationPrefService
+import database.service.UserPriceTriggerService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -30,6 +32,8 @@ class EconomyWebServiceTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var userService: UserService
+    private lateinit var priceTriggerService: UserPriceTriggerService
+    private lateinit var notificationPrefService: UserNotificationPrefService
     private lateinit var service: EconomyWebService
 
     private val guildId = 42L
@@ -42,7 +46,12 @@ class EconomyWebServiceTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
-        service = EconomyWebService(jda, introWebService, tradeService, marketService, userService, GuildMembership(jda))
+        priceTriggerService = mockk(relaxed = true)
+        notificationPrefService = mockk(relaxed = true)
+        service = EconomyWebService(
+            jda, introWebService, tradeService, marketService, userService,
+            GuildMembership(jda), priceTriggerService, notificationPrefService,
+        )
     }
 
     @Test

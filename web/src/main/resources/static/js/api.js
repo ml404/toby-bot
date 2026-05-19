@@ -42,9 +42,24 @@
         });
     }
 
-    window.TobyApi = { postJson: postJson };
+    function del(url) {
+        const headers = { 'Accept': 'application/json' };
+        const token = getCsrfToken();
+        if (token) headers[getCsrfHeader()] = token;
+        return fetch(url, {
+            method: 'DELETE',
+            credentials: 'same-origin',
+            headers: headers
+        }).then(function (r) {
+            return r.json().catch(function () {
+                return { ok: r.ok, error: r.ok ? null : 'Request failed.' };
+            });
+        });
+    }
+
+    window.TobyApi = { postJson: postJson, del: del };
 
     if (typeof module !== 'undefined') {
-        module.exports = { postJson: postJson };
+        module.exports = { postJson: postJson, del: del };
     }
 })();
