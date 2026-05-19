@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Wire WebPushAdapter via @Autowired constructor",
+    "summary": "Setting `TOBY_VAPID_PUBLIC_KEY` + `TOBY_VAPID_PRIVATE_KEY` on Heroku crashed the dyno (`Process exited with status 1`, then `H10 App crashed` on every request). Root cause: `WebPushAdapter` has two constructors and neither was `@Autowired`. Spring defaults to the **primary** for Kotlin `@Component`s, which needs a `PushTransport` bean — but `PushTransport` is just an interface and `DefaultPushTransport` is a plain class with no `@Component` / `@Bean` factory. With the env…",
+    "emoji": "🎟️",
+    "prNumber": 503
+  },
+  {
+    "date": "May 2026",
     "title": "Align admin DM/channel settings with notification prefs",
     "summary": "Three seams between the older admin pages (per-feature channel pickers, \"DM-only\" toggles) and the per-surface notification-preferences system that landed in V37. **Achievement shoutout label was misleading.** The admin UI said *\"Leave blank to keep unlocks DM-only\"*, but `AchievementEventHandler.onAchievementUnlocked()` always fires the DM (gated by the user's `ACHIEVEMENT_UNLOCK`/`Surface.DM` pref) and the channel post is additive. Updated the hint text and the empty-opt…",
     "emoji": "🛡️",
