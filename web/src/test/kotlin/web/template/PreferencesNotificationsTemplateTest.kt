@@ -152,6 +152,23 @@ class PreferencesNotificationsTemplateTest {
         val html = render()
         assertTrue(html.contains("/js/api.js"), "page must load api.js for CSRF-aware POST")
         assertTrue(html.contains("/js/preferences-notifications.js"), "page must load the toggle JS")
+        assertTrue(html.contains("/js/push-subscribe.js"), "page must load the push-subscribe toggle JS")
+    }
+
+    @Test
+    fun `page renders the browser-push toggle section the JS hooks into`() {
+        val html = render()
+        // push-subscribe.js looks up `[data-push-toggle]` to wire the
+        // enable/disable button — if this attribute disappears the JS
+        // silently no-ops.
+        assertTrue(
+            html.contains("data-push-toggle"),
+            "page must contain the data-push-toggle section the JS wires into"
+        )
+        assertTrue(
+            html.contains("push-toggle-btn"),
+            "page must contain the .push-toggle-btn the JS targets"
+        )
     }
 
     @Test

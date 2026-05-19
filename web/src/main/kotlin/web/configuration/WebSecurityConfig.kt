@@ -21,7 +21,15 @@ class WebSecurityConfig {
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
                     "/dnd", "/dnd/**",
-                    "/sitemap.xml", "/robots.txt"
+                    "/sitemap.xml", "/robots.txt",
+                    // Service worker for web push must be reachable
+                    // unauthenticated — the browser registers it on
+                    // page load, before any session push activity.
+                    "/sw.js",
+                    // Public read of the VAPID public key so the
+                    // client knows whether push is enabled at all
+                    // before prompting the user.
+                    "/api/push/vapid-public-key"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/moderation/**").authenticated()
@@ -57,6 +65,12 @@ class WebSecurityConfig {
                 csrf.ignoringRequestMatchers(
                     "/v3/api-docs/**", "/swagger-ui/**",
                     "/api/engagement/**",
+                    // Push subscription lifecycle (subscribe / unsubscribe)
+                    // is called from the same authenticated dashboard JS
+                    // and protected by the same OAuth2 session + per-user
+                    // ownership check. The only mutating action is the
+                    // user (re)anchoring their own push subscription.
+                    "/api/push/**",
                 )
             }
 

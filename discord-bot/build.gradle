@@ -28,6 +28,12 @@ dependencies {
     implementation "net.dv8tion:JDA:$jdaVersion"
     implementation "dev.arbjerg:lavaplayer:$lavaplayer_version"
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
+    // Needed for @ConditionalOnProperty on WebPushAdapter. spring-boot-autoconfigure
+    // arrives transitively at runtime via :web's spring-boot-starter-web, but
+    // Gradle's `implementation` configuration doesn't expose those transitives
+    // on the compile classpath of project consumers — so it has to be declared
+    // here for the @ConditionalOnProperty import to resolve.
+    implementation 'org.springframework.boot:spring-boot-autoconfigure'
     implementation 'com.google.code.gson:gson:2.10.1'
     // Used directly for the per-user message-XP cooldown cache in
     // MessageChatListener. common already pulls Caffeine in via Spring
@@ -46,6 +52,12 @@ dependencies {
     implementation 'org.springframework:spring-context'
     implementation 'org.jsoup:jsoup:1.18.3'
     implementation 'org.jfree:jfreechart:1.5.4'
+    // Web Push (RFC 8030 / 8291 / 8292) delivery. BouncyCastle is a
+    // transitive dep — required for EC key parsing + AES-128-GCM payload
+    // encryption — pinned here so the dependency-analysis plugin doesn't
+    // flag WebPushAdapter's BouncyCastleProvider import.
+    implementation 'nl.martijndwars:web-push:5.1.1'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_version"
     implementation "dev.lavalink.youtube:common:$youtube_common_version"

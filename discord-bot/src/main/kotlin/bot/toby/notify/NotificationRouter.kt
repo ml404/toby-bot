@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 import java.util.concurrent.atomic.AtomicBoolean
@@ -30,10 +31,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  *   mention via JDA's `mentionUsers(...)` allow-list when [mentions]
  *   is supplied. The post still happens; opted-out users see the
  *   content but don't get a notification.
- * - [sendPush] — provider-agnostic push notification. No adapter is
- *   wired today; the call drops with a one-shot "no push adapter wired"
- *   WARN once per process so a misconfigured guild doesn't flood logs.
- *   The future provider PR plugs in here.
+ * - [sendPush] — provider-agnostic push notification. Forwards to the
+ *   configured [PushAdapter] (today: [WebPushAdapter] when VAPID keys
+ *   are present). Without an adapter bean the call drops with a one-shot
+ *   "no push adapter wired" WARN once per process so a misconfigured
+ *   guild doesn't flood logs.
  *
  * All methods are best-effort. Dispatch failures are logged but never
  * propagate, so a synchronous caller (e.g. an event listener) never
@@ -44,6 +46,7 @@ class NotificationRouter(
     @Lazy private val jda: JDA,
     private val prefService: UserNotificationPrefService,
     private val configService: ConfigService,
+    @Autowired(required = false) private val pushAdapter: PushAdapter? = null,
 ) {
     private val logger = DiscordLogger.createLogger(this::class.java)
     private val pushAdapterMissingLogged = AtomicBoolean(false)
@@ -155,11 +158,11 @@ class NotificationRouter(
     }
 
     /**
-     * Push-notification entry point. No adapter is wired today — the
-     * call short-circuits after the opt-in check and logs "no push
-     * adapter wired" exactly once per process the first time a
-     * deliverable push lands. User opt-ins persist forward-compatibly,
-     * so the provider-adapter PR plugs in here without surprise pushes.
+     * Push-notification entry point. Routes to the configured
+     * [PushAdapter] when one is registered in the Spring context;
+     * otherwise the call short-circuits after the opt-in check and
+     * logs "no push adapter wired" exactly once per process the first
+     * time a deliverable push lands.
      *
      * [message] is built lazily — only when [kind] supports PUSH AND
      * the user is opted in. No-supported-surface returns silently
@@ -173,20 +176,26 @@ class NotificationRouter(
     ) {
         if (!kind.supports(Surface.PUSH)) return
         if (!prefService.isOptedIn(discordId, guildId, kind, Surface.PUSH)) return
-        // Build is intentional — if the caller's payload-builder is
-        // expensive we still want to short-circuit before it runs (the
-        // two guards above). Once we're past them the user wanted this
-        // push, so building is justified even when the adapter is
-        // missing (the adapter PR will use the result).
-        runCatching { message() }
-        if (pushAdapterMissingLogged.compareAndSet(false, true)) {
-            logger.warn(
-                "Push delivery requested for kind $kind (user $discordId guild $guildId) but no " +
-                    "PushAdapter is wired. Subsequent push requests will be dropped silently until " +
-                    "an adapter ships."
-            )
+        val payload = runCatching { message() }
+            .getOrElse { err ->
+                logger.warn("Failed to build $kind push payload for $discordId: ${err.message}")
+                return
+            }
+        val adapter = pushAdapter
+        if (adapter == null) {
+            if (pushAdapterMissingLogged.compareAndSet(false, true)) {
+                logger.warn(
+                    "Push delivery requested for kind $kind (user $discordId guild $guildId) but no " +
+                        "PushAdapter is wired. Subsequent push requests will be dropped silently until " +
+                        "an adapter ships."
+                )
+            }
+            return
         }
-        // TODO(push-adapter PR): forward to PushAdapter.deliver(...) when wired.
+        runCatching { adapter.deliver(discordId, payload) }
+            .onFailure { err ->
+                logger.warn("PushAdapter.deliver failed for $discordId ($kind): ${err.message}")
+            }
     }
 
     private fun resolveChannel(
