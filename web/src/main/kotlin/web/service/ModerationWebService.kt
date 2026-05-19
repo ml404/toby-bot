@@ -21,6 +21,10 @@ import net.dv8tion.jda.api.entities.UserSnowflake
 import net.dv8tion.jda.api.entities.emoji.Emoji
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
+import web.view.BulkBonusTierView
+import web.view.LotteryIncentivesView
+import web.view.MultiplierTierView
+import web.view.PoolMilestoneView
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -1462,32 +1466,6 @@ data class GuildOverview(
     val config: Map<String, String?>,
     val lotteryIncentives: LotteryIncentivesView = LotteryIncentivesView.empty(),
 )
-
-/**
- * Resolved view of the participation-incentive config for the lottery
- * page. Each list contains only the tiers that are actually active
- * (threshold > 0) — the template uses `.size` and `.isEmpty()` to
- * render the "Active rules" summary, so unset/zero tiers vanish.
- *
- * Sourced from the same [database.service.LotteryHelper] getters that
- * [database.service.JackpotLotteryService.buyTickets] and
- * [bot.toby.scheduling.LotteryAnnouncer] read, so the web summary
- * can't drift from runtime behaviour.
- */
-data class LotteryIncentivesView(
-    val bulkTiers: List<BulkBonusTierView>,
-    val multiplierTiers: List<MultiplierTierView>,
-    val poolMilestones: List<PoolMilestoneView>,
-) {
-    companion object {
-        fun empty(): LotteryIncentivesView =
-            LotteryIncentivesView(emptyList(), emptyList(), emptyList())
-    }
-}
-
-data class BulkBonusTierView(val buy: Long, val bonus: Long)
-data class MultiplierTierView(val total: Long, val bp: Int)
-data class PoolMilestoneView(val tickets: Long, val pct: Long)
 
 data class ModeratedMember(
     val id: String,

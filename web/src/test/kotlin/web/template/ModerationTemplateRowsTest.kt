@@ -348,17 +348,20 @@ class ModerationTemplateRowsTest {
 
     @Test
     fun `lottery template has a participation incentives details block carrying all three levers`() {
-        // The new section sits inside its own collapsible block so
-        // admins can scan past it when tuning the daily prize
-        // parameters. The block's headings group the tiers by lever
-        // (bulk / multiplier / milestone) — losing any of them would
-        // flatten the section back to a wall of identical-looking
-        // numeric inputs.
-        val sectionStart = lotteryHtml.indexOf("<summary>Participation incentives")
-        assertTrue(sectionStart >= 0, "expected a Participation incentives section header")
-        val sectionEnd = lotteryHtml.indexOf("</details>", sectionStart)
-        assertTrue(sectionEnd > sectionStart, "Participation incentives section not terminated")
-        val sectionHtml = lotteryHtml.substring(sectionStart, sectionEnd)
+        // The section sits in its own collapsible block, with three
+        // nested `<details>` levers (bulk / multiplier / milestone)
+        // for visual separation. We scope to the outer block by
+        // walking `<details>` / `</details>` pairs from the section's
+        // own opening tag, since a naive "next </details>" would
+        // terminate at the first nested closer.
+        val summaryIdx = lotteryHtml.indexOf("Participation incentives")
+        assertTrue(summaryIdx >= 0, "expected a Participation incentives section header")
+        // Walk back to the outer `<details` tag that wraps the summary.
+        val outerOpen = lotteryHtml.lastIndexOf("<details", summaryIdx)
+        assertTrue(outerOpen >= 0, "expected an outer <details> wrapping the Participation incentives summary")
+        val outerEnd = matchingCloseDetails(lotteryHtml, outerOpen)
+        assertTrue(outerEnd > outerOpen, "outer Participation incentives <details> not terminated")
+        val sectionHtml = lotteryHtml.substring(outerOpen, outerEnd)
         for (heading in listOf(
             "Bulk bonus tickets",
             "Volume weight multiplier",
@@ -381,6 +384,33 @@ class ModerationTemplateRowsTest {
                 "$key should live inside the Participation incentives section",
             )
         }
+    }
+
+    /**
+     * Find the `</details>` index that closes the `<details` opened
+     * at [openIdx], honouring nested `<details>` blocks. Returns -1
+     * if the tag is never closed (shouldn't happen on a well-formed
+     * template). Used by section-scoped assertions where a naive
+     * `indexOf("</details>", start)` would stop at the first nested
+     * closer instead of the matching outer one.
+     */
+    private fun matchingCloseDetails(html: String, openIdx: Int): Int {
+        var depth = 0
+        var i = openIdx
+        while (i < html.length) {
+            val nextOpen = html.indexOf("<details", i)
+            val nextClose = html.indexOf("</details>", i)
+            if (nextClose < 0) return -1
+            if (nextOpen in 0..<nextClose) {
+                depth++
+                i = nextOpen + "<details".length
+            } else {
+                depth--
+                if (depth == 0) return nextClose
+                i = nextClose + "</details>".length
+            }
+        }
+        return -1
     }
 
     @Test

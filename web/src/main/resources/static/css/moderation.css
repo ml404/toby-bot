@@ -237,6 +237,62 @@ details.config-section.is-hidden { display: none; }
 .config-section .config-subhead + p.muted {
     margin: 0 var(--space-4) var(--space-2);
 }
+/* Section lead paragraph — the short explainer that sits between the
+   <summary> and the first config-grid. Pads to align with the grid
+   columns so a long paragraph doesn't crowd the section's left edge.
+   Used by sections that need a one-paragraph orientation before the
+   dials start. */
+.config-section .config-section-lead {
+    margin: 0 var(--space-4) var(--space-3);
+}
+/* Active rules summary — small "Active: ..." readout sitting above a
+   tier's config-grid. Same gutter as config-section-lead so the row
+   visually aligns with the surrounding section copy. */
+.config-section .config-active-rules {
+    margin: 0 var(--space-4) var(--space-2);
+}
+/* Nested section inside another .config-section (e.g. the three
+   levers inside Participation incentives). Slimmer summary + thin
+   top divider so the lever boundaries read as distinct without
+   visually competing with the outer accordion. */
+.config-section .config-section.nested {
+    margin: var(--space-3) var(--space-4) 0;
+    background: var(--bg);
+}
+.config-section .config-section.nested > summary {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.9rem;
+}
+/* Small inline pill, e.g. "TICKET_WEIGHTED only" badge sitting next
+   to a section summary. Uses --accent for a subtle tint that still
+   reads against the elevated card background. */
+.config-badge {
+    display: inline-block;
+    margin-left: var(--space-2);
+    padding: 0 var(--space-2);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+/* Callout box for warnings that need to stand out — e.g. the
+   "TobyBot's role must sit above…" guidance on leveling-role rewards.
+   Yellow-tinted to distinguish it from .config-hint without needing
+   a new colour token. */
+.config-warning {
+    margin: var(--space-2) var(--space-4) var(--space-3);
+    padding: var(--space-3);
+    background: rgba(241, 196, 15, 0.08);
+    border-left: 3px solid #f1c40f;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.9rem;
+}
 .config-grid {
     display: grid;
     gap: var(--space-3);

@@ -3,6 +3,7 @@ package web.controller
 import database.dto.JackpotLotteryDto
 import database.service.JackpotLotteryService.BuyMatchOutcome
 import database.service.JackpotLotteryService.BuyOutcome
+import database.service.LotteryHelper
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -216,8 +217,53 @@ data class LotteryViewModel(
         val closesAtMillis: Long,
         val totalTickets: Long,
         val myTickets: Int,
+        val myBonusTickets: Long,
         val mySpent: Long,
         val topHolders: List<TopHolder>,
+        /**
+         * Resolved participation-incentive surface for the open
+         * weighted lottery: active rules + personalised next-threshold
+         * hints + next-to-fire milestone progress. Null when no
+         * incentives are configured — the player template hides the
+         * whole panel in that case.
+         */
+        val incentives: WeightedIncentivesPanel?,
+    )
+
+    /**
+     * What the player sees in the "Participation incentives" panel on
+     * the lottery page. Only carries data that has something to render:
+     * `nextBulkHint` / `nextMultiplierHint` are null when the viewer
+     * already holds the top tier (no further "buy N more" to dangle),
+     * and `milestoneProgress` is null when no future milestone is
+     * configured (the panel just shows active rules in that case).
+     */
+    data class WeightedIncentivesPanel(
+        val bulkTiers: List<web.view.BulkBonusTierView>,
+        val multiplierTiers: List<web.view.MultiplierTierView>,
+        val poolMilestones: List<web.view.PoolMilestoneView>,
+        val nextBulkHint: NextBulkHint?,
+        val nextMultiplierHint: NextMultiplierHint?,
+        val milestoneProgress: MilestoneProgress?,
+    )
+
+    /** Smallest unmatched bulk tier — "buy [gap] more in one purchase for +[bonus] free". */
+    data class NextBulkHint(val gap: Long, val bonus: Long, val threshold: Long)
+
+    /** Smallest unmatched multiplier tier, with the bp pre-formatted to a human "1.25×" decimal. */
+    data class NextMultiplierHint(val gap: Long, val multiplier: String, val threshold: Long)
+
+    /**
+     * The next-to-fire pool milestone, plus current vs threshold ticket
+     * counts so the template can render a `<progress>` bar. Already
+     * filtered by `milestonesFired`: only shows milestones strictly
+     * greater than the highest fired, so a re-render after a milestone
+     * pops never shows the just-fired one as "still ahead".
+     */
+    data class MilestoneProgress(
+        val currentTickets: Long,
+        val thresholdTickets: Long,
+        val pct: Long,
     )
 
     /** View projection of a weighted-lottery top holder — Discord
@@ -254,6 +300,9 @@ data class LotteryViewModel(
                 )
             }
             val weighted = snap.weightedOpen?.let { row ->
+                val myTickets = (snap.weightedMyTicket?.ticketCount ?: 0).toLong()
+                val myBonus = snap.weightedMyTicket?.bonusTickets ?: 0L
+                val incentives = buildIncentivesPanel(snap, row, myTickets)
                 WeightedView(
                     pool = row.poolAmount,
                     ticketPrice = row.ticketPrice,
@@ -262,10 +311,12 @@ data class LotteryViewModel(
                     closesAtMillis = row.closesAt.toEpochMilli(),
                     totalTickets = snap.weightedTotalTickets,
                     myTickets = snap.weightedMyTicket?.ticketCount ?: 0,
+                    myBonusTickets = myBonus,
                     mySpent = snap.weightedMyTicket?.spent ?: 0L,
                     topHolders = snap.weightedTopHolders.map {
                         TopHolder(it.discordId, it.ticketCount, it.name, it.avatarUrl, it.title)
                     },
+                    incentives = incentives,
                 )
             }
             return LotteryViewModel(
@@ -284,6 +335,72 @@ data class LotteryViewModel(
         private fun parseCsv(csv: String?): List<Int> {
             if (csv.isNullOrBlank()) return emptyList()
             return csv.split(',').mapNotNull { it.trim().toIntOrNull() }
+        }
+
+        /**
+         * Build the incentives panel for the viewing player on the
+         * open weighted lottery. Returns null when no incentives are
+         * configured — the template hides the whole panel rather than
+         * render an empty card.
+         *
+         * Hint derivation:
+         *  - Next bulk tier: smallest `buy` threshold strictly greater
+         *    than the viewer's current ticket count. The hint copy
+         *    "buy [gap] more in one purchase" reflects the per-purchase
+         *    nature of the bulk bonus (splitting doesn't count).
+         *  - Next multiplier tier: smallest `total` threshold strictly
+         *    greater than the viewer's total. Multiplier rendered as
+         *    a 1.25× / 1.5× decimal so the template doesn't have to.
+         *  - Milestone progress: smallest milestone whose threshold is
+         *    strictly greater than both `milestonesFired` (so we don't
+         *    show one that has already paid out) and the current
+         *    guild-wide ticket count. Pre-filtered here so the
+         *    template can just check non-null.
+         */
+        private fun buildIncentivesPanel(
+            snap: LotteryWebService.LotteryPageSnapshot,
+            lottery: JackpotLotteryDto,
+            myTickets: Long,
+        ): WeightedIncentivesPanel? {
+            val incentives = snap.weightedIncentives
+            if (incentives.isEmpty) return null
+
+            val nextBulk = incentives.bulkTiers
+                .firstOrNull { it.buy > myTickets }
+                ?.let { tier ->
+                    NextBulkHint(
+                        gap = tier.buy - myTickets,
+                        bonus = tier.bonus,
+                        threshold = tier.buy,
+                    )
+                }
+            val nextMultiplier = incentives.multiplierTiers
+                .firstOrNull { it.total > myTickets }
+                ?.let { tier ->
+                    NextMultiplierHint(
+                        gap = tier.total - myTickets,
+                        multiplier = "%.2f×".format(tier.bp / LotteryHelper.MULTIPLIER_BP_IDENTITY.toDouble()),
+                        threshold = tier.total,
+                    )
+                }
+            val nextMilestone = incentives.poolMilestones
+                .firstOrNull { it.tickets > lottery.milestonesFired && it.tickets > snap.weightedTotalTickets }
+                ?.let { tier ->
+                    MilestoneProgress(
+                        currentTickets = snap.weightedTotalTickets,
+                        thresholdTickets = tier.tickets,
+                        pct = tier.pct,
+                    )
+                }
+
+            return WeightedIncentivesPanel(
+                bulkTiers = incentives.bulkTiers,
+                multiplierTiers = incentives.multiplierTiers,
+                poolMilestones = incentives.poolMilestones,
+                nextBulkHint = nextBulk,
+                nextMultiplierHint = nextMultiplier,
+                milestoneProgress = nextMilestone,
+            )
         }
     }
 }

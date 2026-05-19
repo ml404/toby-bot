@@ -8,6 +8,10 @@ import database.service.LotteryHelper
 import database.service.TitleService
 import database.service.UserService
 import org.springframework.stereotype.Service
+import web.view.BulkBonusTierView
+import web.view.LotteryIncentivesView
+import web.view.MultiplierTierView
+import web.view.PoolMilestoneView
 
 /**
  * Thin orchestration layer around [JackpotLotteryService] for the web
@@ -52,6 +56,14 @@ class LotteryWebService(
         val revenueJackpotPct: Long,
         val dailyMode: String,
         val dailyEnabled: Boolean,
+        /**
+         * Active participation-incentive tiers for the open WEIGHTED
+         * lottery. Empty when no lottery is open, the lottery is
+         * NUMBER_MATCH-only, or no tiers are configured. Mirrors the
+         * moderation page's `lotteryIncentives` so both surfaces show
+         * the same rules verbatim.
+         */
+        val weightedIncentives: LotteryIncentivesView = LotteryIncentivesView.empty(),
     )
 
     /**
@@ -104,6 +116,20 @@ class LotteryWebService(
         }
         val weightedTotal = weightedTickets.sumOf { it.ticketCount.toLong() }
 
+        // Resolve incentives only when there's an open weighted lottery
+        // (they don't apply to NUMBER_MATCH, and an empty list when no
+        // tiers are configured means the panel won't render at all).
+        val incentives = if (weightedOpen != null) {
+            LotteryIncentivesView(
+                bulkTiers = LotteryHelper.bulkBonusTiers(configService, guildId)
+                    .map { (buy, bonus) -> BulkBonusTierView(buy = buy, bonus = bonus) },
+                multiplierTiers = LotteryHelper.volumeMultiplierTiers(configService, guildId)
+                    .map { (total, bp) -> MultiplierTierView(total = total, bp = bp) },
+                poolMilestones = LotteryHelper.poolMilestones(configService, guildId)
+                    .map { (tickets, pct) -> PoolMilestoneView(tickets = tickets, pct = pct) },
+            )
+        } else LotteryIncentivesView.empty()
+
         return LotteryPageSnapshot(
             dailyOpen = dailyOpen,
             dailyLatestDrawn = dailyLatest,
@@ -119,6 +145,7 @@ class LotteryWebService(
             revenueJackpotPct = LotteryHelper.dailyRevenueJackpotPct(configService, guildId),
             dailyMode = LotteryHelper.dailyMode(configService, guildId),
             dailyEnabled = LotteryHelper.dailyEnabled(configService, guildId),
+            weightedIncentives = incentives,
         )
     }
 

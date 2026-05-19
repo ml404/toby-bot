@@ -37,9 +37,7 @@
                         <label>
                             Daily XP cap
                             <span class="config-hint">
-                                Per-user ceiling on XP earned in a UTC day across all
-                                sources (messages, commands, voice intros, voice
-                                sessions). Default 1000.
+                                Per-user ceiling on XP earned in a UTC day. Default 1000.
                             </span>
                         </label>
                         <input type="number" min="0" max="100000"
@@ -143,11 +141,15 @@
 
             <details class="config-section" open>
                 <summary>Role rewards</summary>
-                <p class="muted mb-3">
+                <p class="muted config-section-lead">
                     Bind a Discord role to a level threshold — TobyBot assigns it the
-                    moment the user crosses that level. Make sure TobyBot's role sits
-                    above any role you bind here, or the assign will fail at runtime.
+                    moment the user crosses that level.
                 </p>
+                <div class="config-warning">
+                    <strong>Heads up:</strong> TobyBot's role must sit
+                    <em>above</em> any role you bind here in your server's role list, or
+                    the assign will fail at runtime.
+                </div>
 
                 <div class="leveling-rewards" id="leveling-rewards-list">
                     <p class="muted" th:if="${#lists.isEmpty(leveling.levelRewards)}">
