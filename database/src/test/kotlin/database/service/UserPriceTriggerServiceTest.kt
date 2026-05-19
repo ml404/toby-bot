@@ -5,13 +5,17 @@ import database.persistence.UserPriceTriggerPersistence
 import database.service.impl.DefaultUserPriceTriggerService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
-class UserPriceTriggerTargetReachedTest {
+class UserPriceTriggerServiceTest {
 
     private val guildId = 100L
     private val discordId = 42L
@@ -154,5 +158,88 @@ class UserPriceTriggerTargetReachedTest {
         assertFalse(service.remove(7L, requestingDiscordId = 9999L))
         // Correct owner — proceeds.
         assertTrue(service.remove(7L, requestingDiscordId = discordId))
+    }
+
+    @Test
+    fun `remove returns false when no row exists`() {
+        every { persistence.findById(404L) } returns null
+
+        assertFalse(service.remove(404L, requestingDiscordId = discordId))
+        verify(exactly = 0) { persistence.deleteById(any()) }
+    }
+
+    @Test
+    fun `create persists a row with the enum stored as its name and enabled=true`() {
+        val saved = slot<UserPriceTriggerDto>()
+        every { persistence.save(capture(saved)) } answers { firstArg() }
+
+        val result = service.create(
+            discordId, guildId,
+            threshold = 90.0, priceAtCreation = 120.0,
+            side = UserPriceTriggerDto.Side.SELL, amount = 7L,
+        )
+
+        assertEquals("SELL", saved.captured.side)
+        assertEquals(7L, saved.captured.amount)
+        assertEquals(90.0, saved.captured.thresholdPrice)
+        assertEquals(120.0, saved.captured.priceAtCreation)
+        assertTrue(saved.captured.enabled)
+        assertNotNull(result)
+        // Sanity-check the typed accessor — refactor R1.
+        assertEquals(UserPriceTriggerDto.Side.SELL, saved.captured.sideEnum)
+    }
+
+    @Test
+    fun `listForUser delegates straight to persistence`() {
+        val rows = listOf(row(id = 1, threshold = 50.0, priceAtCreation = 100.0))
+        every { persistence.listByUser(discordId, guildId) } returns rows
+
+        assertEquals(rows, service.listForUser(discordId, guildId))
+        verify(exactly = 1) { persistence.listByUser(discordId, guildId) }
+    }
+
+    @Test
+    fun `markFired stamps firedAt and disables, then saves`() {
+        val row = row(id = 5, threshold = 100.0, priceAtCreation = 120.0)
+        every { persistence.findById(5L) } returns row
+        val saved = slot<UserPriceTriggerDto>()
+        every { persistence.save(capture(saved)) } answers { firstArg() }
+
+        val now = Instant.parse("2026-05-19T12:00:00Z")
+        service.markFired(5L, now)
+
+        assertEquals(now, saved.captured.firedAt)
+        assertFalse(saved.captured.enabled)
+    }
+
+    @Test
+    fun `markFired on missing id is a silent no-op`() {
+        every { persistence.findById(404L) } returns null
+
+        service.markFired(404L, Instant.now())
+
+        verify(exactly = 0) { persistence.save(any()) }
+    }
+
+    @Test
+    fun `sideEnum accessor round-trips through the string column`() {
+        // R1 refactor: verify the typed accessor reads what setter wrote.
+        val dto = UserPriceTriggerDto(
+            discordId = discordId, guildId = guildId,
+            thresholdPrice = 100.0, priceAtCreation = 120.0,
+            side = UserPriceTriggerDto.Side.BUY.name, amount = 1L,
+        )
+        assertEquals(UserPriceTriggerDto.Side.BUY, dto.sideEnum)
+
+        dto.sideEnum = UserPriceTriggerDto.Side.SELL
+        assertEquals("SELL", dto.side)
+        assertEquals(UserPriceTriggerDto.Side.SELL, dto.sideEnum)
+    }
+
+    @Test
+    fun `sideEnum getter throws when column holds garbage`() {
+        val dto = UserPriceTriggerDto(side = "WOBBLE")
+        val ex = runCatching { dto.sideEnum }.exceptionOrNull()
+        assertTrue(ex is IllegalArgumentException, "expected IAE, got $ex")
     }
 }

@@ -108,10 +108,14 @@ internal class PriceAlertCommandTest : CommandTest {
             triggerService.create(discordId, guildId, 80.0, 100.0, UserPriceTriggerDto.Side.BUY, 5L)
         } returns created
 
-        // Capture the embed sent back so we can assert the direction copy.
+        // Capture the embed sent back so we can assert the direction
+        // copy. JDA's `sendMessageEmbeds(MessageEmbed, MessageEmbed...)`
+        // has a vararg tail; the matcher must spell out `*anyVararg()`
+        // or it falls through to the looser stub in CommandTest which
+        // doesn't capture.
         val embedSlot = slot<MessageEmbed>()
         every {
-            interactionHook.sendMessageEmbeds(capture(embedSlot))
+            interactionHook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
         } returns mockk<WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
 
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
@@ -158,5 +162,118 @@ internal class PriceAlertCommandTest : CommandTest {
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
 
         verify(exactly = 1) { triggerService.remove(99L, discordId) }
+    }
+
+    @Test
+    fun `remove success path replies with confirmation`() {
+        every { event.subcommandName } returns "remove"
+        every { event.getOption("id") } returns longOpt(42L)
+        every { triggerService.remove(42L, discordId) } returns true
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 1) { triggerService.remove(42L, discordId) }
+        // The success branch sends a non-embed ephemeral reply (the
+        // failure branch does the same). We can't easily assert the
+        // text content without overriding `sendMessage`, but we can
+        // verify that the call hit the service and reached `queue()`.
+        verify(atLeast = 1) { interactionHook.sendMessage(any<String>()) }
+    }
+
+    @Test
+    fun `add handles missing price option`() {
+        every { event.subcommandName } returns "add"
+        every { event.getOption("price") } returns null
+        every { event.getOption("side") } returns stringOpt("BUY")
+        every { event.getOption("amount") } returns longOpt(5L)
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 0) {
+            triggerService.create(any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `add handles missing side option`() {
+        every { event.subcommandName } returns "add"
+        every { event.getOption("price") } returns doubleOpt(80.0)
+        every { event.getOption("side") } returns null
+        every { event.getOption("amount") } returns longOpt(5L)
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 0) {
+            triggerService.create(any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `add handles missing amount option`() {
+        every { event.subcommandName } returns "add"
+        every { event.getOption("price") } returns doubleOpt(80.0)
+        every { event.getOption("side") } returns stringOpt("BUY")
+        every { event.getOption("amount") } returns null
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 0) {
+            triggerService.create(any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `add rejects invalid side string`() {
+        every { event.subcommandName } returns "add"
+        every { event.getOption("price") } returns doubleOpt(80.0)
+        every { event.getOption("side") } returns stringOpt("WOBBLE")
+        every { event.getOption("amount") } returns longOpt(5L)
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 0) {
+            triggerService.create(any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `list with no triggers renders empty-state hint`() {
+        every { event.subcommandName } returns "list"
+        every { triggerService.listForUser(discordId, guildId) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        verify(exactly = 0) { interactionHook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
+        verify(atLeast = 1) { interactionHook.sendMessage(any<String>()) }
+    }
+
+    @Test
+    fun `list with triggers renders one field per row`() {
+        every { event.subcommandName } returns "list"
+        every { triggerService.listForUser(discordId, guildId) } returns listOf(
+            UserPriceTriggerDto(
+                id = 1L, discordId = discordId, guildId = guildId,
+                thresholdPrice = 80.0, priceAtCreation = 100.0,
+                side = UserPriceTriggerDto.Side.BUY.name, amount = 5L,
+                enabled = true,
+            ),
+            UserPriceTriggerDto(
+                id = 2L, discordId = discordId, guildId = guildId,
+                thresholdPrice = 150.0, priceAtCreation = 100.0,
+                side = UserPriceTriggerDto.Side.SELL.name, amount = 3L,
+                enabled = true,
+            ),
+        )
+        val embedSlot = slot<MessageEmbed>()
+        every {
+            interactionHook.sendMessageEmbeds(capture(embedSlot), *anyVararg())
+        } returns mockk<WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>>(relaxed = true)
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        assertEquals(2, embedSlot.captured.fields.size, "two triggers should produce two fields")
+        val text = embedSlot.captured.fields.joinToString(" ") { "${it.name} ${it.value}" }
+        assertTrue(text.contains("↓"), "downward arrow should appear for BUY-below trigger: $text")
+        assertTrue(text.contains("↑"), "upward arrow should appear for SELL-above trigger: $text")
     }
 }

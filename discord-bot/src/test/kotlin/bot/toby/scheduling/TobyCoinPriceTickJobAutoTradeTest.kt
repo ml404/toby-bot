@@ -146,6 +146,126 @@ class TobyCoinPriceTickJobAutoTradeTest {
     }
 
     @Test
+    fun `empty triggered list does not dispatch or mark anything`() {
+        val marketService: TobyCoinMarketService = mockk(relaxed = true)
+        val triggerService: UserPriceTriggerService = mockk(relaxed = true)
+        val tradeService: EconomyTradeService = mockk(relaxed = true)
+        val router: NotificationRouter = mockk(relaxed = true)
+
+        every { marketService.getMarket(guildId) } returns
+                TobyCoinMarketDto(guildId = guildId, price = 110.0, lastTickAt = Instant.now())
+        every { marketService.saveMarket(any()) } answers { firstArg() }
+        every { marketService.appendPricePoint(any()) } answers { firstArg<TobyCoinPricePointDto>() }
+        every { marketService.pruneHistoryOlderThan(any()) } returns 0
+        every { marketService.pruneTradesOlderThan(any()) } returns 0
+        every { triggerService.findTriggered(guildId, any()) } returns emptyList()
+
+        newJob(marketService, triggerService, tradeService, router).tickAllGuilds()
+
+        verify(exactly = 0) { tradeService.buy(any(), any(), any()) }
+        verify(exactly = 0) { tradeService.sell(any(), any(), any()) }
+        verify(exactly = 0) { triggerService.markFired(any(), any()) }
+        verify(exactly = 0) {
+            router.dispatch(any<NotificationChannelKind>(), any<Long>(), any<Long>(), any())
+        }
+    }
+
+    @Test
+    fun `unknown side string disables the row without trading`() {
+        // Refactor R1: a corrupted `side` column should not crash —
+        // the typed accessor's runCatching guard disables the row.
+        val marketService: TobyCoinMarketService = mockk(relaxed = true)
+        val triggerService: UserPriceTriggerService = mockk(relaxed = true)
+        val tradeService: EconomyTradeService = mockk(relaxed = true)
+        val router: NotificationRouter = mockk(relaxed = true)
+
+        every { marketService.getMarket(guildId) } returns
+                TobyCoinMarketDto(guildId = guildId, price = 110.0, lastTickAt = Instant.now())
+        every { marketService.saveMarket(any()) } answers { firstArg() }
+        every { marketService.appendPricePoint(any()) } answers { firstArg<TobyCoinPricePointDto>() }
+        every { marketService.pruneHistoryOlderThan(any()) } returns 0
+        every { marketService.pruneTradesOlderThan(any()) } returns 0
+        val corrupt = armedTrigger().apply { side = "WOBBLE" }
+        every { triggerService.findTriggered(guildId, any()) } returns listOf(corrupt)
+        every { triggerService.markFired(1L, any()) } just Runs
+
+        newJob(marketService, triggerService, tradeService, router).tickAllGuilds()
+
+        verify(exactly = 0) { tradeService.buy(any(), any(), any()) }
+        verify(exactly = 0) { tradeService.sell(any(), any(), any()) }
+        verify(exactly = 1) { triggerService.markFired(1L, any()) }
+    }
+
+    @Test
+    fun `trade service throws — trigger still disabled`() {
+        val marketService: TobyCoinMarketService = mockk(relaxed = true)
+        val triggerService: UserPriceTriggerService = mockk(relaxed = true)
+        val tradeService: EconomyTradeService = mockk(relaxed = true)
+        val router: NotificationRouter = mockk(relaxed = true)
+
+        every { marketService.getMarket(guildId) } returns
+                TobyCoinMarketDto(guildId = guildId, price = 110.0, lastTickAt = Instant.now())
+        every { marketService.saveMarket(any()) } answers { firstArg() }
+        every { marketService.appendPricePoint(any()) } answers { firstArg<TobyCoinPricePointDto>() }
+        every { marketService.pruneHistoryOlderThan(any()) } returns 0
+        every { marketService.pruneTradesOlderThan(any()) } returns 0
+
+        every { triggerService.findTriggered(guildId, any()) } returns listOf(armedTrigger())
+        every { tradeService.buy(discordId, guildId, 10L) } throws RuntimeException("kaboom")
+        every { triggerService.markFired(1L, any()) } just Runs
+
+        // Tick must NOT crash — the outer runCatching swallows.
+        newJob(marketService, triggerService, tradeService, router).tickAllGuilds()
+
+        // Trigger is still disabled by the inner markFired in the
+        // failure branch so it doesn't loop next tick.
+        verify(exactly = 1) { triggerService.markFired(1L, any()) }
+        // No dispatch was issued because the trade itself blew up
+        // before the router was reached.
+        verify(exactly = 0) {
+            router.dispatch(any<NotificationChannelKind>(), any<Long>(), any<Long>(), any())
+        }
+    }
+
+    @Test
+    fun `multiple triggers fire same tick produce one dispatch each`() {
+        val marketService: TobyCoinMarketService = mockk(relaxed = true)
+        val triggerService: UserPriceTriggerService = mockk(relaxed = true)
+        val tradeService: EconomyTradeService = mockk(relaxed = true)
+        val router: NotificationRouter = mockk(relaxed = true)
+
+        every { marketService.getMarket(guildId) } returns
+                TobyCoinMarketDto(guildId = guildId, price = 110.0, lastTickAt = Instant.now())
+        every { marketService.saveMarket(any()) } answers { firstArg() }
+        every { marketService.appendPricePoint(any()) } answers { firstArg<TobyCoinPricePointDto>() }
+        every { marketService.pruneHistoryOlderThan(any()) } returns 0
+        every { marketService.pruneTradesOlderThan(any()) } returns 0
+
+        val a = armedTrigger().apply { id = 1L; discordId = 100L }
+        val b = armedTrigger().apply { id = 2L; discordId = 200L }
+        every { triggerService.findTriggered(guildId, any()) } returns listOf(a, b)
+        every { tradeService.buy(100L, guildId, 10L) } returns TradeOutcome.Ok(
+            amount = 10L, transactedCredits = 1010L, newCoins = 10L,
+            newCredits = 8990L, newPrice = 100.5, fee = 10L,
+        )
+        every { tradeService.buy(200L, guildId, 10L) } returns TradeOutcome.Ok(
+            amount = 10L, transactedCredits = 1010L, newCoins = 10L,
+            newCredits = 8990L, newPrice = 100.5, fee = 10L,
+        )
+        every { triggerService.markFired(any(), any()) } just Runs
+        every {
+            router.dispatch(any<NotificationChannelKind>(), any<Long>(), any<Long>(), any())
+        } just Runs
+
+        newJob(marketService, triggerService, tradeService, router).tickAllGuilds()
+
+        verify(exactly = 1) { router.dispatch(NotificationChannelKind.PRICE_ALERT, 100L, guildId, any()) }
+        verify(exactly = 1) { router.dispatch(NotificationChannelKind.PRICE_ALERT, 200L, guildId, any()) }
+        verify(exactly = 1) { triggerService.markFired(1L, any()) }
+        verify(exactly = 1) { triggerService.markFired(2L, any()) }
+    }
+
+    @Test
     fun `failed trade still disables the trigger`() {
         val marketService: TobyCoinMarketService = mockk(relaxed = true)
         val triggerService: UserPriceTriggerService = mockk(relaxed = true)

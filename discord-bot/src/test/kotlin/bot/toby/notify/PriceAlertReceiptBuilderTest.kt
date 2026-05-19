@@ -139,4 +139,37 @@ class PriceAlertReceiptBuilderTest {
             assertTrue(payload.body.isNotBlank(), "push body must be non-blank for $outcome")
         }
     }
+
+    @Test
+    fun `InvalidAmount renders a failure embed mentioning the trigger id`() {
+        val dm = PriceAlertReceiptBuilder.buildDm(
+            trigger(UserPriceTriggerDto.Side.BUY),
+            TradeOutcome.InvalidAmount,
+        )
+        val text = renderedText(dm)
+        assertTrue(text.contains("Trigger #42"), "embed should mention trigger id 42: $text")
+        assertTrue(text.contains("invalid") || text.contains("Invalid") || text.contains("failed"),
+                "embed should describe the failure: $text")
+    }
+
+    @Test
+    fun `Ok with amount 0 renders execution price as 0 without dividing by zero`() {
+        // Defensive guard on okEmbed:75 — service rejects amount <= 0,
+        // but the builder should still survive if a bad row slips through.
+        val ok = TradeOutcome.Ok(
+            amount = 0L,
+            transactedCredits = 0L,
+            newCoins = 10L,
+            newCredits = 1000L,
+            newPrice = 100.0,
+            fee = 0L,
+        )
+        val dm = PriceAlertReceiptBuilder.buildDm(trigger(UserPriceTriggerDto.Side.BUY), ok)
+        val text = renderedText(dm)
+        // Either "0.0000" or just "0" appearing inside the Trade line is fine —
+        // the point is we didn't NaN/Infinity-format from a div-by-zero.
+        assertTrue(text.contains("0.0000"), "expected formatted zero price: $text")
+        assertFalse(text.contains("NaN"), "must not render NaN: $text")
+        assertFalse(text.contains("Infinity"), "must not render Infinity: $text")
+    }
 }

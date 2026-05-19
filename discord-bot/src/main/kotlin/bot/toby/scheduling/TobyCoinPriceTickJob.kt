@@ -101,23 +101,29 @@ class TobyCoinPriceTickJob @Autowired constructor(
                                 "user=${row.discordId} guild=$guildId: ${err.message}"
                     )
                     // Disable the row anyway so a broken trigger doesn't
-                    // re-fire every 5 minutes for the next 24 hours.
+                    // re-fire every 5 minutes for the next 24 hours. A
+                    // second failure here would otherwise be silent —
+                    // log it so the operator sees both halves.
                     runCatching { triggerService.markFired(row.id!!, now) }
+                        .onFailure { markErr ->
+                            logger.warn(
+                                "Also failed to disable broken trigger=${row.id} " +
+                                        "after trade-execution failure: ${markErr.message}"
+                            )
+                        }
                 }
         }
     }
 
     private fun executeTrigger(row: UserPriceTriggerDto, guildId: Long, now: Instant) {
-        val outcome = when (row.side) {
-            UserPriceTriggerDto.Side.BUY.name ->
-                tradeService.buy(row.discordId, guildId, row.amount)
-            UserPriceTriggerDto.Side.SELL.name ->
-                tradeService.sell(row.discordId, guildId, row.amount)
-            else -> {
-                logger.warn("Unknown side ${row.side} on trigger ${row.id}; disabling.")
-                triggerService.markFired(row.id!!, now)
-                return
-            }
+        val side = runCatching { row.sideEnum }.getOrElse {
+            logger.warn("Unknown side ${row.side} on trigger ${row.id}; disabling.")
+            triggerService.markFired(row.id!!, now)
+            return
+        }
+        val outcome = when (side) {
+            UserPriceTriggerDto.Side.BUY -> tradeService.buy(row.discordId, guildId, row.amount)
+            UserPriceTriggerDto.Side.SELL -> tradeService.sell(row.discordId, guildId, row.amount)
         }
         notificationRouter.dispatch(NotificationChannelKind.PRICE_ALERT, row.discordId, guildId) {
             dm { PriceAlertReceiptBuilder.buildDm(row, outcome) }

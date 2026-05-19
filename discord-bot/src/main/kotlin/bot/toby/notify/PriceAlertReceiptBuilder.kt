@@ -2,6 +2,7 @@ package bot.toby.notify
 
 import common.notification.PushPayload
 import database.dto.UserPriceTriggerDto
+import database.dto.UserPriceTriggerDto.Side
 import database.service.EconomyTradeService.TradeOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
@@ -28,7 +29,7 @@ object PriceAlertReceiptBuilder {
         trigger: UserPriceTriggerDto,
         outcome: TradeOutcome,
     ): MessageCreateData {
-        val side = trigger.side
+        val side = trigger.sideEnum
         val embed = when (outcome) {
             is TradeOutcome.Ok -> okEmbed(trigger, outcome, side)
             is TradeOutcome.InsufficientCredits -> insufficientCreditsEmbed(trigger, outcome)
@@ -53,7 +54,7 @@ object PriceAlertReceiptBuilder {
         val title = "TobyCoin price alert"
         val body = when (outcome) {
             is TradeOutcome.Ok ->
-                "${pastTense(trigger.side)} ${outcome.amount} TOBY at ${"%.4f".format(outcome.newPrice)}."
+                "${pastTense(trigger.sideEnum)} ${outcome.amount} TOBY at ${"%.4f".format(outcome.newPrice)}."
             is TradeOutcome.InsufficientCredits ->
                 "Trigger #${trigger.id} fired but you lacked credits to BUY."
             is TradeOutcome.InsufficientCoins ->
@@ -69,8 +70,9 @@ object PriceAlertReceiptBuilder {
     private fun okEmbed(
         trigger: UserPriceTriggerDto,
         ok: TradeOutcome.Ok,
-        side: String,
+        side: Side,
     ): net.dv8tion.jda.api.entities.MessageEmbed {
+        val isBuy = side == Side.BUY
         val verb = pastTense(side)
         val executionPrice = if (ok.amount > 0L) {
             // Reconstruct from the canonical gross. Both BUY and SELL
@@ -80,7 +82,6 @@ object PriceAlertReceiptBuilder {
             // matches what `/tobycoin buy|sell` users already see and
             // keeps the receipt free of a separate price-per-coin
             // field that would have to be plumbed through TradeOutcome.
-            val isBuy = side == UserPriceTriggerDto.Side.BUY.name
             val gross = if (isBuy) ok.transactedCredits - ok.fee
                         else ok.transactedCredits + ok.fee
             gross.toDouble() / ok.amount
@@ -101,7 +102,7 @@ object PriceAlertReceiptBuilder {
                 false
             )
 
-        if (side == UserPriceTriggerDto.Side.BUY.name) {
+        if (isBuy) {
             val gross = ok.transactedCredits - ok.fee
             val feePart = if (ok.fee > 0L) " + **${ok.fee}** fee (to jackpot)" else ""
             embed.addField(
@@ -166,9 +167,8 @@ object PriceAlertReceiptBuilder {
         )
         .build()
 
-    private fun pastTense(side: String): String = when (side) {
-        UserPriceTriggerDto.Side.BUY.name -> "Bought"
-        UserPriceTriggerDto.Side.SELL.name -> "Sold"
-        else -> side
+    private fun pastTense(side: Side): String = when (side) {
+        Side.BUY -> "Bought"
+        Side.SELL -> "Sold"
     }
 }

@@ -75,4 +75,17 @@ class UserPriceTriggerDto(
 ) : Serializable {
 
     enum class Side { BUY, SELL }
+
+    /**
+     * Typed accessor over the stringly-typed [side] column. Reading
+     * throws [IllegalArgumentException] when the column holds a value
+     * that doesn't map to a [Side] enum constant — callers in the
+     * scheduler hot-path wrap this in a `runCatching` guard so a
+     * corrupted row disables itself instead of crashing the whole
+     * tick. Writes go through the enum's `name` so the column never
+     * holds anything but valid identifiers.
+     */
+    var sideEnum: Side
+        get() = Side.valueOf(side)
+        set(value) { side = value.name }
 }
