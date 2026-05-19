@@ -7,9 +7,8 @@ import database.service.PushSubscriptionService
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import org.bouncycastle.jce.provider.BouncyCastleProvider
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.security.Security
 
@@ -30,24 +29,41 @@ import java.security.Security
  *  - 429 / 5xx → transient. Logged and skipped — the next push will
  *    retry naturally.
  *
- * Bean wiring: this class is `@ConditionalOnBean(VapidProperties::class)`,
- * which itself is `@ConditionalOnProperty` on `toby.vapid.public-key` /
- * `private-key`. Without keys → no bean → `NotificationRouter`'s
+ * Bean wiring: `@ConditionalOnProperty` on the VAPID public + private
+ * keys gates registration. Without keys → no bean → `NotificationRouter`'s
  * `@Autowired(required=false)` adapter stays null → router falls back
- * to its no-op + warn path. Dev environments work unchanged.
+ * to its no-op + warn path. Dev environments without env vars set
+ * keep working unchanged.
  *
  * The actual network call is mediated through [PushTransport] (the
- * production [DefaultPushTransport] is produced by
- * [WebPushAdapterConfig.defaultPushTransport]). The seam lets unit tests
- * swap in a fake response without spinning up a real push service.
+ * production implementation is built lazily on first push). The seam
+ * lets unit tests pass a fake transport via the secondary constructor.
+ *
+ * BouncyCastle is registered eagerly on first push because `PushService`
+ * requires it for EC key parsing and AES-128-GCM payload encryption.
+ * `addProvider` is idempotent — a no-op if a provider with the same
+ * name is already installed.
  */
 @Component
-@ConditionalOnBean(VapidProperties::class)
+@ConditionalOnProperty(prefix = "toby.vapid", name = ["public-key", "private-key"])
 class WebPushAdapter(
     private val subscriptions: PushSubscriptionService,
     private val objectMapper: ObjectMapper,
     private val transport: PushTransport,
 ) : PushAdapter {
+
+    /**
+     * Production constructor used by Spring. Builds a [DefaultPushTransport]
+     * from the VAPID env vars; tests use the primary constructor with a
+     * fake [PushTransport] directly.
+     */
+    constructor(
+        subscriptions: PushSubscriptionService,
+        objectMapper: ObjectMapper,
+        @Value("\${toby.vapid.public-key}") publicKey: String,
+        @Value("\${toby.vapid.private-key}") privateKey: String,
+        @Value("\${toby.vapid.subject:mailto:admin@example.invalid}") subject: String,
+    ) : this(subscriptions, objectMapper, DefaultPushTransport(publicKey, privateKey, subject))
 
     private val logger = DiscordLogger.createLogger(this::class.java)
 
@@ -111,17 +127,16 @@ interface PushTransport {
  * Lazy-initialises [PushService] so failed VAPID parsing (e.g. an
  * operator pastes the wrong key) defers the throw to the first push
  * rather than crashing the application context.
- *
- * BouncyCastle is registered eagerly on first push because `PushService`
- * requires it for EC key parsing and AES-128-GCM payload encryption.
- * `addProvider` is idempotent — a no-op if a provider with the same name
- * is already installed.
  */
-class DefaultPushTransport(private val vapid: VapidProperties) : PushTransport {
+class DefaultPushTransport(
+    private val publicKey: String,
+    private val privateKey: String,
+    private val subject: String,
+) : PushTransport {
 
     private val pushService: PushService by lazy {
         Security.addProvider(BouncyCastleProvider())
-        PushService(vapid.publicKey, vapid.privateKey, vapid.subject)
+        PushService(publicKey, privateKey, subject)
     }
 
     override fun send(endpoint: String, p256dh: String, auth: String, body: ByteArray): Int {
@@ -133,17 +148,4 @@ class DefaultPushTransport(private val vapid: VapidProperties) : PushTransport {
         val response = pushService.send(notification)
         return response.statusLine.statusCode
     }
-}
-
-/**
- * Bean factory for [DefaultPushTransport]. Lives in its own
- * `@Configuration` (gated by the same [VapidProperties] availability so
- * dev environments without keys don't instantiate it).
- */
-@Configuration
-@ConditionalOnBean(VapidProperties::class)
-class WebPushAdapterConfig {
-
-    @Bean
-    fun defaultPushTransport(vapid: VapidProperties): PushTransport = DefaultPushTransport(vapid)
 }
