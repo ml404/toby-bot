@@ -3,6 +3,7 @@ package web.controller
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.service.UserNotificationPrefService
+import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -11,7 +12,10 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.GuildMembership
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -43,11 +47,20 @@ class NotificationPreferencesController(
     @GetMapping
     fun picker(
         @AuthenticationPrincipal user: OAuth2User?,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
         model: Model,
     ): String {
         if (user == null) return "redirect:/login"
         val discordId = user.discordIdOrNull() ?: return "redirect:/login"
-        val guilds = jda.guilds.filter { it.getMemberById(discordId) != null }
+        val mutual = jda.guilds.filter { it.getMemberById(discordId) != null }
+        DefaultGuildRedirect.pick(
+            guildIds = mutual.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = DefaultGuildCookie.read(request),
+            pick = pick,
+        )?.let { return "redirect:/preferences/notifications/$it" }
+
+        val guilds = mutual
             .map { PickerGuild(id = it.id, name = it.name, iconUrl = it.iconUrl) }
             .sortedBy { it.name.lowercase() }
         model.addAttribute("guilds", guilds)
