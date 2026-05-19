@@ -181,8 +181,15 @@ class LotteryAnnouncer @Autowired constructor(
      * any other fields (e.g. yesterday's recap) are preserved as the
      * mod team last saw them. Embed layout / footer / colour stay
      * identical so the message doesn't visibly flicker on edit.
+     *
+     * [force] bypasses the pool/digest short-circuit so an admin-driven
+     * "rebuild this embed now" path
+     * (`/jackpotadmin lottery_refresh_embed`) re-renders even when
+     * nothing the watermark tracks has changed. The 5-minute
+     * [LotteryRefreshJob] never passes `force = true`, so its
+     * quiet-tick cost stays unchanged.
      */
-    fun refreshAnnouncement(guild: Guild, lottery: JackpotLotteryDto) {
+    fun refreshAnnouncement(guild: Guild, lottery: JackpotLotteryDto, force: Boolean = false) {
         val lotteryId = lottery.id ?: return
         val messageId = lottery.announcementMessageId ?: return
         val channelId = lottery.announcementChannelId ?: return
@@ -198,7 +205,7 @@ class LotteryAnnouncer @Autowired constructor(
         } else null
         val poolChanged = lottery.announcedPoolAmount != lottery.poolAmount
         val incentivesChanged = lottery.announcedIncentivesDigest != freshDigest
-        if (!poolChanged && !incentivesChanged) return
+        if (!force && !poolChanged && !incentivesChanged) return
 
         val channel = guild.getTextChannelById(channelId) ?: run {
             logger.warn(
