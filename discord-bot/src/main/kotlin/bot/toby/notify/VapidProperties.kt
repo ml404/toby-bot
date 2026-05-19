@@ -2,7 +2,7 @@ package bot.toby.notify
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
-import org.springframework.context.annotation.Configuration
+import org.springframework.stereotype.Component
 
 /**
  * VAPID (RFC 8292) keys + contact subject used by [WebPushAdapter] to
@@ -21,7 +21,7 @@ import org.springframework.context.annotation.Configuration
  * to the operator's contact. Push services use it to reach you when
  * something goes wrong with delivery for your origin.
  */
-@Configuration
+@Component
 @ConditionalOnProperty(prefix = "toby.vapid", name = ["public-key", "private-key"])
 class VapidProperties(
     @Value("\${toby.vapid.public-key}") val publicKey: String,

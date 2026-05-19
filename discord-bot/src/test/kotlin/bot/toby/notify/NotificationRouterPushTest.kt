@@ -136,9 +136,8 @@ class NotificationRouterPushTest {
         every {
             prefService.isOptedIn(discordId, guildId, NotificationChannelKind.PRICE_ALERT, Surface.PUSH)
         } returns true
-        val adapter = mockk<PushAdapter>().also {
-            every { it.deliver(any(), any()) } throws RuntimeException("simulated")
-        }
+        val adapter = mockk<PushAdapter>()
+        every { adapter.deliver(any(), any()) } throws RuntimeException("simulated")
         // No throw = router caught it.
         newRouter(adapter).sendPush(discordId, guildId, NotificationChannelKind.PRICE_ALERT, CountingBuilder())
         verify(exactly = 1) { adapter.deliver(discordId, any()) }

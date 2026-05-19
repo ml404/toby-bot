@@ -22,11 +22,6 @@ import java.time.Instant
 class WebPushAdapterTest {
 
     private val discordId = 123L
-    private val vapid = VapidProperties(
-        publicKey = "pk",
-        privateKey = "sk",
-        subject = "mailto:test@example.invalid",
-    )
     private val mapper = ObjectMapper()
 
     private lateinit var subscriptions: PushSubscriptionService
@@ -37,7 +32,7 @@ class WebPushAdapterTest {
     fun setup() {
         subscriptions = mockk(relaxed = true)
         transport = RecordingTransport()
-        adapter = WebPushAdapter(vapid, subscriptions, mapper, transport)
+        adapter = WebPushAdapter(subscriptions, mapper, transport)
     }
 
     @Test

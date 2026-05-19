@@ -9,6 +9,8 @@ import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Subscription
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.stereotype.Component
 import java.security.Security
 
@@ -35,23 +37,17 @@ import java.security.Security
  * `@Autowired(required=false)` adapter stays null → router falls back
  * to its no-op + warn path. Dev environments work unchanged.
  *
- * BouncyCastle is registered eagerly at construction because
- * `PushService` requires it for EC key parsing and AES-128-GCM encryption.
- * The registration is idempotent — `addProvider` is a no-op if a provider
- * with the same name is already installed.
- *
- * The actual network call is mediated through [PushTransport] so a unit
- * test can swap in a fake response without spinning up a real push
- * service. Production wiring uses [DefaultPushTransport] (the only
- * other implementation today).
+ * The actual network call is mediated through [PushTransport] (the
+ * production [DefaultPushTransport] is produced by
+ * [WebPushAdapterConfig.defaultPushTransport]). The seam lets unit tests
+ * swap in a fake response without spinning up a real push service.
  */
 @Component
 @ConditionalOnBean(VapidProperties::class)
 class WebPushAdapter(
-    private val vapid: VapidProperties,
     private val subscriptions: PushSubscriptionService,
     private val objectMapper: ObjectMapper,
-    private val transport: PushTransport = DefaultPushTransport(vapid),
+    private val transport: PushTransport,
 ) : PushAdapter {
 
     private val logger = DiscordLogger.createLogger(this::class.java)
@@ -116,6 +112,11 @@ interface PushTransport {
  * Lazy-initialises [PushService] so failed VAPID parsing (e.g. an
  * operator pastes the wrong key) defers the throw to the first push
  * rather than crashing the application context.
+ *
+ * BouncyCastle is registered eagerly on first push because `PushService`
+ * requires it for EC key parsing and AES-128-GCM payload encryption.
+ * `addProvider` is idempotent — a no-op if a provider with the same name
+ * is already installed.
  */
 class DefaultPushTransport(private val vapid: VapidProperties) : PushTransport {
 
@@ -132,4 +133,17 @@ class DefaultPushTransport(private val vapid: VapidProperties) : PushTransport {
         val response = pushService.send(notification)
         return response.statusLine.statusCode
     }
+}
+
+/**
+ * Bean factory for [DefaultPushTransport]. Lives in its own
+ * `@Configuration` (gated by the same [VapidProperties] availability so
+ * dev environments without keys don't instantiate it).
+ */
+@Configuration
+@ConditionalOnBean(VapidProperties::class)
+class WebPushAdapterConfig {
+
+    @Bean
+    fun defaultPushTransport(vapid: VapidProperties): PushTransport = DefaultPushTransport(vapid)
 }
