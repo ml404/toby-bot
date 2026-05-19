@@ -924,6 +924,92 @@ class LotteryAnnouncerTest {
         }
 
         @Test
+        fun `weighted refresh with force=true edits even when pool and digest both match`() {
+            // The admin manual-trigger path
+            // (`/jackpotadmin lottery_refresh_embed`) needs to bypass
+            // the short-circuit so an admin can verify config changes
+            // landed without waiting. Same setup as the short-circuit
+            // case above, but with `force = true` the embed is still
+            // edited and the watermark gets re-persisted.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+            every { guild.getTextChannelById(777L) } returns channel
+
+            val previousEmbed = EmbedBuilder()
+                .setTitle("🎟️ Daily Lottery — Test Guild")
+                .addField(
+                    LotteryAnnouncer.TODAYS_DRAW_FIELD,
+                    "**1000** credits in the pool · Ticket: **50** · Mode: **Top-3 weighted** · Closes 24h.",
+                    false,
+                )
+                .addField(LotteryAnnouncer.ACTIVE_INCENTIVES_FIELD, "🎁 Bulk bonus: buy ≥10 → **+3** free", false)
+                .build()
+            val message: Message = mockk(relaxed = true)
+            every { message.embeds } returns listOf(previousEmbed)
+
+            val retrieveAction: RestAction<Message> = mockk(relaxed = true)
+            every { channel.retrieveMessageById(999L) } returns retrieveAction
+            every {
+                retrieveAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+            val editAction: MessageEditAction = mockk(relaxed = true)
+            val editedEmbedSlot = slot<MessageEmbed>()
+            every { message.editMessageEmbeds(capture(editedEmbedSlot)) } returns editAction
+            every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
+            every {
+                editAction.queue(any<java.util.function.Consumer<Message>>(), any())
+            } answers {
+                firstArg<java.util.function.Consumer<Message>>().accept(message)
+            }
+
+            val liveDigest = announcer.incentivesDigest(guildId)
+            val lottery = openLottery(
+                poolAmount = 1_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+                announcedIncentivesDigest = liveDigest,
+            )
+
+            announcer.refreshAnnouncement(guild, lottery, force = true)
+
+            // The edit fired — same path as the digest-mismatch case
+            // would have taken, just driven by `force = true`.
+            verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
+            // And the watermark is re-persisted (idempotent here:
+            // same digest in, same digest out, but the call still
+            // happens so a future bug that mutates state mid-refresh
+            // doesn't leave the watermark stale).
+            verify(exactly = 1) {
+                jackpotLotteryService.updateAnnouncementWatermarks(1L, 1_000L, any())
+            }
+        }
+
+        @Test
+        fun `refresh with default force=false still skips when nothing changed`() {
+            // Regression guard so the 5-minute LotteryRefreshJob keeps
+            // its cheap quiet-tick behaviour: only the new admin
+            // command should be passing force=true.
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
+            stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")
+
+            val liveDigest = announcer.incentivesDigest(guildId)
+            val lottery = openLottery(
+                poolAmount = 1_000L,
+                announcedPoolAmount = 1_000L,
+                mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+                announcedIncentivesDigest = liveDigest,
+            )
+
+            // Default force=false (the explicit parameter is omitted
+            // by the refresh job).
+            announcer.refreshAnnouncement(guild, lottery)
+
+            verify(exactly = 0) { guild.getTextChannelById(any<Long>()) }
+        }
+
+        @Test
         fun `incentivesDigest is deterministic for the same configured tiers`() {
             stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BUY, "10")
             stubConfig(ConfigDto.Configurations.LOTTERY_BULK_TIER1_BONUS, "3")

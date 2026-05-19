@@ -1,6 +1,7 @@
 package bot.toby.command.commands.moderation
 
 import bot.toby.modal.modals.JackpotAdminModal
+import bot.toby.scheduling.LotteryAnnouncer
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
@@ -33,6 +34,7 @@ class JackpotAdminCommand @Autowired constructor(
     private val casinoAdminService: CasinoAdminService,
     private val jackpotService: JackpotService,
     private val jackpotLotteryService: JackpotLotteryService,
+    private val lotteryAnnouncer: LotteryAnnouncer,
 ) : ModerationCommand {
 
     override val name: String = "jackpotadmin"
@@ -50,6 +52,10 @@ class JackpotAdminCommand @Autowired constructor(
         SubcommandData(SUB_LOTTERY_OPEN, "Open a multi-winner ticketed lottery seeded from the jackpot pool (form)."),
         SubcommandData(SUB_LOTTERY_DRAW, "Close the open lottery and pay weighted winners."),
         SubcommandData(SUB_LOTTERY_CANCEL, "Cancel the open lottery (refund tickets, return seed to pool)."),
+        SubcommandData(
+            SUB_LOTTERY_REFRESH_EMBED,
+            "Re-render announce embeds for any open lottery — pick up tier edits without the 5-min wait.",
+        ),
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -85,9 +91,11 @@ class JackpotAdminCommand @Autowired constructor(
             SUB_POOL -> handlePool(event, guildId, deleteDelay)
             SUB_LOTTERY_DRAW -> handleLotteryDraw(event, guildId, deleteDelay)
             SUB_LOTTERY_CANCEL -> handleLotteryCancel(event, guildId, deleteDelay)
+            SUB_LOTTERY_REFRESH_EMBED -> handleLotteryRefreshEmbed(event, guildId, deleteDelay)
             else -> event.hook.replyEphemeralAndDelete(
                 "Pick a subcommand: $SUB_RESET / $SUB_REFUND / $SUB_POOL / " +
-                    "$SUB_LOTTERY_OPEN / $SUB_LOTTERY_DRAW / $SUB_LOTTERY_CANCEL.",
+                    "$SUB_LOTTERY_OPEN / $SUB_LOTTERY_DRAW / $SUB_LOTTERY_CANCEL / " +
+                    "$SUB_LOTTERY_REFRESH_EMBED.",
                 deleteDelay,
             )
         }
@@ -184,6 +192,51 @@ class JackpotAdminCommand @Autowired constructor(
         }
     }
 
+    /**
+     * Force-rebuild the announce embed for every open lottery on this
+     * guild. Bypasses the 5-minute `LotteryRefreshJob` timer and its
+     * pool/digest short-circuit so admins can verify a tier edit
+     * landed without waiting (or guessing whether the digest path
+     * fired). Each call to [LotteryAnnouncer.refreshAnnouncement]
+     * runs asynchronously inside JDA's queue, so the admin's reply is
+     * "queued N", not "completed".
+     */
+    private fun handleLotteryRefreshEmbed(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
+        val guild = event.guild ?: run {
+            replyError(event, "Guild only.", deleteDelay)
+            return
+        }
+        val openLotteries = jackpotLotteryService.getOpenLotteriesForRefresh(guildId)
+        if (openLotteries.isEmpty()) {
+            event.hook.replyEphemeralAndDelete("No open lottery to refresh.", deleteDelay)
+            return
+        }
+        var queued = 0
+        var skipped = 0
+        openLotteries.forEach { lottery ->
+            // No announcement reference means the embed was never
+            // posted (or got cleared by an UNKNOWN_MESSAGE retry).
+            // `refreshAnnouncement` would early-exit anyway, but
+            // counting up-front gives the admin a cleaner reply than
+            // "queued 1, but actually 0 happened".
+            if (lottery.announcementMessageId == null || lottery.announcementChannelId == null) {
+                skipped++
+            } else {
+                lotteryAnnouncer.refreshAnnouncement(guild, lottery, force = true)
+                queued++
+            }
+        }
+        val message = buildString {
+            append("Queued **$queued** embed refresh")
+            if (queued != 1) append("es")
+            append(".")
+            if (skipped > 0) {
+                append(" Skipped **$skipped** (no announce posted yet).")
+            }
+        }
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
+    }
+
     private fun handleLotteryCancel(event: SlashCommandInteractionEvent, guildId: Long, deleteDelay: Int) {
         when (val result = jackpotLotteryService.cancelLottery(guildId)) {
             is JackpotLotteryService.CancelOutcome.Ok -> event.hook.replyEphemeralAndDelete(
@@ -207,6 +260,7 @@ class JackpotAdminCommand @Autowired constructor(
         const val SUB_LOTTERY_OPEN = "lottery_open"
         const val SUB_LOTTERY_DRAW = "lottery_draw"
         const val SUB_LOTTERY_CANCEL = "lottery_cancel"
+        const val SUB_LOTTERY_REFRESH_EMBED = "lottery_refresh_embed"
         const val OPT_USER = "user"
         const val OPT_AMOUNT = "amount"
     }
