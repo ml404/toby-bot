@@ -1,8 +1,11 @@
 package bot.toby.scheduling
 
+import bot.toby.notify.NotificationRouter
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
+import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
+import database.service.UserPriceTriggerService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -45,7 +48,13 @@ class TobyCoinPriceTickJobTest {
         every { marketService.appendPricePoint(any()) } answers { firstArg<TobyCoinPricePointDto>() }
         every { marketService.pruneHistoryOlderThan(any()) } returns 0
 
-        val job = TobyCoinPriceTickJob(jda, marketService)
+        // Trigger scanning is a no-op when no rows are armed, which is
+        // the case for this regression test — relaxed mocks return an
+        // empty list by default.
+        val triggerService: UserPriceTriggerService = mockk(relaxed = true)
+        val tradeService: EconomyTradeService = mockk(relaxed = true)
+        val router: NotificationRouter = mockk(relaxed = true)
+        val job = TobyCoinPriceTickJob(jda, marketService, triggerService, tradeService, router)
 
         val prices = (1..50).map {
             job.tickAllGuilds()

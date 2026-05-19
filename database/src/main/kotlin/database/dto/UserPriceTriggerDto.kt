@@ -1,0 +1,78 @@
+package database.dto
+
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.GeneratedValue
+import jakarta.persistence.GenerationType
+import jakarta.persistence.Id
+import jakarta.persistence.NamedQueries
+import jakarta.persistence.NamedQuery
+import jakarta.persistence.Table
+import org.hibernate.annotations.DynamicUpdate
+import org.springframework.transaction.annotation.Transactional
+import java.io.Serializable
+import java.time.Instant
+
+/**
+ * A user-defined TobyCoin price trigger. When the market tick crosses
+ * [thresholdPrice] from the side the price was on at creation
+ * ([priceAtCreation]), the scheduler auto-executes the declared trade
+ * ([side] of [amount] coins) and DMs a receipt.
+ *
+ * One-shot: the scheduler stamps [firedAt] and flips [enabled] false
+ * on fire, so a price oscillating around the threshold can't replay
+ * the trade. The user re-arms by re-running `/pricealert add`.
+ */
+@NamedQueries(
+    NamedQuery(
+        name = "UserPriceTriggerDto.listEnabledByGuild",
+        query = "select t from UserPriceTriggerDto t " +
+                "where t.guildId = :guildId and t.enabled = true"
+    ),
+    NamedQuery(
+        name = "UserPriceTriggerDto.listByUser",
+        query = "select t from UserPriceTriggerDto t " +
+                "where t.discordId = :discordId and t.guildId = :guildId " +
+                "order by t.id"
+    )
+)
+@Entity
+@DynamicUpdate
+@Table(name = "user_price_trigger", schema = "public")
+@Transactional
+class UserPriceTriggerDto(
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    var id: Long? = null,
+
+    @Column(name = "discord_id", nullable = false)
+    var discordId: Long = 0,
+
+    @Column(name = "guild_id", nullable = false)
+    var guildId: Long = 0,
+
+    @Column(name = "threshold_price", nullable = false)
+    var thresholdPrice: Double = 0.0,
+
+    @Column(name = "price_at_creation", nullable = false)
+    var priceAtCreation: Double = 0.0,
+
+    @Column(name = "side", nullable = false, length = 8)
+    var side: String = Side.BUY.name,
+
+    @Column(name = "amount", nullable = false)
+    var amount: Long = 0,
+
+    @Column(name = "enabled", nullable = false)
+    var enabled: Boolean = true,
+
+    @Column(name = "fired_at")
+    var firedAt: Instant? = null,
+
+    @Column(name = "created_at", nullable = false)
+    var createdAt: Instant = Instant.now(),
+) : Serializable {
+
+    enum class Side { BUY, SELL }
+}
