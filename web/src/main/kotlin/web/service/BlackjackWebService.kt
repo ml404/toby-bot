@@ -1,11 +1,6 @@
 package web.service
 
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
-import database.blackjack.BlackjackTableRegistry
-import database.blackjack.bestTotal
-import database.blackjack.canSplit
-import database.blackjack.isSoft
+import database.blackjack.*
 import database.card.Card
 import org.springframework.stereotype.Service
 
@@ -166,9 +161,9 @@ class BlackjackWebService(
                 mySeatIndex == table.actorIndex &&
                 table.phase == BlackjackTable.Phase.PLAYER_TURNS &&
                 mySeat?.status == BlackjackTable.SeatStatus.ACTIVE
-            val canDouble = isMyTurn && mySeat != null &&
+            val canDouble = isMyTurn &&
                 mySeat.hand.size == 2 && !mySeat.doubled
-            val canSplitNow = isMyTurn && mySeat != null &&
+            val canSplitNow = isMyTurn &&
                 !mySeat.doubled &&
                 canSplit(mySeat.hand) &&
                 mySeat.hands.size < Blackjack.MAX_SPLIT_HANDS

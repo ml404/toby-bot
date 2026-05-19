@@ -12,12 +12,12 @@ import database.service.JackpotLotteryService
 import database.service.LotteryHelper
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.exceptions.ErrorResponseException
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.ErrorResponse
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
@@ -61,7 +61,7 @@ class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
     private val jackpotLotteryService: JackpotLotteryService,
     private val notificationRouter: NotificationRouter,
-    @Value("\${app.base-url:}") private val webBaseUrl: String = "",
+    @param:Value($$"${app.base-url:}") private val webBaseUrl: String = "",
 ) {
 
     /**

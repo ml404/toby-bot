@@ -75,12 +75,12 @@ data class Monster(
         }
 
         val abilityScores = listOfNotNull(
-            strength?.let { "STR ${it} (${formatMod(it)})" },
-            dexterity?.let { "DEX ${it} (${formatMod(it)})" },
-            constitution?.let { "CON ${it} (${formatMod(it)})" },
-            intelligence?.let { "INT ${it} (${formatMod(it)})" },
-            wisdom?.let { "WIS ${it} (${formatMod(it)})" },
-            charisma?.let { "CHA ${it} (${formatMod(it)})" }
+            strength?.let { "STR $it (${formatMod(it)})" },
+            dexterity?.let { "DEX $it (${formatMod(it)})" },
+            constitution?.let { "CON $it (${formatMod(it)})" },
+            intelligence?.let { "INT $it (${formatMod(it)})" },
+            wisdom?.let { "WIS $it (${formatMod(it)})" },
+            charisma?.let { "CHA $it (${formatMod(it)})" }
         )
         if (abilityScores.isNotEmpty()) {
             embedBuilder.addField("Ability Scores", abilityScores.joinToString("\n"), true)
