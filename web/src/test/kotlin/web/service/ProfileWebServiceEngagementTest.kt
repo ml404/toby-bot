@@ -115,12 +115,14 @@ class ProfileWebServiceEngagementTest {
     }
 
     @Test
-    fun `achievements field rolls up unlocked and total counts and entries`() {
+    fun `achievements field rolls up unlocked and total counts and groups by category`() {
         val unlockedSpec = AchievementDto(
-            id = 1L, code = "u", name = "U", description = "ud", category = "level", threshold = 1
+            id = 1L, code = "u", name = "U", description = "ud", category = "level",
+            threshold = 1, xpReward = 25, creditReward = 50,
         )
         val lockedSpec = AchievementDto(
-            id = 2L, code = "l", name = "L", description = "ld", category = "level", threshold = 10
+            id = 2L, code = "l", name = "L", description = "ld", category = "level",
+            threshold = 10, xpReward = 100, creditReward = 0,
         )
         every { loginStreakService.get(discordId, guildId) } returns null
         every { achievementService.listFor(discordId, guildId) } returns listOf(
@@ -131,12 +133,107 @@ class ProfileWebServiceEngagementTest {
         val view = service.getProfile(discordId, guildId)!!
         assertEquals(1, view.achievementsUnlocked)
         assertEquals(2, view.achievementsTotal)
-        assertEquals(2, view.achievements.size)
-        val unlocked = view.achievements.first { it.code == "u" }
+        assertEquals(25L, view.totalXpEarned)
+
+        val levelCat = view.achievementCategories.single { it.key == "level" }
+        assertEquals("Levels", levelCat.label)
+        assertEquals("🎖️", levelCat.icon)
+        assertEquals(1, levelCat.unlockedCount)
+        assertEquals(2, levelCat.total)
+        // Unlocked entries sort before locked ones.
+        assertEquals(listOf("u", "l"), levelCat.entries.map { it.code })
+
+        val unlocked = levelCat.entries.first { it.code == "u" }
         assertTrue(unlocked.unlocked)
-        val locked = view.achievements.first { it.code == "l" }
+        assertEquals("2026-05-01T12:00:00Z", unlocked.unlockedAt)
+        assertEquals(25, unlocked.xpReward)
+        assertEquals(50L, unlocked.creditReward)
+
+        val locked = levelCat.entries.first { it.code == "l" }
         assertFalse(locked.unlocked)
         assertEquals(4L, locked.progress)
         assertEquals(10L, locked.threshold)
+        assertEquals(40, locked.progressPercent)  // 4/10 = 40%
+        assertEquals(100, locked.xpReward)
     }
+
+    @Test
+    fun `categories render in the canonical order (streak, level, casino, social, music, voice)`() {
+        every { loginStreakService.get(discordId, guildId) } returns null
+        every { achievementService.listFor(discordId, guildId) } returns listOf(
+            AchievementView(spec("v", "voice"), null, 0L),
+            AchievementView(spec("m", "music"), null, 0L),
+            AchievementView(spec("so", "social"), null, 0L),
+            AchievementView(spec("ca", "casino"), null, 0L),
+            AchievementView(spec("l", "level"), null, 0L),
+            AchievementView(spec("s", "streak"), null, 0L),
+        )
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals(
+            listOf("streak", "level", "casino", "social", "music", "voice"),
+            view.achievementCategories.map { it.key }
+        )
+    }
+
+    @Test
+    fun `unknown categories fall back to capitalised label and append after canonical ones`() {
+        every { loginStreakService.get(discordId, guildId) } returns null
+        every { achievementService.listFor(discordId, guildId) } returns listOf(
+            AchievementView(spec("e", "experimental"), null, 0L),
+            AchievementView(spec("s", "streak"), null, 0L),
+        )
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals(listOf("streak", "experimental"), view.achievementCategories.map { it.key })
+        val unknown = view.achievementCategories.last()
+        assertEquals("Experimental", unknown.label)
+        assertEquals("🏅", unknown.icon)
+    }
+
+    @Test
+    fun `within a category unlocked sorts newest-first then locked sorts by progress descending`() {
+        val older = Instant.parse("2024-01-01T00:00:00Z")
+        val newer = Instant.parse("2024-06-01T00:00:00Z")
+        every { loginStreakService.get(discordId, guildId) } returns null
+        every { achievementService.listFor(discordId, guildId) } returns listOf(
+            AchievementView(spec("lo", "casino", threshold = 10), null, 1L),
+            AchievementView(spec("un_old", "casino"), older, 1L),
+            AchievementView(spec("hi", "casino", threshold = 10), null, 8L),
+            AchievementView(spec("un_new", "casino"), newer, 1L),
+        )
+
+        val view = service.getProfile(discordId, guildId)!!
+        val codes = view.achievementCategories.single { it.key == "casino" }.entries.map { it.code }
+        assertEquals(listOf("un_new", "un_old", "hi", "lo"), codes)
+    }
+
+    @Test
+    fun `empty achievement list produces zero totals and no categories`() {
+        every { loginStreakService.get(discordId, guildId) } returns null
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals(0, view.achievementsTotal)
+        assertEquals(0, view.achievementsUnlocked)
+        assertEquals(0L, view.totalXpEarned)
+        assertTrue(view.achievementCategories.isEmpty())
+    }
+
+    private fun spec(
+        code: String,
+        category: String,
+        threshold: Long = 1L,
+        xpReward: Int = 0,
+        creditReward: Long = 0L,
+    ): AchievementDto = AchievementDto(
+        id = code.hashCode().toLong(),
+        code = code,
+        name = code,
+        description = "d",
+        category = category,
+        threshold = threshold,
+        xpReward = xpReward,
+        creditReward = creditReward,
+    )
 }

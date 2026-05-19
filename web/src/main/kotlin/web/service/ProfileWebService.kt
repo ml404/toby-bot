@@ -74,18 +74,8 @@ class ProfileWebService(
 
         val achievementViews = achievementService.listFor(discordId, guildId)
         val unlockedAchievements = achievementViews.filter { it.unlockedAt != null }
-        val achievementEntries = achievementViews.map { v ->
-            ProfileAchievementEntry(
-                code = v.achievement.code,
-                name = v.achievement.name,
-                description = v.achievement.description,
-                icon = v.achievement.icon,
-                category = v.achievement.category,
-                threshold = v.achievement.threshold,
-                progress = v.progress,
-                unlocked = v.unlockedAt != null,
-            )
-        }
+        val totalXpEarned = unlockedAchievements.sumOf { it.achievement.xpReward.toLong() }
+        val achievementCategories = buildAchievementCategories(achievementViews)
 
         return ProfileView(
             guildId = guild.id,
@@ -108,7 +98,59 @@ class ProfileWebService(
             streak = streakView,
             achievementsUnlocked = unlockedAchievements.size,
             achievementsTotal = achievementViews.size,
-            achievements = achievementEntries,
+            totalXpEarned = totalXpEarned,
+            achievementCategories = achievementCategories,
+        )
+    }
+
+    private fun buildAchievementCategories(
+        views: List<AchievementService.AchievementView>
+    ): List<ProfileAchievementCategory> {
+        if (views.isEmpty()) return emptyList()
+        val grouped = views.groupBy { it.achievement.category }
+        val ordered = CATEGORY_ORDER.mapNotNull { key ->
+            grouped[key]?.let { key to it }
+        } + grouped.entries
+            .filter { it.key !in CATEGORY_ORDER }
+            .sortedBy { it.key }
+            .map { it.key to it.value }
+
+        return ordered.map { (key, entries) ->
+            val sorted = entries.sortedWith(
+                compareBy<AchievementService.AchievementView> { it.unlockedAt == null }
+                    .thenByDescending { it.unlockedAt?.epochSecond ?: 0L }
+                    .thenByDescending { it.progress }
+            )
+            val display = CATEGORY_DISPLAY[key]
+            ProfileAchievementCategory(
+                key = key,
+                label = display?.first ?: key.replaceFirstChar { it.uppercase() },
+                icon = display?.second ?: "🏅",
+                unlockedCount = sorted.count { it.unlockedAt != null },
+                total = sorted.size,
+                entries = sorted.map(::toEntry),
+            )
+        }
+    }
+
+    private fun toEntry(view: AchievementService.AchievementView): ProfileAchievementEntry {
+        val a = view.achievement
+        val percent = if (a.threshold > 0)
+            ((view.progress.toDouble() / a.threshold) * 100).toInt().coerceIn(0, 100)
+        else 0
+        return ProfileAchievementEntry(
+            code = a.code,
+            name = a.name,
+            description = a.description,
+            icon = a.icon,
+            category = a.category,
+            threshold = a.threshold,
+            progress = view.progress,
+            progressPercent = percent,
+            unlocked = view.unlockedAt != null,
+            unlockedAt = view.unlockedAt?.toString(),
+            xpReward = a.xpReward,
+            creditReward = a.creditReward,
         )
     }
 
@@ -118,6 +160,20 @@ class ProfileWebService(
             ProfilePermission("Meme", user?.memePermission ?: true),
             ProfilePermission("Dig", user?.digPermission ?: true),
             ProfilePermission("Superuser", user?.superUser ?: false)
+        )
+    }
+
+    companion object {
+        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice")
+
+        // Pair(label, icon)
+        private val CATEGORY_DISPLAY = mapOf(
+            "streak" to ("Streaks" to "🔥"),
+            "level" to ("Levels" to "🎖️"),
+            "casino" to ("Casino" to "🎰"),
+            "social" to ("Social" to "🤝"),
+            "music" to ("Music" to "🎵"),
+            "voice" to ("Voice" to "🎙️"),
         )
     }
 }
@@ -148,7 +204,8 @@ data class ProfileView(
     val streak: ProfileStreakView,
     val achievementsUnlocked: Int,
     val achievementsTotal: Int,
-    val achievements: List<ProfileAchievementEntry>
+    val totalXpEarned: Long,
+    val achievementCategories: List<ProfileAchievementCategory>,
 )
 
 data class ProfileStreakView(
@@ -156,6 +213,15 @@ data class ProfileStreakView(
     val longestStreak: Int,
     val lastClaimDate: String?,
     val claimedToday: Boolean
+)
+
+data class ProfileAchievementCategory(
+    val key: String,
+    val label: String,
+    val icon: String,
+    val unlockedCount: Int,
+    val total: Int,
+    val entries: List<ProfileAchievementEntry>,
 )
 
 data class ProfileAchievementEntry(
@@ -166,7 +232,11 @@ data class ProfileAchievementEntry(
     val category: String,
     val threshold: Long,
     val progress: Long,
-    val unlocked: Boolean
+    val progressPercent: Int,
+    val unlocked: Boolean,
+    val unlockedAt: String?,
+    val xpReward: Int,
+    val creditReward: Long,
 )
 
 data class ProfileTitleEntry(
