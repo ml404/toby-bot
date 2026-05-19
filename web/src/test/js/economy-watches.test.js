@@ -112,6 +112,25 @@ describe('TobyWatches.renderWatchRow', () => {
         expect(side.textContent).toBe('SELL 3');
     });
 
+    // The CSS row-stripe (.economy-watch-row.is-buy::before, .is-sell::before)
+    // hooks off these flags. Regression guard: stripping either class
+    // silently kills the buy/sell visual ID on the row.
+    test('BUY watch tags the row with is-buy (for the side-stripe CSS hook)', () => {
+        const li = Watches.renderWatchRow(document, baseBuy, 95.0);
+        expect(li.classList.contains('is-buy')).toBe(true);
+        expect(li.classList.contains('is-sell')).toBe(false);
+    });
+
+    test('SELL watch tags the row with is-sell', () => {
+        const li = Watches.renderWatchRow(
+            document,
+            { ...baseBuy, side: 'SELL', threshold: 150.0 },
+            120.0
+        );
+        expect(li.classList.contains('is-sell')).toBe(true);
+        expect(li.classList.contains('is-buy')).toBe(false);
+    });
+
     test('threshold below priceAtCreation renders a down arrow in red class', () => {
         const li = Watches.renderWatchRow(document, baseBuy, 95.0);
         const arrow = li.querySelector('.economy-watch-arrow');
