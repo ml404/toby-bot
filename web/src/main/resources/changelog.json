@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "SOLID/DRY sweep across common, core-api, database, web",
+    "summary": "Top-6 focused SOLID/DRY refactor + test-gap sweep spanning all four priority modules. Each refactor lands with the tests it enables; behaviour is preserved (no public API breaks). **Result:** 19 modified / 10 new files. Net **−221 LOC** across modified files. **+44 new tests** (common 9, core-api 13, database 5, web 17). **All 1,704 buildable-module tests pass.**",
+    "emoji": "🎰",
+    "prNumber": 505
+  },
+  {
+    "date": "May 2026",
     "title": "Register BouncyCastle eagerly + add push-path observability",
     "summary": "After PR #503, browser push still wasn't reaching users. Heroku logs from a real attempt revealed: ``` WARN bot.toby.notify.WebPushAdapter - WebPushAdapter: send threw for https://updates.push.services.mozilla.com/wpush/v2/…: no such provider: BC ``` Browser subscription, persistence, prefs, dispatch, and adapter wiring were all healthy — but `DefaultPushTransport.send()` builds `Notification(endpoint, p256dh, auth, body)` **before** touching its lazy `pushService` field,…",
     "emoji": "🎟️",
