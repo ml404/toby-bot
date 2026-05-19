@@ -64,6 +64,34 @@
         await navigator.serviceWorker.ready;
 
         let subscription = await registration.pushManager.getSubscription();
+        const testBtn = root.querySelector('[data-push-test]');
+        if (testBtn) {
+            testBtn.addEventListener('click', async function () {
+                testBtn.disabled = true;
+                setStatus('Sending test push…');
+                try {
+                    const token = getCsrfToken();
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (token) headers[getCsrfHeader()] = token;
+                    const resp = await fetch('/api/push/test', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: headers,
+                    });
+                    // 503 / 500 still carry a JSON body explaining why.
+                    const body = await resp.json().catch(function () { return null; });
+                    if (body && body.message) {
+                        setStatus(body.message);
+                    } else {
+                        setStatus('Test request returned HTTP ' + resp.status + '.');
+                    }
+                } catch (e) {
+                    setStatus('Test request failed: ' + (e.message || e));
+                } finally {
+                    testBtn.disabled = false;
+                }
+            });
+        }
         render();
 
         btn.addEventListener('click', async function () {
@@ -128,6 +156,10 @@
         }
 
         function render() {
+            // Only surface the smoke-test button once the user has a live
+            // subscription on this device — otherwise it would always
+            // return "no subscriptions registered" and waste a click.
+            if (testBtn) testBtn.hidden = !subscription;
             if (subscription) {
                 btn.textContent = 'Disable browser push';
                 btn.classList.add('is-on');

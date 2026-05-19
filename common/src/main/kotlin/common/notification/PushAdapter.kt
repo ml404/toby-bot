@@ -1,16 +1,18 @@
-package bot.toby.notify
-
-import common.notification.PushPayload
+package common.notification
 
 /**
  * Provider-agnostic push-notification delivery contract.
  *
- * [NotificationRouter.sendPush] forwards opted-in pushes to the
+ * `NotificationRouter.sendPush` forwards opted-in pushes to the
  * implementation wired into the Spring context (`@Autowired(required=false)`):
  * if no bean is present, the router falls back to its one-shot
  * "no push adapter wired" warning and drops the call. The current
- * implementation [WebPushAdapter] fans out to every web-push subscription
+ * implementation `WebPushAdapter` fans out to every web-push subscription
  * the user has registered through the preferences page.
+ *
+ * Lives in `common` (alongside [PushPayload]) so the `web` module's
+ * test-push endpoint can autowire the contract — `web` doesn't depend
+ * on `discord-bot`, where the implementation lives.
  *
  * Implementations must be best-effort: a delivery failure for one
  * subscription must not propagate to other subscriptions or to the

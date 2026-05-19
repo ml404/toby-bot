@@ -2,6 +2,7 @@ package bot.toby.notify
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.logging.DiscordLogger
+import common.notification.PushAdapter
 import common.notification.PushPayload
 import database.service.PushSubscriptionService
 import nl.martijndwars.webpush.Notification

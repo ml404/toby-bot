@@ -1,7 +1,10 @@
 package web.controller
 
+import common.notification.PushAdapter
+import common.notification.PushPayload
 import database.service.PushSubscriptionService
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -39,6 +42,7 @@ import java.time.Instant
 class PushSubscriptionController(
     private val subscriptions: PushSubscriptionService,
     @Value("\${toby.vapid.public-key:}") private val vapidPublicKey: String = "",
+    @Autowired(required = false) private val pushAdapter: PushAdapter? = null,
 ) {
 
     @GetMapping("/vapid-public-key")
@@ -92,6 +96,78 @@ class PushSubscriptionController(
         return ResponseEntity.noContent().build()
     }
 
+    /**
+     * Self-serve smoke test for the push pipeline. Bypasses the per-(kind,
+     * surface) opt-in check on purpose — the caller is explicitly asking to
+     * receive a test push, so honouring their pref state would be a UX trap
+     * for anyone trying to verify "is web push wired correctly for me?".
+     *
+     * Outcomes the caller cares about, mapped to status codes:
+     *  - 401 — not authenticated.
+     *  - 503 — server has no PushAdapter bean (VAPID env vars absent).
+     *  - 200 ok=false — adapter is wired but the user has no persisted
+     *    subscription, so there's nothing to deliver to. The UI surfaces
+     *    the "click Enable browser push first" message.
+     *  - 200 ok=true — payload handed off to the adapter; the browser
+     *    notification should appear shortly.
+     *  - 500 — adapter threw; the message includes the exception so the
+     *    operator can read it directly in the response.
+     */
+    @PostMapping("/test")
+    fun sendTestPush(
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<TestPushResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        val adapter = pushAdapter
+            ?: return ResponseEntity.status(503).body(
+                TestPushResponse(
+                    ok = false,
+                    adapterPresent = false,
+                    subscriptionCount = 0,
+                    message = "Push adapter not configured on the server. " +
+                        "Set TOBY_VAPID_PUBLIC_KEY and TOBY_VAPID_PRIVATE_KEY.",
+                )
+            )
+        val subs = subscriptions.listForUser(discordId)
+        if (subs.isEmpty()) {
+            return ResponseEntity.ok(
+                TestPushResponse(
+                    ok = false,
+                    adapterPresent = true,
+                    subscriptionCount = 0,
+                    message = "No browser subscriptions registered for this account. " +
+                        "Click 'Enable browser push' first.",
+                )
+            )
+        }
+        val payload = PushPayload(
+            title = "Test notification",
+            body = "If you see this, web push is working ✓",
+            deepLink = null,
+        )
+        return runCatching { adapter.deliver(discordId, payload) }
+            .map {
+                ResponseEntity.ok(
+                    TestPushResponse(
+                        ok = true,
+                        adapterPresent = true,
+                        subscriptionCount = subs.size,
+                        message = "Test push dispatched to ${subs.size} endpoint(s).",
+                    )
+                )
+            }
+            .getOrElse { err ->
+                ResponseEntity.status(500).body(
+                    TestPushResponse(
+                        ok = false,
+                        adapterPresent = true,
+                        subscriptionCount = subs.size,
+                        message = "Push delivery threw: ${err.message ?: err::class.simpleName}",
+                    )
+                )
+            }
+    }
+
     @GetMapping("/subscriptions")
     fun list(
         @AuthenticationPrincipal user: OAuth2User?,
@@ -123,5 +199,12 @@ class PushSubscriptionController(
         val userAgent: String?,
         val createdAt: String,
         val lastUsedAt: String?,
+    )
+
+    data class TestPushResponse(
+        val ok: Boolean,
+        val adapterPresent: Boolean,
+        val subscriptionCount: Int,
+        val message: String,
     )
 }

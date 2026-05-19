@@ -1,12 +1,16 @@
 package web.controller
 
+import common.notification.PushAdapter
+import common.notification.PushPayload
 import database.dto.PushSubscriptionDto
 import database.service.PushSubscriptionService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import jakarta.servlet.http.HttpServletRequest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -204,6 +208,120 @@ class PushSubscriptionControllerTest {
         )
         assertEquals(204, resp.statusCode.value())
         verify(exactly = 1) { subscriptions.unsubscribe(endpoint) }
+    }
+
+    // ---------- sendTestPush ----------
+
+    @Test
+    fun `sendTestPush rejects unauthenticated with 401`() {
+        val anon = mockk<OAuth2User> { every { getAttribute<String>("id") } returns null }
+        val resp = controller.sendTestPush(anon)
+        assertEquals(401, resp.statusCode.value())
+    }
+
+    @Test
+    fun `sendTestPush returns 503 with adapterPresent=false when no PushAdapter bean is wired`() {
+        // Default controller in setup is constructed without a pushAdapter.
+        val resp = controller.sendTestPush(user)
+        assertEquals(503, resp.statusCode.value())
+        val body = resp.body!!
+        assertFalse(body.ok)
+        assertFalse(body.adapterPresent)
+        assertEquals(0, body.subscriptionCount)
+        assertTrue(body.message.contains("TOBY_VAPID_PUBLIC_KEY")) {
+            "expected the message to name the env vars an operator needs to set, got: ${body.message}"
+        }
+    }
+
+    @Test
+    fun `sendTestPush returns ok=false with zero-subscriptions message when the user has no rows`() {
+        val adapter = mockk<PushAdapter>(relaxed = true)
+        val withAdapter = PushSubscriptionController(
+            subscriptions = subscriptions,
+            vapidPublicKey = "test-public-key",
+            pushAdapter = adapter,
+        )
+        every { subscriptions.listForUser(discordId) } returns emptyList()
+
+        val resp = withAdapter.sendTestPush(user)
+
+        assertEquals(200, resp.statusCode.value())
+        val body = resp.body!!
+        assertFalse(body.ok)
+        assertTrue(body.adapterPresent)
+        assertEquals(0, body.subscriptionCount)
+        assertTrue(body.message.contains("Enable browser push")) {
+            "expected the message to nudge towards the 'Enable browser push' button, got: ${body.message}"
+        }
+        verify(exactly = 0) { adapter.deliver(any(), any()) }
+    }
+
+    @Test
+    fun `sendTestPush forwards a Test notification payload via the adapter when subscriptions exist`() {
+        val adapter = mockk<PushAdapter>(relaxed = true)
+        val withAdapter = PushSubscriptionController(
+            subscriptions = subscriptions,
+            vapidPublicKey = "test-public-key",
+            pushAdapter = adapter,
+        )
+        every { subscriptions.listForUser(discordId) } returns listOf(
+            PushSubscriptionDto(
+                endpoint = "$endpoint/laptop", discordId = discordId,
+                p256dh = "pk", auth = "a", userAgent = "Firefox",
+                createdAt = Instant.now(), lastUsedAt = null,
+            ),
+            PushSubscriptionDto(
+                endpoint = "$endpoint/phone", discordId = discordId,
+                p256dh = "pk", auth = "a", userAgent = "Chrome",
+                createdAt = Instant.now(), lastUsedAt = null,
+            ),
+        )
+        val captured = slot<PushPayload>()
+        every { adapter.deliver(discordId, capture(captured)) } returns Unit
+
+        val resp = withAdapter.sendTestPush(user)
+
+        assertEquals(200, resp.statusCode.value())
+        val body = resp.body!!
+        assertTrue(body.ok)
+        assertTrue(body.adapterPresent)
+        assertEquals(2, body.subscriptionCount)
+        // The 'deliver' call is once at the router boundary; WebPushAdapter
+        // fans out to per-endpoint sends internally.
+        verify(exactly = 1) { adapter.deliver(discordId, any()) }
+        assertEquals("Test notification", captured.captured.title)
+        assertTrue(captured.captured.body.contains("working")) {
+            "expected the test body to read like a smoke-test confirmation, got: ${captured.captured.body}"
+        }
+    }
+
+    @Test
+    fun `sendTestPush returns 500 with the exception message when the adapter throws`() {
+        val adapter = mockk<PushAdapter>()
+        val withAdapter = PushSubscriptionController(
+            subscriptions = subscriptions,
+            vapidPublicKey = "test-public-key",
+            pushAdapter = adapter,
+        )
+        every { subscriptions.listForUser(discordId) } returns listOf(
+            PushSubscriptionDto(
+                endpoint = "$endpoint/laptop", discordId = discordId,
+                p256dh = "pk", auth = "a", userAgent = null,
+                createdAt = Instant.now(), lastUsedAt = null,
+            ),
+        )
+        every { adapter.deliver(any(), any()) } throws RuntimeException("simulated kapow")
+
+        val resp = withAdapter.sendTestPush(user)
+
+        assertEquals(500, resp.statusCode.value())
+        val body = resp.body!!
+        assertFalse(body.ok)
+        assertTrue(body.adapterPresent)
+        assertEquals(1, body.subscriptionCount)
+        assertTrue(body.message.contains("simulated kapow")) {
+            "expected the response to surface the underlying exception, got: ${body.message}"
+        }
     }
 
     // ---------- list ----------

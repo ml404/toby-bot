@@ -2,7 +2,7 @@ package bot.toby.handler
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
-import bot.toby.notify.PushAdapter
+import common.notification.PushAdapter
 import common.events.AchievementUnlockedEvent
 import common.events.BlackjackNaturalEvent
 import common.events.DuelResolvedEvent

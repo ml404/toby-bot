@@ -2,8 +2,8 @@ import app.Application
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
-import bot.toby.notify.PushAdapter
 import bot.toby.notify.WebPushAdapter
+import common.notification.PushAdapter
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import org.junit.jupiter.api.Assertions.assertNotNull

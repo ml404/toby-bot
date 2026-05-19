@@ -1,6 +1,7 @@
 package bot.toby.notify
 
 import common.notification.NotificationChannelKind
+import common.notification.PushAdapter
 import common.notification.PushPayload
 import common.notification.Surface
 import database.service.ConfigService
