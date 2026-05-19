@@ -2,7 +2,7 @@
 
 .keno-header { margin-bottom: var(--space-5); }
 .keno-header h1 { margin: var(--space-2) 0; }
-.keno-header strong { color: #fff; }
+.keno-header strong { color: var(--heading); }
 
 .keno-bet {
     background: var(--surface);
@@ -31,7 +31,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.keno-pickcount strong { color: #fff; }
+.keno-pickcount strong { color: var(--heading); }
 
 .keno-bet input[type="number"] {
     width: 100%;
@@ -39,7 +39,7 @@
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
     max-width: 12rem;
@@ -55,7 +55,7 @@
     color: var(--text-muted);
     margin-top: var(--space-3);
 }
-.keno-balance strong { color: #fff; }
+.keno-balance strong { color: var(--heading); }
 
 /* casino-felt owns the green table; this class only owns layout. */
 .keno-table {
@@ -153,7 +153,7 @@
     font-variant-numeric: tabular-nums;
     color: rgba(255, 255, 255, 0.85);
 }
-.keno-result.keno-result-win { color: #57F287; }
+.keno-result.keno-result-win { color: var(--buy); }
 .keno-result.keno-result-lose { color: #a0a0b0; }
 .keno-result strong { color: inherit; }
 
@@ -182,8 +182,8 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.keno-rules strong { color: #fff; }
-.keno-rules em { color: #fff; font-style: normal; }
+.keno-rules strong { color: var(--heading); }
+.keno-rules em { color: var(--heading); font-style: normal; }
 
 /* Paytable horizontal scroll: 11 columns (Spots + 0..10 hits) often
    overflows on phones — the scroll preserves alignment and prevents

@@ -17,7 +17,7 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #f1c40f 0%, #c89200 100%);
+    background: linear-gradient(135deg, var(--jackpot) 0%, #c89200 100%);
     box-shadow: 0 4px 16px rgba(241, 196, 15, 0.25), inset 0 -4px 8px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
@@ -45,7 +45,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.coinflip-result-win { color: #57F287; }
+.coinflip-result-win { color: var(--buy); }
 .coinflip-result-lose { color: #a0a0b0; }
 
 .coinflip-bet {
@@ -86,7 +86,7 @@
 /* Selected side gets the shared gold halo (--casino-active-glow). */
 .coinflip-side input[type="radio"]:checked + span {
     border-color: var(--casino-gold);
-    color: #fff;
+    color: var(--heading);
     background: var(--casino-active-tile-bg);
     box-shadow: var(--casino-active-glow);
 }
@@ -109,7 +109,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -122,7 +122,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.coinflip-balance strong { color: #fff; }
+.coinflip-balance strong { color: var(--heading); }
 
 .coinflip-rules {
     margin-top: var(--space-5);
@@ -145,7 +145,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.coinflip-rules strong { color: #fff; }
+.coinflip-rules strong { color: var(--heading); }
 
 @media (max-width: 600px) {
     .coinflip-coin { width: 96px; height: 96px; }

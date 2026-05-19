@@ -11,7 +11,7 @@
 .hero-badge {
     display: inline-block;
     background: rgba(88, 101, 242, 0.15);
-    color: #7289fa;
+    color: var(--accent-light);
     border: 1px solid rgba(88, 101, 242, 0.3);
     border-radius: 999px;
     padding: 4px 16px;
@@ -23,7 +23,7 @@
 }
 .hero h1 {
     font-size: clamp(2rem, 5vw, 3.2rem);
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 16px;
     line-height: 1.2;
 }
@@ -45,7 +45,7 @@
 .btn-primary {
     display: inline-block;
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     text-decoration: none;
     padding: 14px 28px;
     border-radius: var(--radius-md);
@@ -53,7 +53,7 @@
     font-weight: 600;
     transition: background 0.2s;
 }
-.btn-primary:hover { background: #4752c4; }
+.btn-primary:hover { background: var(--accent-hover); }
 .btn-secondary {
     display: inline-block;
     background: transparent;
@@ -66,12 +66,12 @@
     font-weight: 600;
     transition: border-color 0.2s, color 0.2s;
 }
-.btn-secondary:hover { border-color: var(--accent); color: #fff; }
+.btn-secondary:hover { border-color: var(--accent); color: var(--heading); }
 .hero-aside {
     font-size: 0.85rem;
     color: var(--text-dim);
 }
-.hero-aside a { color: #7289fa; text-decoration: none; }
+.hero-aside a { color: var(--accent-light); text-decoration: none; }
 .hero-aside a:hover { text-decoration: underline; }
 
 /* LIVE STATS STRIP */
@@ -121,7 +121,7 @@
 /* .section-eyebrow lives in base.css now (used across admin + public). */
 .section h2 {
     font-size: 1.7rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 8px;
     line-height: 1.25;
 }
@@ -152,7 +152,7 @@
 .feature-icon { font-size: 1.8rem; margin-bottom: 12px; }
 .feature-card h3 {
     font-size: 1rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 8px;
 }
 .feature-card p {
@@ -166,7 +166,7 @@
     margin-top: 10px;
     font-size: 0.72rem;
     font-weight: 600;
-    color: #7289fa;
+    color: var(--accent-light);
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
@@ -217,7 +217,7 @@
 }
 .final-cta h2 {
     font-size: 1.6rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 12px;
 }
 .final-cta p {
@@ -241,7 +241,7 @@
     gap: 8px;
 }
 .site-footer-line { margin: 0; }
-.site-footer a { color: #7289fa; text-decoration: none; }
+.site-footer a { color: var(--accent-light); text-decoration: none; }
 .site-footer a:hover { text-decoration: underline; }
 .site-footer-source { font-size: 0.85rem; }
 .site-footer-stack {
@@ -280,11 +280,11 @@
 .changelog-header { margin-bottom: 32px; }
 .changelog-header h1 {
     font-size: 1.8rem;
-    color: #fff;
+    color: var(--heading);
     margin: 8px 0 8px;
 }
 .changelog-header .muted { color: var(--text-muted); line-height: 1.5; }
-.changelog-header a { color: #7289fa; text-decoration: none; }
+.changelog-header a { color: var(--accent-light); text-decoration: none; }
 .changelog-header a:hover { text-decoration: underline; }
 .changelog-timeline {
     list-style: none;
@@ -320,7 +320,7 @@
 .changelog-emoji { font-size: 1.05rem; }
 .changelog-title {
     font-size: 1.05rem;
-    color: #fff;
+    color: var(--heading);
     margin: 0 0 6px;
 }
 .changelog-summary {
@@ -333,7 +333,7 @@
 .changelog-pr {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.78rem;
-    color: #7289fa;
+    color: var(--accent-light);
     text-decoration: none;
 }
 .changelog-pr:hover { text-decoration: underline; }
@@ -356,7 +356,7 @@
     width: 100%;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
-.login-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: #fff; }
+.login-card h1 { font-size: 1.8rem; margin-bottom: 8px; color: var(--heading); }
 .login-card .lede { color: var(--text-muted); margin-bottom: 24px; line-height: 1.55; }
 .login-card ul {
     list-style: none;
@@ -383,13 +383,13 @@
     border-radius: 8px;
     font-size: 1rem;
 }
-.login-card .btn-discord:hover { background: #4752c4; }
+.login-card .btn-discord:hover { background: var(--accent-hover); }
 .login-error {
-    background: #4a1a1a;
-    border: 1px solid #c0392b;
-    color: #e74c3c;
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
+    color: var(--danger);
     padding: 10px 16px;
-    border-radius: 6px;
+    border-radius: var(--radius-sm);
     margin-bottom: 20px;
     font-size: 0.9rem;
 }
@@ -398,7 +398,7 @@
     font-size: 0.82rem;
     color: var(--text-dim);
 }
-.login-aside a { color: #7289fa; text-decoration: none; }
+.login-aside a { color: var(--accent-light); text-decoration: none; }
 .login-aside a:hover { text-decoration: underline; }
 
 /* RESPONSIVE */

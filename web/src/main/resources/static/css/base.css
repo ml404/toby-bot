@@ -7,7 +7,11 @@
     --border-strong: #3a3a5a;
     --accent: #5865F2;
     --accent-hover: #4752c4;
+    --accent-light: #7289fa;
     --accent-soft: rgba(88, 101, 242, 0.12);
+    --on-accent: #fff;
+    --heading: #fff;
+    --heading-soft: #c0c0d0;
     --text: #e0e0e0;
     --text-muted: #a0a0b0;
     --text-dim: #7a7a8a;
@@ -17,6 +21,19 @@
     --success: #2ecc71;
     --success-bg: #1a4a2a;
     --success-border: #27ae60;
+    /* Trade palette — brighter Discord-themed buy/sell distinct from
+       semantic --success/--danger which are used for alerts. */
+    --buy: #57F287;
+    --buy-soft: rgba(87, 242, 135, 0.12);
+    --sell: #ED4245;
+    --sell-soft: rgba(237, 66, 69, 0.12);
+    /* Jackpot / gold accents — slots, wheel, "you won" moments. */
+    --jackpot: #f1c40f;
+    --jackpot-glow: #ffe066;
+    /* Medal palette — leaderboard podium 1st/2nd/3rd. */
+    --medal-gold: #FFD700;
+    --medal-silver: #C0C0C0;
+    --medal-bronze: #CD7F32;
     --radius-sm: 6px;
     --radius-md: 8px;
     --radius-lg: 10px;
@@ -31,6 +48,18 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
     --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.45);
+    /* Gradients & glow — used for hero aurora, feature-card hover, podium. */
+    --gradient-accent: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    --gradient-hero: radial-gradient(80% 60% at 50% 0%, rgba(88,101,242,0.22) 0%, transparent 65%);
+    --glow-accent: 0 0 24px rgba(88, 101, 242, 0.35);
+    --glow-gold: 0 0 18px rgba(255, 215, 0, 0.35);
+    /* Motion primitives — easings + canonical durations. Components
+       compose: transition: opacity var(--dur-base) var(--ease-out). */
+    --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --dur-fast: 120ms;
+    --dur-base: 220ms;
+    --dur-slow: 420ms;
 
     /* Canonical breakpoints. `var()` doesn't resolve inside `@media`
        queries, so these aren't usable in media rules directly — they're
@@ -69,9 +98,9 @@ body {
 .container { max-width: 900px; margin: 40px auto; padding: 0 var(--space-6); }
 .container-wide { max-width: 1100px; margin: 40px auto; padding: 0 var(--space-6); }
 
-h1 { font-size: 1.6rem; color: #fff; }
-h2 { font-size: 1.1rem; color: #c0c0d0; }
-h3 { font-size: 1rem; color: #c0c0d0; }
+h1 { font-size: 1.6rem; color: var(--heading); }
+h2 { font-size: 1.1rem; color: var(--heading-soft); }
+h3 { font-size: 1rem; color: var(--heading-soft); }
 p  { color: var(--text); }
 
 .muted { color: var(--text-muted); }
@@ -113,7 +142,7 @@ a:hover { color: var(--accent-hover); }
     justify-content: center;
     gap: var(--space-2);
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
     border: 1px solid transparent;
     padding: 10px 20px;
     border-radius: var(--radius-md);
@@ -148,7 +177,7 @@ a:hover { color: var(--accent-hover); }
     text-decoration: none;
     font-family: inherit;
 }
-.btn-secondary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: #fff; }
+.btn-secondary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--on-accent); }
 .btn-secondary:active:not(:disabled) { transform: translateY(1px); }
 .btn-secondary:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -181,7 +210,7 @@ a:hover { color: var(--accent-hover); }
     text-decoration: none;
     font-family: inherit;
 }
-.btn-success:hover:not(:disabled) { background: var(--success-border); color: #fff; }
+.btn-success:hover:not(:disabled) { background: var(--success-border); color: var(--on-accent); }
 .btn-success:active:not(:disabled) { transform: translateY(1px); }
 .btn-success:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -202,7 +231,7 @@ a:hover { color: var(--accent-hover); }
     text-decoration: none;
     font-family: inherit;
 }
-.btn-danger:hover:not(:disabled) { background: var(--danger-border); color: #fff; }
+.btn-danger:hover:not(:disabled) { background: var(--danger-border); color: var(--on-accent); }
 .btn-danger:active:not(:disabled) { transform: translateY(1px); }
 .btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
 
@@ -212,7 +241,7 @@ a:hover { color: var(--accent-hover); }
     border-color: transparent;
     padding: 6px 10px;
 }
-.btn-ghost:hover:not(:disabled) { color: #fff; background: var(--accent-soft); }
+.btn-ghost:hover:not(:disabled) { color: var(--on-accent); background: var(--accent-soft); }
 
 .btn-sm { padding: 6px 12px; font-size: 0.85rem; }
 .btn-icon { width: 34px; height: 34px; padding: 0; border-radius: 50%; }
@@ -229,7 +258,7 @@ a:hover { color: var(--accent-hover); }
     margin: auto;
     width: 16px; height: 16px;
     border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #fff;
+    border-top-color: var(--on-accent);
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
 }
@@ -328,7 +357,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
 .segmented button:hover { color: var(--text); }
 .segmented button[aria-pressed="true"] {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-accent);
 }
 
 /* ---- Shared "back to listing" anchor ----
@@ -384,7 +413,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     display: inline-block;
     font-size: 0.72rem;
     font-weight: 600;
-    color: #7289fa;
+    color: var(--accent-light);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-bottom: var(--space-2);
@@ -452,7 +481,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     cursor: pointer;
     margin-left: auto;
 }
-.toast button.toast-action:hover { border-color: var(--accent); color: #fff; }
+.toast button.toast-action:hover { border-color: var(--accent); color: var(--on-accent); }
 .toast button.toast-close {
     background: transparent;
     border: none;
@@ -462,7 +491,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     line-height: 1;
     padding: 0 4px;
 }
-.toast button.toast-close:hover { color: #fff; }
+.toast button.toast-close:hover { color: var(--on-accent); }
 @keyframes toast-in {
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -490,7 +519,7 @@ input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.12); }
     width: 100%;
     box-shadow: var(--shadow-lg);
 }
-.modal h2 { margin-bottom: var(--space-3); color: #fff; }
+.modal h2 { margin-bottom: var(--space-3); color: var(--heading); }
 .modal p  { color: var(--text-muted); margin-bottom: var(--space-5); }
 .modal-actions { display: flex; justify-content: flex-end; gap: var(--space-3); }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -525,6 +554,30 @@ td { font-size: 0.95rem; }
     position: absolute; width: 1px; height: 1px;
     padding: 0; margin: -1px; overflow: hidden;
     clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ---- Reveal-on-scroll primitive ----
+   Elements with [data-reveal] fade + slide up when motion.js marks them
+   visible via IntersectionObserver. Reduced-motion users see the resolved
+   state immediately. CSS is the source of truth — JS only flips the class. */
+[data-reveal] {
+    opacity: 0;
+    transform: translateY(12px);
+    transition:
+        opacity var(--dur-slow) var(--ease-out),
+        transform var(--dur-slow) var(--ease-out);
+    will-change: opacity, transform;
+}
+[data-reveal].is-revealed {
+    opacity: 1;
+    transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
 }
 
 /* ---- Shared responsive grid utilities ----
@@ -635,12 +688,12 @@ td { font-size: 0.95rem; }
     background: linear-gradient(90deg, rgba(241, 196, 15, 0.18), rgba(241, 196, 15, 0.06));
     border: 1px solid rgba(241, 196, 15, 0.55);
     border-radius: 10px;
-    color: #f1c40f;
+    color: var(--jackpot);
     font-size: 0.95rem;
     font-variant-numeric: tabular-nums;
     text-align: center;
 }
-.casino-jackpot-banner strong { color: #ffe066; }
+.casino-jackpot-banner strong { color: var(--jackpot-glow); }
 .casino-jackpot-banner .muted { color: var(--text-muted); font-size: 0.85rem; }
 
 /* Game result lines paint themselves with `<game>-result-jackpot` when a
@@ -653,14 +706,14 @@ td { font-size: 0.95rem; }
 .scratch-result-jackpot,
 .bac-result-jackpot,
 .lottery-result-jackpot {
-    color: #f1c40f;
+    color: var(--jackpot);
     text-shadow: 0 0 8px rgba(241, 196, 15, 0.4);
 }
 
 /* "+N to jackpot" suffix on lose lines — same accent gold as the
    banner so the visual loop reads "loss → pool grows". */
 .casino-loss-tribute {
-    color: #f1c40f;
+    color: var(--jackpot);
     font-size: 0.85rem;
 }
 
@@ -806,7 +859,7 @@ td { font-size: 0.95rem; }
 .jackpot-wheel-result {
     min-height: 1.4em;
     text-align: center;
-    color: #ffe066;
+    color: var(--jackpot-glow);
     font-family: "Cambria", "Georgia", serif;
     font-weight: 700;
     font-size: 1.1rem;
@@ -941,18 +994,18 @@ td { font-size: 0.95rem; }
 .lb-rank-1 {
     background: linear-gradient(135deg, #FFE066, #FFA500);
     color: #1a1a1a;
-    border-color: #FFD700;
-    box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+    border-color: var(--medal-gold);
+    box-shadow: var(--glow-gold);
 }
 .lb-rank-2 {
     background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
     color: #1a1a1a;
-    border-color: #C0C0C0;
+    border-color: var(--medal-silver);
 }
 .lb-rank-3 {
     background: linear-gradient(135deg, #CD7F32, #8B4513);
-    color: #fff;
-    border-color: #CD7F32;
+    color: var(--on-accent);
+    border-color: var(--medal-bronze);
 }
 
 .lb-title-pill {
@@ -971,11 +1024,11 @@ td { font-size: 0.95rem; }
    to surface a coloured numeric pill can reuse the same set without
    re-importing leaderboard.css. -- */
 .lb-value { font-size: 1rem; }
-.lb-value-credits { color: #FFD700; }
-.lb-value-toby { color: #57F287; }
+.lb-value-credits { color: var(--medal-gold); }
+.lb-value-toby { color: var(--buy); }
 .lb-value-portfolio { color: var(--text-muted); font-variant-numeric: tabular-nums; }
-.lb-value-month { color: #2ECC71; font-weight: 600; }
-.lb-value-month-down { color: #ED4245; font-weight: 600; }
+.lb-value-month { color: var(--success); font-weight: 600; }
+.lb-value-month-down { color: var(--sell); font-weight: 600; }
 
 /* ============================================================
    Mobile: tighter standings cards.
@@ -1111,7 +1164,7 @@ td { font-size: 0.95rem; }
 .user-picker__field[aria-expanded="true"] {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .user-picker__chips { display: contents; }
 .user-picker__chip {
@@ -1141,7 +1194,7 @@ td { font-size: 0.95rem; }
     padding: 0 var(--space-1);
     border-radius: var(--radius-sm);
 }
-.user-picker__chip-remove:hover { color: #fff; background: var(--accent); }
+.user-picker__chip-remove:hover { color: var(--on-accent); background: var(--accent); }
 .user-picker__value {
     flex: 1;
     min-width: 0;

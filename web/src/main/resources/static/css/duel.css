@@ -160,13 +160,13 @@
 .duel-figure-avatar.is-fallback {
     font-size: 2.5rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--heading);
 }
 
 .duel-figure-avatar.is-fallback::before { content: attr(data-initial); }
 
 .duel-figure-name {
-    color: #fff;
+    color: var(--heading);
     font-weight: 600;
     text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
 }
@@ -216,7 +216,7 @@
 .duel-credits-pill.flies-right { --duel-pill-x:  180px; }
 
 .duel-result-line {
-    color: #fff;
+    color: var(--heading);
     font-size: 1.1rem;
     font-weight: 600;
     text-align: center;

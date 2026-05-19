@@ -176,7 +176,7 @@
 
 .lottery-result-win,
 .lottery-result-summary.lottery-result-win {
-    color: #57F287;
+    color: var(--buy);
 }
 
 .lottery-result-lose,
@@ -241,7 +241,7 @@
     box-shadow: 0 0 12px rgba(241, 196, 15, 0.25);
 }
 .lottery-top-holders li.lottery-rank-1 .avatar {
-    box-shadow: 0 0 0 2px #f1c40f, 0 0 12px rgba(241, 196, 15, 0.55);
+    box-shadow: 0 0 0 2px var(--jackpot), 0 0 12px rgba(241, 196, 15, 0.55);
 }
 .lottery-top-holders .member-cell {
     flex: 1 1 auto;

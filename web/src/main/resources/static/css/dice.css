@@ -2,7 +2,7 @@
 
 .dice-header { margin-bottom: var(--space-5); }
 .dice-header h1 { margin: var(--space-2) 0; }
-.dice-header strong { color: #fff; }
+.dice-header strong { color: var(--heading); }
 
 /* casino-felt owns the green table look; this class only owns layout. */
 .dice-table {
@@ -48,7 +48,7 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.dice-result-win { color: #57F287; }
+.dice-result-win { color: var(--buy); }
 .dice-result-lose { color: #a0a0b0; }
 
 .dice-bet {
@@ -91,7 +91,7 @@
 /* Selected number gets the shared gold halo (--casino-active-glow). */
 .dice-prediction input[type="radio"]:checked + span {
     border-color: var(--casino-gold);
-    color: #fff;
+    color: var(--heading);
     background: var(--casino-active-tile-bg);
     box-shadow: var(--casino-active-glow);
 }
@@ -113,7 +113,7 @@
     background: #0f1830;
     border: 1px solid var(--border);
     border-radius: 6px;
-    color: #fff;
+    color: var(--heading);
     font-size: 1rem;
     font-variant-numeric: tabular-nums;
 }
@@ -123,7 +123,7 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
-.dice-balance strong { color: #fff; }
+.dice-balance strong { color: var(--heading); }
 
 .dice-rules {
     margin-top: var(--space-5);
@@ -146,7 +146,7 @@
     font-size: 0.95rem;
     line-height: 1.7;
 }
-.dice-rules strong { color: #fff; }
+.dice-rules strong { color: var(--heading); }
 
 @media (max-width: 600px) {
     .dice-die { width: 96px; height: 96px; }

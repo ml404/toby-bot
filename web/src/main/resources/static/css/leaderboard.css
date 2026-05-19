@@ -88,7 +88,7 @@
 }
 .lb-guild-icon-placeholder {
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
     font-weight: 700;
     font-size: 1.1rem;
     display: flex;
@@ -314,7 +314,7 @@
 .lb-sort-option:hover { color: var(--text); }
 .lb-sort-option.active {
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
 }
 .lb-sort-option:focus-visible {
     outline: 2px solid var(--accent);
@@ -443,7 +443,7 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .lb-section-tabs .lb-sort-option.active {
     background: var(--accent);
     border-color: var(--accent);
-    color: #fff;
+    color: var(--heading);
 }
 .lb-section-tabs .lb-sort-option:focus-visible {
     outline: 2px solid var(--accent);
@@ -660,7 +660,7 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .lb-new-pill {
     display: inline-block;
     background: var(--accent);
-    color: #fff;
+    color: var(--heading);
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -763,7 +763,7 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
 .notif-toggle.is-on {
     background: var(--accent);
     border-color: var(--accent);
-    color: #fff;
+    color: var(--heading);
 }
 .notif-toggle.is-on:hover:not(:disabled) {
     background: var(--accent-hover);

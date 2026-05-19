@@ -86,7 +86,7 @@
     padding: 2px 8px;
     border-radius: 999px;
     font-size: 0.75rem;
-    color: #fff;
+    color: var(--heading);
     margin-bottom: 0.25rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
@@ -366,7 +366,7 @@
 .btn-preview:hover { background: rgba(88, 101, 242, 0.2); }
 .btn-preview[aria-pressed="true"] {
     background: var(--accent, #5865f2);
-    color: #fff;
+    color: var(--heading);
 }
 
 /* Playlists */
