@@ -1,9 +1,11 @@
 package bot.toby.leveling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.dto.LevelRoleRewardDto
 import database.dto.TitleDto
 import database.service.LevelRoleRewardService
@@ -58,7 +60,7 @@ class LevelUpListenerTest {
     private fun captureAnnouncementEmbed(): CapturingSlot<() -> MessageCreateData> {
         val builder = slot<() -> MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), capture(builder), any())
+            router.sendChannel(any(), any(), any(), capture(builder), any(), any())
         } just runs
         return builder
     }
@@ -82,6 +84,10 @@ class LevelUpListenerTest {
                 originChannelId = 99L,
                 message = any(),
                 onSent = null,
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(discordId),
+                ),
             )
         }
         val embed = builder.captured.invoke().embeds.single()
@@ -106,6 +112,26 @@ class LevelUpListenerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = null,
+                mentions = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `onLevelUp dispatches a LEVEL_UP DM via the router (gating handled in router)`() {
+        guildOnly()
+        captureAnnouncementEmbed()
+
+        listener.onLevelUp(
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 110L, channelId = 99L)
+        )
+
+        verify(exactly = 1) {
+            router.sendDm(
+                discordId = discordId,
+                guildId = guildId,
+                kind = NotificationChannelKind.LEVEL_UP,
+                message = any(),
             )
         }
     }
@@ -176,7 +202,7 @@ class LevelUpListenerTest {
         )
 
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
-        verify(exactly = 0) { router.sendChannel(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { router.sendChannel(any(), any(), any(), any(), any(), any()) }
     }
 
     @Test
@@ -218,7 +244,7 @@ class LevelUpListenerTest {
         guildOnly()
         val captured = mutableListOf<MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), any(), any())
+            router.sendChannel(any(), any(), any(), any(), any(), any())
         } answers {
             @Suppress("UNCHECKED_CAST")
             val build = arg<() -> MessageCreateData>(3)
@@ -255,7 +281,7 @@ class LevelUpListenerTest {
         guildOnly()
         val captured = mutableListOf<MessageCreateData>()
         every {
-            router.sendChannel(any(), any(), any(), any(), any())
+            router.sendChannel(any(), any(), any(), any(), any(), any())
         } answers {
             @Suppress("UNCHECKED_CAST")
             val build = arg<() -> MessageCreateData>(3)

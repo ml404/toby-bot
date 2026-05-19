@@ -1,10 +1,12 @@
 package bot.toby.leveling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
+import common.notification.NotificationChannelKind
 import database.dto.TitleDto
 import database.service.LevelRoleRewardService
 import database.service.TitleService
@@ -53,21 +55,36 @@ class LevelUpListener @Autowired constructor(
         logger.info {
             "User ${event.discordId} levelled up: ${event.oldLevel} -> ${event.newLevel}"
         }
-        announce(guild, event)
+        val member = runCatching { guild.getMemberById(event.discordId) }.getOrNull()
+        announce(guild, event, member)
+        sendLevelUpDm(event, member)
         assignRoleRewards(guild, event)
         unlockTitles(event)
     }
 
-    private fun announce(guild: Guild, event: LevelUpEvent) {
-        val member = runCatching { guild.getMemberById(event.discordId) }.getOrNull()
+    private fun announce(guild: Guild, event: LevelUpEvent, member: Member?) {
         notificationRouter.sendChannel(
             guildId = guild.idLong,
             route = ChannelRouteKey.LEVEL_UP,
             originChannelId = event.channelId,
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.LEVEL_UP,
+                userIds = listOf(event.discordId),
+            ),
             message = {
                 MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
             },
         )
+    }
+
+    private fun sendLevelUpDm(event: LevelUpEvent, member: Member?) {
+        notificationRouter.sendDm(
+            discordId = event.discordId,
+            guildId = event.guildId,
+            kind = NotificationChannelKind.LEVEL_UP,
+        ) {
+            MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
+        }
     }
 
     private fun buildLevelUpEmbed(event: LevelUpEvent, member: Member?): MessageEmbed {

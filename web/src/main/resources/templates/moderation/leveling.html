@@ -296,12 +296,13 @@
                         <label>
                             Achievement shoutout channel
                             <span class="config-hint">
-                                Optional public channel for achievement unlocks.
-                                Leave blank to keep unlocks DM-only.
+                                Optional public channel for unlock shoutouts. DMs still fire for users
+                                opted in to achievement DMs &mdash; users control DM/push delivery in
+                                their notification preferences. Leave blank to suppress the public shoutout.
                             </span>
                         </label>
                         <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; DM only &mdash;</option>
+                            <option value="">&mdash; no public shoutout &mdash;</option>
                             <option th:each="tc : ${overview.textChannels}"
                                     th:value="${tc.id}"
                                     th:text="'#' + ${tc.name}"
