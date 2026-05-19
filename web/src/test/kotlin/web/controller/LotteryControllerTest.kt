@@ -253,4 +253,206 @@ class LotteryControllerTest {
         assertNull(vm.daily)
         assertNull(vm.weighted)
     }
+
+    // ---- LotteryViewModel.from — Participation incentives panel ------
+
+    private fun weightedSnapshot(
+        myTickets: Int = 0,
+        myBonusTickets: Long = 0L,
+        totalTickets: Long = 0L,
+        milestonesFired: Long = 0L,
+        incentives: web.view.LotteryIncentivesView = web.view.LotteryIncentivesView.empty(),
+    ): LotteryWebService.LotteryPageSnapshot {
+        val weighted = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+            milestonesFired = milestonesFired,
+        )
+        val myTicket = if (myTickets > 0 || myBonusTickets > 0L) {
+            database.dto.JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = discordId,
+                ticketCount = myTickets, spent = myTickets * 100L,
+                bonusTickets = myBonusTickets,
+            )
+        } else null
+        return LotteryWebService.LotteryPageSnapshot(
+            dailyOpen = null,
+            dailyLatestDrawn = null,
+            dailyMyTicket = null,
+            dailyTicketBuyers = 0,
+            weightedOpen = weighted,
+            weightedMyTicket = myTicket,
+            weightedTopHolders = emptyList(),
+            weightedTotalTickets = totalTickets,
+            pickCount = 5,
+            numberMax = 49,
+            tierPercents = listOf(60, 25, 10, 5),
+            revenueJackpotPct = 30L,
+            dailyMode = "WEIGHTED",
+            dailyEnabled = true,
+            weightedIncentives = incentives,
+        )
+    }
+
+    @Test
+    fun `LotteryViewModel hides incentives panel when no tiers are configured`() {
+        // Default empty incentives → no panel rendered. The template
+        // checks `weighted.incentives != null` to decide whether to
+        // emit the section at all.
+        val vm = LotteryViewModel.from(weightedSnapshot())
+        assertNull(vm.weighted!!.incentives)
+    }
+
+    @Test
+    fun `LotteryViewModel surfaces active rules when at least one tier is configured`() {
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = listOf(
+                web.view.BulkBonusTierView(buy = 10L, bonus = 3L),
+                web.view.BulkBonusTierView(buy = 25L, bonus = 8L),
+            ),
+            multiplierTiers = emptyList(),
+            poolMilestones = emptyList(),
+        )
+        val vm = LotteryViewModel.from(weightedSnapshot(incentives = incentives))
+        val panel = vm.weighted!!.incentives
+        assertNotNull(panel)
+        assertEquals(2, panel!!.bulkTiers.size)
+        assertEquals(10L, panel.bulkTiers.first().buy)
+        assertTrue(panel.multiplierTiers.isEmpty())
+        assertTrue(panel.poolMilestones.isEmpty())
+    }
+
+    @Test
+    fun `LotteryViewModel computes nextBulkHint as the gap to the next unmatched tier`() {
+        // Player holds 4 tickets, lowest tier requires 10. Hint
+        // should surface "buy 6 more for +3 free". The +1 tier sits
+        // above 4 so the next-tier rule fires there.
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = listOf(
+                web.view.BulkBonusTierView(buy = 10L, bonus = 3L),
+                web.view.BulkBonusTierView(buy = 25L, bonus = 8L),
+            ),
+            multiplierTiers = emptyList(),
+            poolMilestones = emptyList(),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(myTickets = 4, incentives = incentives)
+        )
+        val hint = vm.weighted!!.incentives!!.nextBulkHint
+        assertNotNull(hint)
+        assertEquals(6L, hint!!.gap)
+        assertEquals(3L, hint.bonus)
+        assertEquals(10L, hint.threshold)
+    }
+
+    @Test
+    fun `LotteryViewModel returns null nextBulkHint when player already holds top tier`() {
+        // Player holds 30 tickets; tier ceiling is 25. No further
+        // "buy N more" hint to dangle — return null.
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = listOf(
+                web.view.BulkBonusTierView(buy = 10L, bonus = 3L),
+                web.view.BulkBonusTierView(buy = 25L, bonus = 8L),
+            ),
+            multiplierTiers = emptyList(),
+            poolMilestones = emptyList(),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(myTickets = 30, incentives = incentives)
+        )
+        assertNull(vm.weighted!!.incentives!!.nextBulkHint)
+    }
+
+    @Test
+    fun `LotteryViewModel formats nextMultiplierHint with a 2-decimal multiplier`() {
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = emptyList(),
+            multiplierTiers = listOf(
+                web.view.MultiplierTierView(total = 15L, bp = 15_000),
+            ),
+            poolMilestones = emptyList(),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(myTickets = 9, incentives = incentives)
+        )
+        val hint = vm.weighted!!.incentives!!.nextMultiplierHint
+        assertNotNull(hint)
+        assertEquals(6L, hint!!.gap)
+        // The hint precomputes the human "1.50×" string so the
+        // template doesn't have to massage bp at render time.
+        assertEquals("1.50×", hint.multiplier)
+    }
+
+    @Test
+    fun `LotteryViewModel reports the next-to-fire milestone with current vs threshold`() {
+        // Guild-wide 42 tickets sold; milestones at 50 and 100, none
+        // fired yet. Progress bar should show the 50 tier with
+        // current=42, threshold=50.
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = emptyList(),
+            multiplierTiers = emptyList(),
+            poolMilestones = listOf(
+                web.view.PoolMilestoneView(tickets = 50L, pct = 10L),
+                web.view.PoolMilestoneView(tickets = 100L, pct = 5L),
+            ),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(totalTickets = 42L, incentives = incentives)
+        )
+        val progress = vm.weighted!!.incentives!!.milestoneProgress
+        assertNotNull(progress)
+        assertEquals(42L, progress!!.currentTickets)
+        assertEquals(50L, progress.thresholdTickets)
+        assertEquals(10L, progress.pct)
+    }
+
+    @Test
+    fun `LotteryViewModel skips already-fired milestones when picking the next one`() {
+        // 50 already fired (recorded on lottery.milestonesFired);
+        // even if current ticket count is still below the 100
+        // threshold, the next-to-fire is 100, not 50.
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = emptyList(),
+            multiplierTiers = emptyList(),
+            poolMilestones = listOf(
+                web.view.PoolMilestoneView(tickets = 50L, pct = 10L),
+                web.view.PoolMilestoneView(tickets = 100L, pct = 5L),
+            ),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(totalTickets = 60L, milestonesFired = 50L, incentives = incentives)
+        )
+        val progress = vm.weighted!!.incentives!!.milestoneProgress
+        assertNotNull(progress)
+        assertEquals(100L, progress!!.thresholdTickets)
+    }
+
+    @Test
+    fun `LotteryViewModel returns null milestoneProgress when no future milestone exists`() {
+        // Both milestones already fired — nothing further to chase.
+        val incentives = web.view.LotteryIncentivesView(
+            bulkTiers = emptyList(),
+            multiplierTiers = emptyList(),
+            poolMilestones = listOf(
+                web.view.PoolMilestoneView(tickets = 50L, pct = 10L),
+                web.view.PoolMilestoneView(tickets = 100L, pct = 5L),
+            ),
+        )
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(totalTickets = 120L, milestonesFired = 100L, incentives = incentives)
+        )
+        assertNull(vm.weighted!!.incentives!!.milestoneProgress)
+    }
+
+    @Test
+    fun `LotteryViewModel exposes the player's bonus tickets on the weighted view`() {
+        // Bonus tickets accumulated from past bulk buys must be
+        // visible to the template so the "X paid + Y bonus" copy can
+        // render. Untouched when the player has no bonus.
+        val vm = LotteryViewModel.from(
+            weightedSnapshot(myTickets = 10, myBonusTickets = 3L)
+        )
+        assertEquals(3L, vm.weighted!!.myBonusTickets)
+    }
 }

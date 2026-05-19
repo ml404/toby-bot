@@ -303,6 +303,65 @@
     border-bottom-width: 2px;
 }
 
+/* Participation incentives panel — appears on the WEIGHTED lottery
+ * section (and the Featured event card) when at least one tier is
+ * configured. Three sub-blocks, one per lever, each with the active
+ * rules + an optional personalised hint. Visually separated from the
+ * top-holders list above with the same elevated-card treatment as
+ * other lottery surfaces. */
+.lottery-incentives {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+.lottery-incentives > h3 {
+    margin: 0 0 var(--space-3);
+    font-size: 1rem;
+    color: var(--text);
+}
+.lottery-incentive-block {
+    padding: var(--space-3) 0;
+    border-top: 1px solid var(--border);
+}
+.lottery-incentive-block:first-of-type { border-top: 0; padding-top: 0; }
+.lottery-incentive-block > h4 {
+    margin: 0 0 var(--space-2);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.lottery-incentive-rules {
+    margin: 0 0 var(--space-2);
+    padding-left: var(--space-4);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+.lottery-incentive-rules > li { margin-bottom: 2px; }
+.lottery-incentive-hint {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 0.9rem;
+}
+.lottery-incentive-progress { margin-top: var(--space-2); }
+.lottery-incentive-progress label {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+.lottery-incentive-progress progress {
+    width: 100%;
+    height: 12px;
+    accent-color: var(--accent);
+}
+
 @media (max-width: 480px) {
     .lottery-cells { grid-template-columns: repeat(7, minmax(0, 1fr)); }
     .lottery-cell { min-width: 30px; font-size: 0.9rem; }

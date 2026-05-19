@@ -215,6 +215,78 @@
             </div>
         </form>
 
+        <!-- Participation incentives — same source of truth as the
+             admin "Active rules" line. Only renders when at least one
+             tier is configured for this guild; empty config = no panel
+             (instead of an empty-card placeholder).
+             - Active rules:  the static "buy ≥N → +M free" lines.
+             - Next bonus:    personalised "buy gap more for +M free"
+                              hint per lever; hidden when the viewer
+                              already holds the top tier.
+             - Milestone bar: live "current / threshold tickets sold"
+                              progress for the next-to-fire milestone. -->
+        <section class="lottery-incentives"
+                 th:if="${snapshot.weighted != null and snapshot.weighted.incentives != null}"
+                 th:with="inc=${snapshot.weighted.incentives}"
+                 aria-label="Participation incentives">
+            <h3>Participation incentives</h3>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="bulk"
+                 th:if="${!#lists.isEmpty(inc.bulkTiers)}">
+                <h4>🎁 Bulk bonus tickets</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.bulkTiers}"
+                        th:text="|buy at least ${t.buy} in one purchase → +${t.bonus} free tickets|">
+                        buy at least 10 in one purchase → +3 free tickets
+                    </li>
+                </ul>
+                <p class="lottery-incentive-hint"
+                   th:if="${inc.nextBulkHint != null}"
+                   th:text="|Buy ${inc.nextBulkHint.gap} more in one purchase to earn +${inc.nextBulkHint.bonus} free tickets.|">
+                    Buy 6 more in one purchase to earn +3 free tickets.
+                </p>
+            </div>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="multiplier"
+                 th:if="${!#lists.isEmpty(inc.multiplierTiers)}">
+                <h4>📈 Volume weight multiplier</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.multiplierTiers}"
+                        th:text="|hold at least ${t.total} tickets → ${#numbers.formatDecimal(t.bp / 10000.0, 1, 2)}× draw weight|">
+                        hold at least 15 tickets → 1.50× draw weight
+                    </li>
+                </ul>
+                <p class="lottery-incentive-hint"
+                   th:if="${inc.nextMultiplierHint != null}"
+                   th:text="|Hold ${inc.nextMultiplierHint.gap} more to reach ${inc.nextMultiplierHint.multiplier} draw weight.|">
+                    Hold 6 more to reach 1.50× draw weight.
+                </p>
+            </div>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="milestone"
+                 th:if="${!#lists.isEmpty(inc.poolMilestones)}">
+                <h4>🚀 Pool-growth milestones</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.poolMilestones}"
+                        th:text="|${t.tickets} tickets sold guild-wide → +${t.pct}% of jackpot top-up|">
+                        50 tickets sold guild-wide → +10% of jackpot top-up
+                    </li>
+                </ul>
+                <div class="lottery-incentive-progress"
+                     th:if="${inc.milestoneProgress != null}">
+                    <label th:text="|Next milestone: ${inc.milestoneProgress.currentTickets} / ${inc.milestoneProgress.thresholdTickets} tickets sold → +${inc.milestoneProgress.pct}% jackpot top-up|">
+                        Next milestone: 42 / 50 tickets sold → +10% jackpot top-up
+                    </label>
+                    <progress th:value="${inc.milestoneProgress.currentTickets}"
+                              th:max="${inc.milestoneProgress.thresholdTickets}">
+                    </progress>
+                </div>
+            </div>
+        </section>
+
         <div class="lottery-weighted-holders"
              th:if="${snapshot.weighted != null and !#lists.isEmpty(snapshot.weighted.topHolders)}">
             <h3>Top holders</h3>
@@ -279,6 +351,60 @@
                 Buy <span class="muted">(at <strong th:text="${snapshot.weighted.ticketPrice}">100</strong>/ticket)</span>
             </button>
         </form>
+
+        <!-- Same incentives panel as the WEIGHTED-daily section
+             above, since featured admin-fired lotteries reuse the same
+             tiers and `snapshot.weighted.incentives` projection. -->
+        <section class="lottery-incentives"
+                 th:if="${snapshot.weighted.incentives != null}"
+                 th:with="inc=${snapshot.weighted.incentives}"
+                 aria-label="Participation incentives">
+            <h3>Participation incentives</h3>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="bulk"
+                 th:if="${!#lists.isEmpty(inc.bulkTiers)}">
+                <h4>🎁 Bulk bonus tickets</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.bulkTiers}"
+                        th:text="|buy at least ${t.buy} in one purchase → +${t.bonus} free tickets|"></li>
+                </ul>
+                <p class="lottery-incentive-hint"
+                   th:if="${inc.nextBulkHint != null}"
+                   th:text="|Buy ${inc.nextBulkHint.gap} more in one purchase to earn +${inc.nextBulkHint.bonus} free tickets.|"></p>
+            </div>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="multiplier"
+                 th:if="${!#lists.isEmpty(inc.multiplierTiers)}">
+                <h4>📈 Volume weight multiplier</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.multiplierTiers}"
+                        th:text="|hold at least ${t.total} tickets → ${#numbers.formatDecimal(t.bp / 10000.0, 1, 2)}× draw weight|"></li>
+                </ul>
+                <p class="lottery-incentive-hint"
+                   th:if="${inc.nextMultiplierHint != null}"
+                   th:text="|Hold ${inc.nextMultiplierHint.gap} more to reach ${inc.nextMultiplierHint.multiplier} draw weight.|"></p>
+            </div>
+
+            <div class="lottery-incentive-block"
+                 data-incentive="milestone"
+                 th:if="${!#lists.isEmpty(inc.poolMilestones)}">
+                <h4>🚀 Pool-growth milestones</h4>
+                <ul class="lottery-incentive-rules">
+                    <li th:each="t : ${inc.poolMilestones}"
+                        th:text="|${t.tickets} tickets sold guild-wide → +${t.pct}% of jackpot top-up|"></li>
+                </ul>
+                <div class="lottery-incentive-progress"
+                     th:if="${inc.milestoneProgress != null}">
+                    <label th:text="|Next milestone: ${inc.milestoneProgress.currentTickets} / ${inc.milestoneProgress.thresholdTickets} tickets sold → +${inc.milestoneProgress.pct}% jackpot top-up|"></label>
+                    <progress th:value="${inc.milestoneProgress.currentTickets}"
+                              th:max="${inc.milestoneProgress.thresholdTickets}">
+                    </progress>
+                </div>
+            </div>
+        </section>
+
         <div class="lottery-weighted-holders" th:if="${!#lists.isEmpty(snapshot.weighted.topHolders)}">
             <h3>Top holders</h3>
             <ol class="lottery-top-holders">
