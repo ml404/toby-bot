@@ -97,6 +97,43 @@ class DefaultAchievementService(
         return finalizeUnlock(discordId, guildId, achievement, achievementId, achievement.threshold, channelId)
     }
 
+    override fun setProgress(
+        discordId: Long,
+        guildId: Long,
+        code: String,
+        value: Long,
+        channelId: Long?
+    ): ProgressResult {
+        val achievement = persistence.getByCode(code)
+            ?: return ProgressResult(null, 0L, unlocked = false, alreadyUnlocked = false)
+        val achievementId = achievement.id
+            ?: return ProgressResult(achievement, 0L, unlocked = false, alreadyUnlocked = false)
+
+        if (persistence.owns(discordId, guildId, achievementId)) {
+            return ProgressResult(achievement, achievement.threshold, unlocked = false, alreadyUnlocked = true)
+        }
+
+        val newProgress = value.coerceIn(0L, achievement.threshold)
+        val existing = persistence.getProgress(discordId, guildId, achievementId)
+        if (existing?.progress != newProgress) {
+            persistence.upsertProgress(
+                AchievementProgressDto(
+                    discordId = discordId,
+                    guildId = guildId,
+                    achievementId = achievementId,
+                    progress = newProgress,
+                    updatedAt = Instant.now()
+                )
+            )
+        }
+
+        if (newProgress < achievement.threshold) {
+            return ProgressResult(achievement, newProgress, unlocked = false, alreadyUnlocked = false)
+        }
+
+        return finalizeUnlock(discordId, guildId, achievement, achievementId, newProgress, channelId)
+    }
+
     override fun listFor(discordId: Long, guildId: Long): List<AchievementView> {
         val owned = persistence.listOwnedByUser(discordId, guildId).associateBy { it.achievementId }
         val progressByAchievement = persistence.listProgressByUser(discordId, guildId).associateBy { it.achievementId }

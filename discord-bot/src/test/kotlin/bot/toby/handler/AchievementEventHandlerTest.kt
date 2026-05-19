@@ -60,46 +60,84 @@ class AchievementEventHandlerTest {
     }
 
     @Test
-    fun `streak claim unlocks every milestone the current streak crosses`() {
-        // currentStreak=7 → streak_first, streak_3, streak_7 (not streak_30).
+    fun `streak claim calls setProgress for every milestone with currentStreak as the value`() {
         handler.onStreakClaimed(
             StreakClaimedEvent(discordId, guildId, currentStreak = 7, longestStreak = 7, channelId = 99L)
         )
         verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_first", 99L) }
-        verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_3", 99L) }
-        verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_7", 99L) }
-        verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_30", 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_3", 7L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_7", 7L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_30", 7L, 99L) }
+        // Old wiring used unlock() for milestones — guard against regression.
+        verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_3", any()) }
+        verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_7", any()) }
+        verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_30", any()) }
     }
 
     @Test
-    fun `30-day streak unlocks every streak milestone`() {
+    fun `30-day streak claim still ratchets all milestones via setProgress`() {
         handler.onStreakClaimed(
             StreakClaimedEvent(discordId, guildId, currentStreak = 30, longestStreak = 30, channelId = null)
         )
-        listOf("streak_first", "streak_3", "streak_7", "streak_30").forEach { code ->
-            verify(exactly = 1) { achievementService.unlock(discordId, guildId, code, null) }
+        verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_first", null) }
+        listOf(3, 7, 30).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "streak_$milestone", 30L, null)
+            }
         }
+    }
+
+    @Test
+    fun `streak claim propagates a decreased streak to setProgress (streak-broke case)`() {
+        // User had a 14-day streak, broke it, now reclaiming at day 1.
+        // The locked /achievements display should show 1/3, 1/7, 1/30 —
+        // not the high-water mark. setProgress accepts decreases.
+        handler.onStreakClaimed(
+            StreakClaimedEvent(discordId, guildId, currentStreak = 1, longestStreak = 14, channelId = 99L)
+        )
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_3", 1L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_7", 1L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_30", 1L, 99L) }
     }
 
     // ---- level ----
 
     @Test
-    fun `level-up unlocks only milestones crossed in this jump`() {
-        // 4 → 26 crosses 5 and 25, not 50.
+    fun `level-up calls setProgress for every level milestone with newLevel as the value`() {
         handler.onLevelUp(
             LevelUpEvent(discordId, guildId, oldLevel = 4, newLevel = 26, totalXp = 0L, channelId = 99L)
         )
-        verify(exactly = 1) { achievementService.unlock(discordId, guildId, "level_5", 99L) }
-        verify(exactly = 1) { achievementService.unlock(discordId, guildId, "level_25", 99L) }
-        verify(exactly = 0) { achievementService.unlock(discordId, guildId, "level_50", any()) }
+        // Unconditional — the service short-circuits already-owned milestones.
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_5", 26L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_25", 26L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_50", 26L, 99L) }
+        // Old wiring used unlock() — guard against regression.
+        verify(exactly = 0) { achievementService.unlock(any(), any(), match { it.startsWith("level_") }, any()) }
     }
 
     @Test
-    fun `level-up that doesn't cross any milestone unlocks nothing`() {
+    fun `level-up forwards channelId on every setProgress call`() {
+        handler.onLevelUp(
+            LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 0L, channelId = 12345L)
+        )
+        listOf(5, 25, 50).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "level_$milestone", 1L, 12345L)
+            }
+        }
+    }
+
+    @Test
+    fun `level-up still ratchets progress on tiny single-level jumps`() {
+        // Previously this test asserted no unlock calls. New semantics:
+        // every level-up tells the service the absolute level — the
+        // service decides whether to write/unlock.
         handler.onLevelUp(
             LevelUpEvent(discordId, guildId, oldLevel = 6, newLevel = 7, totalXp = 0L, channelId = 99L)
         )
-        verify(exactly = 0) { achievementService.unlock(any(), any(), match { it.startsWith("level_") }, any()) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_5", 7L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_25", 7L, 99L) }
+        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_50", 7L, 99L) }
     }
 
     // ---- tip / duel / lottery / intro / blackjack ----

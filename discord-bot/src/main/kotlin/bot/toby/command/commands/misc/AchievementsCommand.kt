@@ -46,54 +46,126 @@ class AchievementsCommand @Autowired constructor(
     }
 
     private fun buildEmbed(displayName: String, views: List<AchievementView>): MessageEmbed {
-        val unlocked = views.filter { it.unlockedAt != null }
-        val locked = views.filter { it.unlockedAt == null }
+        val builder = EmbedBuilder()
+            .setTitle("$displayName — Achievements")
+            .setColor(Color(0xFFC857))
 
-        val body = buildString {
-            if (views.isEmpty()) {
-                append("No achievements have been seeded yet — check back soon.")
-                return@buildString
-            }
-            append("**${unlocked.size}** / **${views.size}** unlocked\n\n")
-
-            if (unlocked.isNotEmpty()) {
-                append("__Unlocked__\n")
-                unlocked.take(MAX_LINES_PER_SECTION).forEach { v ->
-                    val icon = v.achievement.icon ?: "🏅"
-                    append("$icon **").append(v.achievement.name).append("** — ")
-                    append(v.achievement.description).append('\n')
-                }
-                if (unlocked.size > MAX_LINES_PER_SECTION) {
-                    append("…and ").append(unlocked.size - MAX_LINES_PER_SECTION).append(" more\n")
-                }
-                append('\n')
-            }
-            if (locked.isNotEmpty()) {
-                append("__In progress / locked__\n")
-                locked.take(MAX_LINES_PER_SECTION).forEach { v ->
-                    val icon = v.achievement.icon ?: "🔒"
-                    append("$icon **").append(v.achievement.name).append("** — ")
-                    append(v.achievement.description)
-                    if (v.achievement.threshold > 1) {
-                        append("  (").append(v.progress).append('/').append(v.achievement.threshold).append(')')
-                    }
-                    append('\n')
-                }
-                if (locked.size > MAX_LINES_PER_SECTION) {
-                    append("…and ").append(locked.size - MAX_LINES_PER_SECTION).append(" more\n")
-                }
-            }
+        if (views.isEmpty()) {
+            builder.setDescription("No achievements have been seeded yet — check back soon.")
+            return builder.build()
         }
 
-        return EmbedBuilder()
-            .setTitle("$displayName — Achievements")
-            .setDescription(body)
-            .setColor(Color(0xFFC857))
-            .build()
+        val unlocked = views.filter { it.unlockedAt != null }
+        val totalXp = unlocked.sumOf { it.achievement.xpReward.toLong() }
+        builder.setDescription(
+            "**${unlocked.size}** / **${views.size}** unlocked  ·  **$totalXp XP** earned"
+        )
+
+        val byCategory = views.groupBy { it.achievement.category }
+        CATEGORY_ORDER.forEach { category ->
+            val entries = byCategory[category] ?: return@forEach
+            builder.addField(renderCategoryField(category, entries))
+        }
+        // Any catalog category not in CATEGORY_ORDER (future-proofing).
+        byCategory.keys
+            .filter { it !in CATEGORY_ORDER }
+            .sorted()
+            .forEach { category ->
+                builder.addField(renderCategoryField(category, byCategory.getValue(category)))
+            }
+
+        return builder.build()
+    }
+
+    private fun renderCategoryField(category: String, entries: List<AchievementView>): MessageEmbed.Field {
+        val unlockedCount = entries.count { it.unlockedAt != null }
+        val title = "${categoryDisplay(category)}  ($unlockedCount/${entries.size})"
+
+        val sorted = entries.sortedWith(
+            compareBy<AchievementView> { it.unlockedAt == null }
+                .thenByDescending { it.unlockedAt?.epochSecond ?: 0L }
+                .thenByDescending { it.progress }
+        )
+
+        val lines = sorted.map { renderLine(it) }
+        val body = joinWithLimit(lines, FIELD_VALUE_LIMIT)
+        return MessageEmbed.Field(title, body, false)
+    }
+
+    private fun renderLine(view: AchievementView): String {
+        val a = view.achievement
+        val icon = a.icon ?: if (view.unlockedAt != null) "🏅" else "🔒"
+        val rewardSuffix = rewardSuffix(a.xpReward, a.creditReward)
+
+        return if (view.unlockedAt != null) {
+            val ts = "<t:${view.unlockedAt!!.epochSecond}:R>"
+            buildString {
+                append("✅ ").append(icon).append(" **").append(a.name).append("** — ").append(a.description)
+                append("  ·  *").append(ts).append('*')
+                if (rewardSuffix.isNotEmpty()) append("  ·  ").append(rewardSuffix)
+            }
+        } else {
+            buildString {
+                append("🔒 ").append(icon).append(" **").append(a.name).append("** — ").append(a.description)
+                if (a.threshold > 1) {
+                    append("  `[").append(progressBar(view.progress, a.threshold)).append("]` ")
+                    append(view.progress).append('/').append(a.threshold)
+                }
+                if (rewardSuffix.isNotEmpty()) append("  ·  ").append(rewardSuffix)
+            }
+        }
+    }
+
+    private fun rewardSuffix(xpReward: Int, creditReward: Long): String {
+        val parts = mutableListOf<String>()
+        if (xpReward > 0) parts.add("+$xpReward XP")
+        if (creditReward > 0L) parts.add("+${creditReward}¢")
+        return parts.joinToString(" ")
+    }
+
+    private fun progressBar(progress: Long, threshold: Long): String {
+        if (threshold <= 0L) return "░".repeat(BAR_WIDTH)
+        val ratio = (progress.toDouble() / threshold).coerceIn(0.0, 1.0)
+        val filled = (ratio * BAR_WIDTH).toInt().coerceIn(0, BAR_WIDTH)
+        return "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled)
+    }
+
+    private fun categoryDisplay(category: String): String =
+        CATEGORY_DISPLAY[category] ?: category.replaceFirstChar { it.uppercase() }
+
+    private fun joinWithLimit(lines: List<String>, limit: Int): String {
+        val sb = StringBuilder()
+        var dropped = 0
+        for ((index, line) in lines.withIndex()) {
+            val candidate = if (sb.isEmpty()) line else "\n$line"
+            val remaining = lines.size - index
+            // Reserve space for a trailing "…and N more" if we'd overflow.
+            val reserved = if (remaining > 1) TRUNCATE_RESERVE else 0
+            if (sb.length + candidate.length + reserved > limit) {
+                dropped = lines.size - index
+                break
+            }
+            sb.append(candidate)
+        }
+        if (dropped > 0) sb.append("\n…and ").append(dropped).append(" more")
+        return sb.toString()
     }
 
     companion object {
         private const val OPT_USER = "user"
-        private const val MAX_LINES_PER_SECTION = 15
+        private const val BAR_WIDTH = 10
+        private const val FIELD_VALUE_LIMIT = 1024
+        private const val TRUNCATE_RESERVE = 24
+
+        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice")
+
+        private val CATEGORY_DISPLAY = mapOf(
+            "streak" to "🔥 Streaks",
+            "level" to "🎖️ Levels",
+            "casino" to "🎰 Casino",
+            "social" to "🤝 Social",
+            "music" to "🎵 Music",
+            "voice" to "🎙️ Voice"
+        )
     }
 }

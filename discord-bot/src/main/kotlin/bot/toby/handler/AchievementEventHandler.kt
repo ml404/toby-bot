@@ -49,36 +49,31 @@ class AchievementEventHandler(
             channelId = event.channelId
         )
 
-        // Counter-style streak milestones. We pass the current streak
-        // as the *absolute* value via a delta-from-current calculation
-        // would be racy across multiple guilds with shared streaks —
-        // here each is per-guild, so we just call unlock once the
-        // threshold is reached. The catalog's threshold matches the
-        // streak count, so we use `unlock` directly when the streak
-        // crosses a known milestone.
+        // Milestone streaks ratchet by absolute value so the locked
+        // /achievements display reflects the user's current streak,
+        // not zero. setProgress is idempotent post-unlock and accepts
+        // decreases (streak-broke).
         STREAK_MILESTONES.forEach { milestone ->
-            if (event.currentStreak >= milestone) {
-                achievementService.unlock(
-                    discordId = event.discordId,
-                    guildId = event.guildId,
-                    code = "streak_$milestone",
-                    channelId = event.channelId
-                )
-            }
+            achievementService.setProgress(
+                discordId = event.discordId,
+                guildId = event.guildId,
+                code = "streak_$milestone",
+                value = event.currentStreak.toLong(),
+                channelId = event.channelId
+            )
         }
     }
 
     @EventListener
     fun onLevelUp(event: LevelUpEvent) {
         LEVEL_MILESTONES.forEach { milestone ->
-            if (event.newLevel >= milestone && event.oldLevel < milestone) {
-                achievementService.unlock(
-                    discordId = event.discordId,
-                    guildId = event.guildId,
-                    code = "level_$milestone",
-                    channelId = event.channelId
-                )
-            }
+            achievementService.setProgress(
+                discordId = event.discordId,
+                guildId = event.guildId,
+                code = "level_$milestone",
+                value = event.newLevel.toLong(),
+                channelId = event.channelId
+            )
         }
     }
 
