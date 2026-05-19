@@ -22,6 +22,10 @@
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <link rel="stylesheet" th:href="@{/css/nav.css}">
     <link rel="stylesheet" th:if="${extraCss != null}" th:href="@{${extraCss}}">
+    <!-- Shared motion primitives (count-up + reveal-on-scroll). `defer`
+         so it runs after parse but blocks no rendering; reduced-motion is
+         respected internally. -->
+    <script th:src="@{/js/motion.js}" defer></script>
 </head>
 <head th:fragment="headSeo(pageTitle, pageDescription, ogImage, extraCss)">
     <meta charset="UTF-8">
@@ -45,5 +49,9 @@
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <link rel="stylesheet" th:href="@{/css/nav.css}">
     <link rel="stylesheet" th:if="${extraCss != null}" th:href="@{${extraCss}}">
+    <!-- Shared motion primitives (count-up + reveal-on-scroll). `defer`
+         so it runs after parse but blocks no rendering; reduced-motion is
+         respected internally. -->
+    <script th:src="@{/js/motion.js}" defer></script>
 </head>
 </html>
