@@ -55,14 +55,14 @@
         <div class="nav-identity" th:if="${username != null}">
             <div class="nav-identity-name" th:text="${username}">User</div>
             <a th:if="${currentDefaultGuildName != null}"
-               href="/preferences"
+               th:href="@{/preferences(pick=true)}"
                class="nav-default-guild"
                th:title="'Default server: ' + ${currentDefaultGuildName} + ' — click to change'">
                 <span aria-hidden="true">&#9733;</span>
                 <span th:text="${currentDefaultGuildName}">Server</span>
             </a>
             <a th:unless="${currentDefaultGuildName != null}"
-               href="/preferences"
+               th:href="@{/preferences(pick=true)}"
                class="nav-default-guild nav-default-guild-empty"
                title="Set a default server to skip the guild picker">
                 <span aria-hidden="true">&#9734;</span>

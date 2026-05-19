@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import web.service.IntroWebService
 import web.util.DefaultGuildCookie
+import web.util.DefaultGuildRedirect
 import web.util.displayName
 
 /**
@@ -40,12 +41,19 @@ class PreferencesController(
     fun page(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User?,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
         request: HttpServletRequest,
         model: Model,
     ): String {
         val guilds = if (user == null) emptyList()
             else introWebService.getMutualGuilds(client.accessToken.tokenValue)
         val defaultGuildId = DefaultGuildCookie.read(request)
+
+        DefaultGuildRedirect.pick(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        )?.let { return "redirect:/preferences/notifications/$it" }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("defaultGuildId", defaultGuildId)
