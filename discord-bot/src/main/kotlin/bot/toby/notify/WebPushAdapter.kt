@@ -6,7 +6,6 @@ import common.notification.PushPayload
 import database.service.PushSubscriptionService
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
-import nl.martijndwars.webpush.Subscription
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.context.annotation.Bean
@@ -126,10 +125,11 @@ class DefaultPushTransport(private val vapid: VapidProperties) : PushTransport {
     }
 
     override fun send(endpoint: String, p256dh: String, auth: String, body: ByteArray): Int {
-        val notification = Notification(
-            Subscription(endpoint, Subscription.Keys(p256dh, auth)),
-            body,
-        )
+        // (endpoint, publicKey-base64url, authKey-base64url, payload-bytes) —
+        // the four-arg form parses the keys into an EC public key and auth
+        // secret internally. The Subscription-typed constructors take a
+        // String payload only.
+        val notification = Notification(endpoint, p256dh, auth, body)
         val response = pushService.send(notification)
         return response.statusLine.statusCode
     }
