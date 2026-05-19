@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Web buy/sell watches on the /economy market page",
+    "summary": "Surfaces the Discord `/pricealert` feature (#512) on the web dashboard. A watch created from `/economy/{guildId}` writes to the same `user_price_trigger` table the scheduler scans on each market tick, so the firing path is unchanged and either surface can manage the other's rows.",
+    "emoji": "💰",
+    "prNumber": 514
+  },
+  {
+    "date": "May 2026",
     "title": "/pricealert auto-trade triggers with PRICE_ALERT receipt DM",
     "summary": "Wires up the `PRICE_ALERT` notification kind, which previously had infrastructure (channel kind, router DM/PUSH surfaces) but no trigger source. Adds `/pricealert add|list|remove`. A trigger captures the **current market price** and a **target threshold** plus the user's chosen side (BUY/SELL) and amount. On every 5-min tick, `TobyCoinPriceTickJob` scans enabled triggers and fires any whose target was reached **from the side the price was on at creation** — so \"buy at 100…",
     "emoji": "💰",
