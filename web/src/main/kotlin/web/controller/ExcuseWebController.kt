@@ -12,8 +12,8 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.ExcuseWebService
+import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
-import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.discordIdString
@@ -40,11 +40,11 @@ class ExcuseWebController(
         val guilds = excuseWebService.getMutualGuilds(client.accessToken.tokenValue)
 
         val defaultGuildId = DefaultGuildCookie.read(request)
-        DefaultGuildRedirect.pick(
+        GuildPickerSupport.resolveRedirect(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        )?.let { return "redirect:/excuses/$it" }
+        ) { "/excuses/$it" }?.let { return it }
 
         val counts = excuseWebService.getApprovedCountsForGuilds(guilds.map { it.id.toLong() })
             .mapKeys { it.key.toString() }

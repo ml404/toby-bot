@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.LeaderboardSort
 import web.service.LeaderboardWebService
+import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
-import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -40,11 +40,11 @@ class LeaderboardController(
         } else emptyList()
 
         val defaultGuildId = DefaultGuildCookie.read(request)
-        DefaultGuildRedirect.pick(
+        GuildPickerSupport.resolveRedirect(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        )?.let { return "redirect:/leaderboard/$it" }
+        ) { "/leaderboard/$it" }?.let { return it }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())

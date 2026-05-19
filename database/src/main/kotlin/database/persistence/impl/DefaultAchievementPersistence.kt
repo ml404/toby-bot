@@ -33,17 +33,8 @@ class DefaultAchievementPersistence : AchievementPersistence {
     override fun getById(id: Long): AchievementDto? =
         entityManager.find(AchievementDto::class.java, id)
 
-    override fun save(achievement: AchievementDto): AchievementDto {
-        return if (achievement.id == null) {
-            entityManager.persist(achievement)
-            entityManager.flush()
-            achievement
-        } else {
-            val merged = entityManager.merge(achievement)
-            entityManager.flush()
-            merged
-        }
-    }
+    override fun save(achievement: AchievementDto): AchievementDto =
+        entityManager.saveOrMerge(achievement, isNew = { it.id == null })
 
     override fun listOwnedByUser(discordId: Long, guildId: Long): List<UserAchievementDto> {
         val q: TypedQuery<UserAchievementDto> =
@@ -90,17 +81,13 @@ class DefaultAchievementPersistence : AchievementPersistence {
     }
 
     override fun upsertProgress(row: AchievementProgressDto): AchievementProgressDto {
+        // Find by composite (discordId, guildId, achievementId); merge mutates the
+        // existing row in place to preserve its surrogate id, otherwise insert new.
         val existing = getProgress(row.discordId, row.guildId, row.achievementId)
-        return if (existing == null) {
-            entityManager.persist(row)
-            entityManager.flush()
-            row
-        } else {
-            existing.progress = row.progress
-            existing.updatedAt = row.updatedAt
-            entityManager.merge(existing)
-            entityManager.flush()
-            existing
-        }
+        val target = existing?.apply {
+            progress = row.progress
+            updatedAt = row.updatedAt
+        } ?: row
+        return entityManager.saveOrMerge(target, isNew = { existing == null })
     }
 }

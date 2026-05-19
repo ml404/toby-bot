@@ -21,8 +21,8 @@ import database.service.EconomyTradeService.TradeOutcome
 import database.service.SocialCreditAwardService
 import web.service.PricePoint
 import web.service.TradeMarker
+import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
-import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -53,11 +53,11 @@ class EconomyController(
         } else emptyList()
 
         val defaultGuildId = DefaultGuildCookie.read(request)
-        DefaultGuildRedirect.pick(
+        GuildPickerSupport.resolveRedirect(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        )?.let { return "redirect:/economy/$it" }
+        ) { "/economy/$it" }?.let { return it }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())

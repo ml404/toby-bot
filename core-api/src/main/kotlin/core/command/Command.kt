@@ -1,6 +1,7 @@
 package core.command
 
 import core.log.Loggable
+import core.managers.Named
 import database.dto.UserDto
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -13,9 +14,9 @@ import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import java.util.concurrent.TimeUnit
 import java.util.function.Consumer
 
-interface Command : Loggable {
+interface Command : Loggable, Named {
     fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int)
-    val name: String
+    override val name: String
     val description: String
 
     fun getErrorMessage(serverOwner: String?): String {
@@ -62,21 +63,34 @@ interface Command : Loggable {
          * embed / ephemeral embed. Callers using `sendMessageFormat`
          * pre-format with a Kotlin string template at the call site —
          * the helpers take `String` only.
+         *
+         * All four shapes route through [sendAndDelete] so the queue +
+         * deletion side lives in one place; only the JDA action factory
+         * differs per shape. `setEphemeral` is only called when
+         * `ephemeral=true` so non-ephemeral variants don't unnecessarily
+         * touch the action (matches the pre-refactor behaviour callers
+         * and JDA test mocks expect).
          */
-        fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) {
-            sendMessage(message).queue(invokeDeleteOnMessageResponse(deleteDelay))
+        private inline fun InteractionHook.sendAndDelete(
+            ephemeral: Boolean,
+            deleteDelay: Int,
+            action: InteractionHook.() -> net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction<net.dv8tion.jda.api.entities.Message>
+        ) {
+            val req = action()
+            val finalReq = if (ephemeral) req.setEphemeral(true) else req
+            finalReq.queue(invokeDeleteOnMessageResponse(deleteDelay))
         }
 
-        fun InteractionHook.replyEphemeralAndDelete(message: String, deleteDelay: Int) {
-            sendMessage(message).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-        }
+        fun InteractionHook.replyAndDelete(message: String, deleteDelay: Int) =
+            sendAndDelete(ephemeral = false, deleteDelay) { sendMessage(message) }
 
-        fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
-            sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
-        }
+        fun InteractionHook.replyEphemeralAndDelete(message: String, deleteDelay: Int) =
+            sendAndDelete(ephemeral = true, deleteDelay) { sendMessage(message) }
 
-        fun InteractionHook.replyEphemeralEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) {
-            sendMessageEmbeds(embed).setEphemeral(true).queue(invokeDeleteOnMessageResponse(deleteDelay))
-        }
+        fun InteractionHook.replyEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) =
+            sendAndDelete(ephemeral = false, deleteDelay) { sendMessageEmbeds(embed) }
+
+        fun InteractionHook.replyEphemeralEmbedAndDelete(embed: MessageEmbed, deleteDelay: Int) =
+            sendAndDelete(ephemeral = true, deleteDelay) { sendMessageEmbeds(embed) }
     }
 }

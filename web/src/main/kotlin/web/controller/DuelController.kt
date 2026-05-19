@@ -22,8 +22,8 @@ import web.event.WebDuelOfferedEvent
 import web.service.DuelWebService
 import web.service.EconomyWebService
 import web.service.MemberLookupHelper
+import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
-import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
@@ -60,11 +60,11 @@ class DuelController(
         } else emptyList()
 
         val defaultGuildId = DefaultGuildCookie.read(request)
-        DefaultGuildRedirect.pick(
+        GuildPickerSupport.resolveRedirect(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        )?.let { return "redirect:/duel/$it" }
+        ) { "/duel/$it" }?.let { return it }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())

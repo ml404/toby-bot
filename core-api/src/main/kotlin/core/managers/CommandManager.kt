@@ -6,9 +6,10 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 
-interface CommandManager {
+interface CommandManager : NamedRegistry<Command> {
 
     val commands: List<Command>
+    override val items: List<Command> get() = commands
     val slashCommands: MutableList<CommandData?>
     val musicCommands: List<Command>
     val dndCommands: List<Command>
@@ -19,7 +20,7 @@ interface CommandManager {
 
     val lastCommands: Map<Guild, Pair<Command, CommandContext>>
 
-    fun getCommand(search: String): Command? = commands.find { it.name.equals(search, true) }
+    fun getCommand(search: String): Command? = findByName(search)
 
     fun handle(event: SlashCommandInteractionEvent)
 }
