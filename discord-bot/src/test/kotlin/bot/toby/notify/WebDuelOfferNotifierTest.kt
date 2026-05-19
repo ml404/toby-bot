@@ -2,6 +2,7 @@ package bot.toby.notify
 
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
+import common.notification.PushAdapter
 import common.notification.PushPayload
 import database.duel.PendingDuelRegistry
 import database.service.ConfigService

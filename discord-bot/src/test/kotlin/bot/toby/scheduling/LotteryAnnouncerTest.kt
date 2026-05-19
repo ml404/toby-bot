@@ -1,7 +1,7 @@
 package bot.toby.scheduling
 
 import bot.toby.notify.NotificationRouter
-import bot.toby.notify.PushAdapter
+import common.notification.PushAdapter
 import common.notification.ChannelRouteKey
 import common.notification.PushPayload
 import database.dto.ConfigDto
