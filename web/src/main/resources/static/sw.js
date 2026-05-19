@@ -20,8 +20,12 @@ self.addEventListener('push', function (event) {
     }
     const options = {
         body: data.body || '',
-        icon: '/images/toby-icon.png',
-        badge: '/images/toby-icon.png',
+        // No icon / badge: the asset they used to point at
+        // (/images/toby-icon.png) doesn't exist, and macOS Firefox
+        // routes showNotification through the system NotificationCenter,
+        // which silently rejects the call when an icon URL 404s
+        // instead of falling back to a default. Omitting the fields
+        // lets every browser substitute its own default app glyph.
         data: { deepLink: data.deepLink || '/' }
     };
     event.waitUntil(self.registration.showNotification(data.title || 'TobyBot', options));
