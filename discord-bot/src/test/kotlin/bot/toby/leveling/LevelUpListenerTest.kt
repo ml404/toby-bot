@@ -1,5 +1,6 @@
 package bot.toby.leveling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
@@ -83,16 +84,23 @@ class LevelUpListenerTest {
                 originChannelId = 99L,
                 message = any(),
                 onSent = null,
-                // The leveler's mention is in the embed description, which
-                // doesn't ping per Discord rules — so no ChannelMentions
-                // filtering is needed (matches achievement shoutout).
-                mentions = null,
+                // The leveler's mention is now in setContent (embed mentions
+                // don't ping), so the router needs ChannelMentions to filter
+                // the @-ping by per-user (LEVEL_UP, CHANNEL) opt-in.
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(discordId),
+                ),
             )
         }
-        val embed = builder.captured.invoke().embeds.single()
+        val payload = builder.captured.invoke()
+        val embed = payload.embeds.single()
         assert(embed.title!!.contains("LVL 1"))
         assert(embed.description!!.contains("<@$discordId>"))
         assert(embed.description!!.contains("Level 1"))
+        assert(payload.content == "<@$discordId>") {
+            "expected setContent='<@$discordId>' to drive the ping, got '${payload.content}'"
+        }
     }
 
     @Test
@@ -111,7 +119,10 @@ class LevelUpListenerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = null,
-                mentions = null,
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.LEVEL_UP,
+                    userIds = listOf(discordId),
+                ),
             )
         }
     }

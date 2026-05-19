@@ -1,5 +1,6 @@
 package bot.toby.leveling
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
@@ -62,16 +63,25 @@ class LevelUpListener @Autowired constructor(
     }
 
     private fun announce(guild: Guild, event: LevelUpEvent, member: Member?) {
-        // The leveler's mention sits in the embed description, and embed
-        // mentions don't ping — so no per-user CHANNEL opt-in filtering
-        // is needed here (mirrors AchievementEventHandler.postPublicShoutout).
         notificationRouter.sendChannel(
             guildId = guild.idLong,
             route = ChannelRouteKey.LEVEL_UP,
             originChannelId = event.channelId,
             message = {
-                MessageCreateBuilder().setEmbeds(buildLevelUpEmbed(event, member)).build()
+                // setContent on the message (not just the embed description) so the
+                // <@leveler> mention actually pings — embed-mention pings are silent.
+                MessageCreateBuilder()
+                    .setEmbeds(buildLevelUpEmbed(event, member))
+                    .setContent("<@${event.discordId}>")
+                    .build()
             },
+            // Router suppresses the leveler's user-ping when they've
+            // opted out of (LEVEL_UP, CHANNEL). Channel post still
+            // happens; they just don't get notified.
+            mentions = ChannelMentions(
+                kind = NotificationChannelKind.LEVEL_UP,
+                userIds = listOf(event.discordId),
+            ),
         )
     }
 

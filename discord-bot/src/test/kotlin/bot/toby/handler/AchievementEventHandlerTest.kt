@@ -15,7 +15,10 @@ import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import database.service.AchievementService
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -242,7 +245,7 @@ class AchievementEventHandlerTest {
     }
 
     @Test
-    fun `achievement unlock also routes a public shoutout via ACHIEVEMENT_SHOUTOUT`() {
+    fun `achievement unlock also routes a public shoutout via ACHIEVEMENT_SHOUTOUT with CHANNEL opt-in gating`() {
         val event = AchievementUnlockedEvent(
             discordId = discordId, guildId = guildId,
             achievementId = 1L, achievementCode = "tip_giver",
@@ -250,6 +253,9 @@ class AchievementEventHandlerTest {
         )
         handler.onAchievementUnlocked(event)
 
+        // The unlocker's mention is now in setContent (embed mentions
+        // don't ping), so the router needs ChannelMentions to filter
+        // the @-ping by per-user (ACHIEVEMENT_UNLOCK, CHANNEL) opt-in.
         verify(exactly = 1) {
             router.sendChannel(
                 guildId = guildId,
@@ -257,37 +263,34 @@ class AchievementEventHandlerTest {
                 originChannelId = null,
                 message = any(),
                 onSent = null,
-                mentions = null,
+                mentions = ChannelMentions(
+                    kind = NotificationChannelKind.ACHIEVEMENT_UNLOCK,
+                    userIds = listOf(discordId),
+                ),
             )
         }
     }
 
     @Test
-    fun `achievement shoutout does not pass mentions (embed mention is silent)`() {
-        // The shoutout embeds `<@discordId>` in the embed description —
-        // embed mentions don't ping by Discord rules, so there's no
-        // user-ping suppression needed. The earlier test already
-        // verifies `mentions = null` is passed explicitly; this case is
-        // covered by that assertion.
+    fun `achievement shoutout puts the mention in setContent so it actually pings`() {
+        // Embed-mention pings are silent — moving the ping into the
+        // message content is what makes the user's notification fire,
+        // and what makes their CHANNEL opt-in toggle meaningful.
         val event = AchievementUnlockedEvent(
             discordId = discordId, guildId = guildId,
             achievementId = 1L, achievementCode = "tip_giver",
             name = "Generous", description = "desc", icon = null, channelId = null,
         )
+        val captured = slot<() -> net.dv8tion.jda.api.utils.messages.MessageCreateData>()
+        every {
+            router.sendChannel(any(), any(), any(), capture(captured), any(), any())
+        } just runs
+
         handler.onAchievementUnlocked(event)
 
-        // Only one sendChannel call total (the shoutout). It must have
-        // mentions = null — anything else would constitute "router
-        // please filter these users", which is wrong for embed-only.
-        verify(exactly = 1) {
-            router.sendChannel(
-                guildId = any(),
-                route = any(),
-                originChannelId = any(),
-                message = any(),
-                onSent = any(),
-                mentions = null,
-            )
+        val payload = captured.captured.invoke()
+        assert(payload.content == "<@$discordId>") {
+            "expected setContent='<@$discordId>' to drive the ping, got '${payload.content}'"
         }
     }
 
