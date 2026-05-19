@@ -68,12 +68,19 @@
                 <span aria-hidden="true">&#9734;</span>
                 <span>Set default server</span>
             </a>
+            <a href="/preferences"
+               class="nav-default-guild"
+               title="Account settings &amp; notification preferences">
+                <span aria-hidden="true">&#9881;&#65039;</span>
+                <span>Settings</span>
+            </a>
         </div>
 
         <div class="nav-section">
             <div class="nav-section-eyebrow">Main</div>
             <a class="nav-item" href="/profile/guilds"><span class="nav-item-icon" aria-hidden="true">&#128100;</span><span>Profile</span></a>
             <a class="nav-item" href="/leaderboards"><span class="nav-item-icon" aria-hidden="true">&#127942;</span><span>Leaderboards</span></a>
+            <a th:if="${username != null}" class="nav-item" href="/preferences/notifications"><span class="nav-item-icon" aria-hidden="true">&#128276;</span><span>Notifications</span></a>
         </div>
 
         <div class="nav-section">
