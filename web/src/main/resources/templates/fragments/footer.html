@@ -2,14 +2,10 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <!--
-    Shared site footer for public marketing pages (home, commands, login,
-    terms, privacy, changelog). Logged-in app pages don't include this —
-    they're working surfaces and the navbar already covers the legal
-    links via OAuth flows.
-
-    Three rows: copyright + legal, source link, tech stack. The
-    tech-stack row doubles as a craft signal for recruiters; the GitHub
-    link points at the same repo referenced from the legal pages.
+    Shared site footer, included from every page. Three rows:
+    copyright + legal, source link, tech stack. The tech-stack row
+    doubles as a craft signal for recruiters; the GitHub link points
+    at the same repo referenced from the legal pages.
 -->
 <footer th:fragment="footer" class="site-footer">
     <div class="site-footer-inner">
