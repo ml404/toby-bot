@@ -1,6 +1,419 @@
 [
   {
     "date": "May 2026",
+    "title": "Wire 13 casino games to their reserved achievement events",
+    "summary": "Follow-up to #520. That PR reserved 13 hidden roadmap stubs in `AchievementCatalog` for casino games that didn't yet publish domain events. This PR wires them up so every stub is `hidden = false` and `PENDING_HIDDEN_CODES` is empty. ### What changed **13 new event classes** under `common.events` — one per game, mirroring `BlackjackNaturalEvent`'s minimal `(discordId, guildId)` shape (Highlow adds an `isWin` flag). **13 modified services** under `database.service` — each ge…",
+    "emoji": "🎰",
+    "prNumber": 522
+  },
+  {
+    "date": "May 2026",
+    "title": "Public profiles via leaderboard click-through + level pill alongside title",
+    "summary": "Turns leaderboard rows into links to a read-only public profile so members can compare their level, streak, and achievements with anyone else in the guild — and surfaces each member's **level next to their title** across the leaderboard for at-a-glance prestige. **Public profile route** `GET /profile/{guildId}/{targetDiscordId}` reusing `WebGuildAccess.requireForPage` + `ProfileWebService.getProfile` (already keyed by `(discordId, guildId)`). Self-clicks bounce to the exis…",
+    "emoji": "🎟️",
+    "prNumber": 521
+  },
+  {
+    "date": "May 2026",
+    "title": "Expand catalog with new tiers, counters, consolation, and roadmap stubs",
+    "summary": "Expands the achievements catalogue with **19 new visible specs** + **13 hidden roadmap stubs**, riding entirely on event listeners that already exist in `AchievementEventHandler`. No new domain events. ### What's new (visible) **Streak ladder**: `streak_100` (Centurion), `streak_365` (Year of Toby) **Level ladder**: `level_75` (Elite), `level_100` (Legend) **Duel wins ladder**: `duel_wins_25` (Champion), `duel_wins_50` (Warlord), `duel_wins_100` (Undefeated) **Voice ladder…",
+    "emoji": "✨",
+    "prNumber": 520
+  },
+  {
+    "date": "May 2026",
+    "title": "Surface achievements and notifications on the homepage",
+    "summary": "Add two feature-cards to the existing **Engagement** section of `home.html`: **Achievements** (links to `/profile/guilds`) and **Notifications** (links to `/preferences/notifications`). Engagement section grows from 4 to 6 cards, matching the Casino section's 6-card layout — no CSS changes needed. Extend `HomeStatsService.HomeStats` with `achievementCount` and `notificationKindCount`, sourced directly from `AchievementCatalog.all.count { !it.hidden }` and `NotificationChan…",
+    "emoji": "✨",
+    "prNumber": 519
+  },
+  {
+    "date": "May 2026",
+    "title": "Admin tabs no longer paint over the navbar / drawer / dropdowns",
+    "summary": "The previous attempts (#509 layout, #510 raising the drawer to `z-index: 1000`) didn't fix admin tab overlap because the cause wasn't z-index — it was selector scope. `nav { position: relative; z-index: 10 }` in `nav.css` matched **every** `<nav>` on the page, including `<nav class=\"mod-subnav\">` in `moderationHeader.html`. That made the admin tab strip create its own root-level stacking context at the same z-index as the top navbar but later in the DOM, so it painted over…",
+    "emoji": "🔨",
+    "prNumber": 516
+  },
+  {
+    "date": "May 2026",
+    "title": "Web buy/sell watches on the /economy market page",
+    "summary": "Surfaces the Discord `/pricealert` feature (#512) on the web dashboard. A watch created from `/economy/{guildId}` writes to the same `user_price_trigger` table the scheduler scans on each market tick, so the firing path is unchanged and either surface can manage the other's rows.",
+    "emoji": "💰",
+    "prNumber": 514
+  },
+  {
+    "date": "May 2026",
+    "title": "/pricealert auto-trade triggers with PRICE_ALERT receipt DM",
+    "summary": "Wires up the `PRICE_ALERT` notification kind, which previously had infrastructure (channel kind, router DM/PUSH surfaces) but no trigger source. Adds `/pricealert add|list|remove`. A trigger captures the **current market price** and a **target threshold** plus the user's chosen side (BUY/SELL) and amount. On every 5-min tick, `TobyCoinPriceTickJob` scans enabled triggers and fires any whose target was reached **from the side the price was on at creation** — so \"buy at 100…",
+    "emoji": "💰",
+    "prNumber": 512
+  },
+  {
+    "date": "May 2026",
+    "title": "/jackpotadmin lottery_refresh_embed — manual embed rebuild trigger",
+    "summary": "## Why",
+    "emoji": "🎰",
+    "prNumber": 511
+  },
+  {
+    "date": "May 2026",
+    "title": "Nav drawer stacking, additive embed rebuild, top holders include bonus tickets",
+    "summary": "## Three bugs reported after #509",
+    "emoji": "🎰",
+    "prNumber": 510
+  },
+  {
+    "date": "May 2026",
+    "title": "Tab-nav layout + silent web bonus award + broken bulk-buy hint",
+    "summary": "## Three bugs reported after PR #508 merged",
+    "emoji": "🎰",
+    "prNumber": 509
+  },
+  {
+    "date": "May 2026",
+    "title": "Surface incentives on the player page + polish moderation pages",
+    "summary": "## Why",
+    "emoji": "🎟️",
+    "prNumber": 508
+  },
+  {
+    "date": "May 2026",
+    "title": "Drop broken icon asset from sw.js so macOS Firefox renders",
+    "summary": "macOS Firefox test push from `/api/push/test` showed the full happy path server-side: ``` WebPushAdapter: delivering to 2 endpoint(s) for 313049624636162059. WebPushAdapter: HTTP 201 from .../wpush/v2/gAAAAABqDCEy…; marking used. WebPushAdapter: HTTP 201 from .../wpush/v2/gAAAAABqDFP2…; marking used. POST /api/push/test … status=200 ``` …but no banner ever rendered on the laptop. The next log line is the smoking gun: ``` GET /images/toby-icon.png … status=404 ``` `sw.js` s…",
+    "emoji": "🔨",
+    "prNumber": 507
+  },
+  {
+    "date": "May 2026",
+    "title": "Reward buying more tickets via three configurable incentives",
+    "summary": "Some users had figured out that buying a single TICKET_WEIGHTED lottery ticket was enough to satisfy `LOTTERY_DAILY_MIN_BUYERS` and be entered — making one-ticket entries the optimal play. Rather than punishing that (e.g. raising minimums), this PR adds three additive, positive incentives that make committing more attractive than splitting. Existing `LOTTERY_DAILY_MIN_BUYERS` safeguard is untouched. All three levers are default-off so nothing changes for existing guilds un…",
+    "emoji": "🎰",
+    "prNumber": 506
+  },
+  {
+    "date": "May 2026",
+    "title": "SOLID/DRY sweep across common, core-api, database, web",
+    "summary": "Top-6 focused SOLID/DRY refactor + test-gap sweep spanning all four priority modules. Each refactor lands with the tests it enables; behaviour is preserved (no public API breaks). **Result:** 19 modified / 10 new files. Net **−221 LOC** across modified files. **+44 new tests** (common 9, core-api 13, database 5, web 17). **All 1,704 buildable-module tests pass.**",
+    "emoji": "🎰",
+    "prNumber": 505
+  },
+  {
+    "date": "May 2026",
+    "title": "Register BouncyCastle eagerly + add push-path observability",
+    "summary": "After PR #503, browser push still wasn't reaching users. Heroku logs from a real attempt revealed: ``` WARN bot.toby.notify.WebPushAdapter - WebPushAdapter: send threw for https://updates.push.services.mozilla.com/wpush/v2/…: no such provider: BC ``` Browser subscription, persistence, prefs, dispatch, and adapter wiring were all healthy — but `DefaultPushTransport.send()` builds `Notification(endpoint, p256dh, auth, body)` **before** touching its lazy `pushService` field,…",
+    "emoji": "🎟️",
+    "prNumber": 504
+  },
+  {
+    "date": "May 2026",
+    "title": "Wire WebPushAdapter via @Autowired constructor",
+    "summary": "Setting `TOBY_VAPID_PUBLIC_KEY` + `TOBY_VAPID_PRIVATE_KEY` on Heroku crashed the dyno (`Process exited with status 1`, then `H10 App crashed` on every request). Root cause: `WebPushAdapter` has two constructors and neither was `@Autowired`. Spring defaults to the **primary** for Kotlin `@Component`s, which needs a `PushTransport` bean — but `PushTransport` is just an interface and `DefaultPushTransport` is a plain class with no `@Component` / `@Bean` factory. With the env…",
+    "emoji": "🎟️",
+    "prNumber": 503
+  },
+  {
+    "date": "May 2026",
+    "title": "Align admin DM/channel settings with notification prefs",
+    "summary": "Three seams between the older admin pages (per-feature channel pickers, \"DM-only\" toggles) and the per-surface notification-preferences system that landed in V37. **Achievement shoutout label was misleading.** The admin UI said *\"Leave blank to keep unlocks DM-only\"*, but `AchievementEventHandler.onAchievementUnlocked()` always fires the DM (gated by the user's `ACHIEVEMENT_UNLOCK`/`Surface.DM` pref) and the channel post is additive. Updated the hint text and the empty-opt…",
+    "emoji": "🛡️",
+    "prNumber": 502
+  },
+  {
+    "date": "May 2026",
+    "title": "Auto-route /preferences + /preferences/notifications past the picker when anchored",
+    "summary": "Follow-up to #496. The Settings and Notifications navbar entries from that PR landed users on the `/preferences` hub or the notifications guild-picker even when they had already anchored a default guild via `DefaultGuildCookie`. That's an extra click vs. the rest of the app — `/leaderboards`, `/profile/guilds`, `/casino/guilds`, `/intro/guilds` etc. already skip their pickers using the shared `DefaultGuildRedirect.pick(...)` helper. This PR applies the same helper to both…",
+    "emoji": "✨",
+    "prNumber": 499
+  },
+  {
+    "date": "May 2026",
+    "title": "Ratchet level/streak progress + regroup /achievements display by category",
+    "summary": "Two complaints addressed: 1. **Progress on `level_*` (and `streak_*`) achievements is wrong.** The catalog gives these milestones `threshold = 5/25/50` (and `3/7/30`), so the locked display tries to show `(progress/threshold)` — but the handler called `achievementService.unlock(...)` on milestone-cross, which skips the progress table entirely. Result: locked level/streak entries always rendered as `(0/5)`, `(0/25)`, etc., regardless of the user's actual level or streak. Co…",
+    "emoji": "🔨",
+    "prNumber": 498
+  },
+  {
+    "date": "May 2026",
+    "title": "Surface settings + notification preferences in navbar",
+    "summary": "The notification-preferences feature shipped end-to-end in #491/#493 (backend service, REST endpoints in `EngagementApiController`, MVC controller, templates, JS), but the only navbar path to `/preferences` was the small default-server star chip in the nav-identity block — whose label is the current default-server name and whose tooltip says \"click to change default server.\" Nothing in the navbar said Settings, Preferences, or Notifications, so the matrix was effectively i…",
+    "emoji": "✨",
+    "prNumber": 496
+  },
+  {
+    "date": "May 2026",
+    "title": "Wire Web Push adapter for Surface.PUSH",
+    "summary": "Replaces the no-op `sendPush` stub from #493 with a real Web Push (RFC 8030 / 8291 / 8292) delivery path. End-to-end: schema → DTO/persistence/service → adapter → router wiring → REST endpoints → service worker → toggle UI on `/preferences/notifications`. Without VAPID keys configured the adapter bean is not registered (`@ConditionalOnProperty` + `@ConditionalOnBean`), so `NotificationRouter` falls back to the existing one-shot \"no adapter wired\" warn path. Dev/CI environm…",
+    "emoji": "✨",
+    "prNumber": 494
+  },
+  {
+    "date": "May 2026",
+    "title": "Per-surface notification preferences + push stub + blackjack_natural hookup",
+    "summary": "Today every `user_notification_pref` row is keyed by `(discord_id, guild_id, channel_kind)` — one flag per (user, kind). That collapses DM and channel behaviour into a single toggle for kinds that have both (today only `ACHIEVEMENT_UNLOCK`), and channel posts ignore prefs entirely so tip recipients / duel opponents / lottery winners get pinged regardless of preference. This PR splits the row by surface so a user can opt out independently per surface. Also bundles two defer…",
+    "emoji": "🎟️",
+    "prNumber": 493
+  },
+  {
+    "date": "May 2026",
+    "title": "Centralise channel routing through NotificationRouter",
+    "summary": "Follow-up to #491. Pulls channel resolution + permission checks out of each notifier and into a single `NotificationRouter.sendChannel(...)` method, gated by a per-route `ChannelRouteKey` enum. Same shape as the existing `sendDm(...)` — one delivery gate per surface, two surfaces (DM, CHANNEL). Also fixes the latent `INTRO_PROMPT` preference bypass: `IntroNotificationService.promptUserForMusicInfo` used to DM unconditionally; now it honours the per-user opt-out.",
+    "emoji": "🎟️",
+    "prNumber": 492
+  },
+  {
+    "date": "May 2026",
+    "title": "Daily streak, achievements, notification preferences",
+    "summary": "Adds a cohesive **engagement loop** on top of the existing per-guild XP/credit infrastructure: **Daily streak** (`/daily`): claim once per UTC day to grow a per-(user, guild) streak. Rewards scale by streak length (`min(base + per_day_bonus × (streak − 1), max)`) and bypass the daily XP/credit caps. Publishes `StreakClaimedEvent`. **Achievement engine** (`/achievements`): seeded from `AchievementCatalog` on startup. Counter-based (`progress(code, delta)`) and one-shot (`un…",
+    "emoji": "🎰",
+    "prNumber": 491
+  },
+  {
+    "date": "May 2026",
+    "title": "Trim low-value misc commands",
+    "summary": "You flagged `/hellothere`, `/ch`, and `/brother` as low-value. This PR removes the first two outright and reworks `/brother` into something a non-Toby guild would actually use. **Delete `/hellothere`** — one-line Star Wars joke that only does anything if you happen to type a date relative to 2005-05-19. No replay value. **Delete `/ch`** — text-mangling gimmick with a stale `ink`/`gamerword` censoring easter egg. **Rework `/brother`** as a real registry: `check` — preserves…",
+    "emoji": "🧹",
+    "prNumber": 490
+  },
+  {
+    "date": "May 2026",
+    "title": "Restore desktop navbar identity/auth + dedupe drawer close ✕",
+    "summary": "Three follow-ups to the navbar redesign in #488 (now on `main`): **1. Desktop regression — Login + default-guild pill were invisible.** The redesign moved Login into `.nav-auth` and the username + default-guild pill into `.nav-identity`, then set both to `display: none` on desktop. Result: logged-out users couldn't see the Login button; logged-in users couldn't see their default-server pill or Logout button on desktop. Removed both from the desktop hide-list and gave them…",
+    "emoji": "🔨",
+    "prNumber": 489
+  },
+  {
+    "date": "May 2026",
+    "title": "Redesign mobile navbar as a slide-in drawer",
+    "summary": "The mobile navbar was broken (screenshot below): the hamburger ended up *below* the open menu because `.nav-toggle` sat after `.nav-links` in the DOM with `flex-wrap: wrap`. The drawer felt detached from the page (no backdrop, no scroll lock, no close affordance) and every link looked identical with no grouping or active-page indication. **Mobile redesign:** Hamburger moved before `.nav-links` so it can no longer wrap below the open menu. `.nav-links` becomes a fixed-posit…",
+    "emoji": "✨",
+    "prNumber": 488
+  },
+  {
+    "date": "May 2026",
+    "title": "Add pick=true to remaining \"All servers\" back-links",
+    "summary": "Adds `?pick=true` to the \"← All servers\" back-link on 11 per-guild pages (poker-lobby, blackjack-lobby/solo, lottery, profile, economy, titles, tip, duel, music-player, moderation). Without the query param the picker auto-redirect introduced in #486 bounces the user straight back to the page they just left, leaving them no way to re-anchor a different server from page chrome. Adds the back-link to `intros.html`, `excuses.html`, `teams.html` which had no in-page change-serv…",
+    "emoji": "🎟️",
+    "prNumber": 487
+  },
+  {
+    "date": "May 2026",
+    "title": "Auto-route through guild pickers when possible",
+    "summary": "Skips the `/{thing}/guilds` picker when the user only shares one server with the bot, or has anchored a default server. Applies to every picker in the navbar (casino games, leaderboards, intros, poker, blackjack, lottery, profile, economy, titles, tip, duel, music, excuses, teams, moderation). Each picker card grows a `☆ Set as default` / `★ Default` toggle, the navbar shows a \"★ ServerName\" pill when anchored, and a new `/preferences` page lets the user manage the anchor…",
+    "emoji": "🎟️",
+    "prNumber": 486
+  },
+  {
+    "date": "May 2026",
+    "title": "Reorganize moderation settings UI into Server/Economy/Casino pillars",
+    "summary": "A re-arranging pass on `/moderation/{guildId}/settings` to fix two awkwardnesses without rewriting the page: **Blackjack and Poker each had settings split across two homes.** Table rules lived in their own section, but ante/blind/buy-in stakes were buried inside the \"Casino stakes & buy-ins\" mega-section — tuning either game meant scrolling between two cards. Stakes now live with their game. **No top-level grouping.** Three `<h2 class=\"config-pillar\">` headers (**Server**…",
+    "emoji": "🛡️",
+    "prNumber": 485
+  },
+  {
+    "date": "May 2026",
+    "title": "Render full progress bar on level-up embed",
+    "summary": "The Progress field on the level-up embed was computed via `LevelCurve.progress(totalXp)`, which returns `xpIntoLevel = 0` when the user lands exactly on the level threshold. That made the celebration message render an empty bar (e.g. `░░░░░░░░░░ 0 / 155 XP`) right at the moment of leveling up — the \"wonky\" look in the screenshot. Switch `buildLevelUpEmbed` to use `LevelCurve.xpForNextLevel(newLevel - 1)` as both `filled` and `total` for the bar, so the achieved level rende…",
+    "emoji": "🔨",
+    "prNumber": 484
+  },
+  {
+    "date": "May 2026",
+    "title": "Gate purchases by level, add level-ladder titles, extend tiers",
+    "summary": "**Gate purchasable titles by level.** `TitleDto.required_level` (added in V34) is now enforced on the buy paths — Discord `/title buy`, web `/titles/{guildId}/{titleId}/buy`, and the one-click \"Buy with TOBY\" flow. Logic is centralised in a new `TitlePurchasePolicy` so all three callsites share the same rule. The auto-unlock branch on level-up (`LevelUpListener.unlockTitles`) is unchanged. **Add 14 level-ladder titles (V35).** New titles span Lvl 5 → Lvl 200 (🌱 Sprout … ♾…",
+    "emoji": "💰",
+    "prNumber": 483
+  },
+  {
+    "date": "May 2026",
+    "title": "Award XP for web casino/poker/duel/economy actions",
+    "summary": "Web gameplay surfaces (casino, blackjack, poker, duels, lottery, the economy market, tips) previously bypassed the XP system entirely — playing slots in Discord awarded 5 XP per slash invocation, but the same action through the browser awarded zero. This change closes the gap. New `WebGameplayXpInterceptor` — a Spring `HandlerInterceptor` that, after a successful (2xx) POST to a gameplay/economy route, calls `XpAwardService.award(...)` with the same 5 XP grant Discord uses…",
+    "emoji": "✨",
+    "prNumber": 481
+  },
+  {
+    "date": "May 2026",
+    "title": "Render Discord level-up as a tier-colored embed",
+    "summary": "Discord level-up announcement is now a tier-colored embed that mirrors the web profile card (`templates/profile.html` + `static/css/profile.css`): tier color (Bronze/Silver/Gold/Diamond), level badge in the title, an XP progress bar, and total lifetime XP. Numbers come from `LevelCurve.progress(totalXp)` — the same source the profile page uses — so the embed and the profile show the exact same `xpIntoLevel` / `xpForNextLevel` / total at the moment of the level-up. `LevelUp…",
+    "emoji": "✨",
+    "prNumber": 480
+  },
+  {
+    "date": "May 2026",
+    "title": "Dedicated tab + role-reward CRUD + title gating",
+    "summary": "Closes the moderation-UI gaps from #477. That PR shipped the leveling backbone (XP, levels, `level_role_reward` table, `title.required_level` column) but the admin UI was incomplete: the four config keys were buried inside the collapsed-by-default \"Economy\" `<details>`, the `level_role_reward` table had no CRUD path, and `title.required_level` could only be set via direct DB write. ### Why this was missed `ModerationTemplateRowsTest` only enforces that every `ConfigDto.Con…",
+    "emoji": "🛡️",
+    "prNumber": 479
+  },
+  {
+    "date": "May 2026",
+    "title": "Collapse navbar dropdown sections on mobile",
+    "summary": "On a phone-width viewport (≤600px), the navbar hamburger opened a menu where all four dropdown sections (Play, Economy, Social, Tools) were already fully expanded — every link visible, scroll forever, and the section toggle buttons did nothing. Root cause was one CSS rule in the mobile media query of `nav.css`: `.nav-dropdown-menu { display: flex; ... }` was set unconditionally, overriding the desktop default (`display: none` unless `.open` is on the parent). The `toggleDr…",
+    "emoji": "🔨",
+    "prNumber": 478
+  },
+  {
+    "date": "May 2026",
+    "title": "Add per-guild XP, levels, role rewards and title gates",
+    "summary": "Adds a leveling / engagement system on top of the existing social-credit infrastructure. XP is tracked **separately** from social credit so spending or losing credit at the casino doesn't drag a user's level down — the long-term progression track is durable. ### XP awards (all daily-capped, default 1000 XP/day per user/guild) **Messages**: 15–25 XP per non-bot message with a 60s per-user cooldown (Tatsu/MEE6-style anti-spam), tracked in a Caffeine cache keyed on `(guildId,…",
+    "emoji": "🛡️",
+    "prNumber": 477
+  },
+  {
+    "date": "May 2026",
+    "title": "Resume preempted audio after intro plays",
+    "summary": "Today, when a member joins voice while the bot is already playing audio, their intro is enqueued **behind** the currently-playing track and only plays after that track finishes — defeating the point of an intro. This PR makes the intro preempt the currently-playing audio and resume it (from the same position) once the intro finishes.",
+    "emoji": "🎵",
+    "prNumber": 476
+  },
+  {
+    "date": "May 2026",
+    "title": "In-browser preview of search results and queue items",
+    "summary": "The /music-player dashboard's search panel lists up to 10 results per query, but the only way to find out which \"Linkin Park — Numb\" is the right one is to queue it and let the bot play. Same gap on items already queued — title/author visible, no way to sanity-check before they reach the front. This PR adds a small **▶ Preview** button next to each search result and each queue item that plays the source's own ~30s clip directly in the browser via a single shared `<audio>`…",
+    "emoji": "🎵",
+    "prNumber": 475
+  },
+  {
+    "date": "May 2026",
+    "title": "Expand Lavaplayer sources + polish embed + web dashboard",
+    "summary": "Three connected pieces shipped together: ### A — Expanded audio sources Registers **SoundCloud, Bandcamp, Vimeo, Niconico** (built-in Lavaplayer) and **Spotify, Apple Music, Deezer, Yandex Music** (via the LavaSrc 4.8.2 plugin) alongside the existing YouTube/Twitch/HTTP/Local sources. Each LavaSrc source is gated on its env-var credentials (`SPOTIFY_CLIENT_ID`/`SPOTIFY_CLIENT_SECRET`, `APPLE_MUSIC_MEDIA_API_TOKEN`, `DEEZER_MASTER_KEY`/`DEEZER_ARL`, `YANDEX_ACCESS_TOKEN`);…",
+    "emoji": "🎵",
+    "prNumber": 472
+  },
+  {
+    "date": "May 2026",
+    "title": "Derive homepage game counts from a single GameCatalog",
+    "summary": "The homepage was rendering three different game counts because the stats strip, hero paragraph, and casino feature card each held their own hardcoded literal: | Location | Before | |---|---| | Stats strip (`home.html` line 39, `homeStats.gameCount`) | `12` (from `HomeStatsService.GAME_COUNT`) | | Hero meta description + paragraph (`home.html` lines 5, 16) | `13`-game casino | | Casino feature card body (line 64) | `12` quick-play minigames | | Casino feature card tag (line…",
+    "emoji": "🔨",
+    "prNumber": 474
+  },
+  {
+    "date": "May 2026",
+    "title": "Add Ko-fi link across web, README and Discord bot",
+    "summary": "Surfaces a single Ko-fi link (`https://ko-fi.com/fratlayton`) in one spot per user-facing channel so supporters can find it without making the bot feel like a paywall: **Web footer** (`fragments/footer.html`) — appears on every marketing page (home, commands, terms, privacy, changelog). **Home page final CTA** — small `hero-aside` link under the existing Invite / Browse buttons. **README.md** — new \"Support the Project\" section above Acknowledgments. **`/help` no-args repl…",
+    "emoji": "✨",
+    "prNumber": 473
+  },
+  {
+    "date": "May 2026",
+    "title": "Redesign section tabs as segmented cards with counts",
+    "summary": "The Members / TobyCoin / Games tab strip shipped in #470 cloned the `.lb-sort` pill aesthetic (designed for a secondary inline switcher) and read as small + left-aligned + visually lost between the prominent podium above and the prominent tables below. This PR redesigns the section nav as a full-width row of equal-flex segmented cards echoing the existing `.lb-stat` / `.lb-podium-card` aesthetic — `bg-elevated` + border + `radius-lg`, with the accent fill on the active tab…",
+    "emoji": "🧹",
+    "prNumber": 471
+  },
+  {
+    "date": "May 2026",
+    "title": "Tabbed sections, month nav, hover contributors, deltas, sparklines",
+    "summary": "The leaderboard page used to stack three full sections vertically (credit standings, TobyCoin wallets, Top Games) and the Top Games list collapsed each game to a single number. This PR reshapes the page into three tabs and gives the Games panel real depth. ### What changed **Tabs** above the fold: **Members · TobyCoin · Games**. The podium stays as the page hero above the tab strip. Tab choice is persisted per guild in `localStorage` (matches the existing collapse-state me…",
+    "emoji": "✨",
+    "prNumber": 470
+  },
+  {
+    "date": "May 2026",
+    "title": "Modal-driven /team split with preview-confirm flow + web presets",
+    "summary": "Rebuilds `/team` around a Discord modal, a preview-then-confirm flow, and a `/teams/{guildId}` web UI for saved rosters. Replaces the old one-shot slash command that immediately created voice channels with no chance to review. **Discord flow** `/team split` opens a modal (optional `members:` slash-option pre-fills it) Modal collects: optional preset name, members (paragraph; `@mentions` or raw IDs), team count, naming strategy (`prefix`|`list`), names Submit shows an ephem…",
+    "emoji": "✨",
+    "prNumber": 469
+  },
+  {
+    "date": "May 2026",
+    "title": "Add ban/timeout/purge/lock/slowmode tools + Actions UI tab",
+    "summary": "Replaces `/shh` and `/talk` (and their voice-tab Shh/Talk buttons) with a proper moderation toolkit. Every new action is reachable both as a Discord slash command and from a new **Actions** tab on the moderation dashboard. ### New slash commands (`discord-bot`) | Command | What it does | |---|---| | `/ban` | Ban one or more mentioned members (optional reason + 0-7 days message delete) | | `/unban` | Unban a user by Discord ID | | `/timeout` | Discord-native timeout, 1-4032…",
+    "emoji": "🛡️",
+    "prNumber": 468
+  },
+  {
+    "date": "May 2026",
+    "title": "Mobile-friendly pass, breakpoint refactor, responsive tests",
+    "summary": "Full mobile-friendliness sweep across the dashboard. An audit found ~25 concrete mobile bugs across 15 casino games + admin/marketing pages, inconsistent breakpoints (480 / 600 / 640 / 380 px scattered across 31 CSS files), and the same `repeat(N, 1fr) → 1fr` reflow pattern duplicated dozens of times in casino game CSS. This pass standardises the breakpoint set, extracts shared utilities, fixes the bugs, and pins the contract with tests so future regressions surface in CI.…",
+    "emoji": "🎲",
+    "prNumber": 466
+  },
+  {
+    "date": "May 2026",
+    "title": "Align admin poll page with /poll modal (4 options, 1 min)",
+    "summary": "`/poll` was reworked into a Discord modal (`PollModal.kt`) that — bound by Discord's 5-component modal cap — accepts a paragraph question (1–500 chars) plus up to **4** single-line options, with only option 1 required. The admin web page at `/moderation/{guildId}/poll` was still built for the old shape (max 10 options, 2 required, 256-char single-line question), so it was visibly out of sync and could submit polls that needed shapes the new emoji list couldn't represent. T…",
+    "emoji": "🛡️",
+    "prNumber": 467
+  },
+  {
+    "date": "May 2026",
+    "title": "Revert YouTube proxy from LavaPlayer + Ktor paths",
+    "summary": "LavaPlayer was 407-ing every CONNECT through the YouTube proxy across all configured clients, surfacing in production as: ``` dev.lavalink.youtube.AllClientsFailedException: (yts.version: 1.18.0) All clients failed to load the item. Client [TVHTML5_SIMPLY] failed: Invalid status code for fetch player script (embed): 407 Client [WEB] failed: Invalid status code for client config fetch: 407 Client [ANDROID] failed: Invalid status code for player api response: 407 ``` Every v…",
+    "emoji": "🎵",
+    "prNumber": 465
+  },
+  {
+    "date": "May 2026",
+    "title": "Authenticate HTTPS CONNECT to YouTube proxy",
+    "summary": "Intro preview was logging `YouTube Data API preview returned HTTP 407` on every URL pre-flight when the YouTube proxy was configured with auth. Root cause: `IntroWebService.openYouTubeDataApiConnection` set `Proxy-Authorization` via `HttpURLConnection.setRequestProperty`. That header is only attached to the inner HTTP request inside an established CONNECT tunnel — it isn't sent on the CONNECT itself. So for HTTPS targets like `googleapis.com`, the proxy 407s the tunnel bef…",
+    "emoji": "🎵",
+    "prNumber": 464
+  },
+  {
+    "date": "May 2026",
+    "title": "Swap per-horse odds label when Win/Place/Show changes",
+    "summary": "The horse cards always rendered the WIN multiplier regardless of which bet type was selected, so the favourite looked like \"3.1× win\" even when Place was active (where it actually pays 1.7×). Server-render all three multipliers as `data-{win|place|show}-mult` attributes on each `.hr-horse` card. New `updateHorseOdds(cards, betType)` helper rewrites the visible label when the bet radio changes. IIFE listens for `change` events on every `input[name=\"bet\"]` radio and primes t…",
+    "emoji": "🎰",
+    "prNumber": 463
+  },
+  {
+    "date": "May 2026",
+    "title": "Add Horse Racing minigame (Win/Place/Show on 6-horse field)",
+    "summary": "New casino minigame: `/horse-racing` slash command + `/casino/{guildId}/horse-racing` web page with an animated six-lane track. Six horses, named with distinct win odds (favourite H1 to longshot H6); three bet types — **Win** (1st only), **Place** (top 2), **Show** (top 3). **Pure logic** (`HorseRacing.kt`) uses Plackett–Luce sampling: each horse's \"strength\" is its stated win probability, so favourites land on the podium more often than just their win rate suggests — exac…",
+    "emoji": "🎰",
+    "prNumber": 462
+  },
+  {
+    "date": "May 2026",
+    "title": "Add Plinko + Wheel of Fortune (low-RTP jackpot feeders)",
+    "summary": "Two new jackpot-eligible casino games that sit in the sub-92% RTP band (where only Slots, Scratch, and Dice currently live). Both fund the per-guild jackpot pool via loss tribute and roll for it on a win — and unlike Coinflip / Blackjack / Baccarat / Roulette, they're tight enough on RTP that the `JACKPOT_RTP_MAX_PCT` gate will still let them roll when a guild dials the ceiling down. ### Plinko (canonical RTP ≈ 0.89) 8 peg rows, 9 buckets. Three risk profiles (`LOW`, `MEDI…",
+    "emoji": "🎰",
+    "prNumber": 461
+  },
+  {
+    "date": "May 2026",
+    "title": "Honor [hidden] on .btn-primary and .btn-secondary",
+    "summary": "Follow-up to #458. The user noticed the previous fix didn't actually hide the \"Buy (sell N TOBY)\" button on scratch even when their balance comfortably covered the stake (screenshot: balance ~100k, stake 100, button still visible reading \"sell 0 TOBY\"). Same story for the \"Reveal all\" button on initial page load. **Root cause:** `.btn-primary` and `.btn-secondary` in `base.css:118-152` set explicit `display: inline-flex`, which outranks the user-agent stylesheet's `[hidden…",
+    "emoji": "🔨",
+    "prNumber": 460
+  },
+  {
+    "date": "May 2026",
+    "title": "Load casino-win-settle.js on the bespoke web pages",
+    "summary": "User report: \"no coins visible\" on `/blackjack/{guild}/solo` after a winning hand — the chip-stack flourish that other casino pages drop on the felt never appeared. Root cause: #428 swapped `blackjack-solo.js`'s `CasinoRender.flashChipsOn(...)` call for the new shared helper `TobyCasinoWinSettle.fire(...)` and hoisted `casino-win-settle.js` into the shared `casinoMinigame :: scripts` fragment. But `blackjack-solo.html` (and `blackjack-table.html`) hand-roll their `<script>…",
+    "emoji": "♠️",
+    "prNumber": 459
+  },
+  {
+    "date": "May 2026",
+    "title": "Split into subcommand-per-category modals",
+    "summary": "Splits the monolithic `/setconfig` slash command into 12 subcommands, each opening a category-scoped modal pre-populated with the guild's current values. Replaces the previous 25-flat-option form that was hitting Discord's hard option cap and forcing ~45 other config keys to be web-only.",
+    "emoji": "🎰",
+    "prNumber": 457
+  },
+  {
+    "date": "May 2026",
+    "title": "Lock buy buttons through reveal + refresh TOBY button on balance changes",
+    "summary": "Two scratch-card UX gaps that diverged from how the other casino games (slots, dice, coinflip, keno, etc.) behave: **Buy buttons re-enabled mid-reveal.** The \"Buy ticket\" / \"Buy (sell N TOBY)\" buttons flipped back to enabled the moment the server returned a card — before the player had finished scratching cells. A fast-clicker (or autoclicker) could submit a second buy on top of a half-revealed card. Fix: convert scratch's `renderResult` from a no-op to a Promise resolved…",
+    "emoji": "🎲",
+    "prNumber": 458
+  },
+  {
+    "date": "May 2026",
+    "title": "SOLID/DRY pass + expand modal usage",
+    "summary": "Three workstreams in one PR: ### A. Discord-bot SOLID/DRY **`Loggable` mixin** in `core-api/core/log` — `Command`, `Button`, `Menu`, `Modal` each used to declare an identical `val logger: DiscordLogger get() = DiscordLogger.createLogger(this::class.java)`. Now one interface. **`PermissionValidator`** + `DefaultPermissionValidator` (`actorMayActOn` / `botMayAct`) — `MoveCommand` and `KickCommand` migrated. Removes inline `canInteract`/`hasPermission` duplication. **`WagerCo…",
+    "emoji": "🎰",
+    "prNumber": 456
+  },
+  {
+    "date": "May 2026",
+    "title": "Tighter walk-and-shoot choreography + mobile-friendly overlay",
+    "summary": "Two follow-up tweaks to the duel resolution animation that merged in #453. **Choreography.** The figures now begin overlapping at the arena centre and walk apart back-to-back. The winner half-flips (`scaleX(-1)`) just before the flash, and the loser falls without flipping. Reads as the classic Western duel arc — together, walk apart, turn, shoot — instead of the previous \"just start a bit close and walk out\" beat. The flip lives on `.duel-figure-avatar` (the disc only) rat…",
+    "emoji": "💰",
+    "prNumber": 454
+  },
+  {
+    "date": "May 2026",
     "title": "Play a resolution animation when an offer is accepted on the web",
     "summary": "Follow-on to #452 (which enriched the recipient + per-offer expiry on the web inbox). When the acceptor clicks **Accept**, the silent toast is replaced with a modal overlay that animates the two duelists: they walk apart, a 💥 flashes between them, the loser tips over, the winner gets a gold glow, and the `+pot credits` pill flies to the winner. Click anywhere, hit <kbd>Esc</kbd>, or wait 6s to dismiss — at which point `refreshAll()` runs and the inbox/balance update norma…",
     "emoji": "💰",
