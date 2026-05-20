@@ -196,6 +196,22 @@ class AntiAutoclickNotifier(
         guild.selfMember.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
 
     /**
+     * Drop every in-flight session for [guildId] and cancel any pending
+     * debounced edit. Called when the bot leaves the guild — there's no
+     * channel to edit against anymore so the message handle and counters
+     * are dead weight.
+     */
+    fun evictGuild(guildId: Long) {
+        val iter = sessions.entries.iterator()
+        while (iter.hasNext()) {
+            val (key, session) = iter.next()
+            if (key.second != guildId) continue
+            iter.remove()
+            session.pendingEdit.getAndSet(null)?.cancel(false)
+        }
+    }
+
+    /**
      * Test-only: force the currently-pending debounced edit to run immediately
      * (and clears the pending future). Returns `true` if there was a pending
      * edit to flush. Production code should never call this; the scheduler

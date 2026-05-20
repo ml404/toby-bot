@@ -154,6 +154,22 @@ class BlackjackTableRegistry(
     }
 
     /**
+     * Force-evict every table belonging to [guildId]. Called when the
+     * bot leaves the guild so seated antes are refunded via the same
+     * [onIdleEvict] path the idle sweeper uses.
+     */
+    fun evictGuild(guildId: Long) {
+        for ((id, table) in tables) {
+            if (table.guildId != guildId) continue
+            synchronized(table) {
+                val evicted = tables.remove(id)
+                cancelShotClock(id)
+                if (evicted != null) runCatching { onIdleEvict?.invoke(evicted) }
+            }
+        }
+    }
+
+    /**
      * Force-evict every table whose `lastActivityAt` is older than
      * [idleTtl]. Public + parameterised so tests can drive it without
      * waiting for the scheduler.

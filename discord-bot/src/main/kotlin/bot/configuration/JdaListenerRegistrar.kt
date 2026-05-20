@@ -4,6 +4,7 @@ import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.AutocompleteEventListener
 import bot.toby.handler.ButtonEventListener
 import bot.toby.handler.EventWaiter
+import bot.toby.handler.GuildLeaveCleanupHandler
 import bot.toby.handler.MenuEventListener
 import bot.toby.handler.MessageChatListener
 import bot.toby.handler.ModalEventListener
@@ -27,6 +28,7 @@ class JdaListenerRegistrar @Autowired constructor(
     autocompleteEventListener: AutocompleteEventListener,
     activityEventHandler: ActivityEventHandler,
     eventWaiter: EventWaiter,
+    guildLeaveCleanupHandler: GuildLeaveCleanupHandler,
 ) {
     init {
         jda.addEventListener(
@@ -40,6 +42,7 @@ class JdaListenerRegistrar @Autowired constructor(
             autocompleteEventListener,
             activityEventHandler,
             eventWaiter,
+            guildLeaveCleanupHandler,
         )
     }
 }

@@ -4,6 +4,7 @@ import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.AutocompleteEventListener
 import bot.toby.handler.ButtonEventListener
 import bot.toby.handler.EventWaiter
+import bot.toby.handler.GuildLeaveCleanupHandler
 import bot.toby.handler.MenuEventListener
 import bot.toby.handler.MessageChatListener
 import bot.toby.handler.ModalEventListener
@@ -30,6 +31,7 @@ class JdaListenerRegistrarTest {
         val autocompleteEventListener = mockk<AutocompleteEventListener>()
         val activityEventHandler = mockk<ActivityEventHandler>()
         val eventWaiter = mockk<EventWaiter>()
+        val guildLeaveCleanupHandler = mockk<GuildLeaveCleanupHandler>()
 
         JdaListenerRegistrar(
             jda,
@@ -43,6 +45,7 @@ class JdaListenerRegistrarTest {
             autocompleteEventListener,
             activityEventHandler,
             eventWaiter,
+            guildLeaveCleanupHandler,
         )
 
         verify {
@@ -57,6 +60,7 @@ class JdaListenerRegistrarTest {
                 autocompleteEventListener,
                 activityEventHandler,
                 eventWaiter,
+                guildLeaveCleanupHandler,
             )
         }
     }

@@ -166,6 +166,15 @@ class CasinoBotSuspicionService(
         return if (nowOpen) matches else 0
     }
 
+    /**
+     * Drop every tracked window for [guildId]. Called when the bot
+     * leaves the guild — the window state is meaningless once the
+     * casino pages can no longer post bets for that guild.
+     */
+    fun evictGuild(guildId: Long) {
+        states.keys.removeIf { it.second == guildId }
+    }
+
     companion object {
         const val EPSILON_PX: Int = 2
 
