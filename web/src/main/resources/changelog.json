@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Surface achievements and notifications on the homepage",
+    "summary": "Add two feature-cards to the existing **Engagement** section of `home.html`: **Achievements** (links to `/profile/guilds`) and **Notifications** (links to `/preferences/notifications`). Engagement section grows from 4 to 6 cards, matching the Casino section's 6-card layout — no CSS changes needed. Extend `HomeStatsService.HomeStats` with `achievementCount` and `notificationKindCount`, sourced directly from `AchievementCatalog.all.count { !it.hidden }` and `NotificationChan…",
+    "emoji": "✨",
+    "prNumber": 519
+  },
+  {
+    "date": "May 2026",
     "title": "Admin tabs no longer paint over the navbar / drawer / dropdowns",
     "summary": "The previous attempts (#509 layout, #510 raising the drawer to `z-index: 1000`) didn't fix admin tab overlap because the cause wasn't z-index — it was selector scope. `nav { position: relative; z-index: 10 }` in `nav.css` matched **every** `<nav>` on the page, including `<nav class=\"mod-subnav\">` in `moderationHeader.html`. That made the admin tab strip create its own root-level stacking context at the same z-index as the top navbar but later in the DOM, so it painted over…",
     "emoji": "🔨",
