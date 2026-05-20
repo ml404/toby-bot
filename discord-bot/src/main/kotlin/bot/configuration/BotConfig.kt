@@ -7,7 +7,6 @@ import moe.kyokobot.libdave.NativeDaveFactory
 import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.JDABuilder
-import net.dv8tion.jda.api.OnlineStatus
 import net.dv8tion.jda.api.audio.AudioModuleConfig
 import net.dv8tion.jda.api.requests.GatewayIntent
 import net.dv8tion.jda.api.utils.ChunkingFilter
@@ -43,12 +42,8 @@ class BotConfig {
             GatewayIntent.GUILD_VOICE_STATES,
             GatewayIntent.GUILD_EXPRESSIONS
         )
-            .setMemberCachePolicy(
-                MemberCachePolicy { it.onlineStatus != OnlineStatus.OFFLINE }
-                    .or(MemberCachePolicy.VOICE)
-                    .or(MemberCachePolicy.OWNER)
-            )
-            .setChunkingFilter(ChunkingFilter.NONE)
+            .setMemberCachePolicy(MemberCachePolicy.ALL)
+            .setChunkingFilter(ChunkingFilter.ALL)
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,
