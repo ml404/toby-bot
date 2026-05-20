@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Restore MemberCachePolicy.ALL — offline users broke leaderboards and auth",
+    "summary": "The narrowed `MemberCachePolicy` introduced in #525 (`online != OFFLINE`, voice, owner) silently breaks any feature that walks the member list for offline users: **Leaderboards** render \"Unknown\" for every offline player (as @user reported with screenshot). **`GuildMembership.isMember(id, guildId)`** returns `false` for an offline user who *is* in the guild — locks them out of pages. **`isOwner(...)`** returns `false` for an offline owner — they look like a regular user. *…",
+    "emoji": "🔨",
+    "prNumber": 529
+  },
+  {
+    "date": "May 2026",
     "title": "Bump metaspace cap to stop startup OOM crash",
     "summary": "Production crashed with: ``` 2026-05-20 08:58:42 [main] INFO o.s.o.jpa.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default' Terminating due to java.lang.OutOfMemoryError: Metaspace ``` The OOM fired ~500ms after JPA finished initialising — i.e. while Spring was still wiring the remaining beans (JDA listeners, controllers, scheduled jobs). My previous `-XX:MaxMetaspaceSize=96m` cut was too aggressive for Spring Boot +…",
     "emoji": "🔨",
