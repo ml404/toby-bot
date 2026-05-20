@@ -31,6 +31,8 @@ class HomeControllerTest {
         minigameCount = 12,
         minigameNames = "slots, dice",
         configKeyCount = 58,
+        achievementCount = 15,
+        notificationKindCount = 8,
     )
 
     @BeforeEach
