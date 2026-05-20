@@ -307,6 +307,7 @@ class LeaderboardWebService(
                     name = member?.effectiveName ?: "Unknown",
                     avatarUrl = member?.effectiveAvatarUrl,
                     title = title,
+                    level = common.leveling.LevelCurve.progress(dto.xp).level,
                     coins = dto.tobyCoins,
                     coinsThisMonth = coinsThisMonth,
                     portfolioCredits = floor(dto.tobyCoins.toDouble() * price).toLong()
@@ -376,6 +377,7 @@ data class TobyCoinLeaderRow(
     val name: String,
     val avatarUrl: String?,
     val title: String?,
+    val level: Int = 0,
     val coins: Long,
     val coinsThisMonth: Long = 0L,
     val portfolioCredits: Long

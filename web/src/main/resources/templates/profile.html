@@ -7,7 +7,10 @@
 
 <main id="main" class="container">
     <div class="profile-header">
-        <a class="back-link" th:href="@{/profile/guilds(pick=true)}">&larr; All servers</a>
+        <a class="back-link"
+           th:href="${backLink != null} ? ${backLink} : @{/profile/guilds(pick=true)}">
+            &larr; <span th:text="${backLabel != null} ? ${backLabel} : 'All servers'">All servers</span>
+        </a>
         <h1 th:text="${profile.guildName}">Guild</h1>
     </div>
 
@@ -42,7 +45,7 @@
                       th:text="${profile.equippedTitleLabel}">Title</span>
                 <span th:unless="${profile.equippedTitleLabel != null}" class="muted">—</span>
             </div>
-            <a class="btn profile-action" th:href="@{/titles/{id}(id=${profile.guildId})}">Go to title shop &rarr;</a>
+            <a th:if="${viewerIsOwner}" class="btn profile-action" th:href="@{/titles/{id}(id=${profile.guildId})}">Go to title shop &rarr;</a>
         </section>
 
         <section class="profile-card level-card" th:classappend="'level-tier-' + (${profile.level} >= 50 ? 'diamond' : (${profile.level} >= 25 ? 'gold' : (${profile.level} >= 10 ? 'silver' : 'bronze')))">
@@ -71,7 +74,7 @@
             </div>
         </section>
 
-        <section class="profile-card">
+        <section class="profile-card" th:if="${viewerIsOwner}">
             <h2>Permissions</h2>
             <ul class="profile-perms">
                 <li th:each="p : ${profile.permissions}">
@@ -100,10 +103,14 @@
                th:if="${profile.streak.lastClaimDate != null}"
                th:text="'Last claim: ' + ${profile.streak.lastClaimDate}">Last claim: —</p>
             <p class="muted profile-streak-meta"
-               th:unless="${profile.streak.lastClaimDate != null}">
+               th:if="${viewerIsOwner and profile.streak.lastClaimDate == null}">
                 You haven't claimed yet — `/daily` in Discord or click the button below.
             </p>
-            <button type="button" class="btn profile-streak-claim"
+            <p class="muted profile-streak-meta"
+               th:if="${!viewerIsOwner and profile.streak.lastClaimDate == null}">
+                Hasn't claimed yet.
+            </p>
+            <button th:if="${viewerIsOwner}" type="button" class="btn profile-streak-claim"
                     th:disabled="${profile.streak.claimedToday}"
                     th:text="${profile.streak.claimedToday} ? 'Already claimed today' : 'Claim daily'">
                 Claim daily
@@ -171,9 +178,12 @@
 
         <section class="profile-card profile-card-wide">
             <h2>Owned titles</h2>
-            <div th:if="${#lists.isEmpty(profile.ownedTitles)}" class="muted">
+            <div th:if="${#lists.isEmpty(profile.ownedTitles) and viewerIsOwner}" class="muted">
                 You don't own any titles yet.
                 <a th:href="@{/titles/{id}(id=${profile.guildId})}">Browse the shop &rarr;</a>
+            </div>
+            <div th:if="${#lists.isEmpty(profile.ownedTitles) and !viewerIsOwner}" class="muted">
+                Hasn't unlocked any titles yet.
             </div>
             <ul class="profile-titles" th:if="${not #lists.isEmpty(profile.ownedTitles)}">
                 <li th:each="t : ${profile.ownedTitles}">

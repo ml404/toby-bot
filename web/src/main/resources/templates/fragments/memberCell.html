@@ -3,16 +3,37 @@
   standings tables and the lottery top-holders list so the two pages
   render the same Discord-member projection.
 
-  Styling lives in static/css/moderation.css (.member-cell, .avatar)
-  and static/css/leaderboard.css (.lb-name); the fragment is a pure
-  markup refactor.
+  Styling lives in static/css/base.css (.member-cell, .avatar, .lb-name)
+  so every page that loads base.css picks it up uniformly. The link
+  affordance (.member-cell-link) also lives in base.css so the four
+  callers (leaderboard, lottery, duel, profile follow-ups) share it.
 -->
-<div xmlns:th="http://www.thymeleaf.org"
-     th:fragment="cell(name, avatarUrl)"
-     class="member-cell">
+<div xmlns:th="http://www.thymeleaf.org">
+
+<div th:fragment="cell(name, avatarUrl)" class="member-cell">
     <img th:if="${avatarUrl != null}"
          th:src="${avatarUrl}"
          class="avatar"
          alt="">
     <span class="lb-name" th:text="${name}">Name</span>
+</div>
+
+<!--
+  Click-through variant: wraps the cell in an <a> so the row navigates
+  to the public profile (or any other URL). Inline-block so the cell
+  keeps its layout flow inside flex parents (member-cell stays a flex
+  child of the row/table cell).
+-->
+<a th:fragment="cellLink(name, avatarUrl, profileHref)"
+   th:href="${profileHref}"
+   class="member-cell-link">
+    <span class="member-cell">
+        <img th:if="${avatarUrl != null}"
+             th:src="${avatarUrl}"
+             class="avatar"
+             alt="">
+        <span class="lb-name" th:text="${name}">Name</span>
+    </span>
+</a>
+
 </div>

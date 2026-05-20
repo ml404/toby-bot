@@ -44,10 +44,18 @@
                  th:src="${view.podium[1].avatarUrl}"
                  class="lb-podium-avatar"
                  alt="">
-            <div class="lb-podium-name" th:text="${view.podium[1].name}">Name</div>
-            <span th:if="${view.podium[1].title != null}"
-                  class="lb-title-pill"
-                  th:text="${view.podium[1].title}">Title</span>
+            <a class="lb-podium-name-link"
+               th:href="@{/profile/{g}/{d}(g=${guildId}, d=${view.podium[1].discordId})}">
+                <div class="lb-podium-name" th:text="${view.podium[1].name}">Name</div>
+            </a>
+            <div class="lb-podium-pills">
+                <span class="lb-level-pill"
+                      th:classappend="${'lb-level-tier-' + (view.podium[1].level >= 50 ? 'diamond' : (view.podium[1].level >= 25 ? 'gold' : (view.podium[1].level >= 10 ? 'silver' : 'bronze')))}"
+                      th:text="'LVL ' + ${view.podium[1].level}">LVL 0</span>
+                <span th:if="${view.podium[1].title != null}"
+                      class="lb-title-pill"
+                      th:text="${view.podium[1].title}">Title</span>
+            </div>
             <div class="lb-podium-credits">
                 <strong th:if="${isMonth}"
                         th:text="|${view.podium[1].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[1].creditsEarnedThisMonth}|">+0</strong>
@@ -70,10 +78,18 @@
                  th:src="${view.podium[0].avatarUrl}"
                  class="lb-podium-avatar"
                  alt="">
-            <div class="lb-podium-name" th:text="${view.podium[0].name}">Name</div>
-            <span th:if="${view.podium[0].title != null}"
-                  class="lb-title-pill"
-                  th:text="${view.podium[0].title}">Title</span>
+            <a class="lb-podium-name-link"
+               th:href="@{/profile/{g}/{d}(g=${guildId}, d=${view.podium[0].discordId})}">
+                <div class="lb-podium-name" th:text="${view.podium[0].name}">Name</div>
+            </a>
+            <div class="lb-podium-pills">
+                <span class="lb-level-pill"
+                      th:classappend="${'lb-level-tier-' + (view.podium[0].level >= 50 ? 'diamond' : (view.podium[0].level >= 25 ? 'gold' : (view.podium[0].level >= 10 ? 'silver' : 'bronze')))}"
+                      th:text="'LVL ' + ${view.podium[0].level}">LVL 0</span>
+                <span th:if="${view.podium[0].title != null}"
+                      class="lb-title-pill"
+                      th:text="${view.podium[0].title}">Title</span>
+            </div>
             <div class="lb-podium-credits">
                 <strong th:if="${isMonth}"
                         th:text="|${view.podium[0].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[0].creditsEarnedThisMonth}|">+0</strong>
@@ -96,10 +112,18 @@
                  th:src="${view.podium[2].avatarUrl}"
                  class="lb-podium-avatar"
                  alt="">
-            <div class="lb-podium-name" th:text="${view.podium[2].name}">Name</div>
-            <span th:if="${view.podium[2].title != null}"
-                  class="lb-title-pill"
-                  th:text="${view.podium[2].title}">Title</span>
+            <a class="lb-podium-name-link"
+               th:href="@{/profile/{g}/{d}(g=${guildId}, d=${view.podium[2].discordId})}">
+                <div class="lb-podium-name" th:text="${view.podium[2].name}">Name</div>
+            </a>
+            <div class="lb-podium-pills">
+                <span class="lb-level-pill"
+                      th:classappend="${'lb-level-tier-' + (view.podium[2].level >= 50 ? 'diamond' : (view.podium[2].level >= 25 ? 'gold' : (view.podium[2].level >= 10 ? 'silver' : 'bronze')))}"
+                      th:text="'LVL ' + ${view.podium[2].level}">LVL 0</span>
+                <span th:if="${view.podium[2].title != null}"
+                      class="lb-title-pill"
+                      th:text="${view.podium[2].title}">Title</span>
+            </div>
             <div class="lb-podium-credits">
                 <strong th:if="${isMonth}"
                         th:text="|${view.podium[2].creditsEarnedThisMonth >= 0 ? '+' : ''}${view.podium[2].creditsEarnedThisMonth}|">+0</strong>
@@ -171,7 +195,7 @@
                     <tr>
                         <th class="lb-col-rank">#</th>
                         <th>Member</th>
-                        <th>Title</th>
+                        <th>Prestige</th>
                         <th class="lb-col-value"
                             th:attr="aria-sort=${view.sort.name() == 'LIFETIME' ? 'descending' : 'none'}">
                             💰 Credits
@@ -190,11 +214,13 @@
                                   th:text="${row.rank}">4</span>
                         </td>
                         <td data-label="Member">
-                            <div th:replace="~{fragments/memberCell :: cell(${row.name}, ${row.avatarUrl})}"></div>
+                            <div th:replace="~{fragments/memberCell :: cellLink(${row.name}, ${row.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${row.discordId})})}"></div>
                         </td>
-                        <td data-label="Title">
+                        <td data-label="Prestige">
+                            <span class="lb-level-pill"
+                                  th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
+                                  th:text="'LVL ' + ${row.level}">LVL 0</span>
                             <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
-                            <span th:unless="${row.title != null}" class="muted">—</span>
                         </td>
                         <td data-label="Credits" class="lb-col-value">
                             <strong class="lb-value lb-value-credits" th:text="${row.socialCredit}">0</strong>
@@ -238,7 +264,7 @@
                     <tr>
                         <th class="lb-col-rank">#</th>
                         <th>Member</th>
-                        <th>Title</th>
+                        <th>Prestige</th>
                         <th class="lb-col-value">🪙 TOBY</th>
                         <th class="lb-col-value">This month</th>
                         <th class="lb-col-value">💰 Portfolio</th>
@@ -252,11 +278,13 @@
                                   th:text="${row.rank}">1</span>
                         </td>
                         <td data-label="Member">
-                            <div th:replace="~{fragments/memberCell :: cell(${row.name}, ${row.avatarUrl})}"></div>
+                            <div th:replace="~{fragments/memberCell :: cellLink(${row.name}, ${row.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${row.discordId})})}"></div>
                         </td>
-                        <td data-label="Title">
+                        <td data-label="Prestige">
+                            <span class="lb-level-pill"
+                                  th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
+                                  th:text="'LVL ' + ${row.level}">LVL 0</span>
                             <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
-                            <span th:unless="${row.title != null}" class="muted">—</span>
                         </td>
                         <td data-label="TOBY" class="lb-col-value">
                             <strong class="lb-value lb-value-toby" th:text="${row.coins}">0</strong>
@@ -339,7 +367,7 @@
                                     <div class="lb-tooltip-title">Top contributors</div>
                                     <ul class="lb-tooltip-list">
                                         <li class="lb-tooltip-row" th:each="c : ${row.contributors}">
-                                            <div th:replace="~{fragments/memberCell :: cell(${c.name}, ${c.avatarUrl})}"></div>
+                                            <div th:replace="~{fragments/memberCell :: cellLink(${c.name}, ${c.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${c.discordId})})}"></div>
                                             <div class="lb-tooltip-meta">
                                                 <span class="lb-tooltip-time" th:text="${c.playtimeDisplay}">0m</span>
                                                 <span class="lb-tooltip-percent muted" th:text="'(' + ${c.percent} + '%)'">(0%)</span>

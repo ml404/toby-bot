@@ -68,6 +68,44 @@ class ProfileController(
 
         model.addAttribute("profile", profile)
         model.addAttribute("username", user.displayName())
+        model.addAttribute("viewerIsOwner", true)
+        model.addAttribute("backLink", "/profile/guilds?pick=true")
+        model.addAttribute("backLabel", "All servers")
+        "profile"
+    }
+
+    // Read-only view of another guild member's profile. Anyone in the guild
+    // can view anyone else's prestige stats (level/streak/achievements/owned
+    // titles) — the same data that's already projected onto the leaderboard.
+    // Owner-only UI (claim button, permissions, title-shop CTA) is gated on
+    // `viewerIsOwner` in the template.
+    @GetMapping("/{guildId}/{targetDiscordId}")
+    fun publicProfile(
+        @PathVariable guildId: Long,
+        @PathVariable targetDiscordId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/profile/guilds",
+        check = profileWebService::isMember,
+    ) { viewerDiscordId ->
+        // Self-clicks (e.g. from clicking your own row on the leaderboard)
+        // bounce to the owner self-view so the claim/permissions flow is
+        // preserved without duplicating logic here.
+        if (viewerDiscordId == targetDiscordId) {
+            return@requireForPage "redirect:/profile/$guildId"
+        }
+        val profile = profileWebService.getProfile(targetDiscordId, guildId) ?: run {
+            ra.addFlashAttribute("error", "That member isn't in this server.")
+            return@requireForPage "redirect:/leaderboard/$guildId"
+        }
+
+        model.addAttribute("profile", profile)
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("viewerIsOwner", false)
+        model.addAttribute("backLink", "/leaderboard/$guildId")
+        model.addAttribute("backLabel", "Leaderboard")
         "profile"
     }
 }
