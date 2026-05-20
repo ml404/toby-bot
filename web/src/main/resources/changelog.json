@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Public profiles via leaderboard click-through + level pill alongside title",
+    "summary": "Turns leaderboard rows into links to a read-only public profile so members can compare their level, streak, and achievements with anyone else in the guild — and surfaces each member's **level next to their title** across the leaderboard for at-a-glance prestige. **Public profile route** `GET /profile/{guildId}/{targetDiscordId}` reusing `WebGuildAccess.requireForPage` + `ProfileWebService.getProfile` (already keyed by `(discordId, guildId)`). Self-clicks bounce to the exis…",
+    "emoji": "🎟️",
+    "prNumber": 521
+  },
+  {
+    "date": "May 2026",
     "title": "Expand catalog with new tiers, counters, consolation, and roadmap stubs",
     "summary": "Expands the achievements catalogue with **19 new visible specs** + **13 hidden roadmap stubs**, riding entirely on event listeners that already exist in `AchievementEventHandler`. No new domain events. ### What's new (visible) **Streak ladder**: `streak_100` (Centurion), `streak_365` (Year of Toby) **Level ladder**: `level_75` (Elite), `level_100` (Legend) **Duel wins ladder**: `duel_wins_25` (Champion), `duel_wins_50` (Warlord), `duel_wins_100` (Undefeated) **Voice ladder…",
     "emoji": "✨",
