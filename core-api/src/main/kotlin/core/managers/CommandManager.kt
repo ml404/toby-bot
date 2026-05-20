@@ -23,4 +23,10 @@ interface CommandManager : NamedRegistry<Command> {
     fun getCommand(search: String): Command? = findByName(search)
 
     fun handle(event: SlashCommandInteractionEvent)
+
+    /**
+     * Drop any cached per-guild state for [guildId]. Default no-op so
+     * test doubles and lighter implementations don't have to override.
+     */
+    fun evictGuild(guildId: Long) {}
 }

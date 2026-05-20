@@ -67,6 +67,16 @@ class DefaultCommandManager @Autowired constructor(
     override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>()
     override val economyCommands: List<Command> get() = commands.filterIsInstance<EconomyCommand>()
 
+    /**
+     * Drop the cached last-command entry for [guildId]. Called from
+     * the guild-leave cleanup path so the JDA [Guild] reference (and
+     * the associated [CommandContext]) don't pin a stale guild after
+     * the bot is gone.
+     */
+    override fun evictGuild(guildId: Long) {
+        lastCommands.keys.removeIf { it.idLong == guildId }
+    }
+
     override fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return
         val deleteDelay = configService.getConfigByName(

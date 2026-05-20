@@ -49,6 +49,14 @@ class VoiceCompanyTracker {
         }
     }
 
+    /**
+     * Drop every tracker for [guildId]. Called when the bot leaves the
+     * guild so per-user session state can't outlive the guild itself.
+     */
+    fun evictGuild(guildId: Long) {
+        trackers.keys.removeIf { it.second == guildId }
+    }
+
     private fun hasCompany(channel: AudioChannel, exceptUserId: Long): Boolean {
         return channel.members.any { other ->
             !other.user.isBot && other.idLong != exceptUserId

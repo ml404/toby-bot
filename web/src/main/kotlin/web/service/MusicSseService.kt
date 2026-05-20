@@ -100,6 +100,19 @@ class MusicSseService(
         }
     }
 
+    /**
+     * Drop every emitter for [guildId] and remove the bucket. Called when
+     * the bot leaves the guild — keeping stale browser channels around
+     * holds onto buffers and the `gateway.getState` lookups become moot
+     * once the guild is gone.
+     */
+    fun evictGuild(guildId: Long) {
+        val list = emitters.remove(guildId) ?: return
+        for (emitter in list) {
+            runCatching { emitter.complete() }
+        }
+    }
+
     private fun fanOut(guildId: Long, name: String, payload: Any) {
         val list = emitters[guildId] ?: return
         broadcast(list) { send(SseEmitter.event().name(name).data(payload)) }
