@@ -89,22 +89,39 @@ class AchievementEventHandler(
             guildId = event.guildId,
             code = "tip_giver"
         )
+        TIP_SENT_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.senderDiscordId,
+                guildId = event.guildId,
+                code = "tips_sent_$tier",
+                delta = 1L
+            )
+        }
     }
 
     @EventListener
     fun onDuelResolved(event: DuelResolvedEvent) {
-        // Two-shot: the winner's first duel + their tenth.
         achievementService.unlock(
             discordId = event.winnerDiscordId,
             guildId = event.guildId,
             code = "first_duel_win"
         )
-        achievementService.progress(
-            discordId = event.winnerDiscordId,
-            guildId = event.guildId,
-            code = "duel_wins_10",
-            delta = 1L
-        )
+        DUEL_WIN_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.winnerDiscordId,
+                guildId = event.guildId,
+                code = "duel_wins_$tier",
+                delta = 1L
+            )
+        }
+        DUEL_LOSS_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.loserDiscordId,
+                guildId = event.guildId,
+                code = "duel_losses_$tier",
+                delta = 1L
+            )
+        }
     }
 
     @EventListener
@@ -114,6 +131,14 @@ class AchievementEventHandler(
             guildId = event.guildId,
             code = "lottery_winner"
         )
+        LOTTERY_WIN_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.discordId,
+                guildId = event.guildId,
+                code = "lottery_wins_$tier",
+                delta = 1L
+            )
+        }
     }
 
     @EventListener
@@ -136,24 +161,28 @@ class AchievementEventHandler(
             guildId = event.guildId,
             code = "blackjack_natural"
         )
+        BLACKJACK_NATURAL_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.discordId,
+                guildId = event.guildId,
+                code = "blackjack_natural_$tier",
+                delta = 1L
+            )
+        }
     }
 
     @EventListener
     fun onVoiceSessionLogged(event: VoiceSessionLoggedEvent) {
         // Counter-style: each session's countedSeconds adds to the
         // cumulative hours. progress() unlocks on threshold cross.
-        achievementService.progress(
-            discordId = event.discordId,
-            guildId = event.guildId,
-            code = "voice_10h",
-            delta = event.countedSeconds
-        )
-        achievementService.progress(
-            discordId = event.discordId,
-            guildId = event.guildId,
-            code = "voice_100h",
-            delta = event.countedSeconds
-        )
+        VOICE_TIER_CODES.forEach { code ->
+            achievementService.progress(
+                discordId = event.discordId,
+                guildId = event.guildId,
+                code = code,
+                delta = event.countedSeconds
+            )
+        }
     }
 
     @EventListener
@@ -206,7 +235,15 @@ class AchievementEventHandler(
     }
 
     companion object {
-        private val STREAK_MILESTONES = listOf(3, 7, 30)
-        private val LEVEL_MILESTONES = listOf(5, 25, 50)
+        private val STREAK_MILESTONES = listOf(3, 7, 30, 100, 365)
+        private val LEVEL_MILESTONES = listOf(5, 25, 50, 75, 100)
+        private val DUEL_WIN_TIERS = listOf(10, 25, 50, 100)
+        private val DUEL_LOSS_TIERS = listOf(5, 25)
+        private val LOTTERY_WIN_TIERS = listOf(3, 10, 25)
+        private val BLACKJACK_NATURAL_TIERS = listOf(5, 25)
+        private val TIP_SENT_TIERS = listOf(10, 50)
+        private val VOICE_TIER_CODES = listOf(
+            "voice_10h", "voice_100h", "voice_250h", "voice_500h", "voice_1000h"
+        )
     }
 }

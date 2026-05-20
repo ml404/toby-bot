@@ -81,6 +81,26 @@ object AchievementCatalog {
             creditReward = 1000,
             threshold = 30
         ),
+        AchievementSpec(
+            code = "streak_100",
+            name = "Centurion",
+            description = "Hit a 100-day login streak.",
+            category = "streak",
+            icon = "🏛️",
+            xpReward = 1500,
+            creditReward = 3000,
+            threshold = 100
+        ),
+        AchievementSpec(
+            code = "streak_365",
+            name = "Year of Toby",
+            description = "Hit a 365-day login streak.",
+            category = "streak",
+            icon = "👑",
+            xpReward = 5000,
+            creditReward = 10000,
+            threshold = 365
+        ),
 
         // Level achievements — fired by AchievementEventHandler on LevelUpEvent.
         AchievementSpec(
@@ -113,6 +133,26 @@ object AchievementCatalog {
             creditReward = 750,
             threshold = 50
         ),
+        AchievementSpec(
+            code = "level_75",
+            name = "Elite",
+            description = "Reach level 75.",
+            category = "level",
+            icon = "🏅",
+            xpReward = 1000,
+            creditReward = 1500,
+            threshold = 75
+        ),
+        AchievementSpec(
+            code = "level_100",
+            name = "Legend",
+            description = "Reach level 100.",
+            category = "level",
+            icon = "🌟",
+            xpReward = 2500,
+            creditReward = 5000,
+            threshold = 100
+        ),
 
         // Casino / social achievements — fired by inline calls from
         // DuelService / TipService / IntroHelper resolution paths.
@@ -136,6 +176,36 @@ object AchievementCatalog {
             threshold = 10
         ),
         AchievementSpec(
+            code = "duel_wins_25",
+            name = "Champion",
+            description = "Win 25 duels.",
+            category = "casino",
+            icon = "🛡️",
+            xpReward = 300,
+            creditReward = 400,
+            threshold = 25
+        ),
+        AchievementSpec(
+            code = "duel_wins_50",
+            name = "Warlord",
+            description = "Win 50 duels.",
+            category = "casino",
+            icon = "⚜️",
+            xpReward = 600,
+            creditReward = 800,
+            threshold = 50
+        ),
+        AchievementSpec(
+            code = "duel_wins_100",
+            name = "Undefeated",
+            description = "Win 100 duels.",
+            category = "casino",
+            icon = "💀",
+            xpReward = 1500,
+            creditReward = 2000,
+            threshold = 100
+        ),
+        AchievementSpec(
             code = "tip_giver",
             name = "Generous",
             description = "Tip another user for the first time.",
@@ -143,6 +213,26 @@ object AchievementCatalog {
             icon = "🎁",
             xpReward = 25,
             creditReward = 50
+        ),
+        AchievementSpec(
+            code = "tips_sent_10",
+            name = "Patron",
+            description = "Tip another user 10 times.",
+            category = "social",
+            icon = "💝",
+            xpReward = 150,
+            creditReward = 150,
+            threshold = 10
+        ),
+        AchievementSpec(
+            code = "tips_sent_50",
+            name = "Philanthropist",
+            description = "Tip another user 50 times.",
+            category = "social",
+            icon = "🪙",
+            xpReward = 500,
+            creditReward = 500,
+            threshold = 50
         ),
         AchievementSpec(
             code = "intro_set",
@@ -161,6 +251,36 @@ object AchievementCatalog {
             icon = "🎰",
             xpReward = 100,
             creditReward = 0
+        ),
+        AchievementSpec(
+            code = "lottery_wins_3",
+            name = "Lucky Streak",
+            description = "Win 3 lifetime daily lottery draws.",
+            category = "casino",
+            icon = "🍀",
+            xpReward = 200,
+            creditReward = 0,
+            threshold = 3
+        ),
+        AchievementSpec(
+            code = "lottery_wins_10",
+            name = "Fortune's Favourite",
+            description = "Win 10 lifetime daily lottery draws.",
+            category = "casino",
+            icon = "🎟️",
+            xpReward = 500,
+            creditReward = 0,
+            threshold = 10
+        ),
+        AchievementSpec(
+            code = "lottery_wins_25",
+            name = "Lottomaniac",
+            description = "Win 25 lifetime daily lottery draws.",
+            category = "casino",
+            icon = "💰",
+            xpReward = 1500,
+            creditReward = 0,
+            threshold = 25
         ),
         AchievementSpec(
             code = "voice_10h",
@@ -182,6 +302,36 @@ object AchievementCatalog {
             creditReward = 500,
             threshold = 360000L
         ),
+        AchievementSpec(
+            code = "voice_250h",
+            name = "Voice Devotee",
+            description = "Spend 250 cumulative hours in voice channels.",
+            category = "voice",
+            icon = "🎚️",
+            xpReward = 1000,
+            creditReward = 1000,
+            threshold = 900000L
+        ),
+        AchievementSpec(
+            code = "voice_500h",
+            name = "Voice Legend",
+            description = "Spend 500 cumulative hours in voice channels.",
+            category = "voice",
+            icon = "📡",
+            xpReward = 2000,
+            creditReward = 2000,
+            threshold = 1800000L
+        ),
+        AchievementSpec(
+            code = "voice_1000h",
+            name = "Voice Immortal",
+            description = "Spend 1000 cumulative hours in voice channels.",
+            category = "voice",
+            icon = "🛰️",
+            xpReward = 5000,
+            creditReward = 5000,
+            threshold = 3600000L
+        ),
 
         AchievementSpec(
             code = "blackjack_natural",
@@ -191,6 +341,186 @@ object AchievementCatalog {
             icon = "🃏",
             xpReward = 50,
             creditReward = 50
+        ),
+        AchievementSpec(
+            code = "blackjack_natural_5",
+            name = "Card Counter",
+            description = "Hit 5 lifetime natural blackjacks.",
+            category = "casino",
+            icon = "🂡",
+            xpReward = 200,
+            creditReward = 200,
+            threshold = 5
+        ),
+        AchievementSpec(
+            code = "blackjack_natural_25",
+            name = "Pit Boss",
+            description = "Hit 25 lifetime natural blackjacks.",
+            category = "casino",
+            icon = "🎴",
+            xpReward = 750,
+            creditReward = 750,
+            threshold = 25
+        ),
+
+        // Consolation achievements — fired by AchievementEventHandler on
+        // DuelResolvedEvent against the loser side.
+        AchievementSpec(
+            code = "duel_losses_5",
+            name = "Tough Luck",
+            description = "Lose 5 duels.",
+            category = "consolation",
+            icon = "🩹",
+            xpReward = 50,
+            creditReward = 100,
+            threshold = 5
+        ),
+        AchievementSpec(
+            code = "duel_losses_25",
+            name = "Comeback Kid",
+            description = "Lose 25 duels.",
+            category = "consolation",
+            icon = "💪",
+            xpReward = 250,
+            creditReward = 500,
+            threshold = 25
+        ),
+
+        // Roadmap stubs for casino games that don't yet publish domain
+        // events. Hidden until a future PR adds the corresponding event
+        // and wires up an AchievementEventHandler listener; the codes
+        // are reserved here so the hookup PR doesn't have to invent
+        // them. Each pending entry must stay enumerated in
+        // AchievementCatalogTest.PENDING_HIDDEN_CODES.
+        AchievementSpec(
+            code = "slots_first_jackpot",
+            name = "Jackpot!",
+            description = "Hit the slot machine jackpot.",
+            category = "casino",
+            icon = "🎰",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "roulette_first_straight_win",
+            name = "Lucky Number",
+            description = "Win a straight-up roulette bet.",
+            category = "casino",
+            icon = "🎯",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "poker_first_royal_flush",
+            name = "Royal Flush",
+            description = "Hit a royal flush in poker.",
+            category = "casino",
+            icon = "♠️",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "dice_first_win",
+            name = "Loaded Dice",
+            description = "Win your first dice game.",
+            category = "casino",
+            icon = "🎲",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "coinflip_first_win",
+            name = "Heads or Tails",
+            description = "Win your first coinflip.",
+            category = "casino",
+            icon = "🪙",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "keno_first_perfect",
+            name = "Perfect Card",
+            description = "Hit every chosen number in keno.",
+            category = "casino",
+            icon = "🔢",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "plinko_first_jackpot",
+            name = "The Drop",
+            description = "Land a plinko jackpot.",
+            category = "casino",
+            icon = "🟢",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "scratch_first_jackpot",
+            name = "Hit the Strip",
+            description = "Hit the jackpot on a scratch ticket.",
+            category = "casino",
+            icon = "🎫",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "wheel_first_jackpot",
+            name = "Spin Doctor",
+            description = "Land the wheel-of-fortune jackpot.",
+            category = "casino",
+            icon = "🎡",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "horse_racing_first_win",
+            name = "Photo Finish",
+            description = "Win your first horse race.",
+            category = "casino",
+            icon = "🐎",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "baccarat_first_win",
+            name = "Punto Banco",
+            description = "Win your first baccarat hand.",
+            category = "casino",
+            icon = "🎴",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "casino_holdem_first_win",
+            name = "All In",
+            description = "Win your first Casino Hold'em hand.",
+            category = "casino",
+            icon = "🂠",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
+        ),
+        AchievementSpec(
+            code = "highlow_first_streak",
+            name = "Higher or Lower",
+            description = "Win 5 high-low calls in a row.",
+            category = "casino",
+            icon = "🔼",
+            xpReward = 100,
+            creditReward = 100,
+            hidden = true
         )
     )
 
