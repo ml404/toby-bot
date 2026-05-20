@@ -81,21 +81,18 @@ class AchievementCatalogTest {
     }
 
     /**
-     * Locks in which catalog entries are still pending hookup. When you
-     * wire one up (e.g. give a casino game a domain event and an
-     * AchievementEventHandler listener), flip `hidden = false` in
-     * AchievementCatalog AND remove it from [PENDING_HIDDEN_CODES] below.
-     * The intent is that the hidden set is a known, reviewed roadmap —
-     * never silent growth.
+     * Locks in which catalog entries are still pending hookup. Every
+     * stub is now wired (PR follow-up to #520), so this set must be
+     * empty. When a new hidden entry is added, document it in this
+     * test's [PENDING_HIDDEN_CODES] set and revive the comparison.
      */
     @Test
-    fun `hidden achievements match the documented pending-hookup allowlist`() {
+    fun `no achievements are hidden`() {
         val actuallyHidden = AchievementCatalog.all.filter { it.hidden }.map { it.code }.toSet()
         assertEquals(
-            PENDING_HIDDEN_CODES, actuallyHidden,
-            "Hidden-achievement set drifted from the documented roadmap. Either wire up " +
-                "the trigger and flip hidden=false (and remove it from PENDING_HIDDEN_CODES), " +
-                "or add the new pending-hookup code to PENDING_HIDDEN_CODES."
+            emptySet<String>(), actuallyHidden,
+            "Hidden achievements set is non-empty. Either wire up the trigger " +
+                "and flip hidden=false, or document the new pending-hookup code in this test."
         )
     }
 
@@ -114,24 +111,6 @@ class AchievementCatalogTest {
             "intro_set",
             "voice_10h", "voice_100h", "voice_250h", "voice_500h", "voice_1000h",
             "blackjack_natural", "blackjack_natural_5", "blackjack_natural_25",
-        )
-        val visible = AchievementCatalog.all.filterNot { it.hidden }.map { it.code }.toSet()
-        val orphaned = visible - wired
-        assertTrue(
-            orphaned.isEmpty(),
-            "Visible achievements with no event-handler hookup: $orphaned. " +
-                "Either wire them up in AchievementEventHandler, mark them hidden, " +
-                "or add them to the wired allowlist in this test."
-        )
-    }
-
-    companion object {
-        // Casino games that don't yet publish domain events — each row
-        // is a reserved code waiting for a hookup PR. When a game gains
-        // an event + AchievementEventHandler listener, flip
-        // `hidden = false` in AchievementCatalog and remove the code
-        // from this set.
-        private val PENDING_HIDDEN_CODES = setOf(
             "slots_first_jackpot",
             "roulette_first_straight_win",
             "poker_first_royal_flush",
@@ -145,6 +124,14 @@ class AchievementCatalogTest {
             "baccarat_first_win",
             "casino_holdem_first_win",
             "highlow_first_streak",
+        )
+        val visible = AchievementCatalog.all.filterNot { it.hidden }.map { it.code }.toSet()
+        val orphaned = visible - wired
+        assertTrue(
+            orphaned.isEmpty(),
+            "Visible achievements with no event-handler hookup: $orphaned. " +
+                "Either wire them up in AchievementEventHandler, mark them hidden, " +
+                "or add them to the wired allowlist in this test."
         )
     }
 }

@@ -59,6 +59,9 @@ class SlotMachine(
         const val MIN_STAKE: Long = 10L
         const val MAX_STAKE: Long = 500L
 
+        /** Top tier — three STARs. Lower-tier wins (cherries/lemons/bells) pay less. */
+        const val JACKPOT_MULTIPLIER: Long = 100L
+
         // Weighted reel: 4 cherries + 3 lemons + 2 bells + 1 star = 10 cells.
         // Same reel on all three slots; independent draws.
         val DEFAULT_REEL: List<Symbol> = buildList {

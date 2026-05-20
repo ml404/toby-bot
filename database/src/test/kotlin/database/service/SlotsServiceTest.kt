@@ -217,4 +217,68 @@ class SlotsServiceTest {
         val lose = assertInstanceOf(SlotsService.SpinOutcome.Lose::class.java, outcome)
         assertTrue(lose.symbols.toSet().size == 3, "three distinct symbols → guaranteed non-payout")
     }
+
+    // -------------------------------------------------------------------------
+    // SlotsJackpotEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<SlotsService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = SlotsService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, machine, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `jackpot pull (100x STAR triple) publishes exactly one SlotsJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { machine.pull(any()) } returns SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR, SlotMachine.Symbol.STAR),
+            multiplier = SlotMachine.JACKPOT_MULTIPLIER,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L)
+
+        assertEquals(1, publisher.slotsJackpots.size)
+        val event = publisher.slotsJackpots.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `non-jackpot win (cherries 5x) publishes no SlotsJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { machine.pull(any()) } returns SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.CHERRY),
+            multiplier = 5L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.slotsJackpots.isEmpty())
+    }
+
+    @Test
+    fun `losing pull publishes no SlotsJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { machine.pull(any()) } returns SlotMachine.Pull(
+            symbols = listOf(SlotMachine.Symbol.CHERRY, SlotMachine.Symbol.LEMON, SlotMachine.Symbol.BELL),
+            multiplier = 0L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.slotsJackpots.isEmpty())
+    }
 }

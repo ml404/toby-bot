@@ -8,6 +8,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -200,5 +201,75 @@ class KenoServiceTest {
         every { keno.maxMultiplier(7) } returns 7000.0
 
         assertEquals(7000.0, service.maxMultiplier(7), 1e-9)
+    }
+
+    // -------------------------------------------------------------------------
+    // KenoPerfectEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<KenoService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = KenoService(
+            userService, jackpotService, tradeService, marketService, configService,
+            keno, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `perfect card (hits == picks) publishes exactly one KenoPerfectEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { keno.play(setOf(1, 2, 3, 4, 5), any()) } returns Keno.Hand(
+            picks = listOf(1, 2, 3, 4, 5),
+            draws = (1..20).toList(),
+            hits = 5,
+            multiplier = 800.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, picks = listOf(1, 2, 3, 4, 5))
+
+        assertEquals(1, publisher.kenoPerfects.size)
+        val event = publisher.kenoPerfects.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `partial-hit win (hits less than picks) publishes no KenoPerfectEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { keno.play(setOf(1, 2, 3, 4, 5), any()) } returns Keno.Hand(
+            picks = listOf(1, 2, 3, 4, 5),
+            draws = (1..20).toList(),
+            hits = 4,
+            multiplier = 10.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, picks = listOf(1, 2, 3, 4, 5))
+
+        assertTrue(publisher.kenoPerfects.isEmpty())
+    }
+
+    @Test
+    fun `zero-hit loss publishes no KenoPerfectEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { keno.play(setOf(1, 2, 3, 4, 5), any()) } returns Keno.Hand(
+            picks = listOf(1, 2, 3, 4, 5),
+            draws = (10..29).toList(),
+            hits = 0,
+            multiplier = 0.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, picks = listOf(1, 2, 3, 4, 5))
+
+        assertTrue(publisher.kenoPerfects.isEmpty())
     }
 }

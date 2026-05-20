@@ -11,6 +11,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -216,5 +217,64 @@ class BaccaratServiceTest {
         assertEquals(1.95, multiplier, 1e-9)
         verify(exactly = 0) { userService.getUserByIdForUpdate(any(), any()) }
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    // -------------------------------------------------------------------------
+    // BaccaratWonEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<BaccaratService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = BaccaratService(
+            userService, jackpotService, tradeService, marketService, configService,
+            baccarat, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `winning hand publishes exactly one BaccaratWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { baccarat.play(Baccarat.Side.PLAYER, any()) } returns
+            handResult(side = Baccarat.Side.PLAYER, winner = Baccarat.Side.PLAYER, multiplier = 2.0)
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, side = Baccarat.Side.PLAYER)
+
+        assertEquals(1, publisher.baccaratWins.size)
+        val event = publisher.baccaratWins.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `losing hand publishes no BaccaratWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { baccarat.play(Baccarat.Side.PLAYER, any()) } returns
+            handResult(side = Baccarat.Side.PLAYER, winner = Baccarat.Side.BANKER, multiplier = 0.0)
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, side = Baccarat.Side.PLAYER)
+
+        assertTrue(publisher.baccaratWins.isEmpty())
+    }
+
+    @Test
+    fun `push hand publishes no BaccaratWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        // Baccarat.Hand with multiplier 1.0 is a push (stake refund).
+        every { baccarat.play(Baccarat.Side.PLAYER, any()) } returns
+            handResult(side = Baccarat.Side.PLAYER, winner = Baccarat.Side.TIE, multiplier = 1.0)
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, side = Baccarat.Side.PLAYER)
+
+        assertTrue(publisher.baccaratWins.isEmpty())
     }
 }

@@ -1,6 +1,7 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.CasinoHoldemWonEvent
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.poker.CasinoHoldem
@@ -8,6 +9,7 @@ import database.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -49,6 +51,7 @@ class CasinoHoldemService @Autowired constructor(
      */
     @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
     @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
+    @Autowired(required = false) private val eventPublisher: ApplicationEventPublisher? = null,
     private val random: Random = Random.Default,
 ) {
 
@@ -298,6 +301,19 @@ class CasinoHoldemService @Autowired constructor(
                     jackpotService, configService, guildId, callStake
                 )
             CasinoHoldem.CallResult.PUSH, CasinoHoldem.CallResult.FOLDED -> Unit
+        }
+
+        // Achievement: a hand counts as a "win" if any leg paid out
+        // anything strictly above stake refund. PUSH (ante) and PUSH /
+        // FOLDED (call) are stake-neutral, so a pure PUSH+PUSH hand does
+        // not fire — matches the achievement copy "Win your first
+        // Casino Hold'em hand".
+        val isAnteWin = resolution.anteResult == CasinoHoldem.AnteResult.WIN
+        val isCallWin = resolution.callResult != CasinoHoldem.CallResult.LOSE &&
+            resolution.callResult != CasinoHoldem.CallResult.PUSH &&
+            resolution.callResult != CasinoHoldem.CallResult.FOLDED
+        if (isAnteWin || isCallWin) {
+            eventPublisher?.publishEvent(CasinoHoldemWonEvent(discordId = discordId, guildId = guildId))
         }
 
         val newBalance = user.socialCredit ?: 0L

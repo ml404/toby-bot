@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.WheelJackpotEvent
 import database.dto.ConfigDto
 import database.economy.WheelOfFortune
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -28,7 +30,8 @@ class WheelOfFortuneService(
     private val configService: ConfigService,
     private val casinoEdgeService: CasinoEdgeService,
     private val wheel: WheelOfFortune = WheelOfFortune(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface SpinOutcome {
@@ -121,6 +124,12 @@ class WheelOfFortuneService(
             userService, resolved.user, resolved.balance, stake, multiplier
         )
         return if (result.isWin) {
+            // Top-tier pick (max of WheelOfFortune.PICKS) landing is the
+            // jackpot achievement trigger. Lower-multiplier wins still pay
+            // out but don't fire the event.
+            if (pickedMultiplier == WheelOfFortune.PICKS.max()) {
+                eventPublisher?.publishEvent(WheelJackpotEvent(discordId = discordId, guildId = guildId))
+            }
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.WHEEL_OF_FORTUNE, random,

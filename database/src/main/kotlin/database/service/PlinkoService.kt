@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.PlinkoJackpotEvent
 import database.dto.ConfigDto
 import database.economy.Plinko
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -29,7 +31,8 @@ class PlinkoService(
     private val configService: ConfigService,
     private val casinoEdgeService: CasinoEdgeService,
     private val plinko: Plinko = Plinko(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface DropOutcome {
@@ -131,6 +134,14 @@ class PlinkoService(
         )
         return when {
             result.isWin -> {
+                // Top-bucket jackpot detection — the achievement fires only
+                // when the landed multiplier equals the risk profile's max.
+                // maxOrNull guards against an empty / stubbed-out payout
+                // table in tests; in production the table is never empty.
+                val maxMultiplier = plinko.payoutTable(risk).maxOrNull()
+                if (maxMultiplier != null && result.multiplier == maxMultiplier) {
+                    eventPublisher?.publishEvent(PlinkoJackpotEvent(discordId = discordId, guildId = guildId))
+                }
                 val jackpot = JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, resolved.user, guildId,
                     stake, JackpotGame.PLINKO, random,

@@ -1,10 +1,12 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.BaccaratWonEvent
 import database.card.Card
 import database.card.Deck
 import database.dto.ConfigDto
 import database.economy.Baccarat
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -32,7 +34,8 @@ class BaccaratService(
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
     private val baccarat: Baccarat = Baccarat(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface PlayOutcome {
@@ -132,6 +135,7 @@ class BaccaratService(
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
         return when {
             hand.isWin -> {
+                eventPublisher?.publishEvent(BaccaratWonEvent(discordId = discordId, guildId = guildId))
                 val jackpot = JackpotHelper.rollOnWin(
                     jackpotService, configService, userService, resolved.user, guildId,
                     stake, JackpotGame.BACCARAT, random,

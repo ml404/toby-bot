@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.CoinflipWonEvent
 import database.dto.ConfigDto
 import database.economy.Coinflip
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -34,7 +36,8 @@ class CoinflipService(
     private val configService: ConfigService,
     private val casinoEdgeService: CasinoEdgeService,
     private val coinflip: Coinflip = Coinflip(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface FlipOutcome {
@@ -118,6 +121,7 @@ class CoinflipService(
 
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, flip.multiplier)
         return if (flip.isWin) {
+            eventPublisher?.publishEvent(CoinflipWonEvent(discordId = discordId, guildId = guildId))
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.COINFLIP, random,

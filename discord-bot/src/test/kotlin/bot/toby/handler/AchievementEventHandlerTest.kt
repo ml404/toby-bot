@@ -4,14 +4,27 @@ import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.notification.PushAdapter
 import common.events.AchievementUnlockedEvent
+import common.events.BaccaratWonEvent
 import common.events.BlackjackNaturalEvent
+import common.events.CasinoHoldemWonEvent
+import common.events.CoinflipWonEvent
+import common.events.DiceWonEvent
 import common.events.DuelResolvedEvent
+import common.events.HighlowHandResolvedEvent
+import common.events.HorseRacingWonEvent
 import common.events.IntroSetEvent
+import common.events.KenoPerfectEvent
 import common.events.LevelUpEvent
 import common.events.LotteryWonEvent
+import common.events.PlinkoJackpotEvent
+import common.events.PokerRoyalFlushEvent
+import common.events.RouletteStraightWinEvent
+import common.events.ScratchJackpotEvent
+import common.events.SlotsJackpotEvent
 import common.events.StreakClaimedEvent
 import common.events.TipSentEvent
 import common.events.VoiceSessionLoggedEvent
+import common.events.WheelJackpotEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
@@ -276,6 +289,128 @@ class AchievementEventHandlerTest {
             verify(exactly = 1) {
                 achievementService.progress(discordId, guildId, "blackjack_natural_$tier", 1L)
             }
+        }
+    }
+
+    // ---- casino game wirings (follow-up to PR #520) ----
+
+    @Test
+    fun `slots jackpot unlocks slots_first_jackpot for the player`() {
+        handler.onSlotsJackpot(SlotsJackpotEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "slots_first_jackpot")
+        }
+    }
+
+    @Test
+    fun `roulette straight-up win unlocks roulette_first_straight_win for the player`() {
+        handler.onRouletteStraightWin(RouletteStraightWinEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "roulette_first_straight_win")
+        }
+    }
+
+    @Test
+    fun `poker royal flush unlocks poker_first_royal_flush for the player`() {
+        handler.onPokerRoyalFlush(PokerRoyalFlushEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "poker_first_royal_flush")
+        }
+    }
+
+    @Test
+    fun `dice win unlocks dice_first_win for the player`() {
+        handler.onDiceWon(DiceWonEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "dice_first_win")
+        }
+    }
+
+    @Test
+    fun `coinflip win unlocks coinflip_first_win for the player`() {
+        handler.onCoinflipWon(CoinflipWonEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "coinflip_first_win")
+        }
+    }
+
+    @Test
+    fun `keno perfect card unlocks keno_first_perfect for the player`() {
+        handler.onKenoPerfect(KenoPerfectEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "keno_first_perfect")
+        }
+    }
+
+    @Test
+    fun `plinko jackpot unlocks plinko_first_jackpot for the player`() {
+        handler.onPlinkoJackpot(PlinkoJackpotEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "plinko_first_jackpot")
+        }
+    }
+
+    @Test
+    fun `scratch jackpot unlocks scratch_first_jackpot for the player`() {
+        handler.onScratchJackpot(ScratchJackpotEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "scratch_first_jackpot")
+        }
+    }
+
+    @Test
+    fun `wheel jackpot unlocks wheel_first_jackpot for the player`() {
+        handler.onWheelJackpot(WheelJackpotEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "wheel_first_jackpot")
+        }
+    }
+
+    @Test
+    fun `horse racing win unlocks horse_racing_first_win for the player`() {
+        handler.onHorseRacingWon(HorseRacingWonEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "horse_racing_first_win")
+        }
+    }
+
+    @Test
+    fun `baccarat win unlocks baccarat_first_win for the player`() {
+        handler.onBaccaratWon(BaccaratWonEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "baccarat_first_win")
+        }
+    }
+
+    @Test
+    fun `casino holdem win unlocks casino_holdem_first_win for the player`() {
+        handler.onCasinoHoldemWon(CasinoHoldemWonEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "casino_holdem_first_win")
+        }
+    }
+
+    @Test
+    fun `highlow win progresses highlow_first_streak by 1`() {
+        handler.onHighlowHandResolved(HighlowHandResolvedEvent(discordId, guildId, isWin = true))
+        verify(exactly = 1) {
+            achievementService.progress(discordId, guildId, "highlow_first_streak", 1L)
+        }
+        // Win must NOT reset the counter — that would defeat the streak.
+        verify(exactly = 0) {
+            achievementService.setProgress(discordId, guildId, "highlow_first_streak", any(), any())
+        }
+    }
+
+    @Test
+    fun `highlow loss resets highlow_first_streak progress to zero`() {
+        handler.onHighlowHandResolved(HighlowHandResolvedEvent(discordId, guildId, isWin = false))
+        verify(exactly = 1) {
+            achievementService.setProgress(discordId, guildId, "highlow_first_streak", 0L)
+        }
+        // Loss must NOT increment the streak.
+        verify(exactly = 0) {
+            achievementService.progress(discordId, guildId, "highlow_first_streak", any())
         }
     }
 

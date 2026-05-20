@@ -9,6 +9,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -209,5 +210,51 @@ class CoinflipServiceTest {
         val lose = assertInstanceOf(CoinflipService.FlipOutcome.Lose::class.java, outcome)
         assertEquals(Coinflip.Side.TAILS, lose.landed, "substitute must land the OPPOSITE of predicted")
         assertEquals(Coinflip.Side.HEADS, lose.predicted)
+    }
+
+    // -------------------------------------------------------------------------
+    // CoinflipWonEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<CoinflipService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = CoinflipService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, coinflip, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `winning flip publishes exactly one CoinflipWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { coinflip.flip(Coinflip.Side.HEADS, any()) } returns Coinflip.Flip(
+            landed = Coinflip.Side.HEADS, predicted = Coinflip.Side.HEADS, multiplier = 2L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.flip(discordId, guildId, stake = 100L, predicted = Coinflip.Side.HEADS)
+
+        assertEquals(1, publisher.coinflipWins.size)
+        val event = publisher.coinflipWins.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `losing flip publishes no CoinflipWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { coinflip.flip(Coinflip.Side.HEADS, any()) } returns Coinflip.Flip(
+            landed = Coinflip.Side.TAILS, predicted = Coinflip.Side.HEADS, multiplier = 0L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.flip(discordId, guildId, stake = 100L, predicted = Coinflip.Side.HEADS)
+
+        assertTrue(publisher.coinflipWins.isEmpty())
     }
 }
