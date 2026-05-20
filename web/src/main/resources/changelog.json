@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Expand catalog with new tiers, counters, consolation, and roadmap stubs",
+    "summary": "Expands the achievements catalogue with **19 new visible specs** + **13 hidden roadmap stubs**, riding entirely on event listeners that already exist in `AchievementEventHandler`. No new domain events. ### What's new (visible) **Streak ladder**: `streak_100` (Centurion), `streak_365` (Year of Toby) **Level ladder**: `level_75` (Elite), `level_100` (Legend) **Duel wins ladder**: `duel_wins_25` (Champion), `duel_wins_50` (Warlord), `duel_wins_100` (Undefeated) **Voice ladder…",
+    "emoji": "✨",
+    "prNumber": 520
+  },
+  {
+    "date": "May 2026",
     "title": "Surface achievements and notifications on the homepage",
     "summary": "Add two feature-cards to the existing **Engagement** section of `home.html`: **Achievements** (links to `/profile/guilds`) and **Notifications** (links to `/preferences/notifications`). Engagement section grows from 4 to 6 cards, matching the Casino section's 6-card layout — no CSS changes needed. Extend `HomeStatsService.HomeStats` with `achievementCount` and `notificationKindCount`, sourced directly from `AchievementCatalog.all.count { !it.hidden }` and `NotificationChan…",
     "emoji": "✨",
