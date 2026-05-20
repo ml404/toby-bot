@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Include site footer on every page",
+    "summary": "Adds the site footer fragment to every page template that was missing it: game tables (blackjack, roulette, slots, plinko, …), guild pickers, dashboards, settings, moderation surfaces, public utilities (`utils`, `dndLookup`), the error page, and the previously-orphaned `profile.html` / `excuses.html`. Also adds the footer to both fragments inside `fragments/guildListPage.html` (`singleAction` and `dualAction`) so the four pages that delegate their entire body through it —…",
+    "emoji": "🎟️",
+    "prNumber": 526
+  },
+  {
+    "date": "May 2026",
     "title": "Load footer styles on every page, not just home",
     "summary": "The site footer renders flush-left and unstyled on every public page except `/` — visible on `/commands`, `/commands/wiki`, `/changelog`, `/login`, `/terms`, `/privacy`. Root cause: `.site-footer*` rules lived in `home.css`, but the footer fragment is included from pages that load their own per-page sheet (`commands.css`, `legal.css`, etc.) and never pull in `home.css`. The shared head fragment only loads `base.css` + `nav.css` + one per-page sheet. Fix: extract the footer…",
     "emoji": "🔨",
