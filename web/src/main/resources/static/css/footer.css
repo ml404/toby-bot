@@ -1,0 +1,65 @@
+/* SITE FOOTER
+   Same gradient hairline trick as the top navbar — a 1px gradient strip
+   reads as a designed divider rather than a default border.
+
+   Lives in its own file (not home.css) because the footer fragment is
+   shared across every public page; styles need to load wherever the
+   fragment does, which is why the head fragment links this directly. */
+.site-footer {
+    position: relative;
+    padding: 36px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.82rem;
+}
+.site-footer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--gradient-accent);
+    opacity: 0.35;
+    pointer-events: none;
+}
+.site-footer-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: grid;
+    gap: 8px;
+}
+.site-footer-line { margin: 0; }
+.site-footer a { color: var(--accent-light); text-decoration: none; }
+.site-footer a:hover { text-decoration: underline; }
+.site-footer-source { font-size: 0.85rem; }
+.site-footer-stack {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+.site-footer-stack-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    font-weight: 600;
+}
+.site-footer-stack-item {
+    color: var(--text-muted);
+    position: relative;
+}
+.site-footer-stack-item + .site-footer-stack-item::before {
+    content: "·";
+    color: var(--text-dim);
+    margin-right: 12px;
+    margin-left: -12px;
+}
+
+@media (max-width: 480px) {
+    .site-footer { padding: 24px 16px; }
+}
