@@ -164,7 +164,7 @@ class ProfileWebService(
     }
 
     companion object {
-        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice")
+        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice", "consolation")
 
         // Pair(label, icon)
         private val CATEGORY_DISPLAY = mapOf(
@@ -174,6 +174,7 @@ class ProfileWebService(
             "social" to ("Social" to "🤝"),
             "music" to ("Music" to "🎵"),
             "voice" to ("Voice" to "🎙️"),
+            "consolation" to ("Consolation" to "🩹"),
         )
     }
 }

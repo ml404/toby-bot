@@ -157,7 +157,7 @@ class AchievementsCommand @Autowired constructor(
         private const val FIELD_VALUE_LIMIT = 1024
         private const val TRUNCATE_RESERVE = 24
 
-        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice")
+        private val CATEGORY_ORDER = listOf("streak", "level", "casino", "social", "music", "voice", "consolation")
 
         private val CATEGORY_DISPLAY = mapOf(
             "streak" to "🔥 Streaks",
@@ -165,7 +165,8 @@ class AchievementsCommand @Autowired constructor(
             "casino" to "🎰 Casino",
             "social" to "🤝 Social",
             "music" to "🎵 Music",
-            "voice" to "🎙️ Voice"
+            "voice" to "🎙️ Voice",
+            "consolation" to "🩹 Consolation"
         )
     }
 }

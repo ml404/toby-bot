@@ -26,7 +26,7 @@ class AchievementCatalogTest {
 
     @Test
     fun `every catalog entry uses a known category`() {
-        val known = setOf("streak", "level", "casino", "social", "music", "voice")
+        val known = setOf("streak", "level", "casino", "social", "music", "voice", "consolation")
         val unknown = AchievementCatalog.all.filterNot { it.category in known }
         assertTrue(unknown.isEmpty(), "achievements with unknown category: ${unknown.map { it.code to it.category }}")
     }
@@ -54,66 +54,66 @@ class AchievementCatalogTest {
         // If the catalog ships a milestone, the handler must be able to find
         // it — otherwise the unlock call silently no-ops in
         // DefaultAchievementService.unlock.
-        listOf("streak_first", "streak_3", "streak_7", "streak_30").forEach { code ->
+        listOf(
+            "streak_first", "streak_3", "streak_7", "streak_30",
+            "streak_100", "streak_365",
+        ).forEach { code ->
             assertNotNull(AchievementCatalog.byCode(code), "missing streak achievement '$code'")
         }
     }
 
     @Test
     fun `level milestone codes match AchievementEventHandler expectations`() {
-        listOf("level_5", "level_25", "level_50").forEach { code ->
+        listOf("level_5", "level_25", "level_50", "level_75", "level_100").forEach { code ->
             assertNotNull(AchievementCatalog.byCode(code), "missing level achievement '$code'")
         }
     }
 
     @Test
     fun `tip and duel achievement codes match TipSentEvent and DuelResolvedEvent handlers`() {
-        listOf("tip_giver", "first_duel_win", "duel_wins_10").forEach { code ->
+        listOf(
+            "tip_giver", "tips_sent_10", "tips_sent_50",
+            "first_duel_win", "duel_wins_10", "duel_wins_25", "duel_wins_50", "duel_wins_100",
+            "duel_losses_5", "duel_losses_25",
+        ).forEach { code ->
             assertNotNull(AchievementCatalog.byCode(code), "missing achievement '$code'")
         }
     }
 
     /**
      * Locks in which catalog entries are still pending hookup. When you
-     * wire one up (e.g. `blackjack_natural` becomes triggered by the
-     * blackjack hand resolution path), flip `hidden = false` in
-     * AchievementCatalog AND remove it from this list. The intent is
-     * that "hidden" never silently grows — every hidden entry is a
-     * promise to a contributor that finishing the hookup makes it
-     * visible.
+     * wire one up (e.g. give a casino game a domain event and an
+     * AchievementEventHandler listener), flip `hidden = false` in
+     * AchievementCatalog AND remove it from [PENDING_HIDDEN_CODES] below.
+     * The intent is that the hidden set is a known, reviewed roadmap —
+     * never silent growth.
      */
     @Test
-    fun `no achievements are hidden`() {
-        // blackjack_natural was the last hidden entry; this PR wires it
-        // through BlackjackService → BlackjackNaturalEvent →
-        // AchievementEventHandler. Every catalog entry is now reachable.
+    fun `hidden achievements match the documented pending-hookup allowlist`() {
         val actuallyHidden = AchievementCatalog.all.filter { it.hidden }.map { it.code }.toSet()
         assertEquals(
-            emptySet<String>(), actuallyHidden,
-            "Hidden achievements set is non-empty. Either wire up the trigger " +
-                "and flip hidden=false, or document the new pending-hookup code in this test."
+            PENDING_HIDDEN_CODES, actuallyHidden,
+            "Hidden-achievement set drifted from the documented roadmap. Either wire up " +
+                "the trigger and flip hidden=false (and remove it from PENDING_HIDDEN_CODES), " +
+                "or add the new pending-hookup code to PENDING_HIDDEN_CODES."
         )
     }
 
     @Test
     fun `every visible achievement is reachable via a wired event handler`() {
         // The handlers in AchievementEventHandler unlock/progress by
-        // these exact codes:
-        //   streak    → streak_first + streak_{3,7,30}
-        //   level     → level_{5,25,50}
-        //   tip       → tip_giver
-        //   duel      → first_duel_win, duel_wins_10
-        //   lottery   → lottery_winner
-        //   intro     → intro_set
-        //   voice     → voice_10h, voice_100h
-        //   blackjack → blackjack_natural
+        // these exact codes — keep this set in lockstep with the
+        // companion-object tier lists in AchievementEventHandler.
         val wired = setOf(
-            "streak_first", "streak_3", "streak_7", "streak_30",
-            "level_5", "level_25", "level_50",
-            "tip_giver", "first_duel_win", "duel_wins_10",
-            "lottery_winner", "intro_set",
-            "voice_10h", "voice_100h",
-            "blackjack_natural",
+            "streak_first", "streak_3", "streak_7", "streak_30", "streak_100", "streak_365",
+            "level_5", "level_25", "level_50", "level_75", "level_100",
+            "tip_giver", "tips_sent_10", "tips_sent_50",
+            "first_duel_win", "duel_wins_10", "duel_wins_25", "duel_wins_50", "duel_wins_100",
+            "duel_losses_5", "duel_losses_25",
+            "lottery_winner", "lottery_wins_3", "lottery_wins_10", "lottery_wins_25",
+            "intro_set",
+            "voice_10h", "voice_100h", "voice_250h", "voice_500h", "voice_1000h",
+            "blackjack_natural", "blackjack_natural_5", "blackjack_natural_25",
         )
         val visible = AchievementCatalog.all.filterNot { it.hidden }.map { it.code }.toSet()
         val orphaned = visible - wired
@@ -122,6 +122,29 @@ class AchievementCatalogTest {
             "Visible achievements with no event-handler hookup: $orphaned. " +
                 "Either wire them up in AchievementEventHandler, mark them hidden, " +
                 "or add them to the wired allowlist in this test."
+        )
+    }
+
+    companion object {
+        // Casino games that don't yet publish domain events — each row
+        // is a reserved code waiting for a hookup PR. When a game gains
+        // an event + AchievementEventHandler listener, flip
+        // `hidden = false` in AchievementCatalog and remove the code
+        // from this set.
+        private val PENDING_HIDDEN_CODES = setOf(
+            "slots_first_jackpot",
+            "roulette_first_straight_win",
+            "poker_first_royal_flush",
+            "dice_first_win",
+            "coinflip_first_win",
+            "keno_first_perfect",
+            "plinko_first_jackpot",
+            "scratch_first_jackpot",
+            "wheel_first_jackpot",
+            "horse_racing_first_win",
+            "baccarat_first_win",
+            "casino_holdem_first_win",
+            "highlow_first_streak",
         )
     }
 }

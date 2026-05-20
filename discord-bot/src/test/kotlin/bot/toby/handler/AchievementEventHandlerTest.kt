@@ -92,9 +92,11 @@ class AchievementEventHandlerTest {
             StreakClaimedEvent(discordId, guildId, currentStreak = 7, longestStreak = 7, channelId = 99L)
         )
         verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_first", 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_3", 7L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_7", 7L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_30", 7L, 99L) }
+        listOf(3, 7, 30, 100, 365).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "streak_$milestone", 7L, 99L)
+            }
+        }
         // Old wiring used unlock() for milestones — guard against regression.
         verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_3", any()) }
         verify(exactly = 0) { achievementService.unlock(discordId, guildId, "streak_7", any()) }
@@ -107,7 +109,7 @@ class AchievementEventHandlerTest {
             StreakClaimedEvent(discordId, guildId, currentStreak = 30, longestStreak = 30, channelId = null)
         )
         verify(exactly = 1) { achievementService.unlock(discordId, guildId, "streak_first", null) }
-        listOf(3, 7, 30).forEach { milestone ->
+        listOf(3, 7, 30, 100, 365).forEach { milestone ->
             verify(exactly = 1) {
                 achievementService.setProgress(discordId, guildId, "streak_$milestone", 30L, null)
             }
@@ -122,9 +124,11 @@ class AchievementEventHandlerTest {
         handler.onStreakClaimed(
             StreakClaimedEvent(discordId, guildId, currentStreak = 1, longestStreak = 14, channelId = 99L)
         )
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_3", 1L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_7", 1L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "streak_30", 1L, 99L) }
+        listOf(3, 7, 30, 100, 365).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "streak_$milestone", 1L, 99L)
+            }
+        }
     }
 
     // ---- level ----
@@ -135,9 +139,11 @@ class AchievementEventHandlerTest {
             LevelUpEvent(discordId, guildId, oldLevel = 4, newLevel = 26, totalXp = 0L, channelId = 99L)
         )
         // Unconditional — the service short-circuits already-owned milestones.
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_5", 26L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_25", 26L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_50", 26L, 99L) }
+        listOf(5, 25, 50, 75, 100).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "level_$milestone", 26L, 99L)
+            }
+        }
         // Old wiring used unlock() — guard against regression.
         verify(exactly = 0) { achievementService.unlock(any(), any(), match { it.startsWith("level_") }, any()) }
     }
@@ -147,7 +153,7 @@ class AchievementEventHandlerTest {
         handler.onLevelUp(
             LevelUpEvent(discordId, guildId, oldLevel = 0, newLevel = 1, totalXp = 0L, channelId = 12345L)
         )
-        listOf(5, 25, 50).forEach { milestone ->
+        listOf(5, 25, 50, 75, 100).forEach { milestone ->
             verify(exactly = 1) {
                 achievementService.setProgress(discordId, guildId, "level_$milestone", 1L, 12345L)
             }
@@ -162,26 +168,37 @@ class AchievementEventHandlerTest {
         handler.onLevelUp(
             LevelUpEvent(discordId, guildId, oldLevel = 6, newLevel = 7, totalXp = 0L, channelId = 99L)
         )
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_5", 7L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_25", 7L, 99L) }
-        verify(exactly = 1) { achievementService.setProgress(discordId, guildId, "level_50", 7L, 99L) }
+        listOf(5, 25, 50, 75, 100).forEach { milestone ->
+            verify(exactly = 1) {
+                achievementService.setProgress(discordId, guildId, "level_$milestone", 7L, 99L)
+            }
+        }
     }
 
     // ---- tip / duel / lottery / intro / blackjack ----
 
     @Test
-    fun `tip sent unlocks tip_giver for the sender`() {
+    fun `tip sent unlocks tip_giver and progresses every tips_sent tier for the sender`() {
         handler.onTipSent(TipSentEvent(senderDiscordId = discordId, recipientDiscordId = otherDiscordId, guildId = guildId, amount = 50L))
         verify(exactly = 1) {
             achievementService.unlock(discordId, guildId, "tip_giver")
         }
+        listOf(10, 50).forEach { tier ->
+            verify(exactly = 1) {
+                achievementService.progress(discordId, guildId, "tips_sent_$tier", 1L)
+            }
+        }
+        // Recipient never gets credit on a tip — sender-only semantics.
         verify(exactly = 0) {
             achievementService.unlock(otherDiscordId, any(), any())
+        }
+        verify(exactly = 0) {
+            achievementService.progress(otherDiscordId, any(), any(), any())
         }
     }
 
     @Test
-    fun `duel resolution unlocks first_duel_win and progresses duel_wins_10 for the winner`() {
+    fun `duel resolution unlocks first_duel_win and progresses every duel_wins tier for the winner`() {
         handler.onDuelResolved(
             DuelResolvedEvent(
                 winnerDiscordId = discordId, loserDiscordId = otherDiscordId,
@@ -191,20 +208,49 @@ class AchievementEventHandlerTest {
         verify(exactly = 1) {
             achievementService.unlock(discordId, guildId, "first_duel_win")
         }
-        verify(exactly = 1) {
-            achievementService.progress(discordId, guildId, "duel_wins_10", 1L)
+        listOf(10, 25, 50, 100).forEach { tier ->
+            verify(exactly = 1) {
+                achievementService.progress(discordId, guildId, "duel_wins_$tier", 1L)
+            }
         }
-        // Loser gets nothing.
+        // Winner doesn't get the consolation prize.
+        verify(exactly = 0) {
+            achievementService.progress(discordId, guildId, match { it.startsWith("duel_losses_") }, any())
+        }
+        // Loser doesn't get the winner achievements.
         verify(exactly = 0) {
             achievementService.unlock(otherDiscordId, any(), any())
+        }
+        verify(exactly = 0) {
+            achievementService.progress(otherDiscordId, guildId, match { it.startsWith("duel_wins_") }, any())
         }
     }
 
     @Test
-    fun `lottery winner unlocks lottery_winner for the recipient`() {
+    fun `duel resolution progresses every duel_losses tier for the loser`() {
+        handler.onDuelResolved(
+            DuelResolvedEvent(
+                winnerDiscordId = discordId, loserDiscordId = otherDiscordId,
+                guildId = guildId, stake = 50L, pot = 100L,
+            )
+        )
+        listOf(5, 25).forEach { tier ->
+            verify(exactly = 1) {
+                achievementService.progress(otherDiscordId, guildId, "duel_losses_$tier", 1L)
+            }
+        }
+    }
+
+    @Test
+    fun `lottery winner unlocks lottery_winner and progresses every lottery_wins tier`() {
         handler.onLotteryWon(LotteryWonEvent(discordId, guildId, amount = 500L))
         verify(exactly = 1) {
             achievementService.unlock(discordId, guildId, "lottery_winner")
+        }
+        listOf(3, 10, 25).forEach { tier ->
+            verify(exactly = 1) {
+                achievementService.progress(discordId, guildId, "lottery_wins_$tier", 1L)
+            }
         }
     }
 
@@ -217,7 +263,7 @@ class AchievementEventHandlerTest {
     }
 
     @Test
-    fun `blackjack natural unlocks blackjack_natural for the player`() {
+    fun `blackjack natural unlocks blackjack_natural and progresses every blackjack_natural tier`() {
         // Regression guard: PR #493 originally shipped without this
         // listener; the event was published but nothing consumed it,
         // so the catalog entry stayed permanently locked even though
@@ -226,20 +272,24 @@ class AchievementEventHandlerTest {
         verify(exactly = 1) {
             achievementService.unlock(discordId, guildId, "blackjack_natural")
         }
+        listOf(5, 25).forEach { tier ->
+            verify(exactly = 1) {
+                achievementService.progress(discordId, guildId, "blackjack_natural_$tier", 1L)
+            }
+        }
     }
 
     // ---- voice ----
 
     @Test
-    fun `voice session logged progresses both 10h and 100h achievements by countedSeconds`() {
+    fun `voice session logged progresses every voice tier achievement by countedSeconds`() {
         handler.onVoiceSessionLogged(
             VoiceSessionLoggedEvent(discordId, guildId, countedSeconds = 3600L)
         )
-        verify(exactly = 1) {
-            achievementService.progress(discordId, guildId, "voice_10h", 3600L)
-        }
-        verify(exactly = 1) {
-            achievementService.progress(discordId, guildId, "voice_100h", 3600L)
+        listOf("voice_10h", "voice_100h", "voice_250h", "voice_500h", "voice_1000h").forEach { code ->
+            verify(exactly = 1) {
+                achievementService.progress(discordId, guildId, code, 3600L)
+            }
         }
     }
 
