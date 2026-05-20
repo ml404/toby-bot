@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Load footer styles on every page, not just home",
+    "summary": "The site footer renders flush-left and unstyled on every public page except `/` — visible on `/commands`, `/commands/wiki`, `/changelog`, `/login`, `/terms`, `/privacy`. Root cause: `.site-footer*` rules lived in `home.css`, but the footer fragment is included from pages that load their own per-page sheet (`commands.css`, `legal.css`, etc.) and never pull in `home.css`. The shared head fragment only loads `base.css` + `nav.css` + one per-page sheet. Fix: extract the footer…",
+    "emoji": "🔨",
+    "prNumber": 523
+  },
+  {
+    "date": "May 2026",
     "title": "Wire 13 casino games to their reserved achievement events",
     "summary": "Follow-up to #520. That PR reserved 13 hidden roadmap stubs in `AchievementCatalog` for casino games that didn't yet publish domain events. This PR wires them up so every stub is `hidden = false` and `PENDING_HIDDEN_CODES` is empty. ### What changed **13 new event classes** under `common.events` — one per game, mirroring `BlackjackNaturalEvent`'s minimal `(discordId, guildId)` shape (Highlow adds an `isWin` flag). **13 modified services** under `database.service` — each ge…",
     "emoji": "🎰",
