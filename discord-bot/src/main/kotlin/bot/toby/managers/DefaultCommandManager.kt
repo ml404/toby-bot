@@ -73,7 +73,7 @@ class DefaultCommandManager @Autowired constructor(
      * the associated [CommandContext]) don't pin a stale guild after
      * the bot is gone.
      */
-    fun evictGuild(guildId: Long) {
+    override fun evictGuild(guildId: Long) {
         lastCommands.keys.removeIf { it.idLong == guildId }
     }
 

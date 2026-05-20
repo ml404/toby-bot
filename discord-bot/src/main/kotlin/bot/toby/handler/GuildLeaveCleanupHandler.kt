@@ -1,9 +1,9 @@
 package bot.toby.handler
 
-import bot.toby.managers.DefaultCommandManager
 import bot.toby.notify.AntiAutoclickNotifier
 import bot.toby.voice.VoiceCompanyTracker
 import common.logging.DiscordLogger
+import core.managers.CommandManager
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
@@ -25,7 +25,7 @@ import web.service.MusicSseService
  */
 @Service
 class GuildLeaveCleanupHandler(
-    private val commandManager: DefaultCommandManager,
+    private val commandManager: CommandManager,
     private val pokerTableRegistry: PokerTableRegistry,
     private val blackjackTableRegistry: BlackjackTableRegistry,
     private val casinoHoldemTableRegistry: CasinoHoldemTableRegistry,
