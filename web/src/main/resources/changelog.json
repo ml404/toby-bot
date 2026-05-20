@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Tighten JVM/JDA caps and evict per-guild caches on leave",
+    "summary": "Dyno memory profile was sitting at **~441 MB avg / 557 MB peak** against the 512 MB quota — R14/R15s on most peaks. Two-pronged fix: **Cap JVM + native footprint** so the process can't grow past the dyno quota. **Stop per-guild caches from drifting upward** as the bot leaves guilds. ### JVM ceiling (Procfile + Dockerfile) The Procfile previously passed *no memory flags*, so `-Xmx` defaulted to ~25% of container memory and Netty's direct memory mirrored `Runtime.maxMemory()…",
+    "emoji": "♠️",
+    "prNumber": 525
+  },
+  {
+    "date": "May 2026",
     "title": "Include site footer on every page",
     "summary": "Adds the site footer fragment to every page template that was missing it: game tables (blackjack, roulette, slots, plinko, …), guild pickers, dashboards, settings, moderation surfaces, public utilities (`utils`, `dndLookup`), the error page, and the previously-orphaned `profile.html` / `excuses.html`. Also adds the footer to both fragments inside `fragments/guildListPage.html` (`singleAction` and `dualAction`) so the four pages that delegate their entire body through it —…",
     "emoji": "🎟️",
