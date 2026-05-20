@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.RouletteStraightWinEvent
 import database.dto.ConfigDto
 import database.economy.Roulette
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -33,6 +35,7 @@ class RouletteService(
     private val configService: ConfigService,
     private val roulette: Roulette = Roulette(),
     private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface SpinOutcome {
@@ -117,6 +120,9 @@ class RouletteService(
         val spin = roulette.spin(bet, effectiveNumber, random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, spin.multiplier)
         return if (spin.isWin) {
+            if (bet == Roulette.Bet.STRAIGHT) {
+                eventPublisher?.publishEvent(RouletteStraightWinEvent(discordId = discordId, guildId = guildId))
+            }
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.ROULETTE, random,

@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.HighlowHandResolvedEvent
 import database.dto.ConfigDto
 import database.economy.Highlow
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -32,7 +34,8 @@ class HighlowService(
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
     private val highlow: Highlow = Highlow(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface PlayOutcome {
@@ -132,6 +135,13 @@ class HighlowService(
         } else {
             highlow.play(direction, random)
         }
+        // Achievement: emit on every terminal hand. The handler increments
+        // the streak counter on wins and resets it on losses — using the
+        // existing achievement_progress row as the streak store so no DB
+        // schema change is needed.
+        eventPublisher?.publishEvent(
+            HighlowHandResolvedEvent(discordId = discordId, guildId = guildId, isWin = hand.isWin)
+        )
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, hand.multiplier)
         return if (hand.isWin) {
             val jackpot = JackpotHelper.rollOnWin(

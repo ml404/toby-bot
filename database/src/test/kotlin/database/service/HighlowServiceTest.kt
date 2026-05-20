@@ -177,4 +177,71 @@ class HighlowServiceTest {
         assertEquals(10L, lose.lossTribute)
         verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
     }
+
+    // -------------------------------------------------------------------------
+    // HighlowHandResolvedEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<HighlowService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = HighlowService(
+            userService, jackpotService, tradeService, marketService, configService,
+            highlow, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `winning hand publishes HighlowHandResolvedEvent with isWin true`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.play(Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
+            anchor = 7, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.HIGHER)
+
+        assertEquals(1, publisher.highlowHandResolutions.size)
+        val event = publisher.highlowHandResolutions.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+        assertEquals(true, event.isWin)
+    }
+
+    @Test
+    fun `losing hand publishes HighlowHandResolvedEvent with isWin false`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.play(Highlow.Direction.LOWER, any()) } returns Highlow.Hand(
+            anchor = 7, next = 10, direction = Highlow.Direction.LOWER, multiplier = 0.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.LOWER)
+
+        assertEquals(1, publisher.highlowHandResolutions.size)
+        val event = publisher.highlowHandResolutions.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+        assertEquals(false, event.isWin)
+    }
+
+    @Test
+    fun `stepwise (anchor-supplied) win publishes HighlowHandResolvedEvent the same way bundled flow does`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { highlow.resolve(7, Highlow.Direction.HIGHER, any()) } returns Highlow.Hand(
+            anchor = 7, next = 10, direction = Highlow.Direction.HIGHER, multiplier = 2.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.play(discordId, guildId, stake = 100L, direction = Highlow.Direction.HIGHER, anchor = 7)
+
+        assertEquals(1, publisher.highlowHandResolutions.size)
+        assertEquals(true, publisher.highlowHandResolutions.single().isWin)
+    }
 }

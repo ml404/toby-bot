@@ -400,7 +400,6 @@ object AchievementCatalog {
             icon = "🎰",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "roulette_first_straight_win",
@@ -410,7 +409,6 @@ object AchievementCatalog {
             icon = "🎯",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "poker_first_royal_flush",
@@ -420,7 +418,6 @@ object AchievementCatalog {
             icon = "♠️",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "dice_first_win",
@@ -430,7 +427,6 @@ object AchievementCatalog {
             icon = "🎲",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "coinflip_first_win",
@@ -440,7 +436,6 @@ object AchievementCatalog {
             icon = "🪙",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "keno_first_perfect",
@@ -450,7 +445,6 @@ object AchievementCatalog {
             icon = "🔢",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "plinko_first_jackpot",
@@ -460,7 +454,6 @@ object AchievementCatalog {
             icon = "🟢",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "scratch_first_jackpot",
@@ -470,7 +463,6 @@ object AchievementCatalog {
             icon = "🎫",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "wheel_first_jackpot",
@@ -480,7 +472,6 @@ object AchievementCatalog {
             icon = "🎡",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "horse_racing_first_win",
@@ -490,7 +481,6 @@ object AchievementCatalog {
             icon = "🐎",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "baccarat_first_win",
@@ -500,17 +490,15 @@ object AchievementCatalog {
             icon = "🎴",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "casino_holdem_first_win",
             name = "All In",
-            description = "Win your first Casino Hold'em hand.",
+            description = "Win your first Casino Hold'em hand (ante or call).",
             category = "casino",
             icon = "🂠",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         ),
         AchievementSpec(
             code = "highlow_first_streak",
@@ -520,7 +508,6 @@ object AchievementCatalog {
             icon = "🔼",
             xpReward = 100,
             creditReward = 100,
-            hidden = true
         )
     )
 

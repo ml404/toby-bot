@@ -3,14 +3,27 @@ package bot.toby.handler
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.events.AchievementUnlockedEvent
+import common.events.BaccaratWonEvent
 import common.events.BlackjackNaturalEvent
+import common.events.CasinoHoldemWonEvent
+import common.events.CoinflipWonEvent
+import common.events.DiceWonEvent
 import common.events.DuelResolvedEvent
+import common.events.HighlowHandResolvedEvent
+import common.events.HorseRacingWonEvent
 import common.events.IntroSetEvent
+import common.events.KenoPerfectEvent
 import common.events.LevelUpEvent
 import common.events.LotteryWonEvent
+import common.events.PlinkoJackpotEvent
+import common.events.PokerRoyalFlushEvent
+import common.events.RouletteStraightWinEvent
+import common.events.ScratchJackpotEvent
+import common.events.SlotsJackpotEvent
 import common.events.StreakClaimedEvent
 import common.events.TipSentEvent
 import common.events.VoiceSessionLoggedEvent
+import common.events.WheelJackpotEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
@@ -168,6 +181,78 @@ class AchievementEventHandler(
                 code = "blackjack_natural_$tier",
                 delta = 1L
             )
+        }
+    }
+
+    @EventListener
+    fun onSlotsJackpot(event: SlotsJackpotEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "slots_first_jackpot")
+    }
+
+    @EventListener
+    fun onRouletteStraightWin(event: RouletteStraightWinEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "roulette_first_straight_win")
+    }
+
+    @EventListener
+    fun onPokerRoyalFlush(event: PokerRoyalFlushEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "poker_first_royal_flush")
+    }
+
+    @EventListener
+    fun onDiceWon(event: DiceWonEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "dice_first_win")
+    }
+
+    @EventListener
+    fun onCoinflipWon(event: CoinflipWonEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "coinflip_first_win")
+    }
+
+    @EventListener
+    fun onKenoPerfect(event: KenoPerfectEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "keno_first_perfect")
+    }
+
+    @EventListener
+    fun onPlinkoJackpot(event: PlinkoJackpotEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "plinko_first_jackpot")
+    }
+
+    @EventListener
+    fun onScratchJackpot(event: ScratchJackpotEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "scratch_first_jackpot")
+    }
+
+    @EventListener
+    fun onWheelJackpot(event: WheelJackpotEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "wheel_first_jackpot")
+    }
+
+    @EventListener
+    fun onHorseRacingWon(event: HorseRacingWonEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "horse_racing_first_win")
+    }
+
+    @EventListener
+    fun onBaccaratWon(event: BaccaratWonEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "baccarat_first_win")
+    }
+
+    @EventListener
+    fun onCasinoHoldemWon(event: CasinoHoldemWonEvent) {
+        achievementService.unlock(event.discordId, event.guildId, "casino_holdem_first_win")
+    }
+
+    @EventListener
+    fun onHighlowHandResolved(event: HighlowHandResolvedEvent) {
+        // Streak counter lives in achievement_progress: progress(+1) on
+        // win cascades to unlock at 5, setProgress(0) on loss resets.
+        // Both calls are no-ops once the achievement is unlocked.
+        if (event.isWin) {
+            achievementService.progress(event.discordId, event.guildId, "highlow_first_streak", delta = 1L)
+        } else {
+            achievementService.setProgress(event.discordId, event.guildId, "highlow_first_streak", value = 0L)
         }
     }
 

@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.SlotsJackpotEvent
 import database.dto.ConfigDto
 import database.economy.SlotMachine
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -38,7 +40,8 @@ class SlotsService(
     private val configService: ConfigService,
     private val casinoEdgeService: CasinoEdgeService,
     private val machine: SlotMachine = SlotMachine(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface SpinOutcome {
@@ -123,6 +126,12 @@ class SlotsService(
         )
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, pull.multiplier)
         return if (pull.isWin) {
+            // 100× is the STAR three-of-a-kind jackpot tier (see SlotMachine
+            // payouts). Lower multipliers (CHERRY/LEMON/BELL trios) are
+            // ordinary wins and don't fire the achievement event.
+            if (pull.multiplier == SlotMachine.JACKPOT_MULTIPLIER) {
+                eventPublisher?.publishEvent(SlotsJackpotEvent(discordId = discordId, guildId = guildId))
+            }
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.SLOTS, random,

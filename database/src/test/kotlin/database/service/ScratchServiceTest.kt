@@ -9,6 +9,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -129,5 +130,93 @@ class ScratchServiceTest {
         val lose = assertInstanceOf(ScratchService.ScratchOutcome.Lose::class.java, outcome)
         assertEquals(10L, lose.lossTribute)
         verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
+    }
+
+    // -------------------------------------------------------------------------
+    // ScratchJackpotEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<ScratchService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = ScratchService(
+            userService, jackpotService, tradeService, marketService, configService,
+            card, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `9-star jackpot publishes exactly one ScratchJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { card.scratch(any()) } returns ScratchCard.Scratch(
+            cells = List(ScratchCard.CELL_COUNT) { SlotMachine.Symbol.STAR },
+            winningSymbol = SlotMachine.Symbol.STAR,
+            matchCount = ScratchCard.CELL_COUNT,
+            multiplier = 200L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.scratch(discordId, guildId, stake = 100L)
+
+        assertEquals(1, publisher.scratchJackpots.size)
+        val event = publisher.scratchJackpots.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `non-jackpot star win (matchCount less than CELL_COUNT) publishes no ScratchJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { card.scratch(any()) } returns ScratchCard.Scratch(
+            cells = List(ScratchCard.CELL_COUNT) { SlotMachine.Symbol.STAR },
+            winningSymbol = SlotMachine.Symbol.STAR,
+            matchCount = 7,
+            multiplier = 90L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.scratch(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.scratchJackpots.isEmpty())
+    }
+
+    @Test
+    fun `9-of-a-kind cherries (non-STAR symbol) publishes no ScratchJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { card.scratch(any()) } returns ScratchCard.Scratch(
+            cells = List(ScratchCard.CELL_COUNT) { SlotMachine.Symbol.CHERRY },
+            winningSymbol = SlotMachine.Symbol.CHERRY,
+            matchCount = ScratchCard.CELL_COUNT,
+            multiplier = 5L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.scratch(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.scratchJackpots.isEmpty())
+    }
+
+    @Test
+    fun `no-match loss publishes no ScratchJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { card.scratch(any()) } returns ScratchCard.Scratch(
+            cells = List(ScratchCard.CELL_COUNT) { SlotMachine.Symbol.LEMON },
+            winningSymbol = null,
+            matchCount = 0,
+            multiplier = 0L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.scratch(discordId, guildId, stake = 100L)
+
+        assertTrue(publisher.scratchJackpots.isEmpty())
     }
 }

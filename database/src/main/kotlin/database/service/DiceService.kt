@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.DiceWonEvent
 import database.dto.ConfigDto
 import database.economy.Dice
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -27,7 +29,8 @@ class DiceService(
     private val configService: ConfigService,
     private val casinoEdgeService: CasinoEdgeService,
     private val dice: Dice = Dice(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface RollOutcome {
@@ -118,6 +121,7 @@ class DiceService(
         )
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, roll.multiplier)
         return if (roll.isWin) {
+            eventPublisher?.publishEvent(DiceWonEvent(discordId = discordId, guildId = guildId))
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.DICE, random,

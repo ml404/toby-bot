@@ -1,8 +1,11 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.ScratchJackpotEvent
 import database.dto.ConfigDto
 import database.economy.ScratchCard
+import database.economy.SlotMachine
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -24,7 +27,8 @@ class ScratchService(
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
     private val card: ScratchCard = ScratchCard(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface ScratchOutcome {
@@ -84,6 +88,12 @@ class ScratchService(
         val result = card.scratch(random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, result.multiplier)
         return if (result.isWin && result.winningSymbol != null) {
+            // All-STAR sweep (matchCount == CELL_COUNT, winningSymbol == STAR)
+            // is the 200× top-tier jackpot.
+            if (result.matchCount == ScratchCard.CELL_COUNT &&
+                result.winningSymbol == SlotMachine.Symbol.STAR) {
+                eventPublisher?.publishEvent(ScratchJackpotEvent(discordId = discordId, guildId = guildId))
+            }
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.SCRATCH, random,

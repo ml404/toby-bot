@@ -1,8 +1,10 @@
 package database.service
 
 import common.casino.CasinoCommonFailure
+import common.events.HorseRacingWonEvent
 import database.dto.ConfigDto
 import database.economy.HorseRacing
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -38,6 +40,7 @@ class HorseRacingService(
     private val configService: ConfigService,
     private val horseRacing: HorseRacing = HorseRacing(),
     private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface RaceOutcome {
@@ -115,6 +118,7 @@ class HorseRacingService(
         val race = horseRacing.race(pickedHorse, bet, random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, race.multiplier)
         return if (race.isWin) {
+            eventPublisher?.publishEvent(HorseRacingWonEvent(discordId = discordId, guildId = guildId))
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.HORSE_RACING, random,

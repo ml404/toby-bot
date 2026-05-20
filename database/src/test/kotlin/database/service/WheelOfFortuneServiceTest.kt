@@ -10,6 +10,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -217,5 +218,67 @@ class WheelOfFortuneServiceTest {
         assertEquals(1_000L, win.payout)
         assertEquals(900L, win.net)
         assertEquals(1_900L, win.newBalance)
+    }
+
+    // -------------------------------------------------------------------------
+    // WheelJackpotEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<WheelOfFortuneService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = WheelOfFortuneService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, wheel, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `top-multiplier pick landing publishes exactly one WheelJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { wheel.spin(10L, any()) } returns WheelOfFortune.Spin(
+            landedMultiplier = 10L, pickedMultiplier = 10L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L, pickedMultiplier = 10L)
+
+        assertEquals(1, publisher.wheelJackpots.size)
+        val event = publisher.wheelJackpots.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `lower-multiplier pick landing publishes no WheelJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { wheel.spin(2L, any()) } returns WheelOfFortune.Spin(
+            landedMultiplier = 2L, pickedMultiplier = 2L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L, pickedMultiplier = 2L)
+
+        assertTrue(publisher.wheelJackpots.isEmpty())
+    }
+
+    @Test
+    fun `top-pick miss publishes no WheelJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        // Picked 10×, landed on 3× → loss.
+        every { wheel.spin(10L, any()) } returns WheelOfFortune.Spin(
+            landedMultiplier = 3L, pickedMultiplier = 10L,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.spin(discordId, guildId, stake = 100L, pickedMultiplier = 10L)
+
+        assertTrue(publisher.wheelJackpots.isEmpty())
     }
 }

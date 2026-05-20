@@ -218,4 +218,56 @@ class DiceServiceTest {
         assertTrue(lose.landed != lose.predicted, "substitute must land on a non-predicted face")
         assertEquals(4, lose.predicted)
     }
+
+    // -------------------------------------------------------------------------
+    // DiceWonEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<DiceService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = DiceService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, dice, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `winning roll publishes exactly one DiceWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { dice.roll(4, any()) } returns Dice.Roll(landed = 4, predicted = 4, multiplier = 5L)
+        every { userService.updateUser(any()) } returns user
+
+        svc.roll(discordId, guildId, stake = 100L, predicted = 4)
+
+        assertEquals(1, publisher.diceWins.size)
+        val event = publisher.diceWins.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `losing roll publishes no DiceWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { dice.roll(3, any()) } returns Dice.Roll(landed = 5, predicted = 3, multiplier = 0L)
+        every { userService.updateUser(any()) } returns user
+
+        svc.roll(discordId, guildId, stake = 100L, predicted = 3)
+
+        assertTrue(publisher.diceWins.isEmpty())
+    }
+
+    @Test
+    fun `dice service with null publisher (default ctor) does not crash on a winning roll`() {
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { dice.roll(4, any()) } returns Dice.Roll(landed = 4, predicted = 4, multiplier = 5L)
+        every { userService.updateUser(any()) } returns user
+        // service is the default-ctor instance from setup() — publisher is null.
+        service.roll(discordId, guildId, stake = 100L, predicted = 4)
+    }
 }

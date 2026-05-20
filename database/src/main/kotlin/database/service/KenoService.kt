@@ -1,7 +1,9 @@
 package database.service
 
+import common.events.KenoPerfectEvent
 import database.dto.ConfigDto
 import database.economy.Keno
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import kotlin.random.Random
@@ -34,7 +36,8 @@ class KenoService(
     private val marketService: TobyCoinMarketService,
     private val configService: ConfigService,
     private val keno: Keno = Keno(),
-    private val random: Random = Random.Default
+    private val random: Random = Random.Default,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
 
     sealed interface PlayOutcome {
@@ -134,6 +137,9 @@ class KenoService(
             userService, resolved.user, resolved.balance, stake, hand.multiplier
         )
         return if (hand.isWin) {
+            if (hand.hits == hand.picks.size) {
+                eventPublisher?.publishEvent(KenoPerfectEvent(discordId = discordId, guildId = guildId))
+            }
             val jackpot = JackpotHelper.rollOnWin(
                 jackpotService, configService, userService, resolved.user, guildId,
                 stake, JackpotGame.KENO, random,

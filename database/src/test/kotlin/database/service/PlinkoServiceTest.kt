@@ -243,4 +243,68 @@ class PlinkoServiceTest {
         assertEquals(3_900L, win.net)
         assertTrue(win.bucket == 0)
     }
+
+    // -------------------------------------------------------------------------
+    // PlinkoJackpotEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<PlinkoService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = PlinkoService(
+            userService, jackpotService, tradeService, marketService, configService,
+            casinoEdgeService, plinko, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `top-multiplier bucket publishes exactly one PlinkoJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { plinko.payoutTable(Plinko.Risk.HIGH) } returns doubleArrayOf(40.0, 5.0, 1.5, 0.5, 0.0, 0.5, 1.5, 5.0, 40.0)
+        every { plinko.drop(Plinko.Risk.HIGH, any()) } returns Plinko.Drop(
+            bucket = 0, multiplier = 40.0, risk = Plinko.Risk.HIGH,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.drop(discordId, guildId, stake = 100L, risk = Plinko.Risk.HIGH)
+
+        assertEquals(1, publisher.plinkoJackpots.size)
+        val event = publisher.plinkoJackpots.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `non-jackpot win publishes no PlinkoJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { plinko.payoutTable(Plinko.Risk.HIGH) } returns doubleArrayOf(40.0, 5.0, 1.5, 0.5, 0.0, 0.5, 1.5, 5.0, 40.0)
+        every { plinko.drop(Plinko.Risk.HIGH, any()) } returns Plinko.Drop(
+            bucket = 1, multiplier = 5.0, risk = Plinko.Risk.HIGH,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.drop(discordId, guildId, stake = 100L, risk = Plinko.Risk.HIGH)
+
+        assertTrue(publisher.plinkoJackpots.isEmpty())
+    }
+
+    @Test
+    fun `losing bucket publishes no PlinkoJackpotEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { plinko.payoutTable(Plinko.Risk.HIGH) } returns doubleArrayOf(40.0, 5.0, 1.5, 0.5, 0.0, 0.5, 1.5, 5.0, 40.0)
+        every { plinko.drop(Plinko.Risk.HIGH, any()) } returns Plinko.Drop(
+            bucket = 4, multiplier = 0.0, risk = Plinko.Risk.HIGH,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.drop(discordId, guildId, stake = 100L, risk = Plinko.Risk.HIGH)
+
+        assertTrue(publisher.plinkoJackpots.isEmpty())
+    }
 }

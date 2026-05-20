@@ -8,6 +8,7 @@ import io.mockk.slot
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
@@ -194,5 +195,57 @@ class HorseRacingServiceTest {
         val lose = assertInstanceOf(HorseRacingService.RaceOutcome.Lose::class.java, outcome)
         assertEquals(10L, lose.lossTribute)
         verify(exactly = 1) { jackpotService.addToPool(guildId, 10L) }
+    }
+
+    // -------------------------------------------------------------------------
+    // HorseRacingWonEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<HorseRacingService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = HorseRacingService(
+            userService, jackpotService, tradeService, marketService, configService,
+            horseRacing, Random(0), publisher,
+        )
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `winning race publishes exactly one HorseRacingWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { horseRacing.race(3, HorseRacing.Bet.WIN, any()) } returns HorseRacing.Race(
+            finishingOrder = listOf(3, 1, 5, 2, 4, 6),
+            bet = HorseRacing.Bet.WIN,
+            pickedHorse = 3,
+            multiplier = 5.3,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.race(discordId, guildId, stake = 100L, pickedHorse = 3, bet = HorseRacing.Bet.WIN)
+
+        assertEquals(1, publisher.horseRacingWins.size)
+        val event = publisher.horseRacingWins.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `losing race publishes no HorseRacingWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        every { horseRacing.race(6, HorseRacing.Bet.WIN, any()) } returns HorseRacing.Race(
+            finishingOrder = listOf(3, 1, 5, 2, 4, 6),
+            bet = HorseRacing.Bet.WIN,
+            pickedHorse = 6,
+            multiplier = 0.0,
+        )
+        every { userService.updateUser(any()) } returns user
+
+        svc.race(discordId, guildId, stake = 100L, pickedHorse = 6, bet = HorseRacing.Bet.WIN)
+
+        assertTrue(publisher.horseRacingWins.isEmpty())
     }
 }

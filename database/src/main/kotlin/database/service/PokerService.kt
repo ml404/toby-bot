@@ -1,17 +1,21 @@
 package database.service
 
+import common.events.PokerRoyalFlushEvent
+import database.card.Rank
 import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
 import database.dto.PokerHandPotDto
 import database.dto.UserDto
 import database.persistence.PokerHandLogPersistence
 import database.persistence.PokerHandPotPersistence
+import database.poker.HandEvaluator
 import database.poker.PokerEngine
 import database.poker.PokerEngine.PokerAction
 import database.poker.PokerTable
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -76,6 +80,7 @@ class PokerService @Autowired constructor(
      */
     @Autowired(required = false) private val tradeService: EconomyTradeService? = null,
     @Autowired(required = false) private val marketService: TobyCoinMarketService? = null,
+    @Autowired(required = false) private val eventPublisher: ApplicationEventPublisher? = null,
     private val random: Random = Random.Default
 ) {
 
@@ -735,6 +740,7 @@ class PokerService @Autowired constructor(
                             jackpotService.addToPool(guildId, ev.result.rake)
                         }
                     }
+                    publishRoyalFlushes(guildId, ev.result.revealedHoleCards, ev.result.board)
                     // v2-3: cash out any seats marked pendingLeave during
                     // the hand. Done after rake / log so a side-pot
                     // refund the engine credited to a leaver still gets
@@ -833,6 +839,33 @@ class PokerService @Autowired constructor(
         )
         val pct = cfg?.value?.toDoubleOrNull() ?: return DEFAULT_RAKE
         return (pct / 100.0).coerceIn(0.0, MAX_RAKE)
+    }
+
+    /**
+     * Fires one [PokerRoyalFlushEvent] per seat whose revealed best-five
+     * is a straight flush with ace-high. Winning the pot is not required
+     * — holding the hand at showdown counts. Folded seats never appear
+     * in `revealedHoleCards` so they can't trigger this.
+     *
+     * Visibility is `internal` so the test suite can exercise the
+     * detection branch directly without standing up a full multi-seat
+     * showdown via PokerEngine.
+     */
+    internal fun publishRoyalFlushes(
+        guildId: Long,
+        revealedHoleCards: Map<Long, List<database.card.Card>>,
+        board: List<database.card.Card>,
+    ) {
+        val publisher = eventPublisher ?: return
+        revealedHoleCards.forEach { (seatDiscordId, hole) ->
+            if (hole.size + board.size < 5) return@forEach
+            val rank = HandEvaluator.bestHand(hole, board)
+            if (rank.category == HandEvaluator.Category.STRAIGHT_FLUSH &&
+                rank.tiebreakers.firstOrNull() == Rank.ACE.value
+            ) {
+                publisher.publishEvent(PokerRoyalFlushEvent(discordId = seatDiscordId, guildId = guildId))
+            }
+        }
     }
 
     private fun persistResult(table: PokerTable, result: PokerTable.HandResult) {

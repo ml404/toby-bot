@@ -406,4 +406,129 @@ class CasinoHoldemServiceTest {
         verify { userService.updateUser(match { it.socialCredit == 1_000L }) }
         assertNull(registry.get(dealt.tableId))
     }
+
+    // -------------------------------------------------------------------------
+    // CasinoHoldemWonEvent (PR #520 follow-up)
+    // -------------------------------------------------------------------------
+
+    private fun serviceWithPublisher(): Pair<CasinoHoldemService, CasinoEventPublisherFake> {
+        val publisher = CasinoEventPublisherFake()
+        val withPublisher = CasinoHoldemService(
+            userService = userService,
+            jackpotService = jackpotService,
+            configService = configService,
+            tableRegistry = registry,
+            game = game,
+            tradeService = null,
+            marketService = null,
+            eventPublisher = publisher,
+            random = Random(0),
+        )
+        withPublisher.wireRegistry()
+        return withPublisher to publisher
+    }
+
+    @Test
+    fun `ante WIN with call WIN publishes exactly one CasinoHoldemWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        stubGameDealAll()
+        every { userService.updateUser(any()) } returns user
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        val playerRank = HandEvaluator.HandRank(HandEvaluator.Category.FLUSH, listOf(14, 13, 11, 5, 3))
+        val dealerRank = HandEvaluator.HandRank(HandEvaluator.Category.PAIR, listOf(13, 12, 11, 9))
+        every { game.resolve(any(), any(), any()) } returns CasinoHoldem.Resolution(
+            playerRank = playerRank,
+            dealerRank = dealerRank,
+            dealerQualified = true,
+            anteResult = CasinoHoldem.AnteResult.WIN,
+            callResult = CasinoHoldem.CallResult.WIN_FLUSH,
+        )
+
+        val dealt = svc.dealSolo(discordId, guildId, stake = 100L)
+            as CasinoHoldemService.DealOutcome.Dealt
+        svc.applyAction(discordId, guildId, dealt.tableId, CasinoHoldem.Action.CALL)
+
+        assertEquals(1, publisher.casinoHoldemWins.size)
+        val event = publisher.casinoHoldemWins.single()
+        assertEquals(discordId, event.discordId)
+        assertEquals(guildId, event.guildId)
+    }
+
+    @Test
+    fun `ante PUSH with call WIN still publishes a CasinoHoldemWonEvent (call leg is a win)`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        stubGameDealAll()
+        every { userService.updateUser(any()) } returns user
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        val anyRank = HandEvaluator.HandRank(HandEvaluator.Category.HIGH_CARD, listOf(14, 13, 11, 9, 5))
+        every { game.resolve(any(), any(), any()) } returns CasinoHoldem.Resolution(
+            playerRank = anyRank,
+            dealerRank = anyRank,
+            dealerQualified = true,
+            anteResult = CasinoHoldem.AnteResult.PUSH,
+            callResult = CasinoHoldem.CallResult.WIN_OTHER,
+        )
+
+        val dealt = svc.dealSolo(discordId, guildId, stake = 100L)
+            as CasinoHoldemService.DealOutcome.Dealt
+        svc.applyAction(discordId, guildId, dealt.tableId, CasinoHoldem.Action.CALL)
+
+        assertEquals(1, publisher.casinoHoldemWins.size)
+    }
+
+    @Test
+    fun `both legs lose publishes no CasinoHoldemWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        stubGameDealAll()
+        every { userService.updateUser(any()) } returns user
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        val anyRank = HandEvaluator.HandRank(HandEvaluator.Category.PAIR, listOf(5, 14, 12, 11))
+        every { game.resolve(any(), any(), any()) } returns CasinoHoldem.Resolution(
+            playerRank = anyRank,
+            dealerRank = anyRank,
+            dealerQualified = true,
+            anteResult = CasinoHoldem.AnteResult.LOSE,
+            callResult = CasinoHoldem.CallResult.LOSE,
+        )
+
+        val dealt = svc.dealSolo(discordId, guildId, stake = 100L)
+            as CasinoHoldemService.DealOutcome.Dealt
+        svc.applyAction(discordId, guildId, dealt.tableId, CasinoHoldem.Action.CALL)
+
+        assertTrue(publisher.casinoHoldemWins.isEmpty())
+    }
+
+    @Test
+    fun `pure push (ante PUSH and call PUSH) publishes no CasinoHoldemWonEvent`() {
+        val (svc, publisher) = serviceWithPublisher()
+        val user = userWithBalance(1_000L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
+        stubGameDealAll()
+        every { userService.updateUser(any()) } returns user
+        every { configService.getConfigByName(any(), any()) } returns null
+
+        val anyRank = HandEvaluator.HandRank(HandEvaluator.Category.HIGH_CARD, listOf(14, 13, 11, 9, 5))
+        every { game.resolve(any(), any(), any()) } returns CasinoHoldem.Resolution(
+            playerRank = anyRank,
+            dealerRank = anyRank,
+            dealerQualified = false,
+            anteResult = CasinoHoldem.AnteResult.PUSH,
+            callResult = CasinoHoldem.CallResult.PUSH,
+        )
+
+        val dealt = svc.dealSolo(discordId, guildId, stake = 100L)
+            as CasinoHoldemService.DealOutcome.Dealt
+        svc.applyAction(discordId, guildId, dealt.tableId, CasinoHoldem.Action.CALL)
+
+        assertTrue(publisher.casinoHoldemWins.isEmpty())
+    }
 }
