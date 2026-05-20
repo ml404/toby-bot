@@ -271,20 +271,46 @@
     flex-direction: column;
 }
 
+/* Watch row — a 4-column grid (main info | status | remove | id).
+   A 3px coloured left edge (::before) flags buy vs sell at a glance so
+   readers can scan side-down before parsing the pill copy. The strip
+   sits inside an `overflow: hidden` row so it tucks into the rounded
+   corner cleanly. is-buy / is-sell classes are emitted by
+   renderWatchRow() in economy-watches.js. */
 .economy-watch-row {
+    position: relative;
     display: grid;
     grid-template-columns: 1fr auto auto auto;
     column-gap: var(--space-3);
     row-gap: 4px;
     align-items: center;
-    padding: var(--space-3) var(--space-2);
+    padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
     margin: 0 calc(var(--space-2) * -1);
-    border-radius: 8px;
-    transition: background 0.12s ease;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition:
+        background var(--dur-base) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
 }
+.economy-watch-row::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: transparent;
+    transition: background var(--dur-base) var(--ease-out);
+}
+.economy-watch-row.is-buy::before  { background: var(--buy); }
+.economy-watch-row.is-sell::before { background: var(--sell); }
 .economy-watch-row + .economy-watch-row { border-top: 1px solid var(--border); }
 .economy-watch-row:hover { background: rgba(255, 255, 255, 0.025); }
+.economy-watch-row.is-buy:hover  { box-shadow: inset 0 0 0 1px rgba(87, 242, 135, 0.18); }
+.economy-watch-row.is-sell:hover { box-shadow: inset 0 0 0 1px rgba(237, 66, 69, 0.18); }
 .economy-watch-row.is-inactive .economy-watch-main { opacity: 0.65; }
+.economy-watch-row.is-inactive::before { opacity: 0.35; }
 .economy-watch-row.is-inactive .economy-watch-target-value {
     text-decoration: line-through;
     text-decoration-color: rgba(255, 255, 255, 0.35);
@@ -356,47 +382,77 @@
     white-space: nowrap;
     line-height: 1;
 }
-.economy-watch-status.status-armed { color: #c8d0e0; }
+.economy-watch-status.status-armed { color: var(--heading-soft); }
 .economy-watch-status.status-fire-now {
     color: var(--buy);
     background: var(--buy-soft);
     border-color: rgba(87, 242, 135, 0.35);
-    animation: economy-watch-pulse 1.6s ease-in-out infinite;
+    animation: economy-watch-pulse 1.6s var(--ease-in-out) infinite;
 }
 @media (prefers-reduced-motion: reduce) {
     .economy-watch-status.status-fire-now { animation: none; }
 }
 .economy-watch-status.status-fired {
-    color: #FAA61A;
-    background: rgba(250, 166, 26, 0.12);
+    color: var(--warn);
+    background: var(--warn-soft);
     border-color: rgba(250, 166, 26, 0.3);
 }
 .economy-watch-status.status-disabled { color: var(--text-muted); }
+/* Pulse: brighter ring + a subtle 1.03× scale at the midpoint so the
+   "would fire now" pill reads as visibly alive without thumping. */
 @keyframes economy-watch-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(87, 242, 135, 0); }
-    50% { box-shadow: 0 0 0 4px rgba(87, 242, 135, 0.18); }
+    0%, 100% { box-shadow: 0 0 0 0 rgba(87, 242, 135, 0);     transform: scale(1); }
+    50%      { box-shadow: 0 0 0 6px rgba(87, 242, 135, 0.22); transform: scale(1.03); }
 }
 
-/* Remove: icon on desktop, label on mobile. */
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+/* Remove button — round 32px icon-only on desktop, tap-min on touch.
+   The hover state tints into the sell palette + adds a soft halo + a
+   small scale lift so the destructive affordance reads as tactile.
+   The selector is scoped to .economy-watch-remove so we don't clobber
+   the base.css .btn-icon defaults used elsewhere. */
+.economy-watch-remove {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 50%;
     background: transparent;
     color: var(--text-muted);
     border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
-    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    transition:
+        background var(--dur-fast) var(--ease-out),
+        border-color var(--dur-fast) var(--ease-out),
+        color var(--dur-fast) var(--ease-out),
+        transform var(--dur-fast) var(--ease-out),
+        box-shadow var(--dur-base) var(--ease-out);
 }
-.btn-icon:hover {
-    background: rgba(237, 66, 69, 0.1);
-    border-color: rgba(237, 66, 69, 0.5);
+.economy-watch-remove:hover,
+.economy-watch-remove:focus-visible {
+    background: var(--sell-soft);
+    border-color: var(--sell);
     color: var(--sell);
+    transform: scale(1.08);
+    box-shadow: 0 0 0 4px rgba(237, 66, 69, 0.10);
+    outline: none;
 }
-.btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
+.economy-watch-remove:active { transform: scale(0.94); }
+.economy-watch-remove:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+@media (prefers-reduced-motion: reduce) {
+    .economy-watch-remove:hover,
+    .economy-watch-remove:focus-visible,
+    .economy-watch-remove:active { transform: none; }
+}
+@media (hover: none) and (pointer: coarse) {
+    .economy-watch-remove { width: var(--tap-min); height: var(--tap-min); }
+}
 .economy-watch-remove-text { display: none; }
 
 .economy-watch-id {

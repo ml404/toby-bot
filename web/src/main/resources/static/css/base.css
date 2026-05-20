@@ -30,6 +30,9 @@
     /* Jackpot / gold accents — slots, wheel, "you won" moments. */
     --jackpot: #f1c40f;
     --jackpot-glow: #ffe066;
+    /* Warning / amber — "fired" alert receipts, future toast-warn state. */
+    --warn: #FAA61A;
+    --warn-soft: rgba(250, 166, 26, 0.12);
     /* Medal palette — leaderboard podium 1st/2nd/3rd. */
     --medal-gold: #FFD700;
     --medal-silver: #C0C0C0;

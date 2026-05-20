@@ -66,15 +66,18 @@
         const li = doc.createElement('li');
         li.className = 'economy-watch-row';
         li.dataset.watchId = String(watch.id);
+        // Side flag on the row lets the CSS paint the 3px coloured left
+        // edge that makes buy vs sell readable at a glance — see
+        // .economy-watch-row.is-buy / .is-sell in economy.css.
+        const sideKind = watch.side === 'SELL' ? 'sell' : 'buy';
+        li.classList.add('is-' + sideKind);
         if (!watch.enabled) li.classList.add('is-inactive');
 
         const main = doc.createElement('div');
         main.className = 'economy-watch-main';
 
         const side = doc.createElement('span');
-        const sideCls = watch.side === 'SELL'
-            ? 'economy-watch-side-sell'
-            : 'economy-watch-side-buy';
+        const sideCls = 'economy-watch-side-' + sideKind;
         side.className = 'economy-watch-side ' + sideCls;
         side.textContent = watch.side + ' ' + watch.amount;
 
