@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Bump metaspace cap to stop startup OOM crash",
+    "summary": "Production crashed with: ``` 2026-05-20 08:58:42 [main] INFO o.s.o.jpa.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default' Terminating due to java.lang.OutOfMemoryError: Metaspace ``` The OOM fired ~500ms after JPA finished initialising — i.e. while Spring was still wiring the remaining beans (JDA listeners, controllers, scheduled jobs). My previous `-XX:MaxMetaspaceSize=96m` cut was too aggressive for Spring Boot +…",
+    "emoji": "🔨",
+    "prNumber": 527
+  },
+  {
+    "date": "May 2026",
     "title": "Tighten JVM/JDA caps and evict per-guild caches on leave",
     "summary": "Dyno memory profile was sitting at **~441 MB avg / 557 MB peak** against the 512 MB quota — R14/R15s on most peaks. Two-pronged fix: **Cap JVM + native footprint** so the process can't grow past the dyno quota. **Stop per-guild caches from drifting upward** as the bot leaves guilds. ### JVM ceiling (Procfile + Dockerfile) The Procfile previously passed *no memory flags*, so `-Xmx` defaulted to ~25% of container memory and Netty's direct memory mirrored `Runtime.maxMemory()…",
     "emoji": "♠️",
