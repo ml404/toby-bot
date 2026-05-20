@@ -299,7 +299,7 @@
                     <span class="lb-rank"
                           th:classappend="${iter.count == 1 ? 'lb-rank-1' : (iter.count == 2 ? 'lb-rank-2' : (iter.count == 3 ? 'lb-rank-3' : ''))}"
                           th:text="${iter.count}">1</span>
-                    <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
+                    <div th:replace="~{fragments/memberCell :: cellLink(${h.name}, ${h.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${h.discordId})})}"></div>
                     <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
                     <span class="lottery-ticket-pill">
                         <strong th:text="${h.bonusTickets > 0}
@@ -418,7 +418,7 @@
                     <span class="lb-rank"
                           th:classappend="${iter.count == 1 ? 'lb-rank-1' : (iter.count == 2 ? 'lb-rank-2' : (iter.count == 3 ? 'lb-rank-3' : ''))}"
                           th:text="${iter.count}">1</span>
-                    <div th:replace="~{fragments/memberCell :: cell(${h.name}, ${h.avatarUrl})}"></div>
+                    <div th:replace="~{fragments/memberCell :: cellLink(${h.name}, ${h.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${h.discordId})})}"></div>
                     <span th:if="${h.title != null}" class="lb-title-pill" th:text="${h.title}"></span>
                     <span class="lottery-ticket-pill">
                         <strong th:text="${h.bonusTickets > 0}

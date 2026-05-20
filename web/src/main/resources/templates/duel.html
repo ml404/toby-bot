@@ -76,7 +76,7 @@
                 <div class="duel-pending-info">
                     <div class="duel-pending-who">
                         <span class="muted">From</span>
-                        <div th:replace="~{fragments/memberCell :: cell(${p.initiatorName}, ${p.initiatorAvatarUrl})}"></div>
+                        <div th:replace="~{fragments/memberCell :: cellLink(${p.initiatorName}, ${p.initiatorAvatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${p.initiatorDiscordId})})}"></div>
                     </div>
                     <div class="duel-pending-meta">
                         <span>for <strong th:text="${p.stake}">100</strong> credits</span>
@@ -101,7 +101,7 @@
                 <div class="duel-pending-info">
                     <div class="duel-pending-who">
                         <span class="muted">To</span>
-                        <div th:replace="~{fragments/memberCell :: cell(${p.opponentName}, ${p.opponentAvatarUrl})}"></div>
+                        <div th:replace="~{fragments/memberCell :: cellLink(${p.opponentName}, ${p.opponentAvatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${p.opponentDiscordId})})}"></div>
                     </div>
                     <div class="duel-pending-meta">
                         <span>for <strong th:text="${p.stake}">100</strong> credits</span>

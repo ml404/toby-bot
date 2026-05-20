@@ -273,6 +273,33 @@
     color: var(--text);
 }
 .lb-podium-1 .lb-podium-name { font-size: 1.15rem; }
+.lb-podium-name-link {
+    display: inline-block;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 6px;
+    padding: 2px 4px;
+    transition: background-color 0.12s ease;
+}
+.lb-podium-name-link:hover .lb-podium-name,
+.lb-podium-name-link:focus-visible .lb-podium-name {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.lb-podium-name-link:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent, #5865f2);
+}
+/* Stack the level pill above the title pill on the podium so each
+   card reads "name → prestige". Centred to match the rest of the card
+   which is column-flex / text-align: center. */
+.lb-podium-pills {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+}
 .lb-podium-credits { color: var(--text); font-size: 0.95rem; }
 .lb-podium-credits strong { color: var(--medal-gold); font-size: 1.1rem; }
 .lb-podium-month {

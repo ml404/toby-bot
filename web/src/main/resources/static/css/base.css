@@ -1022,6 +1022,73 @@ td { font-size: 0.95rem; }
     flex-shrink: 0;
 }
 
+/* Prestige pill — surfaced alongside .lb-title-pill across the
+   leaderboard standings, TobyCoin table, podium cards, and any future
+   page that wants to show level inline. Tier palette mirrors
+   profile.css's .level-tier-* so the bronze/silver/gold/diamond colour
+   language is consistent between the leaderboard and a member's
+   profile page. */
+.lb-level-pill {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+}
+.lb-level-pill.lb-level-tier-bronze {
+    background: linear-gradient(135deg, #c9803a 0%, #e6a86b 100%);
+    border-color: #4a3525;
+}
+.lb-level-pill.lb-level-tier-silver {
+    background: linear-gradient(135deg, #9aa3b2 0%, #d3dae6 100%);
+    border-color: #3a3f4a;
+}
+.lb-level-pill.lb-level-tier-gold {
+    background: linear-gradient(135deg, #d4a017 0%, #ffd966 100%);
+    border-color: #4a3a15;
+}
+.lb-level-pill.lb-level-tier-diamond {
+    background: linear-gradient(135deg, #5865f2 0%, #a6b1ff 100%);
+    border-color: #2a3580;
+    color: #f4f6ff;
+}
+
+/* Click-through wrapper for the shared memberCell. Renders the same
+   avatar+name projection but as an inline-flex anchor so rows on the
+   leaderboard, lottery top-holders, duel offers, and top-games
+   contributor tooltips all navigate to /profile/{guildId}/{discordId}.
+   The hover affordance is intentionally subtle — the cell already
+   carries a strong visual signal (avatar + name) so we only need to
+   announce "this is clickable" on hover. */
+.member-cell-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    min-width: 0;
+    border-radius: 6px;
+    transition: background-color 0.12s ease, transform 0.12s ease;
+}
+.member-cell-link:hover,
+.member-cell-link:focus-visible {
+    background: var(--bg);
+    outline: none;
+}
+.member-cell-link:hover .lb-name,
+.member-cell-link:focus-visible .lb-name {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+.member-cell-link:focus-visible {
+    box-shadow: 0 0 0 2px var(--accent, #5865f2);
+}
+
 /* -- Numeric value accents shared by both standings tables (credits +
    tobycoin) on the leaderboard. Lives here so a future page that wants
    to surface a coloured numeric pill can reuse the same set without
