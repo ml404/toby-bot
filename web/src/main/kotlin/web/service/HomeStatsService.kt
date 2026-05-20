@@ -1,6 +1,8 @@
 package web.service
 
+import common.notification.NotificationChannelKind
 import core.managers.CommandManager
+import database.achievement.AchievementCatalog
 import database.dto.ConfigDto
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
@@ -34,6 +36,8 @@ class HomeStatsService(
         val minigameCount: Int,
         val minigameNames: String,
         val configKeyCount: Int,
+        val achievementCount: Int,
+        val notificationKindCount: Int,
     )
 
     private data class Cached(val stats: HomeStats, val expiresAtNanos: Long)
@@ -63,6 +67,8 @@ class HomeStatsService(
         minigameCount = GameCatalog.minigameCount,
         minigameNames = GameCatalog.minigameNames,
         configKeyCount = ConfigDto.Configurations.values().size,
+        achievementCount = AchievementCatalog.all.count { !it.hidden },
+        notificationKindCount = NotificationChannelKind.entries.size,
     )
 
     companion object {
