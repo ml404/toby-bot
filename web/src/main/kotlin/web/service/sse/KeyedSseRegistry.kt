@@ -3,6 +3,7 @@ package web.service.sse
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.Ticker
+import common.logging.DiscordLogger
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
@@ -86,6 +87,8 @@ class KeyedSseRegistry<K : Any>(
      */
     fun fanOut(key: K, eventName: String, payload: Any) {
         val list = emitters.getIfPresent(key) ?: return
+        // TODO(diag-removal): drop alongside the other [diag] lines once the double-toast cause is known.
+        logger.info { "[diag] fanOut key=$key eventName=$eventName bucketSize=${list.size}" }
         broadcast(key, list) { send(SseEmitter.event().name(eventName).data(payload)) }
     }
 
@@ -169,6 +172,9 @@ class KeyedSseRegistry<K : Any>(
     }
 
     companion object {
+        // TODO(diag-removal): drop alongside the [diag] log line.
+        private val logger = DiscordLogger(KeyedSseRegistry::class.java)
+
         const val HELLO_EVENT = "hello"
 
         /** 1 hour. Long enough that browsers usually close first; reconnect logic on the client handles expiry. */
