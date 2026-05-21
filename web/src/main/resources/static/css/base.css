@@ -1161,8 +1161,24 @@ td { font-size: 0.95rem; }
 
     .lb-standings-table.mod-table td[data-label="#"] { grid-area: rank; }
     .lb-standings-table.mod-table td[data-label="Member"] { grid-area: member; min-width: 0; }
+    /* Force the inline-flex memberCell to fill its grid track so the
+       username's text-overflow: ellipsis kicks in at the column boundary
+       instead of physically colliding with the prestige cluster. */
+    .lb-standings-table.mod-table td[data-label="Member"] .member-cell-link,
+    .lb-standings-table.mod-table td[data-label="Member"] .member-cell {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+    }
     .lb-standings-table.mod-table td[data-label="Prestige"] { grid-area: title; justify-self: end; min-width: 0; }
-    .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige { justify-content: flex-end; }
+    /* Stack LVL above title on mobile so the prestige column is only as
+       wide as the wider pill, freeing horizontal space for long usernames.
+       Each pill keeps its own line, both right-aligned. */
+    .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
 
     /* Each metric cell becomes a tight label/value stack — three
        cells across the bottom row, one grid area each. The
@@ -1222,7 +1238,7 @@ td { font-size: 0.95rem; }
     .lb-rank { width: 24px; height: 24px; font-size: 0.8rem; }
     .lb-title-pill { font-size: 0.75rem; padding: 1px 6px; }
     .lb-level-pill { font-size: 0.7rem; padding: 1px 6px; }
-    .lb-prestige { gap: 6px; row-gap: 3px; }
+    .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige { gap: 3px; }
 }
 
 /* ---- Searchable user picker (templates/fragments/userPicker.html
