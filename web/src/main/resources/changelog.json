@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Surface engagement events as in-page toasts via per-user SSE",
+    "summary": "New per-user SSE endpoint `GET /api/notifications/stream` opens an authenticated stream that fans out four engagement events as in-page toasts: achievement unlocks, level-ups, tips received, and lottery draws (your ticket). Fan-out is in-process via Spring's `ApplicationEventPublisher`. Toasts pop on whatever page the user has open — no opt-in (the user is already on the site) and no service-worker dependency. Click-through navigates to the deep link (`/profile/{guildId}`)…",
+    "emoji": "🎟️",
+    "prNumber": 531
+  },
+  {
+    "date": "May 2026",
     "title": "Polish leaderboard LVL + title pill formatting",
     "summary": "The Prestige cell on the leaderboard had three issues visible in the attached screenshot: 1. **No gap between pills.** The `LVL 7` pill and `💎 Diamond Hands` pill rendered as adjacent `inline-block` siblings with no spacing, so they touched each other. 2. **Mobile grid mismatch.** The phone-width grid in `base.css` targeted `td[data-label=\"Title\"]`, but the template emits `data-label=\"Prestige\"` — so on mobile the cell auto-placed into the member column and collided with…",
     "emoji": "🔨",
