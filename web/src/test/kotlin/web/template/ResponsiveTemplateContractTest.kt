@@ -40,18 +40,25 @@ class ResponsiveTemplateContractTest {
     fun `shared head fragments declare the viewport meta tag`() {
         // Both `head(...)` and `headSeo(...)` fragments must carry
         // `<meta name="viewport" ...>` — every user-facing page renders
-        // through one of these two fragments.
-        val head = readResource("templates/fragments/head.html")
-        assertNotNull(head, "templates/fragments/head.html must exist on the classpath")
-        val viewportMatches = Regex(
+        // through one of these two fragments. The fragments live in
+        // separate files (head.html and headSeo.html) so the HTML5
+        // parser doesn't fold two <head> blocks into one and double
+        // every <script> tag on every page; each file must still carry
+        // its own viewport meta.
+        val viewportRe = Regex(
             """<meta\s+name="viewport"\s+content="width=device-width,\s*initial-scale=1""""
-        ).findAll(head!!).count()
-        assertEquals(
-            2, viewportMatches,
-            "Both `head` and `headSeo` Thymeleaf fragments must declare the viewport meta. " +
-                "Found $viewportMatches. Without it iPhones render the dashboard at 980px-wide " +
-                "desktop scale and the responsive CSS never kicks in."
         )
+        for (path in listOf("templates/fragments/head.html", "templates/fragments/headSeo.html")) {
+            val src = readResource(path)
+            assertNotNull(src, "$path must exist on the classpath")
+            val matches = viewportRe.findAll(src!!).count()
+            assertEquals(
+                1, matches,
+                "$path must declare exactly one viewport meta. Found $matches. Without it " +
+                    "iPhones render the dashboard at 980px-wide desktop scale and the responsive " +
+                    "CSS never kicks in."
+            )
+        }
     }
 
     @Test

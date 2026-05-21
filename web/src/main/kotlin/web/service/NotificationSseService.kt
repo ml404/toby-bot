@@ -4,7 +4,6 @@ import common.events.AchievementUnlockedEvent
 import common.events.LevelUpEvent
 import common.events.LotteryDrawnForTicketHolderEvent
 import common.events.TipSentEvent
-import common.logging.DiscordLogger
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
@@ -47,11 +46,6 @@ class NotificationSseService(
 
     @EventListener
     fun onAchievementUnlocked(event: AchievementUnlockedEvent) {
-        // TODO(diag-removal): drop alongside the other [diag] lines once the double-toast cause is known.
-        logger.info {
-            "[diag] NotificationSseService.onAchievementUnlocked fired: discordId=${event.discordId} " +
-                "code=${event.achievementCode} name=${event.name}"
-        }
         registry.fanOut(
             key = event.discordId,
             eventName = ACHIEVEMENT_EVENT,
@@ -66,11 +60,6 @@ class NotificationSseService(
 
     @EventListener
     fun onLevelUp(event: LevelUpEvent) {
-        // TODO(diag-removal): drop alongside the other [diag] lines.
-        logger.info {
-            "[diag] NotificationSseService.onLevelUp fired: discordId=${event.discordId} " +
-                "guildId=${event.guildId} newLevel=${event.newLevel}"
-        }
         registry.fanOut(
             key = event.discordId,
             eventName = LEVEL_UP_EVENT,
@@ -87,11 +76,6 @@ class NotificationSseService(
     fun onTipSent(event: TipSentEvent) {
         // Recipient gets the toast — the sender triggered the tip and
         // doesn't need UI feedback they didn't ask for.
-        // TODO(diag-removal): drop alongside the other [diag] lines.
-        logger.info {
-            "[diag] NotificationSseService.onTipSent fired: senderId=${event.senderDiscordId} " +
-                "recipientId=${event.recipientDiscordId} guildId=${event.guildId} amount=${event.amount}"
-        }
         registry.fanOut(
             key = event.recipientDiscordId,
             eventName = TIP_EVENT,
@@ -106,11 +90,6 @@ class NotificationSseService(
 
     @EventListener
     fun onLotteryDrawnForTicketHolder(event: LotteryDrawnForTicketHolderEvent) {
-        // TODO(diag-removal): drop alongside the other [diag] lines.
-        logger.info {
-            "[diag] NotificationSseService.onLotteryDrawnForTicketHolder fired: discordId=${event.discordId} " +
-                "guildId=${event.guildId} didWin=${event.didWin} amountWon=${event.amountWon}"
-        }
         val (title, body) = if (event.didWin) {
             "🎰 You won the lottery!" to "Payout: ${event.amountWon} credits."
         } else {
@@ -146,8 +125,5 @@ class NotificationSseService(
         const val TIP_EVENT = "tip"
         const val LOTTERY_DRAWN_EVENT = "lotteryDrawn"
         const val DEFAULT_ACHIEVEMENT_ICON = "🏅"
-
-        // TODO(diag-removal): drop alongside the [diag] log lines.
-        private val logger = DiscordLogger(NotificationSseService::class.java)
     }
 }

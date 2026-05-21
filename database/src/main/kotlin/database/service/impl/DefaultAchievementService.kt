@@ -1,7 +1,6 @@
 package database.service.impl
 
 import common.events.AchievementUnlockedEvent
-import common.logging.DiscordLogger
 import database.dto.AchievementDto
 import database.dto.AchievementProgressDto
 import database.dto.UserAchievementDto
@@ -191,11 +190,6 @@ class DefaultAchievementService(
             )
         }
 
-        // TODO(diag-removal): remove once the double-toast root cause is identified.
-        logger.info {
-            "[diag] publish AchievementUnlockedEvent: discordId=$discordId guildId=$guildId " +
-                "code=${achievement.code} name=${achievement.name}"
-        }
         eventPublisher.publishEvent(
             AchievementUnlockedEvent(
                 discordId = discordId,
@@ -215,10 +209,5 @@ class DefaultAchievementService(
             unlocked = true,
             alreadyUnlocked = false
         )
-    }
-
-    companion object {
-        // TODO(diag-removal): drop alongside the [diag] log line.
-        private val logger = DiscordLogger(DefaultAchievementService::class.java)
     }
 }

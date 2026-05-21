@@ -1,5 +1,6 @@
 package web.template
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -14,11 +15,18 @@ import org.thymeleaf.templatemode.TemplateMode
 import org.thymeleaf.web.servlet.JakartaServletWebApplication
 
 /**
- * Pins the SSE-notification wiring in the shared `<head>` fragment.
+ * Pins the SSE-notification wiring in the shared `<head>` fragments.
  * Logged-out pages must not request the per-user SSE stream
  * (no auth-meta tag, no notifications-stream.js include) but must still
  * load the toast UI (per-page callsites in economy/blackjack/etc.
  * depend on `window.TobyToasts`). Logged-in pages must wire all three.
+ *
+ * Occurrence-counted (not just `contains`) because the original
+ * double-`<head>`-in-one-file layout caused the parser to fold both
+ * fragments' children into the first head, emitting every script tag
+ * twice and silently doubling SSE toasts. Splitting head and headSeo
+ * into separate files is what fixes that — this test guards the
+ * "exactly one of each" invariant so a future merge can't regress it.
  */
 class HeadFragmentNotificationsTest {
 
@@ -60,8 +68,11 @@ class HeadFragmentNotificationsTest {
             setVariable("ogImage", null)
             setVariable("extraCss", null)
         }
-        return engine.process("fragments/head", setOf("headSeo"), ctx)
+        return engine.process("fragments/headSeo", setOf("headSeo"), ctx)
     }
+
+    private fun count(haystack: String, needle: String): Int =
+        if (needle.isEmpty()) 0 else haystack.split(needle).size - 1
 
     @Test
     fun `anonymous head fragment omits the user-authenticated meta tag`() {
@@ -76,7 +87,7 @@ class HeadFragmentNotificationsTest {
     fun `anonymous head fragment omits the notifications-stream script include`() {
         val html = renderHead(username = null)
         assertFalse(
-            html.contains("/js/notifications-stream.js\""),
+            html.contains("/js/notifications-stream.js"),
             "Anonymous pages must skip the SSE script to avoid a wasted network hit.",
         )
     }
@@ -84,19 +95,16 @@ class HeadFragmentNotificationsTest {
     @Test
     fun `anonymous head fragment still includes the toasts script for per-page callsites`() {
         val html = renderHead(username = null)
-        assertTrue(
-            html.contains("/js/toasts.js\""),
-            "Toasts UI must load on every page — per-page callsites (login flow, etc.) still use window.toast().",
+        assertEquals(
+            1, count(html, "/js/toasts.js"),
+            "Toasts UI must load on every page exactly once — per-page callsites still use window.toast().",
         )
     }
 
     @Test
-    fun `authenticated head fragment includes the user-authenticated meta tag`() {
+    fun `authenticated head fragment includes the user-authenticated meta tag exactly once`() {
         val html = renderHead(username = "alice")
-        assertTrue(
-            html.contains("name=\"user-authenticated\""),
-            "Auth meta must signal the SSE script that subscribing is worth it.",
-        )
+        assertEquals(1, count(html, "name=\"user-authenticated\""))
         assertTrue(
             html.contains("content=\"true\""),
             "Meta content must be exactly `true` — the script does a strict comparison.",
@@ -104,28 +112,31 @@ class HeadFragmentNotificationsTest {
     }
 
     @Test
-    fun `authenticated head fragment includes both toasts and notifications-stream scripts`() {
+    fun `authenticated head fragment includes toasts and notifications-stream scripts exactly once`() {
         val html = renderHead(username = "alice")
-        assertTrue(html.contains("/js/toasts.js\""), "Toasts UI must load when authenticated.")
-        assertTrue(
-            html.contains("/js/notifications-stream.js\""),
-            "SSE bridge must load when authenticated.",
+        assertEquals(
+            1, count(html, "/js/toasts.js"),
+            "toasts.js must appear exactly once; two heads in one file used to emit it twice.",
+        )
+        assertEquals(
+            1, count(html, "/js/notifications-stream.js"),
+            "notifications-stream.js must appear exactly once; a duplicate opened two EventSources per tab and doubled every toast.",
         )
     }
 
     @Test
     fun `headSeo fragment mirrors the head fragment's notification wiring when authenticated`() {
         val html = renderHeadSeo(username = "alice")
-        assertTrue(html.contains("name=\"user-authenticated\""))
-        assertTrue(html.contains("/js/toasts.js\""))
-        assertTrue(html.contains("/js/notifications-stream.js\""))
+        assertEquals(1, count(html, "name=\"user-authenticated\""))
+        assertEquals(1, count(html, "/js/toasts.js"))
+        assertEquals(1, count(html, "/js/notifications-stream.js"))
     }
 
     @Test
     fun `headSeo fragment omits SSE wiring when anonymous`() {
         val html = renderHeadSeo(username = null)
         assertFalse(html.contains("name=\"user-authenticated\""))
-        assertFalse(html.contains("/js/notifications-stream.js\""))
-        assertTrue(html.contains("/js/toasts.js\""))
+        assertFalse(html.contains("/js/notifications-stream.js"))
+        assertEquals(1, count(html, "/js/toasts.js"))
     }
 }
