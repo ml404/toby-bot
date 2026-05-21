@@ -217,10 +217,12 @@
                             <div th:replace="~{fragments/memberCell :: cellLink(${row.name}, ${row.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${row.discordId})})}"></div>
                         </td>
                         <td data-label="Prestige">
-                            <span class="lb-level-pill"
-                                  th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
-                                  th:text="'LVL ' + ${row.level}">LVL 0</span>
-                            <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                            <div class="lb-prestige">
+                                <span class="lb-level-pill"
+                                      th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
+                                      th:text="'LVL ' + ${row.level}">LVL 0</span>
+                                <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                            </div>
                         </td>
                         <td data-label="Credits" class="lb-col-value">
                             <strong class="lb-value lb-value-credits" th:text="${row.socialCredit}">0</strong>
@@ -281,10 +283,12 @@
                             <div th:replace="~{fragments/memberCell :: cellLink(${row.name}, ${row.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${row.discordId})})}"></div>
                         </td>
                         <td data-label="Prestige">
-                            <span class="lb-level-pill"
-                                  th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
-                                  th:text="'LVL ' + ${row.level}">LVL 0</span>
-                            <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                            <div class="lb-prestige">
+                                <span class="lb-level-pill"
+                                      th:classappend="${'lb-level-tier-' + (row.level >= 50 ? 'diamond' : (row.level >= 25 ? 'gold' : (row.level >= 10 ? 'silver' : 'bronze')))}"
+                                      th:text="'LVL ' + ${row.level}">LVL 0</span>
+                                <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
+                            </div>
                         </td>
                         <td data-label="TOBY" class="lb-col-value">
                             <strong class="lb-value lb-value-toby" th:text="${row.coins}">0</strong>
