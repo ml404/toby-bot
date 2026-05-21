@@ -29,6 +29,12 @@ import web.service.sse.KeyedSseRegistry
  * migrating preference rows would expand the change for no behavioural
  * win — listening to the underlying events directly is the cleanest
  * fit, and a future opt-out toggle can short-circuit client-side.
+ *
+ * Toast-vs-push overlap is resolved in [sw.js] (foreground-suppress
+ * the OS push when a visible client exists). The toast is the
+ * "looking-at-it" surface; the push is the "not-looking" surface. The
+ * SSE channel fires unconditionally — the SW decides whether the push
+ * also pops or sits quiet because the toast already covered it.
  */
 @Service
 class NotificationSseService(
