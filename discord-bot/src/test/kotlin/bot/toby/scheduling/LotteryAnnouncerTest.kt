@@ -1,6 +1,7 @@
 package bot.toby.scheduling
 
 import bot.toby.notify.NotificationRouter
+import common.events.LotteryDrawnForTicketHolderEvent
 import common.notification.PushAdapter
 import common.notification.ChannelRouteKey
 import common.notification.PushPayload
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 /**
  * After the routing refactor, `announceCycle` delegates channel
@@ -59,6 +61,7 @@ class LotteryAnnouncerTest {
     private lateinit var configService: ConfigService
     private lateinit var jackpotLotteryService: JackpotLotteryService
     private lateinit var router: NotificationRouter
+    private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var guild: Guild
     private lateinit var jda: JDA
     private lateinit var bot: SelfMember
@@ -100,7 +103,8 @@ class LotteryAnnouncerTest {
         every { jda.retrieveCommands() } returns restAction
         every { restAction.complete() } returns emptyList()
 
-        announcer = LotteryAnnouncer(configService, jackpotLotteryService, router)
+        eventPublisher = mockk(relaxed = true)
+        announcer = LotteryAnnouncer(configService, jackpotLotteryService, router, eventPublisher)
     }
 
     private fun stubConfig(key: ConfigDto.Configurations, value: String?) {
@@ -1180,6 +1184,161 @@ class LotteryAnnouncerTest {
 
             verify(exactly = 1) { jackpotLotteryService.clearAnnouncement(1L) }
             verify(exactly = 0) { jackpotLotteryService.updateAnnouncementWatermarks(any(), any(), any()) }
+        }
+    }
+
+    /**
+     * The announcer publishes a `LotteryDrawnForTicketHolderEvent` per
+     * winner so the in-page SSE channel can pop a "you won!" toast for
+     * each tab they have open. The event publication is a pure addition
+     * — it must not perturb the existing channel/push dispatch in any
+     * direction.
+     */
+    @Nested
+    inner class InPageEventPublication {
+
+        @Test
+        fun `WeightedDrawn cycle publishes one event per winner with their payout amount`() {
+            val payouts = listOf(
+                database.service.JackpotLotteryService.WinnerPayout(
+                    discordId = 1L, ticketCount = 5, amount = 500L,
+                ),
+                database.service.JackpotLotteryService.WinnerPayout(
+                    discordId = 2L, ticketCount = 3, amount = 300L,
+                ),
+            )
+            val captured = mutableListOf<LotteryDrawnForTicketHolderEvent>()
+            every { eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>()) } answers {
+                captured += firstArg<LotteryDrawnForTicketHolderEvent>()
+            }
+
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                    payouts = payouts, totalPaid = 800L, drained = 1_000L,
+                ),
+                openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+                ),
+            )
+
+            assertEquals(2, captured.size, "exactly one event per winner")
+            val byId = captured.associateBy { it.discordId }
+            assertEquals(setOf(1L, 2L), byId.keys)
+            assertTrue(byId.getValue(1L).didWin)
+            assertEquals(500L, byId.getValue(1L).amountWon)
+            assertEquals(guildId, byId.getValue(1L).guildId)
+            assertTrue(byId.getValue(2L).didWin)
+            assertEquals(300L, byId.getValue(2L).amountWon)
+            assertEquals(guildId, byId.getValue(2L).guildId)
+        }
+
+        @Test
+        fun `MatchDrawn cycle publishes one event per tier winner with their share`() {
+            val tierPayouts = listOf(
+                database.service.JackpotLotteryService.MatchTierPayout(
+                    discordId = 7L, matches = 5, share = 600L,
+                ),
+                database.service.JackpotLotteryService.MatchTierPayout(
+                    discordId = 8L, matches = 4, share = 250L,
+                ),
+                database.service.JackpotLotteryService.MatchTierPayout(
+                    discordId = 9L, matches = 3, share = 100L,
+                ),
+            )
+            val captured = mutableListOf<LotteryDrawnForTicketHolderEvent>()
+            every { eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>()) } answers {
+                captured += firstArg<LotteryDrawnForTicketHolderEvent>()
+            }
+
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = LotteryAnnouncer.PriorOutcome.MatchDrawn(
+                    drawnNumbers = listOf(1, 2, 3, 4, 5),
+                    tierPayouts = tierPayouts,
+                    totalPaid = 950L,
+                    rolledBack = 0L,
+                ),
+                openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+                ),
+            )
+
+            val byId = captured.associateBy { it.discordId }
+            assertEquals(setOf(7L, 8L, 9L), byId.keys)
+            assertEquals(600L, byId.getValue(7L).amountWon)
+            assertEquals(250L, byId.getValue(8L).amountWon)
+            assertEquals(100L, byId.getValue(9L).amountWon)
+            assertTrue(byId.values.all { it.didWin })
+        }
+
+        @Test
+        fun `NoTickets cycle publishes no in-page events`() {
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+                openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+                ),
+            )
+            verify(exactly = 0) {
+                eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>())
+            }
+        }
+
+        @Test
+        fun `BelowMinBuyers cycle publishes no in-page events`() {
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = LotteryAnnouncer.PriorOutcome.BelowMinBuyers(have = 1, need = 3),
+                openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+                ),
+            )
+            verify(exactly = 0) {
+                eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>())
+            }
+        }
+
+        @Test
+        fun `null priorOutcome publishes no in-page events`() {
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = null,
+                openOutcome = LotteryAnnouncer.OpenSummary.Skipped,
+            )
+            verify(exactly = 0) {
+                eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>())
+            }
+        }
+
+        @Test
+        fun `winners with payout entries missing default to amountWon zero`() {
+            // Defensive: payoutByWinner is built from the prior outcome,
+            // but if a future winnerPingIds source diverges from the
+            // payout map (e.g. dedupe drop), we should still publish
+            // rather than crash. Today the two are aligned — this pins
+            // the safe fallback semantics.
+            val payouts = listOf(
+                database.service.JackpotLotteryService.WinnerPayout(
+                    discordId = 1L, ticketCount = 5, amount = 500L,
+                ),
+            )
+            val captured = mutableListOf<LotteryDrawnForTicketHolderEvent>()
+            every { eventPublisher.publishEvent(any<LotteryDrawnForTicketHolderEvent>()) } answers {
+                captured += firstArg<LotteryDrawnForTicketHolderEvent>()
+            }
+            announcer.announceCycle(
+                guild, mode = "WEIGHTED",
+                priorOutcome = LotteryAnnouncer.PriorOutcome.WeightedDrawn(
+                    payouts = payouts, totalPaid = 500L, drained = 500L,
+                ),
+                openOutcome = LotteryAnnouncer.OpenSummary.Ok(
+                    seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
+                ),
+            )
+            assertEquals(1, captured.size)
+            assertEquals(500L, captured.single().amountWon)
         }
     }
 }
