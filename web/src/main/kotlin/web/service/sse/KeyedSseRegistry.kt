@@ -42,6 +42,13 @@ class KeyedSseRegistry<K : Any>(
         .expireAfterAccess(idleBucketTtl, idleBucketTtlUnit)
         .maximumSize(maximumKeys)
         .ticker(ticker)
+        // Synchronous executor so the removal listener fires in the
+        // calling thread. Default is ForkJoinPool.commonPool which makes
+        // the listener race against any caller that wants to observe
+        // completion synchronously (e.g. evict() returning before the
+        // emitter has actually been completed). Listener work is just
+        // `emitter.complete()` — cheap and safe to inline.
+        .executor(Runnable::run)
         .removalListener<K, CopyOnWriteArrayList<SseEmitter>> { _, list, _ ->
             list?.forEach { runCatching { it.complete() } }
         }
