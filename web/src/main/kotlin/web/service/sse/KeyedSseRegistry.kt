@@ -3,10 +3,11 @@ package web.service.sse
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
 import com.github.benmanes.caffeine.cache.Ticker
-import common.logging.DiscordLogger
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executor
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
 
 /**
@@ -38,11 +39,18 @@ class KeyedSseRegistry<K : Any>(
     idleBucketTtl: Long = DEFAULT_IDLE_BUCKET_TTL_MIN,
     idleBucketTtlUnit: TimeUnit = TimeUnit.MINUTES,
     ticker: Ticker = Ticker.systemTicker(),
+    // Caffeine runs the removal listener via this executor. Production
+    // uses ForkJoinPool.commonPool() (Caffeine's default) so an
+    // emitter.complete() that happens to block doesn't stall the
+    // calling thread. Tests inject `Runnable::run` so removal-listener
+    // assertions run synchronously and don't race the pool.
+    executor: Executor = ForkJoinPool.commonPool(),
 ) {
     private val emitters: Cache<K, CopyOnWriteArrayList<SseEmitter>> = Caffeine.newBuilder()
         .expireAfterAccess(idleBucketTtl, idleBucketTtlUnit)
         .maximumSize(maximumKeys)
         .ticker(ticker)
+        .executor(executor)
         .removalListener<K, CopyOnWriteArrayList<SseEmitter>> { _, list, _ ->
             list?.forEach { runCatching { it.complete() } }
         }
@@ -87,8 +95,6 @@ class KeyedSseRegistry<K : Any>(
      */
     fun fanOut(key: K, eventName: String, payload: Any) {
         val list = emitters.getIfPresent(key) ?: return
-        // TODO(diag-removal): drop alongside the other [diag] lines once the double-toast cause is known.
-        logger.info { "[diag] fanOut key=$key eventName=$eventName bucketSize=${list.size}" }
         broadcast(key, list) { send(SseEmitter.event().name(eventName).data(payload)) }
     }
 
@@ -172,9 +178,6 @@ class KeyedSseRegistry<K : Any>(
     }
 
     companion object {
-        // TODO(diag-removal): drop alongside the [diag] log line.
-        private val logger = DiscordLogger(KeyedSseRegistry::class.java)
-
         const val HELLO_EVENT = "hello"
 
         /** 1 hour. Long enough that browsers usually close first; reconnect logic on the client handles expiry. */

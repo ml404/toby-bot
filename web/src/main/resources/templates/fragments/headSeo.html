@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+    Shared <head> fragment with rich link-preview metadata. Used by
+    public marketing pages (home, commands, login, terms, privacy,
+    changelog). Internal/app pages use the lighter `head` fragment
+    in fragments/head.html.
+
+    Pass null for ogImage to fall back to the default preview.svg.
+
+    Lives in its own file so the parser sees exactly one <head>
+    element per file — when this and the `head` fragment shared a
+    file as sibling <head> blocks the HTML5 parser folded both
+    blocks' children into the first head, leaking the second copy
+    of every <script> tag into every page (notifications-stream.js
+    was fetched twice, the EventSource was opened twice, and toasts
+    fired twice). See PR description for the diagnostic trail.
+-->
+<head th:fragment="headSeo(pageTitle, pageDescription, ogImage, extraCss)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
+    <meta name="user-authenticated" th:if="${username != null}" content="true">
+    <title th:text="${pageTitle}">TobyBot</title>
+    <meta name="description" th:content="${pageDescription}">
+    <meta property="og:type" content="website">
+    <meta property="og:title" th:content="${pageTitle}">
+    <meta property="og:description" th:content="${pageDescription}">
+    <meta property="og:image"
+          th:content="${ogImage != null ? ogImage : 'https://www.toby-bot.co.uk/images/preview.svg'}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" th:content="${pageTitle}">
+    <meta name="twitter:description" th:content="${pageDescription}">
+    <meta name="twitter:image"
+          th:content="${ogImage != null ? ogImage : 'https://www.toby-bot.co.uk/images/preview.svg'}">
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <link rel="stylesheet" th:href="@{/css/nav.css}">
+    <link rel="stylesheet" th:href="@{/css/footer.css}">
+    <link rel="stylesheet" th:if="${extraCss != null}" th:href="@{${extraCss}}">
+    <script th:src="@{/js/motion.js}" defer></script>
+    <script th:src="@{/js/toasts.js}" defer></script>
+    <script th:if="${username != null}" th:src="@{/js/notifications-stream.js}" defer></script>
+</head>
+</html>

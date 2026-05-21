@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <!--
-    Shared <head> fragment. Two signatures:
-      :: head(pageTitle, extraCss)
-          — minimal: title + base CSS + optional per-page sheet. Used by
-            internal/app pages that don't need link-preview metadata.
-      :: head(pageTitle, pageDescription, ogImage, extraCss)
-          — adds <meta name="description"> + Open Graph + Twitter card so
-            shared links render rich previews. Public marketing pages
-            (home, commands, login, terms, privacy, changelog) use this.
-            Pass null for ogImage to fall back to the default preview.svg.
+    Shared <head> fragment for internal/app pages — title + base CSS
+    + optional per-page sheet. Public marketing pages (home, commands,
+    login, terms, privacy, changelog) use `fragments/headSeo :: headSeo`
+    instead, which adds Open Graph + Twitter card metadata.
+
+    The two fragments deliberately live in separate files. Originally
+    they were siblings inside one <html> in this file, but two <head>
+    elements in one document is invalid HTML5 — the parser folded the
+    second head's children into the first, so every page that used the
+    `head` fragment also got the headSeo fragment's <script> tags. The
+    most visible symptom was notifications-stream.js loading twice,
+    which opened two EventSources per tab and rendered every SSE toast
+    twice.
 -->
 <head th:fragment="head(pageTitle, extraCss)">
     <meta charset="UTF-8">
@@ -40,38 +44,6 @@
          Only included for authenticated pages — the script self-guards
          on the meta tag above as well, but skipping the request on
          logged-out pages avoids a useless network hop. -->
-    <script th:if="${username != null}" th:src="@{/js/notifications-stream.js}" defer></script>
-</head>
-<head th:fragment="headSeo(pageTitle, pageDescription, ogImage, extraCss)">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="dark">
-    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
-    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
-    <meta name="user-authenticated" th:if="${username != null}" content="true">
-    <title th:text="${pageTitle}">TobyBot</title>
-    <meta name="description" th:content="${pageDescription}">
-    <meta property="og:type" content="website">
-    <meta property="og:title" th:content="${pageTitle}">
-    <meta property="og:description" th:content="${pageDescription}">
-    <meta property="og:image"
-          th:content="${ogImage != null ? ogImage : 'https://www.toby-bot.co.uk/images/preview.svg'}">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" th:content="${pageTitle}">
-    <meta name="twitter:description" th:content="${pageDescription}">
-    <meta name="twitter:image"
-          th:content="${ogImage != null ? ogImage : 'https://www.toby-bot.co.uk/images/preview.svg'}">
-    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
-    <link rel="stylesheet" th:href="@{/css/base.css}">
-    <link rel="stylesheet" th:href="@{/css/nav.css}">
-    <link rel="stylesheet" th:href="@{/css/footer.css}">
-    <link rel="stylesheet" th:if="${extraCss != null}" th:href="@{${extraCss}}">
-    <!-- Shared motion primitives (count-up + reveal-on-scroll). `defer`
-         so it runs after parse but blocks no rendering; reduced-motion is
-         respected internally. -->
-    <script th:src="@{/js/motion.js}" defer></script>
-    <!-- See `head` fragment above for the toast + SSE notification rationale. -->
-    <script th:src="@{/js/toasts.js}" defer></script>
     <script th:if="${username != null}" th:src="@{/js/notifications-stream.js}" defer></script>
 </head>
 </html>
