@@ -1011,8 +1011,24 @@ td { font-size: 0.95rem; }
     border-color: var(--medal-bronze);
 }
 
+/* Wrapper around the LVL + title pills inside a single Prestige cell.
+   inline-flex keeps the cell's layout role unchanged on desktop while
+   giving us a real gap between the two pills; flex-wrap lets the title
+   pill drop to a second line at narrow widths instead of overflowing
+   the row. The same wrapper acts as the single grid target on mobile
+   (see the @media block below). */
+.lb-prestige {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    row-gap: 4px;
+    min-width: 0;
+}
+
 .lb-title-pill {
     display: inline-block;
+    max-width: 100%;
     padding: 2px 8px;
     border: 1px solid var(--border);
     border-radius: 999px;
@@ -1020,6 +1036,9 @@ td { font-size: 0.95rem; }
     background: var(--bg);
     color: var(--text);
     flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Prestige pill — surfaced alongside .lb-title-pill across the
@@ -1142,7 +1161,24 @@ td { font-size: 0.95rem; }
 
     .lb-standings-table.mod-table td[data-label="#"] { grid-area: rank; }
     .lb-standings-table.mod-table td[data-label="Member"] { grid-area: member; min-width: 0; }
-    .lb-standings-table.mod-table td[data-label="Title"] { grid-area: title; justify-self: end; }
+    /* Force the inline-flex memberCell to fill its grid track so the
+       username's text-overflow: ellipsis kicks in at the column boundary
+       instead of physically colliding with the prestige cluster. */
+    .lb-standings-table.mod-table td[data-label="Member"] .member-cell-link,
+    .lb-standings-table.mod-table td[data-label="Member"] .member-cell {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+    }
+    .lb-standings-table.mod-table td[data-label="Prestige"] { grid-area: title; justify-self: end; min-width: 0; }
+    /* Stack LVL above title on mobile so the prestige column is only as
+       wide as the wider pill, freeing horizontal space for long usernames.
+       Each pill keeps its own line, both right-aligned. */
+    .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige {
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 4px;
+    }
 
     /* Each metric cell becomes a tight label/value stack — three
        cells across the bottom row, one grid area each. The
@@ -1201,6 +1237,8 @@ td { font-size: 0.95rem; }
     .avatar { width: 24px; height: 24px; }
     .lb-rank { width: 24px; height: 24px; font-size: 0.8rem; }
     .lb-title-pill { font-size: 0.75rem; padding: 1px 6px; }
+    .lb-level-pill { font-size: 0.7rem; padding: 1px 6px; }
+    .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige { gap: 3px; }
 }
 
 /* ---- Searchable user picker (templates/fragments/userPicker.html
