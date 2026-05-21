@@ -1,6 +1,48 @@
 [
   {
     "date": "May 2026",
+    "title": "Polish leaderboard LVL + title pill formatting",
+    "summary": "The Prestige cell on the leaderboard had three issues visible in the attached screenshot: 1. **No gap between pills.** The `LVL 7` pill and `💎 Diamond Hands` pill rendered as adjacent `inline-block` siblings with no spacing, so they touched each other. 2. **Mobile grid mismatch.** The phone-width grid in `base.css` targeted `td[data-label=\"Title\"]`, but the template emits `data-label=\"Prestige\"` — so on mobile the cell auto-placed into the member column and collided with…",
+    "emoji": "🔨",
+    "prNumber": 530
+  },
+  {
+    "date": "May 2026",
+    "title": "Restore MemberCachePolicy.ALL — offline users broke leaderboards and auth",
+    "summary": "The narrowed `MemberCachePolicy` introduced in #525 (`online != OFFLINE`, voice, owner) silently breaks any feature that walks the member list for offline users: **Leaderboards** render \"Unknown\" for every offline player (as @user reported with screenshot). **`GuildMembership.isMember(id, guildId)`** returns `false` for an offline user who *is* in the guild — locks them out of pages. **`isOwner(...)`** returns `false` for an offline owner — they look like a regular user. *…",
+    "emoji": "🔨",
+    "prNumber": 529
+  },
+  {
+    "date": "May 2026",
+    "title": "Bump metaspace cap to stop startup OOM crash",
+    "summary": "Production crashed with: ``` 2026-05-20 08:58:42 [main] INFO o.s.o.jpa.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default' Terminating due to java.lang.OutOfMemoryError: Metaspace ``` The OOM fired ~500ms after JPA finished initialising — i.e. while Spring was still wiring the remaining beans (JDA listeners, controllers, scheduled jobs). My previous `-XX:MaxMetaspaceSize=96m` cut was too aggressive for Spring Boot +…",
+    "emoji": "🔨",
+    "prNumber": 527
+  },
+  {
+    "date": "May 2026",
+    "title": "Tighten JVM/JDA caps and evict per-guild caches on leave",
+    "summary": "Dyno memory profile was sitting at **~441 MB avg / 557 MB peak** against the 512 MB quota — R14/R15s on most peaks. Two-pronged fix: **Cap JVM + native footprint** so the process can't grow past the dyno quota. **Stop per-guild caches from drifting upward** as the bot leaves guilds. ### JVM ceiling (Procfile + Dockerfile) The Procfile previously passed *no memory flags*, so `-Xmx` defaulted to ~25% of container memory and Netty's direct memory mirrored `Runtime.maxMemory()…",
+    "emoji": "♠️",
+    "prNumber": 525
+  },
+  {
+    "date": "May 2026",
+    "title": "Include site footer on every page",
+    "summary": "Adds the site footer fragment to every page template that was missing it: game tables (blackjack, roulette, slots, plinko, …), guild pickers, dashboards, settings, moderation surfaces, public utilities (`utils`, `dndLookup`), the error page, and the previously-orphaned `profile.html` / `excuses.html`. Also adds the footer to both fragments inside `fragments/guildListPage.html` (`singleAction` and `dualAction`) so the four pages that delegate their entire body through it —…",
+    "emoji": "🎟️",
+    "prNumber": 526
+  },
+  {
+    "date": "May 2026",
+    "title": "Load footer styles on every page, not just home",
+    "summary": "The site footer renders flush-left and unstyled on every public page except `/` — visible on `/commands`, `/commands/wiki`, `/changelog`, `/login`, `/terms`, `/privacy`. Root cause: `.site-footer*` rules lived in `home.css`, but the footer fragment is included from pages that load their own per-page sheet (`commands.css`, `legal.css`, etc.) and never pull in `home.css`. The shared head fragment only loads `base.css` + `nav.css` + one per-page sheet. Fix: extract the footer…",
+    "emoji": "🔨",
+    "prNumber": 523
+  },
+  {
+    "date": "May 2026",
     "title": "Wire 13 casino games to their reserved achievement events",
     "summary": "Follow-up to #520. That PR reserved 13 hidden roadmap stubs in `AchievementCatalog` for casino games that didn't yet publish domain events. This PR wires them up so every stub is `hidden = false` and `PENDING_HIDDEN_CODES` is empty. ### What changed **13 new event classes** under `common.events` — one per game, mirroring `BlackjackNaturalEvent`'s minimal `(discordId, guildId)` shape (Highlow adds an `isWin` flag). **13 modified services** under `database.service` — each ge…",
     "emoji": "🎰",
