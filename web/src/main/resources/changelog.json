@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Split head fragments — stops the double in-page toast",
+    "summary": "Closes the double-toast loop. Root cause traced via PR #532's `[diag]` logging: ``` [diag] NotificationSseService.onLevelUp fired ... # once [diag] fanOut key=… eventName=levelUp bucketSize=6 # but bucket has 6 [diag] publish AchievementUnlockedEvent ... # once [diag] NotificationSseService.onAchievementUnlocked # once [diag] fanOut key=… eventName=achievement bucketSize=2 # bucket has 2 ``` Server-side fires exactly **once** at every layer. The doubling is in the wire-to-…",
+    "emoji": "🔨",
+    "prNumber": 533
+  },
+  {
+    "date": "May 2026",
     "title": "Surface engagement events as in-page toasts via per-user SSE",
     "summary": "New per-user SSE endpoint `GET /api/notifications/stream` opens an authenticated stream that fans out four engagement events as in-page toasts: achievement unlocks, level-ups, tips received, and lottery draws (your ticket). Fan-out is in-process via Spring's `ApplicationEventPublisher`. Toasts pop on whatever page the user has open — no opt-in (the user is already on the site) and no service-worker dependency. Click-through navigates to the deep link (`/profile/{guildId}`)…",
     "emoji": "🎟️",
