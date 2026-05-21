@@ -2,6 +2,7 @@ package bot.toby.scheduling
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
+import common.events.LotteryDrawnForTicketHolderEvent
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
@@ -22,6 +23,7 @@ import net.dv8tion.jda.api.requests.ErrorResponse
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.awt.Color
 import java.security.MessageDigest
@@ -62,6 +64,7 @@ class LotteryAnnouncer @Autowired constructor(
     private val configService: ConfigService,
     private val jackpotLotteryService: JackpotLotteryService,
     private val notificationRouter: NotificationRouter,
+    private val eventPublisher: ApplicationEventPublisher,
     @param:Value($$"${app.base-url:}") private val webBaseUrl: String = "",
 ) {
 
@@ -90,6 +93,20 @@ class LotteryAnnouncer @Autowired constructor(
         val poolAmount = (openOutcome as? OpenSummary.Ok)?.poolAmount
         val winners = winnerPingIds(priorOutcome)
         val payoutByWinner = payoutByWinner(priorOutcome)
+        // In-page toast fan-out: one event per winner so the web layer's
+        // SSE service can deliver a "you won X" toast to whatever tabs
+        // they have open. The Spring publisher is in-process (single JVM
+        // for bot + web) so subscribers run synchronously on this thread.
+        winners.forEach { winnerId ->
+            eventPublisher.publishEvent(
+                LotteryDrawnForTicketHolderEvent(
+                    discordId = winnerId,
+                    guildId = guild.idLong,
+                    didWin = true,
+                    amountWon = payoutByWinner[winnerId] ?: 0L,
+                ),
+            )
+        }
         // Multi-recipient dispatch: channel{} broadcasts one message
         // pinging every winner; push{} fans out per-winner with each
         // user's own payout in the body. When there are no winners the

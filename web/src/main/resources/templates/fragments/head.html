@@ -17,6 +17,10 @@
     <meta name="color-scheme" content="dark">
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
+    <!-- Signals to notifications-stream.js that an SSE subscription is
+         worth opening. Absent on anonymous pages so the script bails
+         silently. -->
+    <meta name="user-authenticated" th:if="${username != null}" content="true">
     <title th:text="${pageTitle}">TobyBot</title>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/base.css}">
@@ -27,6 +31,16 @@
          so it runs after parse but blocks no rendering; reduced-motion is
          respected internally. -->
     <script th:src="@{/js/motion.js}" defer></script>
+    <!-- Toast UI loaded globally so per-page callsites and the SSE
+         notifications stream can both use `window.TobyToasts.show()`
+         without re-including it per template. -->
+    <script th:src="@{/js/toasts.js}" defer></script>
+    <!-- SSE bridge that pops engagement notifications (achievement
+         unlocks, level-ups, tips, lottery draws) as in-page toasts.
+         Only included for authenticated pages — the script self-guards
+         on the meta tag above as well, but skipping the request on
+         logged-out pages avoids a useless network hop. -->
+    <script th:if="${username != null}" th:src="@{/js/notifications-stream.js}" defer></script>
 </head>
 <head th:fragment="headSeo(pageTitle, pageDescription, ogImage, extraCss)">
     <meta charset="UTF-8">
@@ -34,6 +48,7 @@
     <meta name="color-scheme" content="dark">
     <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
+    <meta name="user-authenticated" th:if="${username != null}" content="true">
     <title th:text="${pageTitle}">TobyBot</title>
     <meta name="description" th:content="${pageDescription}">
     <meta property="og:type" content="website">
@@ -55,5 +70,8 @@
          so it runs after parse but blocks no rendering; reduced-motion is
          respected internally. -->
     <script th:src="@{/js/motion.js}" defer></script>
+    <!-- See `head` fragment above for the toast + SSE notification rationale. -->
+    <script th:src="@{/js/toasts.js}" defer></script>
+    <script th:if="${username != null}" th:src="@{/js/notifications-stream.js}" defer></script>
 </head>
 </html>

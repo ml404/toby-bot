@@ -6,7 +6,11 @@
 //
 // Two events:
 //   push          → render a system notification from the JSON envelope
-//                   `{ title, body, deepLink }` sent by WebPushAdapter.
+//                   `{ title, body, deepLink }` sent by WebPushAdapter,
+//                   UNLESS a tab is currently visible — in that case the
+//                   in-page toast (delivered via SSE by
+//                   `notifications-stream.js`) is already showing the
+//                   user, so a parallel OS banner is redundant noise.
 //   notificationclick → focus an existing tab on the deep link if open,
 //                   otherwise open a new one. Falls back to the origin
 //                   root when no deepLink was supplied.
@@ -28,7 +32,23 @@ self.addEventListener('push', function (event) {
         // lets every browser substitute its own default app glyph.
         data: { deepLink: data.deepLink || '/' }
     };
-    event.waitUntil(self.registration.showNotification(data.title || 'TobyBot', options));
+    event.waitUntil((async () => {
+        // Foreground suppression: if any same-origin tab is visible the
+        // in-page toast already covers the user, so don't pop an OS
+        // banner on top of it. Chromium honours skipping showNotification
+        // when a client is visible; Firefox may show a generic
+        // "site updated in the background" fallback in rare cases — the
+        // tradeoff vs. the duplicate-surface UX is worth it.
+        const windowClients = await self.clients.matchAll({
+            type: 'window',
+            includeUncontrolled: true
+        });
+        const visible = windowClients.some(function (c) {
+            return c.visibilityState === 'visible';
+        });
+        if (visible) return;
+        return self.registration.showNotification(data.title || 'TobyBot', options);
+    })());
 });
 
 self.addEventListener('notificationclick', function (event) {
