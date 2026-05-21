@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Polish leaderboard LVL + title pill formatting",
+    "summary": "The Prestige cell on the leaderboard had three issues visible in the attached screenshot: 1. **No gap between pills.** The `LVL 7` pill and `💎 Diamond Hands` pill rendered as adjacent `inline-block` siblings with no spacing, so they touched each other. 2. **Mobile grid mismatch.** The phone-width grid in `base.css` targeted `td[data-label=\"Title\"]`, but the template emits `data-label=\"Prestige\"` — so on mobile the cell auto-placed into the member column and collided with…",
+    "emoji": "🔨",
+    "prNumber": 530
+  },
+  {
+    "date": "May 2026",
     "title": "Restore MemberCachePolicy.ALL — offline users broke leaderboards and auth",
     "summary": "The narrowed `MemberCachePolicy` introduced in #525 (`online != OFFLINE`, voice, owner) silently breaks any feature that walks the member list for offline users: **Leaderboards** render \"Unknown\" for every offline player (as @user reported with screenshot). **`GuildMembership.isMember(id, guildId)`** returns `false` for an offline user who *is* in the guild — locks them out of pages. **`isOwner(...)`** returns `false` for an offline owner — they look like a regular user. *…",
     "emoji": "🔨",
