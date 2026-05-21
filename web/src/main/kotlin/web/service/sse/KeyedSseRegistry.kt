@@ -6,6 +6,8 @@ import com.github.benmanes.caffeine.cache.Ticker
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executor
+import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
 
 /**
@@ -37,18 +39,18 @@ class KeyedSseRegistry<K : Any>(
     idleBucketTtl: Long = DEFAULT_IDLE_BUCKET_TTL_MIN,
     idleBucketTtlUnit: TimeUnit = TimeUnit.MINUTES,
     ticker: Ticker = Ticker.systemTicker(),
+    // Caffeine runs the removal listener via this executor. Production
+    // uses ForkJoinPool.commonPool() (Caffeine's default) so an
+    // emitter.complete() that happens to block doesn't stall the
+    // calling thread. Tests inject `Runnable::run` so removal-listener
+    // assertions run synchronously and don't race the pool.
+    executor: Executor = ForkJoinPool.commonPool(),
 ) {
     private val emitters: Cache<K, CopyOnWriteArrayList<SseEmitter>> = Caffeine.newBuilder()
         .expireAfterAccess(idleBucketTtl, idleBucketTtlUnit)
         .maximumSize(maximumKeys)
         .ticker(ticker)
-        // Synchronous executor so the removal listener fires in the
-        // calling thread. Default is ForkJoinPool.commonPool which makes
-        // the listener race against any caller that wants to observe
-        // completion synchronously (e.g. evict() returning before the
-        // emitter has actually been completed). Listener work is just
-        // `emitter.complete()` — cheap and safe to inline.
-        .executor(Runnable::run)
+        .executor(executor)
         .removalListener<K, CopyOnWriteArrayList<SseEmitter>> { _, list, _ ->
             list?.forEach { runCatching { it.complete() } }
         }
