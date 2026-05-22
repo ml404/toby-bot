@@ -8,6 +8,7 @@ import com.github.topi314.lavasrc.yandexmusic.YandexMusicSourceManager
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.player.DefaultAudioPlayerManager
+import com.sedmelluq.discord.lavaplayer.source.AudioSourceManager
 import com.sedmelluq.discord.lavaplayer.source.bandcamp.BandcampAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.source.local.LocalAudioSourceManager
@@ -43,6 +44,12 @@ private const val DEEZER_MASTER_KEY = "DEEZER_MASTER_KEY"
 private const val DEEZER_ARL = "DEEZER_ARL"
 private const val YANDEX_ACCESS_TOKEN = "YANDEX_ACCESS_TOKEN"
 
+private const val LAVAPLAYER_ENABLE_SOUNDCLOUD = "LAVAPLAYER_ENABLE_SOUNDCLOUD"
+private const val LAVAPLAYER_ENABLE_BANDCAMP = "LAVAPLAYER_ENABLE_BANDCAMP"
+private const val LAVAPLAYER_ENABLE_VIMEO = "LAVAPLAYER_ENABLE_VIMEO"
+private const val LAVAPLAYER_ENABLE_NICO = "LAVAPLAYER_ENABLE_NICO"
+private const val LAVAPLAYER_ENABLE_TWITCH = "LAVAPLAYER_ENABLE_TWITCH"
+
 private val logger: DiscordLogger = DiscordLogger.createLogger(PlayerManager::class.java)
 
 class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
@@ -67,11 +74,11 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         }
 
         audioPlayerManager.registerSourceManager(youtubeAudioSourceManager)
-        audioPlayerManager.registerSourceManager(SoundCloudAudioSourceManager.createDefault())
-        audioPlayerManager.registerSourceManager(BandcampAudioSourceManager())
-        audioPlayerManager.registerSourceManager(VimeoAudioSourceManager())
-        audioPlayerManager.registerSourceManager(NicoAudioSourceManager())
-        audioPlayerManager.registerSourceManager(TwitchStreamAudioSourceManager())
+        registerIfEnabled(LAVAPLAYER_ENABLE_SOUNDCLOUD, "SoundCloud") { SoundCloudAudioSourceManager.createDefault() }
+        registerIfEnabled(LAVAPLAYER_ENABLE_BANDCAMP, "Bandcamp") { BandcampAudioSourceManager() }
+        registerIfEnabled(LAVAPLAYER_ENABLE_VIMEO, "Vimeo") { VimeoAudioSourceManager() }
+        registerIfEnabled(LAVAPLAYER_ENABLE_NICO, "Nico") { NicoAudioSourceManager() }
+        registerIfEnabled(LAVAPLAYER_ENABLE_TWITCH, "Twitch") { TwitchStreamAudioSourceManager() }
         audioPlayerManager.registerSourceManager(HttpAudioSourceManager())
         audioPlayerManager.registerSourceManager(LocalAudioSourceManager())
 
@@ -137,6 +144,19 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
 
     private fun warnDisabled(sourceName: String, vararg requiredEnv: String) {
         logger.warn { "${requiredEnv.joinToString(" / ")} not set — $sourceName disabled." }
+    }
+
+    // Each Lavaplayer source manager eagerly allocates an Apache HTTP client +
+    // connection pool at construction. On a 512 MB dyno that adds up, so the
+    // non-core sources are opt-in via env flag. Set the flag to "true" to
+    // re-enable.
+    private inline fun registerIfEnabled(envFlag: String, sourceName: String, factory: () -> AudioSourceManager) {
+        if (envOrNull(envFlag)?.equals("true", ignoreCase = true) == true) {
+            audioPlayerManager.registerSourceManager(factory())
+            logger.info { "$sourceName source manager registered ($envFlag=true)." }
+        } else {
+            logger.info { "$sourceName source manager skipped ($envFlag not set to 'true')." }
+        }
     }
 
     // Shared search-provider chain used by sources that can't stream directly
