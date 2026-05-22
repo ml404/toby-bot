@@ -28,19 +28,31 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
+import io.mockk.verifyOrder
+import net.dv8tion.jda.api.components.MessageTopLevelComponent
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.selections.SelectOption
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.Message
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import net.dv8tion.jda.api.modals.Modal
+import net.dv8tion.jda.api.requests.restaction.MessageEditAction
+import net.dv8tion.jda.api.requests.restaction.interactions.MessageEditCallbackAction
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.function.Consumer
 import java.util.stream.Stream
 
 internal class InstallCategoryMenuTest {
@@ -66,6 +78,9 @@ internal class InstallCategoryMenuTest {
     private lateinit var ctx: MenuContext
     private lateinit var guild: Guild
     private lateinit var member: Member
+    private lateinit var message: Message
+    private lateinit var messageEditAction: MessageEditAction
+    private lateinit var deferEditAction: MessageEditCallbackAction
 
     @BeforeEach
     fun setUp() {
@@ -110,11 +125,30 @@ internal class InstallCategoryMenuTest {
             every { queue() } just Runs
             every { queue(any()) } just Runs
         }
-        every { event.editMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>()) } returns
-            mockk(relaxed = true) {
-                every { setComponents(*anyVararg()) } returns this
-                every { queue() } just Runs
-            }
+        // Source message that handleSectionPick / showStakesGameMenu edit via
+        // bot webhook after deferEdit acks the interaction.
+        message = mockk(relaxed = true)
+        every { event.message } returns message
+        messageEditAction = mockk(relaxed = true)
+        every { message.editMessageEmbeds(any<MessageEmbed>()) } returns messageEditAction
+        every {
+            messageEditAction.setComponents(*anyVararg<MessageTopLevelComponent>())
+        } returns messageEditAction
+        every {
+            messageEditAction.setComponents(any<Collection<MessageTopLevelComponent>>())
+        } returns messageEditAction
+        every { messageEditAction.queue() } just Runs
+
+        // deferEdit's `.queue { ... }` invokes the callback synchronously so
+        // tests can assert on the chained message-edit deterministically.
+        deferEditAction = mockk(relaxed = true)
+        every { event.deferEdit() } returns deferEditAction
+        every { deferEditAction.queue(any()) } answers {
+            @Suppress("UNCHECKED_CAST")
+            (firstArg() as Consumer<net.dv8tion.jda.api.interactions.InteractionHook?>)
+                .accept(null)
+        }
+        every { deferEditAction.queue() } just Runs
     }
 
     @Test
@@ -132,7 +166,8 @@ internal class InstallCategoryMenuTest {
 
         verify(exactly = 1) { event.reply(any<String>()) }
         verify(exactly = 0) { event.replyModal(any<Modal>()) }
-        verify(exactly = 0) { event.editMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>()) }
+        verify(exactly = 0) { event.deferEdit() }
+        verify(exactly = 0) { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
@@ -156,14 +191,119 @@ internal class InstallCategoryMenuTest {
     }
 
     @Test
-    fun `top-level section pick edits to section detail menu`() {
+    fun `top-level section pick acks via deferEdit then bot-webhook edits the source message`() {
         every { event.componentId } returns InstallWizard.MENU_SECTION
         every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.POKER.id))
 
         menu.handle(ctx, 0)
 
-        verify(exactly = 1) { event.editMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>()) }
+        verify(exactly = 1) { event.deferEdit() }
+        verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 0) { event.replyModal(any<Modal>()) }
+    }
+
+    @Test
+    fun `section pick never uses the racy interaction-response edit form`() {
+        // Regression guard: the previous implementation called
+        // `event.editMessageEmbeds(...)` (interaction-response) which races
+        // against DefaultMenuManager's bot-webhook disable-rows edit and
+        // could leave the message with stale disabled components. The fix
+        // routes through deferEdit + event.message.editMessageEmbeds (both
+        // bot-webhook, same rate-limit bucket → serialized).
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.POKER.id))
+
+        menu.handle(ctx, 0)
+
+        verify(exactly = 0) { event.editMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `section pick orders deferEdit before the message edit`() {
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.POKER.id))
+
+        menu.handle(ctx, 0)
+
+        // Documents the serialization contract: deferEdit fires first to
+        // ack the interaction, the message edit fires from inside its
+        // callback so it lands after the manager's earlier disable-edit.
+        verifyOrder {
+            event.deferEdit()
+            message.editMessageEmbeds(any<MessageEmbed>())
+        }
+    }
+
+    @Test
+    fun `section pick edits the source message instead of replying or opening a modal`() {
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.POKER.id))
+
+        menu.handle(ctx, 0)
+
+        verify(exactly = 0) { event.reply(any<String>()) }
+        verify(exactly = 0) { event.replyModal(any<Modal>()) }
+    }
+
+    @Test
+    fun `section pick swaps in the section-detail menu, not the section menu`() {
+        // The bug presented exactly as: embed updated, dropdown stayed as
+        // "Pick a section to tune" (section menu) and bottom row stayed as
+        // Optional features + Finish. This test captures the actual
+        // components passed to the bot-webhook edit and asserts the
+        // section-detail menu + Back/Finish row are present.
+        val captured = slot<Array<MessageTopLevelComponent>>()
+        every {
+            messageEditAction.setComponents(*varargAll<MessageTopLevelComponent> { true })
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            captured.captured = args.firstOrNull() as Array<MessageTopLevelComponent>
+            messageEditAction
+        }
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.POKER.id))
+
+        menu.handle(ctx, 0)
+
+        val rows = captured.captured.filterIsInstance<ActionRow>()
+        assertEquals(2, rows.size, "section detail view has menu + bottom row")
+        val firstRow = rows[0].components.filterIsInstance<StringSelectMenu>()
+        assertEquals(1, firstRow.size, "first row is a select menu")
+        assertEquals(
+            InstallWizard.sectionDetailMenuId(WizardSection.POKER.id),
+            firstRow[0].customId,
+            "dropdown is the section-detail menu, not the section menu",
+        )
+        val bottomButtons = rows[1].components.filterIsInstance<Button>().map { it.customId }
+        assertTrue(bottomButtons.contains(InstallWizard.BTN_BACK), "bottom row has ← Back")
+        assertTrue(bottomButtons.contains(InstallWizard.BTN_FINISH), "bottom row has Finish")
+    }
+
+    @Test
+    fun `section pick does not leak the previous Optional features button`() {
+        // Specific regression: the stale customRoot bottom row had the
+        // `install_features` button. After the fix, the bottom row is
+        // backAndFinishRow and must not contain that button id.
+        val captured = slot<Array<MessageTopLevelComponent>>()
+        every {
+            messageEditAction.setComponents(*varargAll<MessageTopLevelComponent> { true })
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            captured.captured = args.firstOrNull() as Array<MessageTopLevelComponent>
+            messageEditAction
+        }
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", WizardSection.GENERAL.id))
+
+        menu.handle(ctx, 0)
+
+        val allButtonIds = captured.captured.filterIsInstance<ActionRow>()
+            .flatMap { it.components.filterIsInstance<Button>() }
+            .map { it.customId }
+        assertFalse(
+            allButtonIds.contains(InstallWizard.BTN_FEATURES),
+            "Optional features button must not leak into the section-detail view",
+        )
     }
 
     @Test
@@ -253,8 +393,81 @@ internal class InstallCategoryMenuTest {
 
         menu.handle(ctx, 0)
 
-        verify(exactly = 1) { event.editMessageEmbeds(any<net.dv8tion.jda.api.entities.MessageEmbed>()) }
+        verify(exactly = 1) { event.deferEdit() }
+        verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 0) { event.replyModal(any<Modal>()) }
+    }
+
+    @Test
+    fun `stakes category never uses the racy interaction-response edit form`() {
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.ECONOMY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_STAKES))
+
+        menu.handle(ctx, 0)
+
+        verify(exactly = 0) { event.editMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `stakes category orders deferEdit before the message edit`() {
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.ECONOMY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_STAKES))
+
+        menu.handle(ctx, 0)
+
+        verifyOrder {
+            event.deferEdit()
+            message.editMessageEmbeds(any<MessageEmbed>())
+        }
+    }
+
+    @Test
+    fun `stakes category swaps to the install_category_stakes menu plus back+finish row`() {
+        val captured = slot<Array<MessageTopLevelComponent>>()
+        every {
+            messageEditAction.setComponents(*varargAll<MessageTopLevelComponent> { true })
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            captured.captured = args.firstOrNull() as Array<MessageTopLevelComponent>
+            messageEditAction
+        }
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.ECONOMY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_STAKES))
+
+        menu.handle(ctx, 0)
+
+        val rows = captured.captured.filterIsInstance<ActionRow>()
+        assertEquals(2, rows.size)
+        val gameMenu = rows[0].components.filterIsInstance<StringSelectMenu>().single()
+        assertEquals(InstallWizard.MENU_CATEGORY_STAKES, gameMenu.customId)
+        val bottomButtons = rows[1].components.filterIsInstance<Button>().map { it.customId }
+        assertTrue(bottomButtons.contains(InstallWizard.BTN_BACK))
+        assertTrue(bottomButtons.contains(InstallWizard.BTN_FINISH))
+    }
+
+    @ParameterizedTest(name = "section pick {0} lands the right section-detail dropdown")
+    @EnumSource(WizardSection::class)
+    fun `section pick is parametrised across every WizardSection`(section: WizardSection) {
+        val captured = slot<Array<MessageTopLevelComponent>>()
+        every {
+            messageEditAction.setComponents(*varargAll<MessageTopLevelComponent> { true })
+        } answers {
+            @Suppress("UNCHECKED_CAST")
+            captured.captured = args.firstOrNull() as Array<MessageTopLevelComponent>
+            messageEditAction
+        }
+        every { event.componentId } returns InstallWizard.MENU_SECTION
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", section.id))
+
+        menu.handle(ctx, 0)
+
+        val firstRow = captured.captured.filterIsInstance<ActionRow>().first()
+        val dropdown = firstRow.components.filterIsInstance<StringSelectMenu>().single()
+        assertEquals(
+            InstallWizard.sectionDetailMenuId(section.id),
+            dropdown.customId,
+            "picking ${section.name} must land its detail menu",
+        )
     }
 
     @ParameterizedTest

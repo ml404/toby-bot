@@ -127,12 +127,24 @@ class InstallCategoryMenu(
             event.reply("Unknown section `$sectionId`.").setEphemeral(true).queue()
             return
         }
-        event.editMessageEmbeds(InstallWizard.sectionDetailEmbed(section))
-            .setComponents(
-                ActionRow.of(InstallWizard.sectionDetailMenu(section)),
-                InstallWizard.backAndFinishRow(),
-            )
-            .queue()
+        // Ack via deferEdit, then edit the source message via the bot
+        // webhook. The bot-webhook edit goes through the same JDA
+        // rate-limit bucket as DefaultMenuManager's prior
+        // disable-all-rows edit (also a bot webhook), so the two are
+        // serialized in submission order — our rearm always wins.
+        //
+        // The previous form (`event.editMessageEmbeds(...).setComponents(...).queue()`)
+        // sent an interaction-response edit on a *different* token, which
+        // raced against the manager's bot-webhook and could leave the
+        // message stuck with the disabled previous-view components.
+        event.deferEdit().queue {
+            event.message.editMessageEmbeds(InstallWizard.sectionDetailEmbed(section))
+                .setComponents(
+                    ActionRow.of(InstallWizard.sectionDetailMenu(section)),
+                    InstallWizard.backAndFinishRow(),
+                )
+                .queue()
+        }
     }
 
     private fun handleCategoryPick(
@@ -176,12 +188,16 @@ class InstallCategoryMenu(
     private fun showStakesGameMenu(ctx: MenuContext) {
         val event = ctx.event
         val games = SetConfigStakesModal.Game.entries.map { it.label to it.token }
-        event.editMessageEmbeds(InstallWizard.stakesGameMenuEmbed())
-            .setComponents(
-                ActionRow.of(InstallWizard.stakesGameMenu(games)),
-                InstallWizard.backAndFinishRow(),
-            )
-            .queue()
+        // Same defer-then-bot-webhook pattern as `handleSectionPick` — see
+        // the comment there for the race-condition this avoids.
+        event.deferEdit().queue {
+            event.message.editMessageEmbeds(InstallWizard.stakesGameMenuEmbed())
+                .setComponents(
+                    ActionRow.of(InstallWizard.stakesGameMenu(games)),
+                    InstallWizard.backAndFinishRow(),
+                )
+                .queue()
+        }
     }
 
     /**
