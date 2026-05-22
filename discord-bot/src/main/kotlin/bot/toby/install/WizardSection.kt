@@ -11,6 +11,9 @@ const val JACKPOT_QUICK_CHANNELS_TOKEN = "jackpot_quick_channels"
 /** Synthetic category token for the Lottery section's Quick channels modal (`InstallLotteryChannelsModal`). */
 const val LOTTERY_QUICK_CHANNELS_TOKEN = "lottery_quick_channels"
 
+/** Synthetic category token for the Activity section's Quick channels modal (`InstallActivityChannelsModal`). */
+const val ACTIVITY_QUICK_CHANNELS_TOKEN = "activity_quick_channels"
+
 /**
  * Groups the 12 setconfig categories into themed sections so the custom
  * install flow is two-clicks-to-modal instead of a 13-deep dropdown.
@@ -57,6 +60,7 @@ enum class WizardSection(
         categories = listOf(
             SectionCategory(SetConfigCommand.SUB_ACTIVITY, "Activity config", "UBI, daily credit cap, XP bonus, tracking toggle"),
             SectionCategory(SetConfigCommand.SUB_JACKPOT_ACTIVITY, "Jackpot eligibility", "Activity-day window"),
+            SectionCategory(ACTIVITY_QUICK_CHANNELS_TOKEN, "Announce channels", "Pick level-up + achievement channels from a list (no IDs)"),
         ),
     ),
     POKER(

@@ -20,6 +20,14 @@ import net.dv8tion.jda.api.modals.Modal as JdaModal
  * Discord modals support select menus inside `Label` since the late
  * 2024 components-v2 API; JDA 6.3 exposes this via `Label.of(name, menu)`.
  *
+ * Discord rejects modal payloads where a `Label`-wrapped select menu
+ * has `min_values=0` (Label children are implicitly required, and
+ * required + min=0 is a contradiction the API enforces with
+ * `COMPONENT_REQUIRED_ZERO_MIN_VALUES`). Both pickers therefore use
+ * `setRequiredRange(1, 1)`: owners must pick a channel for each
+ * picker shown, or cancel the modal (X / Esc) to back out without
+ * writing anything.
+ *
  * On submit:
  * - The voice channel selection's *name* is written to
  *   `DEFAULT_MOVE_CHANNEL` (matches the existing
@@ -27,8 +35,9 @@ import net.dv8tion.jda.api.modals.Modal as JdaModal
  * - The text channel selection's *id* is written to
  *   `LEADERBOARD_CHANNEL` (matches `ChannelByIdStoreId`).
  *
- * Either field can be left empty (no selection); empty selections skip
- * the write.
+ * The "no selection" branches in [handle] are defensive — Discord
+ * shouldn't deliver such a payload given `min=1`, but the bot no-ops
+ * cleanly rather than crashing if one ever arrives.
  */
 @Component
 class InstallQuickChannelsModal(
@@ -40,11 +49,11 @@ class InstallQuickChannelsModal(
     fun buildModal(): JdaModal {
         val moveMenu = EntitySelectMenu.create(FIELD_MOVE, EntitySelectMenu.SelectTarget.CHANNEL)
             .setChannelTypes(ChannelType.VOICE)
-            .setRequiredRange(0, 1)
+            .setRequiredRange(1, 1)
             .build()
         val leaderboardMenu = EntitySelectMenu.create(FIELD_LEADERBOARD, EntitySelectMenu.SelectTarget.CHANNEL)
             .setChannelTypes(ChannelType.TEXT)
-            .setRequiredRange(0, 1)
+            .setRequiredRange(1, 1)
             .build()
         return JdaModal.create(MODAL_NAME, "Quick channel setup")
             .addComponents(

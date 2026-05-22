@@ -17,7 +17,9 @@ import net.dv8tion.jda.api.modals.Modal as JdaModal
  * bigger `setconfig_lottery_pools` modal.
  *
  * See [InstallJackpotChannelsModal] for the design constraint that
- * keeps these channel-only modals single-component-type.
+ * keeps these channel-only modals single-component-type and for the
+ * `setRequiredRange(1, 1)` requirement Discord imposes on
+ * `Label`-wrapped select menus.
  */
 @Component
 class InstallLotteryChannelsModal(
@@ -29,7 +31,7 @@ class InstallLotteryChannelsModal(
     fun buildModal(): JdaModal {
         val menu = EntitySelectMenu.create(FIELD_ANNOUNCE, EntitySelectMenu.SelectTarget.CHANNEL)
             .setChannelTypes(ChannelType.TEXT)
-            .setRequiredRange(0, 1)
+            .setRequiredRange(1, 1)
             .build()
         return JdaModal.create(MODAL_NAME, "Quick lottery channel setup")
             .addComponents(Label.of("Lottery announce channel", menu))

@@ -1,11 +1,13 @@
 package bot.toby.install.menu
 
 import bot.toby.command.commands.moderation.SetConfigCommand
+import bot.toby.install.ACTIVITY_QUICK_CHANNELS_TOKEN
 import bot.toby.install.InstallWizard
 import bot.toby.install.JACKPOT_QUICK_CHANNELS_TOKEN
 import bot.toby.install.LOTTERY_QUICK_CHANNELS_TOKEN
 import bot.toby.install.QUICK_CHANNELS_TOKEN
 import bot.toby.install.WizardSection
+import bot.toby.install.modal.InstallActivityChannelsModal
 import bot.toby.install.modal.InstallAllStakesModal
 import bot.toby.install.modal.InstallJackpotChannelsModal
 import bot.toby.install.modal.InstallLotteryChannelsModal
@@ -78,6 +80,7 @@ internal class InstallCategoryMenuTest {
     private lateinit var quickChannels: InstallQuickChannelsModal
     private lateinit var jackpotChannels: InstallJackpotChannelsModal
     private lateinit var lotteryChannels: InstallLotteryChannelsModal
+    private lateinit var activityChannels: InstallActivityChannelsModal
     private lateinit var menu: InstallCategoryMenu
 
     private lateinit var event: StringSelectInteractionEvent
@@ -107,12 +110,13 @@ internal class InstallCategoryMenuTest {
         quickChannels = mockk(relaxed = true)
         jackpotChannels = mockk(relaxed = true)
         lotteryChannels = mockk(relaxed = true)
+        activityChannels = mockk(relaxed = true)
         menu = InstallCategoryMenu(
             configService,
             general, activity, fees, jackpot, jackpotActivity,
             pokerStakes, pokerTable, blackjackRules, blackjackTable,
             lotteryBasics, lotteryPools, stakes, allStakes,
-            quickChannels, jackpotChannels, lotteryChannels,
+            quickChannels, jackpotChannels, lotteryChannels, activityChannels,
         )
 
         event = mockk(relaxed = true)
@@ -574,6 +578,24 @@ internal class InstallCategoryMenuTest {
     }
 
     @Test
+    fun `activity_quick_channels token opens the activity channels modal`() {
+        val expectedId = InstallActivityChannelsModal.MODAL_NAME
+        val built = mockk<Modal>(relaxed = true) { every { id } returns expectedId }
+        every { activityChannels.buildModal() } returns built
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.ACTIVITY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", ACTIVITY_QUICK_CHANNELS_TOKEN))
+
+        menu.handle(ctx, 0)
+
+        val modalSlot = slot<Modal>()
+        verify(exactly = 1) { event.replyModal(capture(modalSlot)) }
+        assertEquals(expectedId, modalSlot.captured.id)
+        verify(exactly = 0) { quickChannels.buildModal() }
+        verify(exactly = 0) { jackpotChannels.buildModal() }
+        verify(exactly = 0) { lotteryChannels.buildModal() }
+    }
+
+    @Test
     fun `unknown category token in section detail replies ephemerally`() {
         every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.GENERAL.id)
         every { event.selectedOptions } returns listOf(SelectOption.of("x", "totally_made_up"))
@@ -582,5 +604,28 @@ internal class InstallCategoryMenuTest {
 
         verify(exactly = 1) { event.reply(any<String>()) }
         verify(exactly = 0) { event.replyModal(any<Modal>()) }
+    }
+
+    @Test
+    fun `category pick rearms the section detail row before queuing replyModal`() {
+        // Regression: on mobile, dismissing the modal via phone-back used to
+        // leave the dropdown + Back/Finish row visually locked. Cause: rearm
+        // was queued inside replyModal.queue { ... }, one interaction-callback
+        // RTT after the manager's disable PATCH (DefaultMenuManager:38). If
+        // the user dismissed the modal in that window, the disable
+        // MESSAGE_UPDATE propagated to their client over the gateway before
+        // the rearm did. Fix: queue the rearm first so both PATCHes ride the
+        // same channel-message rate-limit bucket FIFO — disable, then rearm.
+        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), any()) } returns
+            mockk<Modal>(relaxed = true) { every { id } returns SetConfigGeneralModal.MODAL_NAME }
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.GENERAL.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_GENERAL))
+
+        menu.handle(ctx, 0)
+
+        verifyOrder {
+            message.editMessageEmbeds(any<MessageEmbed>())
+            event.replyModal(any<Modal>())
+        }
     }
 }

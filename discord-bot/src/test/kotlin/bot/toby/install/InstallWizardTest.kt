@@ -197,6 +197,7 @@ internal class InstallWizardTest {
             bot.toby.install.QUICK_CHANNELS_TOKEN,
             bot.toby.install.JACKPOT_QUICK_CHANNELS_TOKEN,
             bot.toby.install.LOTTERY_QUICK_CHANNELS_TOKEN,
+            bot.toby.install.ACTIVITY_QUICK_CHANNELS_TOKEN,
         )
         WizardSection.entries.flatMap { it.categories }.forEach { cat ->
             assertTrue(
