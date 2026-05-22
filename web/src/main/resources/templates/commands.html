@@ -73,8 +73,9 @@
             </header>
 
             <div class="cmd-grid">
-                <div th:each="cmd : ${cat.commands}"
-                     th:replace="~{fragments/commandCard :: card(${cmd})}"></div>
+                <th:block th:each="cmd : ${cat.commands}">
+                    <div th:replace="~{fragments/commandCard :: card(${cmd})}"></div>
+                </th:block>
             </div>
         </section>
     </div>
