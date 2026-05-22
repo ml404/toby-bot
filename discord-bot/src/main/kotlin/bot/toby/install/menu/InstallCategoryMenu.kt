@@ -4,10 +4,12 @@ import bot.toby.command.commands.moderation.SetConfigCommand
 import bot.toby.install.ConfigReader
 import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
+import bot.toby.install.ACTIVITY_QUICK_CHANNELS_TOKEN
 import bot.toby.install.JACKPOT_QUICK_CHANNELS_TOKEN
 import bot.toby.install.LOTTERY_QUICK_CHANNELS_TOKEN
 import bot.toby.install.QUICK_CHANNELS_TOKEN
 import bot.toby.install.WizardSection
+import bot.toby.install.modal.InstallActivityChannelsModal
 import bot.toby.install.modal.InstallAllStakesModal
 import bot.toby.install.modal.InstallJackpotChannelsModal
 import bot.toby.install.modal.InstallLotteryChannelsModal
@@ -67,6 +69,7 @@ class InstallCategoryMenu(
     quickChannels: InstallQuickChannelsModal,
     jackpotChannels: InstallJackpotChannelsModal,
     lotteryChannels: InstallLotteryChannelsModal,
+    activityChannels: InstallActivityChannelsModal,
 ) : Menu {
 
     override val name: String = InstallWizard.MENU_SECTION
@@ -86,6 +89,7 @@ class InstallCategoryMenu(
         QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { _, _ -> quickChannels.buildModal() },
         JACKPOT_QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { _, _ -> jackpotChannels.buildModal() },
         LOTTERY_QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { _, _ -> lotteryChannels.buildModal() },
+        ACTIVITY_QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { _, _ -> activityChannels.buildModal() },
         SetConfigCommand.SUB_GENERAL to setconfigModal(general, SetConfigGeneralModal.MODAL_NAME),
         SetConfigCommand.SUB_ACTIVITY to setconfigModal(activity, SetConfigActivityModal.MODAL_NAME),
         SetConfigCommand.SUB_FEES to setconfigModal(fees, SetConfigFeesModal.MODAL_NAME),

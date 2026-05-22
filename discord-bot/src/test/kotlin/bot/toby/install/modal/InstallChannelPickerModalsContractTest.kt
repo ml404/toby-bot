@@ -47,6 +47,10 @@ internal class InstallChannelPickerModalsContractTest {
                     "InstallLotteryChannelsModal",
                     InstallLotteryChannelsModal(configService).buildModal(),
                 ),
+                Arguments.of(
+                    "InstallActivityChannelsModal",
+                    InstallActivityChannelsModal(configService).buildModal(),
+                ),
             )
         }
     }
