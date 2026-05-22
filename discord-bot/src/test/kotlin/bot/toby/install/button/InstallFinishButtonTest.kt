@@ -38,6 +38,7 @@ internal class InstallFinishButtonTest {
         button.handle(fx.ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { fx.event.reply(any<String>()) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -45,24 +46,20 @@ internal class InstallFinishButtonTest {
     }
 
     @Test
-    fun `owner happy path writes INSTALL_MODE custom and a fresh INSTALLED_AT epoch`() {
-        val installedAtSlot = slot<String>()
-        every {
-            configService.upsertConfig(Configurations.INSTALLED_AT.configValue, capture(installedAtSlot), "g1")
-        } returns mockk(relaxed = true)
+    fun `owner happy path writes INSTALL_MODE custom and INSTALLED_AT epoch via batch upsert`() {
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         val before = System.currentTimeMillis()
         button.handle(fx.ctx, mockk(relaxed = true), 0)
         val after = System.currentTimeMillis()
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALL_MODE.configValue, "custom", "g1")
-        }
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALLED_AT.configValue, any<String>(), "g1")
-        }
-        val capturedEpoch = installedAtSlot.captured.toLong()
-        assertTrue(capturedEpoch in before..after, "INSTALLED_AT epoch should be ~now")
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        val rows = rowsSlot.captured
+        assertTrue(rows.size == 2)
+        assertTrue(rows[0] == Configurations.INSTALL_MODE.configValue to "custom")
+        assertTrue(rows[1].first == Configurations.INSTALLED_AT.configValue)
+        assertTrue(rows[1].second.toLong() in before..after, "INSTALLED_AT epoch should be ~now")
     }
 
     @Test

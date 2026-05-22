@@ -76,15 +76,14 @@ class SetConfigStakesModalTest {
         stub(SetConfigStakesModal.FIELD_MIN_STAKE, "5")
         stub(SetConfigStakesModal.FIELD_MAX_STAKE, "500")
         stub(SetConfigStakesModal.FIELD_BOT_EDGE_PCT, "30")
-        upsertCreated(Configurations.DICE_MIN_STAKE, "5")
-        upsertCreated(Configurations.DICE_MAX_STAKE, "500")
-        upsertCreated(Configurations.DICE_BOT_EDGE_MAX_PCT, "30")
+        val rowsSlot = stubUpsertAllReturningCreated()
 
         modal.handle(ctx, 0)
 
-        verify { configService.upsertConfig(Configurations.DICE_MIN_STAKE.configValue, "5", guildId) }
-        verify { configService.upsertConfig(Configurations.DICE_MAX_STAKE.configValue, "500", guildId) }
-        verify { configService.upsertConfig(Configurations.DICE_BOT_EDGE_MAX_PCT.configValue, "30", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        assertTrue(rowsSlot.captured.contains(Configurations.DICE_MIN_STAKE.configValue to "5"))
+        assertTrue(rowsSlot.captured.contains(Configurations.DICE_MAX_STAKE.configValue to "500"))
+        assertTrue(rowsSlot.captured.contains(Configurations.DICE_BOT_EDGE_MAX_PCT.configValue to "30"))
     }
 
     @Test
@@ -93,20 +92,16 @@ class SetConfigStakesModalTest {
         stub(SetConfigStakesModal.FIELD_MIN_STAKE, "10")
         stub(SetConfigStakesModal.FIELD_MAX_STAKE, "1000")
         stub(SetConfigStakesModal.FIELD_BOT_EDGE_PCT, "30") // ignored — not in specs
-        upsertCreated(Configurations.DUEL_MIN_STAKE, "10")
-        upsertCreated(Configurations.DUEL_MAX_STAKE, "1000")
+        val rowsSlot = stubUpsertAllReturningCreated()
 
         modal.handle(ctx, 0)
 
-        verify { configService.upsertConfig(Configurations.DUEL_MIN_STAKE.configValue, "10", guildId) }
-        verify { configService.upsertConfig(Configurations.DUEL_MAX_STAKE.configValue, "1000", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        assertTrue(rowsSlot.captured.contains(Configurations.DUEL_MIN_STAKE.configValue to "10"))
+        assertTrue(rowsSlot.captured.contains(Configurations.DUEL_MAX_STAKE.configValue to "1000"))
         // No bot-edge key exists for DUEL → never written even though the field
         // was submitted. The modal's specs map is the source of truth.
-        verify(exactly = 0) {
-            configService.upsertConfig(
-                match { it.contains("BOT_EDGE") }, any(), any(),
-            )
-        }
+        assertTrue(rowsSlot.captured.none { it.first.contains("BOT_EDGE") })
     }
 
     @Test
@@ -114,12 +109,13 @@ class SetConfigStakesModalTest {
         every { event.modalId } returns SetConfigStakesModal.customIdFor(SetConfigStakesModal.Game.SLOTS)
         // FIELD_MIN_STAKE remains null (blank)
         stub(SetConfigStakesModal.FIELD_MAX_STAKE, "750")
-        upsertCreated(Configurations.SLOTS_MAX_STAKE, "750")
+        val rowsSlot = stubUpsertAllReturningCreated()
 
         modal.handle(ctx, 0)
 
-        verify(exactly = 0) { configService.upsertConfig(Configurations.SLOTS_MIN_STAKE.configValue, any(), any()) }
-        verify(exactly = 1) { configService.upsertConfig(Configurations.SLOTS_MAX_STAKE.configValue, "750", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        assertTrue(rowsSlot.captured.none { it.first == Configurations.SLOTS_MIN_STAKE.configValue })
+        assertTrue(rowsSlot.captured.contains(Configurations.SLOTS_MAX_STAKE.configValue to "750"))
     }
 
     @Test
@@ -130,6 +126,7 @@ class SetConfigStakesModalTest {
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         assertTrue(messageSlot.captured.contains("Couldn't save"))
     }
@@ -139,9 +136,20 @@ class SetConfigStakesModalTest {
         every { event.getValue(field) } returns mapping
     }
 
-    private fun upsertCreated(key: Configurations, value: String) {
-        every {
-            configService.upsertConfig(key.configValue, value, guildId)
-        } returns ConfigService.UpsertResult.Created(ConfigDto(key.configValue, value, guildId))
+    /**
+     * Stub `upsertAll` to capture the input list and return per-row
+     * `Created` results synthesized from the captured rows. Saves the
+     * test from re-asserting the Created/Updated distinction (covered
+     * by [DefaultConfigServiceUpsertAllTest]) and lets the modal's
+     * `afterWrites` hook see a sensible result.
+     */
+    private fun stubUpsertAllReturningCreated(): io.mockk.CapturingSlot<List<Pair<String, String>>> {
+        val slot = io.mockk.slot<List<Pair<String, String>>>()
+        every { configService.upsertAll(guildId, capture(slot)) } answers {
+            slot.captured.map { (name, value) ->
+                ConfigService.UpsertResult.Created(ConfigDto(name, value, guildId))
+            }
+        }
+        return slot
     }
 }

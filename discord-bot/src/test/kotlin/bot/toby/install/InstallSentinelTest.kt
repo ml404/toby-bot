@@ -26,22 +26,21 @@ internal class InstallSentinelTest {
         every {
             configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "g1")
         } returns null
-        val installedAtSlot = slot<String>()
+        val rowsSlot = slot<List<Pair<String, String>>>()
         every {
-            configService.upsertConfig(Configurations.INSTALLED_AT.configValue, capture(installedAtSlot), "g1")
-        } returns mockk(relaxed = true)
+            configService.upsertAll("g1", capture(rowsSlot))
+        } returns emptyList()
 
         val before = System.currentTimeMillis()
         InstallSentinel.writeIfFresh(configService, "g1", mode = "express")
         val after = System.currentTimeMillis()
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALL_MODE.configValue, "express", "g1")
-        }
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALLED_AT.configValue, any<String>(), "g1")
-        }
-        assertTrue(installedAtSlot.captured.toLong() in before..after)
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        val rows = rowsSlot.captured
+        assertTrue(rows.size == 2)
+        assertTrue(rows[0] == Configurations.INSTALL_MODE.configValue to "express")
+        assertTrue(rows[1].first == Configurations.INSTALLED_AT.configValue)
+        assertTrue(rows[1].second.toLong() in before..after)
     }
 
     @Test
@@ -49,12 +48,13 @@ internal class InstallSentinelTest {
         every {
             configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "g1")
         } returns null
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         InstallSentinel.writeIfFresh(configService, "g1", mode = "custom")
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALL_MODE.configValue, "custom", "g1")
-        }
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        assertTrue(rowsSlot.captured[0] == Configurations.INSTALL_MODE.configValue to "custom")
     }
 
     @Test
@@ -69,6 +69,7 @@ internal class InstallSentinelTest {
         verify(exactly = 1) {
             configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "g1")
         }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -83,6 +84,7 @@ internal class InstallSentinelTest {
 
         InstallSentinel.writeIfFresh(configService, "g1", mode = "express")
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -93,11 +95,12 @@ internal class InstallSentinelTest {
         every {
             configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "g1")
         } returns ConfigDto(Configurations.INSTALL_MODE.configValue, "", "g1")
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         InstallSentinel.writeIfFresh(configService, "g1", mode = "express")
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.INSTALL_MODE.configValue, "express", "g1")
-        }
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        assertTrue(rowsSlot.captured[0] == Configurations.INSTALL_MODE.configValue to "express")
     }
 }

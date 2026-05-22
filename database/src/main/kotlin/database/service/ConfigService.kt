@@ -27,6 +27,23 @@ interface ConfigService {
      */
     fun upsertConfig(name: String, value: String, guildId: String): UpsertResult
 
+    /**
+     * Insert-or-update multiple `(name, value)` rows under a single
+     * [guildId] in one transactional batch. Equivalent to calling
+     * [upsertConfig] in a loop, but wrapped in a single `@Transactional`
+     * boundary so all rows commit together (or none do). Returns the
+     * per-row results in the same order as [rows] so callers can
+     * correlate by index — e.g. branch on `Created` vs `Updated` for
+     * first-enable side effects.
+     *
+     * Empty input is a no-op and returns `emptyList()`.
+     *
+     * Replaces hand-rolled loops like
+     * `rows.forEach { (name, value) -> upsertConfig(name, value, guildId) }`
+     * which committed N times instead of once.
+     */
+    fun upsertAll(guildId: String, rows: List<Pair<String, String>>): List<UpsertResult>
+
     sealed interface UpsertResult {
         val dto: ConfigDto
         data class Created(override val dto: ConfigDto) : UpsertResult

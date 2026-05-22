@@ -7,6 +7,7 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
@@ -68,60 +69,61 @@ internal class InstallQuickChannelsModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(match<String> { it.contains("nothing changed", ignoreCase = true) }) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
     }
 
     @Test
-    fun `voice channel selection writes MOVE channel name`() {
+    fun `voice channel selection writes MOVE channel name via batch upsert`() {
         val voiceChannel = mockk<VoiceChannel> { every { name } returns "General Voice" }
         stubChannelPick(InstallQuickChannelsModal.FIELD_MOVE, 12345L)
         every { guild.getVoiceChannelById(12345L) } returns voiceChannel
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.MOVE.configValue, "General Voice", "g1")
-        }
-        verify(exactly = 0) {
-            configService.upsertConfig(Configurations.LEADERBOARD_CHANNEL.configValue, any<String>(), "g1")
-        }
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        assertEquals(listOf(Configurations.MOVE.configValue to "General Voice"), rowsSlot.captured)
     }
 
     @Test
-    fun `text channel selection writes LEADERBOARD_CHANNEL id`() {
+    fun `text channel selection writes LEADERBOARD_CHANNEL id via batch upsert`() {
         val textChannel = mockk<TextChannel> { every { name } returns "leaderboard" }
         stubChannelPick(InstallQuickChannelsModal.FIELD_LEADERBOARD, 67890L)
         every { guild.getTextChannelById(67890L) } returns textChannel
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.LEADERBOARD_CHANNEL.configValue, "67890", "g1")
-        }
-        verify(exactly = 0) {
-            configService.upsertConfig(Configurations.MOVE.configValue, any<String>(), "g1")
-        }
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        assertEquals(listOf(Configurations.LEADERBOARD_CHANNEL.configValue to "67890"), rowsSlot.captured)
     }
 
     @Test
-    fun `both selections write both keys`() {
+    fun `both selections write both keys in one batch`() {
         val voiceChannel = mockk<VoiceChannel> { every { name } returns "Lobby" }
         val textChannel = mockk<TextChannel> { every { name } returns "scores" }
         stubChannelPick(InstallQuickChannelsModal.FIELD_MOVE, 1L)
         stubChannelPick(InstallQuickChannelsModal.FIELD_LEADERBOARD, 2L)
         every { guild.getVoiceChannelById(1L) } returns voiceChannel
         every { guild.getTextChannelById(2L) } returns textChannel
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.MOVE.configValue, "Lobby", "g1")
-        }
-        verify(exactly = 1) {
-            configService.upsertConfig(Configurations.LEADERBOARD_CHANNEL.configValue, "2", "g1")
-        }
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        assertEquals(
+            listOf(
+                Configurations.MOVE.configValue to "Lobby",
+                Configurations.LEADERBOARD_CHANNEL.configValue to "2",
+            ),
+            rowsSlot.captured,
+        )
     }
 
     @Test
@@ -132,6 +134,7 @@ internal class InstallQuickChannelsModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(match<String> { it.contains("no longer exists") }) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -145,6 +148,7 @@ internal class InstallQuickChannelsModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(match<String> { it.contains("no longer exists") }) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }

@@ -71,21 +71,21 @@ class InstallAllStakesModal(
             return
         }
 
-        val written = mutableListOf<Pair<String, String>>()
-        // 10 games × up to 2 keys = up to 20 sequential upserts. This is a
-        // one-shot owner-initiated config write, not a hot path, so the
-        // serial round-trips are acceptable. If we ever expose batch
-        // writes on ConfigService (`upsertAll(list)`), swap to that.
-        SetConfigStakesModal.Game.entries.forEach { game ->
-            if (min != null) {
-                configService.upsertConfig(game.minKey.configValue, min.toString(), guildId)
-            }
-            if (max != null) {
-                configService.upsertConfig(game.maxKey.configValue, max.toString(), guildId)
+        // Build the (name, value) rows for every game and commit them in a
+        // single transactional batch. 10 games × up to 2 keys = up to 20
+        // rows in one shot — one commit instead of 20.
+        val rows = buildList {
+            SetConfigStakesModal.Game.entries.forEach { game ->
+                if (min != null) add(game.minKey.configValue to min.toString())
+                if (max != null) add(game.maxKey.configValue to max.toString())
             }
         }
-        if (min != null) written += "Min stake" to min.toString()
-        if (max != null) written += "Max stake" to max.toString()
+        configService.upsertAll(guildId, rows)
+
+        val written = buildList<Pair<String, String>> {
+            if (min != null) add("Min stake" to min.toString())
+            if (max != null) add("Max stake" to max.toString())
+        }
 
         val gameCount = SetConfigStakesModal.Game.entries.size
         val summary = buildString {

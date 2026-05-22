@@ -59,6 +59,10 @@ class InstallQuickChannelsModal(
         val guild = ctx.guild
         val guildId = guild.id
 
+        // Validate both picks before writing anything, then commit them in
+        // one batch — partial writes (e.g. move saved but leaderboard
+        // rejected because the channel was deleted mid-flow) are impossible.
+        val rows = mutableListOf<Pair<String, String>>()
         val written = mutableListOf<String>()
 
         val moveChannelId = event.getValue(FIELD_MOVE)?.asLongList?.firstOrNull()
@@ -69,7 +73,7 @@ class InstallQuickChannelsModal(
                     .setEphemeral(true).queue()
                 return
             }
-            configService.upsertConfig(Configurations.MOVE.configValue, channel.name, guildId)
+            rows += Configurations.MOVE.configValue to channel.name
             written += "Move channel → #${channel.name}"
         }
 
@@ -81,20 +85,17 @@ class InstallQuickChannelsModal(
                     .setEphemeral(true).queue()
                 return
             }
-            configService.upsertConfig(
-                Configurations.LEADERBOARD_CHANNEL.configValue,
-                leaderboardChannelId.toString(),
-                guildId,
-            )
+            rows += Configurations.LEADERBOARD_CHANNEL.configValue to leaderboardChannelId.toString()
             written += "Leaderboard channel → #${channel.name}"
         }
 
-        if (written.isEmpty()) {
+        if (rows.isEmpty()) {
             event.reply("No channels picked — nothing changed.").setEphemeral(true).queue()
-        } else {
-            event.reply("Saved:\n" + written.joinToString("\n") { "• $it" })
-                .setEphemeral(true).queue()
+            return
         }
+        configService.upsertAll(guildId, rows)
+        event.reply("Saved:\n" + written.joinToString("\n") { "• $it" })
+            .setEphemeral(true).queue()
     }
 
     companion object {

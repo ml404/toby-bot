@@ -9,12 +9,15 @@ import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.interactions.modals.ModalMapping
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -69,6 +72,7 @@ internal class InstallAllStakesModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(any<String>()) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -82,6 +86,7 @@ internal class InstallAllStakesModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(match<String> { it.contains("Min") }) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -95,6 +100,7 @@ internal class InstallAllStakesModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(match<String> { it.contains("exceed") }) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
@@ -108,59 +114,63 @@ internal class InstallAllStakesModalTest {
         modal.handle(ctx, 0)
 
         verify(exactly = 1) { event.reply(any<String>()) }
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) {
             configService.upsertConfig(any<String>(), any<String>(), any<String>())
         }
     }
 
     @Test
-    fun `min only writes only MIN_STAKE for every game`() {
+    fun `min only writes one batched upsert containing MIN_STAKE for every game`() {
         stubField(InstallAllStakesModal.FIELD_MIN_STAKE, "100")
         stubField(InstallAllStakesModal.FIELD_MAX_STAKE, "")
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        val gameCount = SetConfigStakesModal.Game.entries.size
+        assertEquals(gameCount, rowsSlot.captured.size)
         SetConfigStakesModal.Game.entries.forEach { game ->
-            verify(exactly = 1) {
-                configService.upsertConfig(game.minKey.configValue, "100", "g1")
-            }
-            verify(exactly = 0) {
-                configService.upsertConfig(game.maxKey.configValue, any<String>(), "g1")
-            }
+            assertTrue(rowsSlot.captured.contains(game.minKey.configValue to "100"))
+            assertFalse(rowsSlot.captured.any { it.first == game.maxKey.configValue })
         }
     }
 
     @Test
-    fun `max only writes only MAX_STAKE for every game`() {
+    fun `max only writes one batched upsert containing MAX_STAKE for every game`() {
         stubField(InstallAllStakesModal.FIELD_MIN_STAKE, "")
         stubField(InstallAllStakesModal.FIELD_MAX_STAKE, "5000")
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        val gameCount = SetConfigStakesModal.Game.entries.size
+        assertEquals(gameCount, rowsSlot.captured.size)
         SetConfigStakesModal.Game.entries.forEach { game ->
-            verify(exactly = 1) {
-                configService.upsertConfig(game.maxKey.configValue, "5000", "g1")
-            }
-            verify(exactly = 0) {
-                configService.upsertConfig(game.minKey.configValue, any<String>(), "g1")
-            }
+            assertTrue(rowsSlot.captured.contains(game.maxKey.configValue to "5000"))
+            assertFalse(rowsSlot.captured.any { it.first == game.minKey.configValue })
         }
     }
 
     @Test
-    fun `both min and max writes both keys for every game`() {
+    fun `both min and max writes one batched upsert with both keys for every game`() {
         stubField(InstallAllStakesModal.FIELD_MIN_STAKE, "100")
         stubField(InstallAllStakesModal.FIELD_MAX_STAKE, "5000")
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 1) { configService.upsertAll("g1", any()) }
+        val gameCount = SetConfigStakesModal.Game.entries.size
+        assertEquals(gameCount * 2, rowsSlot.captured.size)
         SetConfigStakesModal.Game.entries.forEach { game ->
-            verify(exactly = 1) {
-                configService.upsertConfig(game.minKey.configValue, "100", "g1")
-            }
-            verify(exactly = 1) {
-                configService.upsertConfig(game.maxKey.configValue, "5000", "g1")
-            }
+            assertTrue(rowsSlot.captured.contains(game.minKey.configValue to "100"))
+            assertTrue(rowsSlot.captured.contains(game.maxKey.configValue to "5000"))
         }
     }
 
