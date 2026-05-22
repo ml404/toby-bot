@@ -92,7 +92,7 @@ enum class WizardSection(
          * fall out when their toggle is off (`"true"` is the on-signal;
          * anything else is off).
          */
-        fun visibleFor(currentValues: (database.dto.ConfigDto.Configurations) -> String?): List<WizardSection> =
+        fun visibleFor(currentValues: ConfigReader): List<WizardSection> =
             entries.filter { section ->
                 val gate = section.gate ?: return@filter true
                 currentValues(gate.key) == "true"

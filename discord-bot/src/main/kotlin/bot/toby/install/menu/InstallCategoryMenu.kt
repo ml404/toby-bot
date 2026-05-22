@@ -1,8 +1,9 @@
 package bot.toby.install.menu
 
 import bot.toby.command.commands.moderation.SetConfigCommand
+import bot.toby.install.ConfigReader
+import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
-import bot.toby.install.InstallWizard.ConfigReader
 import bot.toby.install.QUICK_CHANNELS_TOKEN
 import bot.toby.install.WizardSection
 import bot.toby.install.modal.InstallAllStakesModal
@@ -19,6 +20,7 @@ import bot.toby.modal.modals.setconfig.SetConfigLotteryPoolsModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerStakesModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerTableModal
 import bot.toby.modal.modals.setconfig.SetConfigStakesModal
+import common.logging.DiscordLogger
 import core.menu.Menu
 import core.menu.MenuContext
 import database.service.ConfigService
@@ -62,6 +64,8 @@ class InstallCategoryMenu(
 
     override val name: String = InstallWizard.MENU_SECTION
 
+    private val log: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+
     /**
      * Dispatch table for top-level category picks. Each entry maps a
      * category token to one of:
@@ -71,38 +75,38 @@ class InstallCategoryMenu(
      * - [CategoryAction.Transition] — perform an inline edit (e.g. swap
      *   the menu for a sub-menu) without opening a modal.
      */
-    private val categoryActions: Map<String, CategoryAction> = buildMap {
-        fun openModal(token: String, build: (ConfigReader) -> Modal) {
-            put(token, CategoryAction.OpenModal(build))
-        }
-        openModal(QUICK_CHANNELS_TOKEN) { quickChannels.buildModal() }
-        openModal(SetConfigCommand.SUB_GENERAL) { r -> general.buildModal(SetConfigGeneralModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_ACTIVITY) { r -> activity.buildModal(SetConfigActivityModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_FEES) { r -> fees.buildModal(SetConfigFeesModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_JACKPOT) { r -> jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_JACKPOT_ACTIVITY) { r -> jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_POKER_STAKES) { r -> pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_POKER_TABLE) { r -> pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_BLACKJACK_RULES) { r -> blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_BLACKJACK_TABLE) { r -> blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_LOTTERY_BASICS) { r -> lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, r) }
-        openModal(SetConfigCommand.SUB_LOTTERY_POOLS) { r -> lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, r) }
-        put(SetConfigCommand.SUB_STAKES, CategoryAction.Transition(::showStakesGameMenu))
-    }
+    private val categoryActions: Map<String, CategoryAction> = mapOf(
+        QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { quickChannels.buildModal() },
+        SetConfigCommand.SUB_GENERAL to setconfigModal(general, SetConfigGeneralModal.MODAL_NAME),
+        SetConfigCommand.SUB_ACTIVITY to setconfigModal(activity, SetConfigActivityModal.MODAL_NAME),
+        SetConfigCommand.SUB_FEES to setconfigModal(fees, SetConfigFeesModal.MODAL_NAME),
+        SetConfigCommand.SUB_JACKPOT to setconfigModal(jackpot, SetConfigJackpotModal.MODAL_NAME),
+        SetConfigCommand.SUB_JACKPOT_ACTIVITY to setconfigModal(jackpotActivity, SetConfigJackpotActivityModal.MODAL_NAME),
+        SetConfigCommand.SUB_POKER_STAKES to setconfigModal(pokerStakes, SetConfigPokerStakesModal.MODAL_NAME),
+        SetConfigCommand.SUB_POKER_TABLE to setconfigModal(pokerTable, SetConfigPokerTableModal.MODAL_NAME),
+        SetConfigCommand.SUB_BLACKJACK_RULES to setconfigModal(blackjackRules, SetConfigBlackjackRulesModal.MODAL_NAME),
+        SetConfigCommand.SUB_BLACKJACK_TABLE to setconfigModal(blackjackTable, SetConfigBlackjackTableModal.MODAL_NAME),
+        SetConfigCommand.SUB_LOTTERY_BASICS to setconfigModal(lotteryBasics, SetConfigLotteryBasicsModal.MODAL_NAME),
+        SetConfigCommand.SUB_LOTTERY_POOLS to setconfigModal(lotteryPools, SetConfigLotteryPoolsModal.MODAL_NAME),
+        SetConfigCommand.SUB_STAKES to CategoryAction.Transition(::showStakesGameMenu),
+    )
+
+    private fun setconfigModal(
+        modal: bot.toby.modal.modals.setconfig.SetConfigCategoryModal,
+        modalName: String,
+    ): CategoryAction.OpenModal =
+        CategoryAction.OpenModal { reader -> modal.buildModal(modalName, reader) }
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.event
-        if (ctx.member?.isOwner != true) {
-            event.reply("Only the server owner can use the install wizard.")
-                .setEphemeral(true).queue()
-            return
-        }
+        if (!InstallAuth.requireOwner(event)) return
         val selected = event.selectedOptions.firstOrNull()?.value ?: run {
             event.reply("No option selected.").setEphemeral(true).queue()
             return
         }
         val reader = InstallWizard.configReader(configService, ctx.guild.id)
         val componentId = event.componentId
+        log.info { "Install menu dispatch: componentId='$componentId' selected='$selected'" }
         when {
             componentId == InstallWizard.MENU_SECTION ->
                 handleSectionPick(ctx, selected)
@@ -110,7 +114,10 @@ class InstallCategoryMenu(
                 handleCategoryPick(ctx, componentId, selected, reader)
             componentId == InstallWizard.MENU_CATEGORY_STAKES ->
                 handleStakesPick(ctx, selected, reader)
-            else -> event.reply("Unknown menu `$componentId`.").setEphemeral(true).queue()
+            else -> {
+                log.warn { "Install menu got unknown componentId '$componentId' — ignoring" }
+                event.reply("Unknown menu `$componentId`.").setEphemeral(true).queue()
+            }
         }
     }
 

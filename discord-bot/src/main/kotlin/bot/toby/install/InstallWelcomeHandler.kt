@@ -29,6 +29,21 @@ class InstallWelcomeHandler(
 
     override fun onGuildJoin(event: GuildJoinEvent) {
         val guild = event.guild
+        try {
+            postWelcomeOrDmOwner(guild)
+        } catch (e: Exception) {
+            // Bot just joined the guild — never let a transient failure
+            // (DB outage on the sentinel read, JDA queue failure, etc.)
+            // propagate up and kill the listener thread. The owner can
+            // always run /install manually.
+            logger.error {
+                "Install welcome failed for guild ${guild.id} (${guild.name}): " +
+                    "${e.javaClass.simpleName}: ${e.message}"
+            }
+        }
+    }
+
+    private fun postWelcomeOrDmOwner(guild: Guild) {
         val existingValue = configService.getConfigByName(Configurations.INSTALL_MODE.configValue, guild.id)?.value
         if (!existingValue.isNullOrBlank()) {
             logger.info { "Skipping welcome — guild ${guild.id} already installed ($existingValue)" }
@@ -47,7 +62,7 @@ class InstallWelcomeHandler(
         // can run /install from the server itself if they want the public
         // version.
         val owner = guild.owner ?: run {
-            logger.warn { "Guild ${guild.id} (${guild.name}) has no resolvable owner — cannot post welcome" }
+            logger.error { "Guild ${guild.id} (${guild.name}) has no resolvable owner AND no writable channel — install wizard is unreachable" }
             return
         }
         dmOwner(guild, owner)
@@ -58,10 +73,21 @@ class InstallWelcomeHandler(
             channel.sendMessageEmbeds(InstallWizard.dmWelcomeEmbed(guild.name))
                 .queue(
                     { logger.info { "DM'd install welcome to owner of ${guild.id} (${guild.name})" } },
-                    { err -> logger.warn { "Could not DM owner of ${guild.id}: ${err.message}" } },
+                    { err ->
+                        // Both the guild and the owner are unreachable — the wizard is
+                        // effectively undiscoverable until the owner runs /install manually.
+                        // ERROR level so this surfaces in alerting, not buried in WARN noise.
+                        logger.error {
+                            "Could not DM owner of guild ${guild.id} (${guild.name}); install wizard " +
+                                "is unreachable until /install is run manually: ${err.message}"
+                        }
+                    },
                 )
         }, { err ->
-            logger.warn { "Could not open DM with owner of ${guild.id}: ${err.message}" }
+            logger.error {
+                "Could not open DM channel with owner of guild ${guild.id} (${guild.name}); " +
+                    "install wizard is unreachable until /install is run manually: ${err.message}"
+            }
         })
     }
 

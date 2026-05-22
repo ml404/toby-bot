@@ -94,6 +94,9 @@ internal class InstallCategoryMenuTest {
         event = mockk(relaxed = true)
         guild = mockk(relaxed = true) { every { id } returns "g1" }
         member = mockk(relaxed = true) { every { isOwner } returns true }
+        // InstallAuth.requireOwner reads event.member; the legacy ctx.member
+        // stub is preserved for handlers that still consult the context.
+        every { event.member } returns member
         ctx = mockk {
             every { this@mockk.event } returns this@InstallCategoryMenuTest.event
             every { this@mockk.guild } returns this@InstallCategoryMenuTest.guild

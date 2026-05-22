@@ -160,8 +160,11 @@ internal class InstallWizardTest {
 
     @Test
     fun `welcome embed lists key defaults`() {
+        // Intentional copy-coupling: the welcome embed exists to tell owners
+        // what "Express" will accept, so dropping any of these mentions is a
+        // regression the test should catch. If copy is reworded, update these
+        // assertions in the same commit — that's the workflow signal.
         val description = InstallWizard.welcomeEmbed("Test").description!!
-        // Catches a future copy edit that drops the default-disclosure.
         assertTrue(description.contains("Activity tracking", ignoreCase = true))
         assertTrue(description.contains("Daily lottery", ignoreCase = true))
         assertTrue(description.contains("OFF"))

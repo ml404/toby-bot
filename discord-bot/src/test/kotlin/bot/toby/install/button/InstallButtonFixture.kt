@@ -45,6 +45,9 @@ internal class InstallButtonFixture(guildId: String = "g1") {
         }
         every { hook.editOriginalEmbeds(any<MessageEmbed>()) } returns editAction
         every { editAction.setComponents(*anyVararg<MessageTopLevelComponent>()) } returns editAction
+        every {
+            editAction.setComponents(any<Collection<MessageTopLevelComponent>>())
+        } returns editAction
         every { editAction.queue() } just Runs
 
         ctx = mockk {

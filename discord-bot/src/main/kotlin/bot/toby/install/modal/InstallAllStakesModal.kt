@@ -72,6 +72,10 @@ class InstallAllStakesModal(
         }
 
         val written = mutableListOf<Pair<String, String>>()
+        // 10 games × up to 2 keys = up to 20 sequential upserts. This is a
+        // one-shot owner-initiated config write, not a hot path, so the
+        // serial round-trips are acceptable. If we ever expose batch
+        // writes on ConfigService (`upsertAll(list)`), swap to that.
         SetConfigStakesModal.Game.entries.forEach { game ->
             if (min != null) {
                 configService.upsertConfig(game.minKey.configValue, min.toString(), guildId)

@@ -1,5 +1,6 @@
 package bot.toby.install.button
 
+import bot.toby.install.InstallAuth
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
@@ -8,7 +9,7 @@ import database.dto.UserDto
  * Shared base for every install-wizard button. Centralizes:
  *
  * - The owner-gate (ephemeral reject if `event.member?.isOwner != true`),
- *   which all install buttons need.
+ *   shared with the menu via [InstallAuth.requireOwner].
  * - `defersReply = false` — install buttons edit the source message via
  *   `deferEdit + hook.editOriginal*`, not a separate ephemeral reply.
  *
@@ -19,15 +20,11 @@ abstract class OwnerOnlyInstallButton : Button {
 
     override val defersReply: Boolean = false
 
-    /** Per-button error string. Defaults to a generic owner-only message. */
-    protected open fun ownerErrorMessage(): String = DEFAULT_OWNER_ERROR
+    /** Per-button error string. Defaults to the wizard's generic owner-only message. */
+    protected open fun ownerErrorMessage(): String = InstallAuth.DEFAULT_MESSAGE
 
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        val event = ctx.event
-        if (event.member?.isOwner != true) {
-            event.reply(ownerErrorMessage()).setEphemeral(true).queue()
-            return
-        }
+        if (!InstallAuth.requireOwner(ctx.event, ownerErrorMessage())) return
         handleAsOwner(ctx, requestingUserDto, deleteDelay)
     }
 
@@ -42,8 +39,4 @@ abstract class OwnerOnlyInstallButton : Button {
         requestingUserDto: UserDto,
         deleteDelay: Int,
     )
-
-    companion object {
-        const val DEFAULT_OWNER_ERROR: String = "Only the server owner can use the install wizard."
-    }
 }

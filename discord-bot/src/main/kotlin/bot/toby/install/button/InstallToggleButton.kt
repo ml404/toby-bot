@@ -1,5 +1,6 @@
 package bot.toby.install.button
 
+import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
 import bot.toby.install.OptInFeatures
 import core.button.ButtonContext
@@ -26,7 +27,7 @@ class InstallToggleButton(
 
     override val name: String = InstallWizard.BTN_TOGGLE_PREFIX
     override val description: String = "Toggle an optional feature on or off."
-    override fun ownerErrorMessage(): String = "Only the server owner can toggle install settings."
+    override fun ownerErrorMessage(): String = InstallAuth.TOGGLE_MESSAGE
 
     override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
@@ -37,6 +38,11 @@ class InstallToggleButton(
         }
         event.deferEdit().queue()
         val guildId = ctx.guild.id
+        // Toggle is read-then-write — two rapid clicks could both read the
+        // same "before" value and produce the same "after". In practice
+        // Discord serializes interactions per-user-per-message, so this is
+        // safe for a guild-owner-only button. If we ever extend toggles
+        // beyond the owner, switch to a CAS-style upsert.
         val current = configService.getConfigByName(feature.key.configValue, guildId)?.value
         val newValue = if (current == "true") "false" else "true"
         configService.upsertConfig(feature.key.configValue, newValue, guildId)

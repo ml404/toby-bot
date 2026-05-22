@@ -19,12 +19,7 @@ class InstallCommand : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-
-        if (ctx.member?.isOwner != true) {
-            event.reply("This is currently reserved for the owner of the server only, this may change in future")
-                .setEphemeral(true).queue()
-            return
-        }
+        if (!InstallAuth.requireOwner(event)) return
         val guild = event.guild ?: run {
             event.reply("This command can only be used in a server.").setEphemeral(true).queue()
             return

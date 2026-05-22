@@ -1,5 +1,6 @@
 package bot.toby.install.button
 
+import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
 import database.dto.UserDto
@@ -15,7 +16,7 @@ class InstallSkipButton : OwnerOnlyInstallButton() {
 
     override val name: String = InstallWizard.BTN_SKIP
     override val description: String = "Dismiss the install wizard without making changes."
-    override fun ownerErrorMessage(): String = "Only the server owner can dismiss the install prompt."
+    override fun ownerErrorMessage(): String = InstallAuth.DISMISS_MESSAGE
 
     override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event

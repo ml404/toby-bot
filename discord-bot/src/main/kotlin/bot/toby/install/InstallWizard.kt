@@ -1,6 +1,5 @@
 package bot.toby.install
 
-import database.dto.ConfigDto.Configurations
 import database.service.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
@@ -23,15 +22,12 @@ import net.dv8tion.jda.api.entities.MessageEmbed
  */
 object InstallWizard {
 
-    /** A function that returns the current value of a per-guild config key, or null if unset. */
-    typealias ConfigReader = (Configurations) -> String?
-
     /** Build the standard config-value reader bound to a specific guild. */
     fun configReader(configService: ConfigService, guildId: String): ConfigReader =
         { key -> configService.getConfigByName(key.configValue, guildId)?.value }
 
     /** Build the two-row component set for the custom-setup root view. */
-    fun customRootRows(reader: ConfigReader): Array<ActionRow> = arrayOf(
+    fun customRootRows(reader: ConfigReader): List<ActionRow> = listOf(
         ActionRow.of(sectionMenu(reader)),
         customRootBottomRow(),
     )
@@ -176,7 +172,7 @@ object InstallWizard {
      * out when their respective opt-in is off. Always non-empty: the
      * General/Economy/Poker/Blackjack sections have no gate.
      */
-    fun sectionMenu(currentValues: (Configurations) -> String?): StringSelectMenu {
+    fun sectionMenu(currentValues: ConfigReader): StringSelectMenu {
         val builder = StringSelectMenu.create(MENU_SECTION).setPlaceholder("Pick a section to tune")
         WizardSection.visibleFor(currentValues).forEach { section ->
             builder.addOptions(
@@ -221,7 +217,7 @@ object InstallWizard {
      * One toggle button per [OptInFeatures] entry, labelled + styled to
      * reflect the supplied current-value reader.
      */
-    fun toggleRow(currentValues: (Configurations) -> String?): ActionRow {
+    fun toggleRow(currentValues: ConfigReader): ActionRow {
         val buttons = OptInFeatures.entries.map { feature ->
             val on = currentValues(feature.key) == "true"
             val state = if (on) "ON" else "OFF"

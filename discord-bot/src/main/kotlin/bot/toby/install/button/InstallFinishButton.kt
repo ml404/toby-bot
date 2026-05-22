@@ -1,5 +1,6 @@
 package bot.toby.install.button
 
+import bot.toby.install.InstallAuth
 import bot.toby.install.InstallSentinel
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
@@ -22,7 +23,7 @@ class InstallFinishButton(
 
     override val name: String = InstallWizard.BTN_FINISH
     override val description: String = "Finish the custom install."
-    override fun ownerErrorMessage(): String = OWNER_ERROR_SETUP
+    override fun ownerErrorMessage(): String = InstallAuth.SETUP_MESSAGE
 
     override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event

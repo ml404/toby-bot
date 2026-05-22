@@ -59,7 +59,7 @@ internal class InstallCustomButtonTest {
         verify(exactly = 1) { fx.event.deferEdit() }
         verify(exactly = 1) { fx.hook.editOriginalEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            fx.editAction.setComponents(*anyVararg<MessageTopLevelComponent>())
+            fx.editAction.setComponents(any<Collection<MessageTopLevelComponent>>())
         }
     }
 }

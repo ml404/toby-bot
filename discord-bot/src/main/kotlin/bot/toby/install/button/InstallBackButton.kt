@@ -1,5 +1,6 @@
 package bot.toby.install.button
 
+import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
 import database.dto.UserDto
@@ -19,14 +20,14 @@ class InstallBackButton(
 
     override val name: String = InstallWizard.BTN_BACK
     override val description: String = "Return to the custom-install section menu."
-    override fun ownerErrorMessage(): String = "Only the server owner can navigate the install wizard."
+    override fun ownerErrorMessage(): String = InstallAuth.NAVIGATE_MESSAGE
 
     override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferEdit().queue()
         val reader = InstallWizard.configReader(configService, ctx.guild.id)
         event.hook.editOriginalEmbeds(InstallWizard.customSectionEmbed())
-            .setComponents(*InstallWizard.customRootRows(reader))
+            .setComponents(InstallWizard.customRootRows(reader))
             .queue()
     }
 }
