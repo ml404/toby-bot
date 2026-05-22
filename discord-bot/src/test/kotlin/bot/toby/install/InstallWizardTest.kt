@@ -193,7 +193,11 @@ internal class InstallWizardTest {
             SetConfigCommand.SUB_LOTTERY_BASICS, SetConfigCommand.SUB_LOTTERY_POOLS,
             SetConfigCommand.SUB_STAKES,
         )
-        val wizardInternal = setOf(bot.toby.install.QUICK_CHANNELS_TOKEN)
+        val wizardInternal = setOf(
+            bot.toby.install.QUICK_CHANNELS_TOKEN,
+            bot.toby.install.JACKPOT_QUICK_CHANNELS_TOKEN,
+            bot.toby.install.LOTTERY_QUICK_CHANNELS_TOKEN,
+        )
         WizardSection.entries.flatMap { it.categories }.forEach { cat ->
             assertTrue(
                 knownSubs.contains(cat.token) || wizardInternal.contains(cat.token),

@@ -2,8 +2,14 @@ package bot.toby.install
 
 import bot.toby.command.commands.moderation.SetConfigCommand
 
-/** Synthetic category token for the EntitySelectMenu-backed quick channels modal. */
+/** Synthetic category token for the General section's Quick channels modal (`InstallQuickChannelsModal`). */
 const val QUICK_CHANNELS_TOKEN = "quick_channels"
+
+/** Synthetic category token for the Jackpot section's Quick channels modal (`InstallJackpotChannelsModal`). */
+const val JACKPOT_QUICK_CHANNELS_TOKEN = "jackpot_quick_channels"
+
+/** Synthetic category token for the Lottery section's Quick channels modal (`InstallLotteryChannelsModal`). */
+const val LOTTERY_QUICK_CHANNELS_TOKEN = "lottery_quick_channels"
 
 /**
  * Groups the 12 setconfig categories into themed sections so the custom
@@ -39,6 +45,7 @@ enum class WizardSection(
         categories = listOf(
             SectionCategory(SetConfigCommand.SUB_FEES, "Fees", "Loss tribute %, jackpot win %, Toby Coin trade fees"),
             SectionCategory(SetConfigCommand.SUB_JACKPOT, "Jackpot", "Stake anchor, cooldown, RTP gate, modlog channel"),
+            SectionCategory(JACKPOT_QUICK_CHANNELS_TOKEN, "Jackpot modlog channel", "Pick the casino modlog channel from a list (no IDs)"),
             SectionCategory(SetConfigCommand.SUB_STAKES, "Per-game stakes", "Min/max stake bounds (apply to all or drill down)"),
         ),
     ),
@@ -80,6 +87,7 @@ enum class WizardSection(
         categories = listOf(
             SectionCategory(SetConfigCommand.SUB_LOTTERY_BASICS, "Lottery basics", "On/off, ticket price, mode, ping"),
             SectionCategory(SetConfigCommand.SUB_LOTTERY_POOLS, "Lottery pools", "Seed/revenue split + announce channel"),
+            SectionCategory(LOTTERY_QUICK_CHANNELS_TOKEN, "Lottery announce channel", "Pick the announce channel from a list (no IDs)"),
         ),
     ),
     ;

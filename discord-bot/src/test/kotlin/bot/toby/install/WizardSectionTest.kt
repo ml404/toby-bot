@@ -89,6 +89,24 @@ internal class WizardSectionTest {
     }
 
     @Test
+    fun `economy section exposes the jackpot quick-channels entry`() {
+        val tokens = WizardSection.ECONOMY.categories.map { it.token }
+        assertTrue(
+            tokens.contains(JACKPOT_QUICK_CHANNELS_TOKEN),
+            "jackpot_quick_channels missing from Economy section",
+        )
+    }
+
+    @Test
+    fun `lottery section exposes the lottery quick-channels entry`() {
+        val tokens = WizardSection.LOTTERY.categories.map { it.token }
+        assertTrue(
+            tokens.contains(LOTTERY_QUICK_CHANNELS_TOKEN),
+            "lottery_quick_channels missing from Lottery section",
+        )
+    }
+
+    @Test
     fun `general section exposes the quick-channels entry`() {
         val tokens = WizardSection.GENERAL.categories.map { it.token }
         assertTrue(tokens.contains(QUICK_CHANNELS_TOKEN), "quick_channels missing from General section")

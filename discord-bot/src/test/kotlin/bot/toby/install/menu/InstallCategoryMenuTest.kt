@@ -2,9 +2,13 @@ package bot.toby.install.menu
 
 import bot.toby.command.commands.moderation.SetConfigCommand
 import bot.toby.install.InstallWizard
+import bot.toby.install.JACKPOT_QUICK_CHANNELS_TOKEN
+import bot.toby.install.LOTTERY_QUICK_CHANNELS_TOKEN
 import bot.toby.install.QUICK_CHANNELS_TOKEN
 import bot.toby.install.WizardSection
 import bot.toby.install.modal.InstallAllStakesModal
+import bot.toby.install.modal.InstallJackpotChannelsModal
+import bot.toby.install.modal.InstallLotteryChannelsModal
 import bot.toby.install.modal.InstallQuickChannelsModal
 import bot.toby.modal.modals.setconfig.SetConfigActivityModal
 import bot.toby.modal.modals.setconfig.SetConfigBlackjackRulesModal
@@ -72,6 +76,8 @@ internal class InstallCategoryMenuTest {
     private lateinit var stakes: SetConfigStakesModal
     private lateinit var allStakes: InstallAllStakesModal
     private lateinit var quickChannels: InstallQuickChannelsModal
+    private lateinit var jackpotChannels: InstallJackpotChannelsModal
+    private lateinit var lotteryChannels: InstallLotteryChannelsModal
     private lateinit var menu: InstallCategoryMenu
 
     private lateinit var event: StringSelectInteractionEvent
@@ -99,11 +105,14 @@ internal class InstallCategoryMenuTest {
         stakes = mockk(relaxed = true)
         allStakes = mockk(relaxed = true)
         quickChannels = mockk(relaxed = true)
+        jackpotChannels = mockk(relaxed = true)
+        lotteryChannels = mockk(relaxed = true)
         menu = InstallCategoryMenu(
             configService,
             general, activity, fees, jackpot, jackpotActivity,
             pokerStakes, pokerTable, blackjackRules, blackjackTable,
-            lotteryBasics, lotteryPools, stakes, allStakes, quickChannels,
+            lotteryBasics, lotteryPools, stakes, allStakes,
+            quickChannels, jackpotChannels, lotteryChannels,
         )
 
         event = mockk(relaxed = true)
@@ -527,6 +536,41 @@ internal class InstallCategoryMenuTest {
         val modalSlot = slot<Modal>()
         verify(exactly = 1) { event.replyModal(capture(modalSlot)) }
         assertEquals(expectedId, modalSlot.captured.id)
+    }
+
+    @Test
+    fun `jackpot_quick_channels token opens the jackpot channels modal`() {
+        val expectedId = InstallJackpotChannelsModal.MODAL_NAME
+        val built = mockk<Modal>(relaxed = true) { every { id } returns expectedId }
+        every { jackpotChannels.buildModal() } returns built
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.ECONOMY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", JACKPOT_QUICK_CHANNELS_TOKEN))
+
+        menu.handle(ctx, 0)
+
+        val modalSlot = slot<Modal>()
+        verify(exactly = 1) { event.replyModal(capture(modalSlot)) }
+        assertEquals(expectedId, modalSlot.captured.id)
+        // The siblings must not have been opened.
+        verify(exactly = 0) { quickChannels.buildModal() }
+        verify(exactly = 0) { lotteryChannels.buildModal() }
+    }
+
+    @Test
+    fun `lottery_quick_channels token opens the lottery channels modal`() {
+        val expectedId = InstallLotteryChannelsModal.MODAL_NAME
+        val built = mockk<Modal>(relaxed = true) { every { id } returns expectedId }
+        every { lotteryChannels.buildModal() } returns built
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.LOTTERY.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", LOTTERY_QUICK_CHANNELS_TOKEN))
+
+        menu.handle(ctx, 0)
+
+        val modalSlot = slot<Modal>()
+        verify(exactly = 1) { event.replyModal(capture(modalSlot)) }
+        assertEquals(expectedId, modalSlot.captured.id)
+        verify(exactly = 0) { quickChannels.buildModal() }
+        verify(exactly = 0) { jackpotChannels.buildModal() }
     }
 
     @Test
