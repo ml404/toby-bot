@@ -165,17 +165,28 @@ internal class InstallAllStakesModalTest {
     }
 
     @Test
-    fun `readCurrentDefaults uses dice as the prefill source`() {
-        val reader: (Configurations) -> String? = { key ->
-            when (key) {
-                Configurations.DICE_MIN_STAKE -> "50"
-                Configurations.DICE_MAX_STAKE -> "9999"
-                else -> "other"
-            }
+    fun `min parse failure is distinguished from out-of-range`() {
+        // Validation message disambiguates "couldn't parse" vs "parsed too small".
+        stubField(InstallAllStakesModal.FIELD_MIN_STAKE, "abc")
+        stubField(InstallAllStakesModal.FIELD_MAX_STAKE, "")
+
+        modal.handle(ctx, 0)
+
+        verify(exactly = 1) {
+            event.reply(match<String> { it.contains("must be a whole number") })
         }
-        val (min, max) = modal.readCurrentDefaults(reader)
-        assertEquals("50", min)
-        assertEquals("9999", max)
+    }
+
+    @Test
+    fun `min equal to zero reports out-of-range`() {
+        stubField(InstallAllStakesModal.FIELD_MIN_STAKE, "0")
+        stubField(InstallAllStakesModal.FIELD_MAX_STAKE, "")
+
+        modal.handle(ctx, 0)
+
+        verify(exactly = 1) {
+            event.reply(match<String> { it.contains("must be ≥ 1") && it.contains("0") })
+        }
     }
 
     @Test

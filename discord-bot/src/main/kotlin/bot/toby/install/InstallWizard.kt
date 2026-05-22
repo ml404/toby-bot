@@ -1,6 +1,7 @@
 package bot.toby.install
 
 import database.dto.ConfigDto.Configurations
+import database.service.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -21,6 +22,19 @@ import net.dv8tion.jda.api.entities.MessageEmbed
  * opt-in is off.
  */
 object InstallWizard {
+
+    /** A function that returns the current value of a per-guild config key, or null if unset. */
+    typealias ConfigReader = (Configurations) -> String?
+
+    /** Build the standard config-value reader bound to a specific guild. */
+    fun configReader(configService: ConfigService, guildId: String): ConfigReader =
+        { key -> configService.getConfigByName(key.configValue, guildId)?.value }
+
+    /** Build the two-row component set for the custom-setup root view. */
+    fun customRootRows(reader: ConfigReader): Array<ActionRow> = arrayOf(
+        ActionRow.of(sectionMenu(reader)),
+        customRootBottomRow(),
+    )
 
     // ---- componentId namespace ----
     const val BTN_EXPRESS = "install_express"

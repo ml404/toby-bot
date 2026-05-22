@@ -1,7 +1,6 @@
 package bot.toby.install.button
 
 import bot.toby.install.InstallWizard
-import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
 import org.springframework.stereotype.Component
@@ -12,19 +11,14 @@ import org.springframework.stereotype.Component
  * the welcome message (skip is non-terminal).
  */
 @Component
-class InstallSkipButton : Button {
+class InstallSkipButton : OwnerOnlyInstallButton() {
 
     override val name: String = InstallWizard.BTN_SKIP
     override val description: String = "Dismiss the install wizard without making changes."
-    override val defersReply: Boolean = false
+    override fun ownerErrorMessage(): String = "Only the server owner can dismiss the install prompt."
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
+    override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        if (event.member?.isOwner != true) {
-            event.reply("Only the server owner can dismiss the install prompt.")
-                .setEphemeral(true).queue()
-            return
-        }
         event.deferEdit().queue()
         event.hook.editOriginalEmbeds(InstallWizard.skipDismissedEmbed())
             .setComponents()

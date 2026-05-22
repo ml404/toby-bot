@@ -1,9 +1,7 @@
 package bot.toby.install.button
 
 import bot.toby.install.InstallWizard
-import core.button.Button
 import core.button.ButtonContext
-import database.dto.ConfigDto.Configurations
 import database.dto.UserDto
 import database.service.ConfigService
 import org.springframework.stereotype.Component
@@ -16,23 +14,15 @@ import org.springframework.stereotype.Component
 @Component
 class InstallFeaturesButton(
     private val configService: ConfigService,
-) : Button {
+) : OwnerOnlyInstallButton() {
 
     override val name: String = InstallWizard.BTN_FEATURES
     override val description: String = "Open the optional-features toggle view."
-    override val defersReply: Boolean = false
 
-    override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
+    override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        if (event.member?.isOwner != true) {
-            event.reply("Only the server owner can use the install wizard.")
-                .setEphemeral(true).queue()
-            return
-        }
         event.deferEdit().queue()
-        val guildId = ctx.guild.id
-        val reader: (Configurations) -> String? =
-            { key -> configService.getConfigByName(key.configValue, guildId)?.value }
+        val reader = InstallWizard.configReader(configService, ctx.guild.id)
         event.hook.editOriginalEmbeds(InstallWizard.togglesEmbed())
             .setComponents(
                 InstallWizard.toggleRow(reader),

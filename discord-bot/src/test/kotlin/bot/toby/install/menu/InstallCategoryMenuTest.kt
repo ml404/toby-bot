@@ -275,7 +275,6 @@ internal class InstallCategoryMenuTest {
         val expectedId = InstallAllStakesModal.MODAL_NAME
         val built = mockk<Modal>(relaxed = true) { every { id } returns expectedId }
         every { allStakes.buildModal(any(), any()) } returns built
-        every { allStakes.readCurrentDefaults(any()) } returns ("100" to "1000")
         every { event.componentId } returns InstallWizard.MENU_CATEGORY_STAKES
         every { event.selectedOptions } returns listOf(SelectOption.of("x", InstallWizard.STAKE_ALL_TOKEN))
 

@@ -3,7 +3,6 @@ package bot.toby.install.modal
 import bot.toby.modal.modals.setconfig.SetConfigStakesModal
 import core.modal.Modal
 import core.modal.ModalContext
-import database.dto.ConfigDto.Configurations
 import database.service.ConfigService
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.textinput.TextInput
@@ -53,10 +52,8 @@ class InstallAllStakesModal(
         val maxRaw = event.getValue(FIELD_MAX_STAKE)?.asString?.trim().orEmpty()
 
         val errors = mutableListOf<String>()
-        val min = if (minRaw.isEmpty()) null else minRaw.toLongOrNull()?.takeIf { it >= 1L }
-            ?: run { errors += "Min stake must be a whole number ≥ 1."; null }
-        val max = if (maxRaw.isEmpty()) null else maxRaw.toLongOrNull()?.takeIf { it >= 1L }
-            ?: run { errors += "Max stake must be a whole number ≥ 1."; null }
+        val min = parseStakeBound("Min stake", minRaw, errors)
+        val max = parseStakeBound("Max stake", maxRaw, errors)
         if (min != null && max != null && min > max) {
             errors += "Min stake ($min) cannot exceed max stake ($max)."
         }
@@ -94,13 +91,23 @@ class InstallAllStakesModal(
         event.reply(summary).setEphemeral(true).queue()
     }
 
-    @Suppress("unused") // referenced by the menu when reading current values
-    fun readCurrentDefaults(currentValues: (Configurations) -> String?): Pair<String?, String?> {
-        // Best-effort prefill: show whatever DICE has set (the first enum entry).
-        // Owners can overwrite freely; mismatches across games just mean the
-        // prefill isn't meaningful and they'll type fresh values anyway.
-        val dice = SetConfigStakesModal.Game.DICE
-        return currentValues(dice.minKey) to currentValues(dice.maxKey)
+    /**
+     * Parses a whole-number stake bound from a modal field. Empty input
+     * means "skip the write" (null, no error). Anything else must parse
+     * to a Long and be ≥ 1; the error message distinguishes "couldn't
+     * parse" from "parsed but too small" so the owner knows why.
+     */
+    private fun parseStakeBound(label: String, raw: String, errors: MutableList<String>): Long? {
+        if (raw.isEmpty()) return null
+        val parsed = raw.toLongOrNull() ?: run {
+            errors += "$label must be a whole number."
+            return null
+        }
+        if (parsed < 1L) {
+            errors += "$label must be ≥ 1 (got $parsed)."
+            return null
+        }
+        return parsed
     }
 
     companion object {

@@ -29,12 +29,9 @@ internal class InstallToggleButtonTest {
         configService = mockk(relaxed = true)
         button = InstallToggleButton(configService)
         fx = InstallButtonFixture()
-        // event.message.components is left as the default relaxed mock
-        // return (empty list). The toggle button's bottom-row resolver
-        // falls back to doneButtonRow() in that case, which is fine for
-        // every assertion in this class (we don't inspect the bottom
-        // row directly — the fallback path is covered in
-        // `falls back to doneButtonRow when no second row on message`).
+        // The toggle button no longer scrapes the source message's
+        // components; the bottom row is unconditionally backButtonRow().
+        // Tests don't need to stub event.message.components.
     }
 
     @Test
@@ -144,21 +141,4 @@ internal class InstallToggleButtonTest {
         }
     }
 
-    @Test
-    fun `falls back to doneButtonRow when source message has no second row`() {
-        // The default fixture leaves message.components as the empty
-        // relaxed-mock return, exercising the InstallToggleButton's
-        // `?: doneButtonRow()` fallback. We just verify no exception is
-        // thrown and the edit still happens.
-        every { fx.event.componentId } returns "${InstallWizard.BTN_TOGGLE_PREFIX}:ACTIVITY_TRACKING"
-        every {
-            configService.getConfigByName(Configurations.ACTIVITY_TRACKING.configValue, "g1")
-        } returns null
-
-        button.handle(fx.ctx, mockk(relaxed = true), 0)
-
-        verify(exactly = 1) {
-            fx.editAction.setComponents(*anyVararg<MessageTopLevelComponent>())
-        }
-    }
 }
