@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Channel pickers replace typed-ID boxes",
+    "summary": "Replaces the typed-channel-ID `TextInput` boxes in `/setconfig` with Discord's native `EntitySelectMenu` channel picker — owners click their channel from a list, no IDs to copy. Affects four channel fields across three modals: `MOVE` (voice, store name) — `SetConfigGeneralModal` `LEADERBOARD_CHANNEL` (text, store id) — `SetConfigGeneralModal` `CASINO_MODLOG_CHANNEL_ID` (text, store id) — `SetConfigJackpotModal` `LOTTERY_CHANNEL` (text, store id) — `SetConfigLotteryPoolsMod…",
+    "emoji": "🛡️",
+    "prNumber": 541
+  },
+  {
+    "date": "May 2026",
     "title": "Un-overlap the commands search icon and placeholder",
     "summary": "The search SVG on `/commands/wiki` was overlapping the first character of the \"Search commands…\" placeholder text (visible in user screenshot of the input). **Cause:** CSS specificity collision with the shared input styling. `web/src/main/resources/static/css/commands.css` line 81: `.commands-search-input { padding: 11px 44px 11px 40px }` — specificity **(0,1,0)**. `web/src/main/resources/static/css/base.css` line 282: `input[type=search] { padding: 10px 12px }` — specific…",
     "emoji": "🔨",
