@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Quick channels picker for jackpot + lottery sections",
+    "summary": "Follow-up to the revert PR. The General section already has a \"Quick channels\" entry (Move + Leaderboard channel pickers via `InstallQuickChannelsModal`). This adds the same UX to the Jackpot and Lottery sections so owners never have to type a channel ID anywhere in the wizard. > **Stacks on top of #542** (the revert). Merge that one first; this PR is independent of its content but its branch was created from #542 to avoid conflicts. ### New modals | Modal | Section | Writ…",
+    "emoji": "🎰",
+    "prNumber": 543
+  },
+  {
+    "date": "May 2026",
     "title": "Revert mixed-modal channel pickers — Discord rejects them",
     "summary": "**Hotfix**: PR #541 broke the setconfig modals for General, Jackpot, and Lottery pools — all show client-side \"Interaction failed\" on open. Discord's modal API rejects modals that mix `TextInput` and `EntitySelectMenu` components. Reproduced by the user on General; same root cause for the other two mixed modals. This PR reverts the rendering change. Channel fields render as `TextInput` again across every setconfig modal, restoring the pre-#541 working behavior. Picker UX i…",
     "emoji": "🔨",
