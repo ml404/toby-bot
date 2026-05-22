@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    Self-contained "one command" card. Renders the slash-command name as
+    a coloured pill, a copy-to-clipboard button, the human description,
+    and the option / subcommand list with friendly type labels and
+    required-flag chips.
+
+    Takes a single [CommandWikiController.CommandView] argument — the
+    same view model the wiki page populates — so any other surface that
+    wants to render a single command (e.g. a per-command detail page, a
+    moderation audit dialog, a search dropdown preview) can drop:
+
+        <div th:replace="~{fragments/commandCard :: card(${cmd})}"></div>
+
+    Styling lives in `commands.css`. Loading that stylesheet on the
+    consumer page is the consumer's responsibility — the fragment ships
+    semantic markup only.
+
+    The wiki page also relies on `data-search` (lowercased haystack) +
+    `data-name` (raw command name, used by the copy button JS). Both
+    attributes are emitted unconditionally so client code can opt into
+    them without the fragment needing a mode switch.
+-->
+<article th:fragment="card(cmd)"
+         class="cmd-card"
+         th:data-search="${cmd.searchKey}"
+         th:data-name="${cmd.name}">
+    <header class="cmd-card-top">
+        <span class="cmd-pill" th:text="'/' + ${cmd.name}">/cmd</span>
+        <span class="cmd-sub-count"
+              th:if="${not #lists.isEmpty(cmd.subCommands)}"
+              th:text="${#lists.size(cmd.subCommands)} + ' subcommands'">0 subcommands</span>
+        <button type="button" class="cmd-copy" data-copy
+                th:attr="aria-label='Copy /' + ${cmd.name}"
+                title="Copy">
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"
+                 fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+            </svg>
+        </button>
+    </header>
+    <p class="cmd-desc" th:text="${cmd.description}">Description</p>
+
+    <ul class="opt-list" th:if="${not #lists.isEmpty(cmd.options)}">
+        <li class="opt-row" th:each="opt : ${cmd.options}">
+            <div class="opt-head">
+                <span class="opt-name" th:text="${opt.name}">name</span>
+                <span class="opt-type" th:text="${opt.typeLabel}">text</span>
+                <span class="opt-req" th:if="${opt.required}" title="Required" aria-label="Required">required</span>
+            </div>
+            <p class="opt-desc" th:text="${opt.description}">desc</p>
+            <ul class="opt-choices" th:if="${not #lists.isEmpty(opt.choices)}">
+                <li th:each="choice : ${opt.choices}" th:text="${choice}">choice</li>
+            </ul>
+        </li>
+    </ul>
+
+    <ul class="sub-list"
+        th:if="${#lists.isEmpty(cmd.options) and not #lists.isEmpty(cmd.subCommands)}">
+        <li class="sub-row" th:each="sub : ${cmd.subCommands}">
+            <span class="sub-pill" th:text="'/' + ${cmd.name} + ' ' + ${sub.name}">/cmd sub</span>
+            <p class="sub-desc" th:text="${sub.description}">desc</p>
+            <ul class="sub-opts" th:if="${not #lists.isEmpty(sub.options)}">
+                <li th:each="subopt : ${sub.options}">
+                    <span class="opt-name" th:text="${subopt.name}">n</span>
+                    <span class="opt-type" th:text="${subopt.typeLabel}">text</span>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</article>
+</body>
+</html>

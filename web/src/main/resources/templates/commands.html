@@ -2,71 +2,86 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head th:replace="~{fragments/headSeo :: headSeo(
         'TobyBot — Commands',
-        'Auto-generated reference for every TobyBot slash command, grouped by category (Music, D&D, Moderation, Economy, Misc, Fetch).',
+        'Searchable catalog of every TobyBot slash command, grouped by category — Music, D&D, Moderation, Economy, Misc, Fetch.',
         null,
         '/css/commands.css')}"></head>
 <body>
 
+<a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<main class="commands-page">
-    <h1>Commands</h1>
-    <p class="subtitle">All available slash commands for TobyBot.</p>
+<main id="main" class="commands-page" data-active-cat="all">
 
-    <section class="category" th:each="category : ${categories}">
-        <h2 th:text="${category.title}">Category</h2>
-        <div class="table-wrap">
-            <table class="commands-table">
-                <thead>
-                <tr>
-                    <th>Command</th>
-                    <th>Description</th>
-                    <th>Options</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="command : ${category.commands}">
-                    <td>
-                        <span class="cmd" th:text="'/' + ${command.name}">/cmd</span>
-                    </td>
-                    <td class="desc" th:text="${command.description}">Description</td>
-                    <td>
-                        <!-- Three render modes: top-level options, sub-commands, or nothing. -->
-                        <ul class="opts" th:if="${not #lists.isEmpty(command.optionData)}">
-                            <li class="opt" th:each="option : ${command.optionData}">
-                                <span class="opt-name" th:text="${option.name}">name</span>
-                                <span class="badge" th:text="${option.type.name}">TYPE</span>
-                                <div class="opt-desc" th:text="${option.description}">description</div>
-                                <ul class="choices" th:if="${not #lists.isEmpty(option.choices)}">
-                                    <li class="choice"
-                                        th:each="choice : ${option.choices}"
-                                        th:text="${choice.name}">choice</li>
-                                </ul>
-                            </li>
-                        </ul>
-                        <ul class="opts"
-                            th:if="${#lists.isEmpty(command.optionData) and not #lists.isEmpty(command.subCommands)}">
-                            <li class="opt" th:each="sub : ${command.subCommands}">
-                                <span class="opt-name" th:text="${sub.name}">subname</span>
-                                <div class="opt-desc" th:text="${sub.description}">subdescription</div>
-                                <ul class="choices" th:if="${not #lists.isEmpty(sub.options)}">
-                                    <li class="choice"
-                                        th:each="subopt : ${sub.options}"
-                                        th:text="${subopt.name} + ': ' + ${subopt.description}">subopt</li>
-                                </ul>
-                            </li>
-                        </ul>
-                        <span class="none"
-                              th:if="${#lists.isEmpty(command.optionData) and #lists.isEmpty(command.subCommands)}">&mdash;</span>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
+    <header class="commands-hero">
+        <span class="section-eyebrow">Commands</span>
+        <h1>Everything TobyBot can do</h1>
+        <p class="lede">
+            Every slash command in one place. Search by name, filter by
+            category, and copy the command straight into your Discord
+            client.
+        </p>
+        <div class="commands-hero-meta">
+            <span class="meta-chip"><strong th:text="${totalCommandCount}">0</strong>&nbsp;commands</span>
+            <span class="meta-chip"><strong th:text="${#lists.size(categories)}">0</strong>&nbsp;categories</span>
         </div>
+    </header>
+
+    <div class="commands-toolbar" role="search">
+        <div class="commands-search">
+            <svg class="commands-search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+            </svg>
+            <input type="search" id="commands-search" class="commands-search-input"
+                   placeholder="Search commands… try 'roll' or 'play'"
+                   aria-label="Search commands"
+                   autocomplete="off">
+            <kbd class="commands-search-kbd" aria-hidden="true">/</kbd>
+        </div>
+        <div class="commands-chips" role="tablist" aria-label="Filter by category">
+            <button type="button" class="cat-chip is-active" data-cat="all" aria-pressed="true">
+                All
+            </button>
+            <button type="button" class="cat-chip"
+                    th:each="cat : ${categories}"
+                    th:data-cat="${cat.slug}"
+                    aria-pressed="false">
+                <span class="cat-chip-icon" th:text="${cat.icon}" aria-hidden="true">·</span>
+                <span th:text="${cat.title}">Category</span>
+            </button>
+        </div>
+    </div>
+
+    <section class="commands-empty empty-hero" data-empty hidden aria-live="polite">
+        <span class="emoji" aria-hidden="true">🔍</span>
+        <p>No commands match your search.</p>
+        <p class="muted">Try a different word, or <button type="button" class="link-button" data-clear>clear filters</button>.</p>
     </section>
+
+    <div class="commands-stream">
+        <section class="cat-section"
+                 th:each="cat : ${categories}"
+                 th:data-cat="${cat.slug}">
+            <header class="cat-header">
+                <span class="cat-icon" th:text="${cat.icon}" aria-hidden="true">·</span>
+                <div class="cat-heading">
+                    <h2 th:text="${cat.title}">Category</h2>
+                    <p class="cat-blurb" th:text="${cat.blurb}">Blurb</p>
+                </div>
+                <span class="cat-count" th:text="${#lists.size(cat.commands)} + ' commands'">0 commands</span>
+            </header>
+
+            <div class="cmd-grid">
+                <div th:each="cmd : ${cat.commands}"
+                     th:replace="~{fragments/commandCard :: card(${cmd})}"></div>
+            </div>
+        </section>
+    </div>
 </main>
 
 <footer th:replace="~{fragments/footer :: footer}"></footer>
 
+<script th:src="@{/js/commands.js}" defer></script>
 </body>
 </html>
