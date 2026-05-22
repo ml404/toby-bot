@@ -78,7 +78,12 @@
     color: var(--text-muted);
     pointer-events: none;
 }
-.commands-search-input {
+/* `input.` prefix bumps specificity to (0,1,1) so this beats the
+   shared `input[type=search] { padding: 10px 12px }` rule in base.css
+   on source order. Without it the input's left padding stays at 12px
+   and the absolutely-positioned search icon at left:14px collides
+   with the first character of the placeholder. */
+input.commands-search-input {
     width: 100%;
     padding: 11px 44px 11px 40px;
     background: var(--bg-input);
@@ -90,8 +95,8 @@
     transition: border-color var(--dur-fast) var(--ease-out),
                 box-shadow var(--dur-fast) var(--ease-out);
 }
-.commands-search-input::placeholder { color: var(--text-muted); }
-.commands-search-input:focus {
+input.commands-search-input::placeholder { color: var(--text-muted); }
+input.commands-search-input:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 3px var(--accent-soft);
