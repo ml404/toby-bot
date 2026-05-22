@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Unstick custom-setup section pick (deferEdit + bot-webhook)",
+    "summary": "Fixes the install wizard hanging after the first section pick in Custom setup. The embed swapped to the section-detail header but the components stayed as the disabled previous view (section menu + Optional features/Finish row) — owner stuck. ### Root cause Race between `DefaultMenuManager.handle` and `InstallCategoryMenu`'s non-modal branches: 1. **Manager** (bot-webhook): `event.message.editMessageComponents(disabledRows).queue()` queued *before* dispatch. 2. **Handler**…",
+    "emoji": "🔨",
+    "prNumber": 539
+  },
+  {
+    "date": "May 2026",
     "title": "Redesign the commands wiki as a searchable catalog",
     "summary": "`/commands/wiki` used to render every slash command as raw bordered tables with enum-style type badges (`STRING`, `INTEGER`, `BOOLEAN`…) and nested bullet lists — readable as developer docs but a poor first impression for the two homepage CTAs that point at it. This rebuilds the page as a polished, searchable catalog. **Hero** with eyebrow + h1 + lede + live counts (N commands · M categories). **Sticky translucent toolbar** with a search input (placeholder hint, `/` to foc…",
     "emoji": "✨",
