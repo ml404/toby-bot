@@ -214,20 +214,32 @@ class InstallCategoryMenu(
     }
 
     /**
-     * Open [modal] and, once it's open, rearm the message back to the
-     * [section]'s detail menu so the owner can pick another category in
-     * the same section without re-navigating.
+     * Open [modal] and rearm the message back to the [section]'s detail
+     * menu so the owner can pick another category in the same section
+     * without re-navigating.
+     *
+     * The rearm is queued **before** `replyModal` (not in its callback)
+     * so the rearm PATCH sits next to the manager's disable PATCH
+     * (`DefaultMenuManager.handle:38`) on the same channel-message
+     * rate-limit bucket. JDA serializes the bucket FIFO: disable lands
+     * first, rearm lands second, rearm wins.
+     *
+     * Doing the rearm inside `replyModal.queue { ... }` waits one
+     * interaction-callback RTT before queuing the rearm. On mobile,
+     * dismissing the modal via the phone-back gesture in that window
+     * lets the disable propagate to the client over the gateway before
+     * the rearm does — leaving the dropdown + Back/Finish row visually
+     * locked until the next message refresh.
      */
     private fun openModalAndRearm(ctx: MenuContext, section: WizardSection, modal: Modal) {
         val event = ctx.event
-        event.replyModal(modal).queue {
-            event.message.editMessageEmbeds(InstallWizard.sectionDetailEmbed(section))
-                .setComponents(
-                    ActionRow.of(InstallWizard.sectionDetailMenu(section)),
-                    InstallWizard.backAndFinishRow(),
-                )
-                .queue()
-        }
+        event.message.editMessageEmbeds(InstallWizard.sectionDetailEmbed(section))
+            .setComponents(
+                ActionRow.of(InstallWizard.sectionDetailMenu(section)),
+                InstallWizard.backAndFinishRow(),
+            )
+            .queue()
+        event.replyModal(modal).queue()
     }
 
     private sealed interface CategoryAction {

@@ -605,4 +605,27 @@ internal class InstallCategoryMenuTest {
         verify(exactly = 1) { event.reply(any<String>()) }
         verify(exactly = 0) { event.replyModal(any<Modal>()) }
     }
+
+    @Test
+    fun `category pick rearms the section detail row before queuing replyModal`() {
+        // Regression: on mobile, dismissing the modal via phone-back used to
+        // leave the dropdown + Back/Finish row visually locked. Cause: rearm
+        // was queued inside replyModal.queue { ... }, one interaction-callback
+        // RTT after the manager's disable PATCH (DefaultMenuManager:38). If
+        // the user dismissed the modal in that window, the disable
+        // MESSAGE_UPDATE propagated to their client over the gateway before
+        // the rearm did. Fix: queue the rearm first so both PATCHes ride the
+        // same channel-message rate-limit bucket FIFO — disable, then rearm.
+        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), any()) } returns
+            mockk<Modal>(relaxed = true) { every { id } returns SetConfigGeneralModal.MODAL_NAME }
+        every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.GENERAL.id)
+        every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_GENERAL))
+
+        menu.handle(ctx, 0)
+
+        verifyOrder {
+            message.editMessageEmbeds(any<MessageEmbed>())
+            event.replyModal(any<Modal>())
+        }
+    }
 }
