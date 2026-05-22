@@ -50,7 +50,11 @@
 .commands-toolbar {
     position: sticky;
     top: 0;
-    z-index: 20;
+    /* Stay below `body > nav { z-index: 10 }` (nav.css) so the sticky
+       toolbar doesn't punch through the open mobile drawer. Same
+       pattern as `.config-search-bar` on the moderation settings page
+       (moderation.css). */
+    z-index: 5;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
