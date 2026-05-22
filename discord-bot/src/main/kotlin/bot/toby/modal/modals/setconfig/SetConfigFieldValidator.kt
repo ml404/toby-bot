@@ -45,10 +45,12 @@ object SetConfigFieldValidator {
         data class EnumChoice(override val label: String, val allowed: Set<String>) : FieldSpec
 
         /**
-         * Discord channel reference (raw id or `<#id>` mention) resolved
-         * against the guild; the channel's **name** is stored. Used by
-         * `MOVE`, which `MoveCommand` looks up by name — switching to id
-         * would silently break unscoped admins.
+         * Discord channel reference resolved against the guild; the
+         * channel's **name** is stored. Used by `MOVE`, which
+         * `MoveCommand` looks up by name — switching to id would
+         * silently break unscoped admins. Rendered in modals as a
+         * voice [net.dv8tion.jda.api.components.selections.EntitySelectMenu]
+         * channel picker (no IDs typed).
          */
         data class ChannelByIdStoreName(override val label: String) : FieldSpec
 
@@ -56,9 +58,10 @@ object SetConfigFieldValidator {
          * Discord channel reference resolved against the guild; the
          * channel's **id** is stored as a string. Used for
          * LEADERBOARD_CHANNEL, LOTTERY_CHANNEL, CASINO_MODLOG_CHANNEL_ID.
-         * `"0"` clears the override to empty string when [allowClear].
+         * Rendered in modals as a text channel picker; selecting no
+         * channel = skip-write (preserves the existing override).
          */
-        data class ChannelByIdStoreId(override val label: String, val allowClear: Boolean = true) : FieldSpec
+        data class ChannelByIdStoreId(override val label: String) : FieldSpec
     }
 
     sealed interface FieldResult {
@@ -169,7 +172,6 @@ object SetConfigFieldValidator {
     }
 
     private fun resolveChannelId(raw: String, spec: FieldSpec.ChannelByIdStoreId, guild: Guild?): FieldResult {
-        if (spec.allowClear && raw == "0") return FieldResult.Write("")
         if (guild == null) return FieldResult.Error("${spec.label}: no guild context to resolve channel")
         val id = extractChannelId(raw)
             ?: return FieldResult.Error("${spec.label}: must be a channel id or #mention")

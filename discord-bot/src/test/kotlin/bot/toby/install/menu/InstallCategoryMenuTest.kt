@@ -346,17 +346,17 @@ internal class InstallCategoryMenuTest {
 
         // Stub the modal bean (whichever) to return a known modal id.
         val built = mockk<Modal>(relaxed = true) { every { id } returns expectedModalName }
-        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any()) } returns built
-        every { activity.buildModal(SetConfigActivityModal.MODAL_NAME, any()) } returns built
-        every { fees.buildModal(SetConfigFeesModal.MODAL_NAME, any()) } returns built
-        every { jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, any()) } returns built
-        every { jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, any()) } returns built
-        every { pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, any()) } returns built
-        every { pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, any()) } returns built
-        every { blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, any()) } returns built
-        every { blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, any()) } returns built
-        every { lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, any()) } returns built
-        every { lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, any()) } returns built
+        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), any()) } returns built
+        every { activity.buildModal(SetConfigActivityModal.MODAL_NAME, any(), any()) } returns built
+        every { fees.buildModal(SetConfigFeesModal.MODAL_NAME, any(), any()) } returns built
+        every { jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, any(), any()) } returns built
+        every { jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, any(), any()) } returns built
+        every { pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, any(), any()) } returns built
+        every { pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, any(), any()) } returns built
+        every { blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, any(), any()) } returns built
+        every { blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, any(), any()) } returns built
+        every { lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, any(), any()) } returns built
+        every { lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, any(), any()) } returns built
 
         // Make the componentId start with a valid section detail prefix.
         every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.GENERAL.id)
@@ -372,7 +372,7 @@ internal class InstallCategoryMenuTest {
     fun `reader passed to buildModal delegates to configService getConfigByName`() {
         val readerSlot = slot<(Configurations) -> String?>()
         val built = mockk<Modal>(relaxed = true) { every { id } returns SetConfigGeneralModal.MODAL_NAME }
-        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, capture(readerSlot)) } returns built
+        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), capture(readerSlot)) } returns built
         every { event.componentId } returns InstallWizard.sectionDetailMenuId(WizardSection.GENERAL.id)
         every { event.selectedOptions } returns listOf(SelectOption.of("x", SetConfigCommand.SUB_GENERAL))
         every {
@@ -475,7 +475,7 @@ internal class InstallCategoryMenuTest {
     fun `game token in stakes sub-menu opens that game's stakes modal`(game: SetConfigStakesModal.Game) {
         val expectedId = SetConfigStakesModal.customIdFor(game)
         val built = mockk<Modal>(relaxed = true) { every { id } returns expectedId }
-        every { stakes.buildModal(expectedId, any()) } returns built
+        every { stakes.buildModal(expectedId, any(), any()) } returns built
         every { event.componentId } returns InstallWizard.MENU_CATEGORY_STAKES
         every { event.selectedOptions } returns listOf(SelectOption.of("x", game.token))
 
@@ -500,7 +500,7 @@ internal class InstallCategoryMenuTest {
         verify(exactly = 1) { event.replyModal(capture(modalSlot)) }
         assertEquals(expectedId, modalSlot.captured.id)
         // Should not have opened any individual game modal.
-        verify(exactly = 0) { stakes.buildModal(any<String>(), any<(Configurations) -> String?>()) }
+        verify(exactly = 0) { stakes.buildModal(any<String>(), any(), any<(Configurations) -> String?>()) }
     }
 
     @Test
