@@ -449,8 +449,13 @@ class ModerationTemplateRowsTest {
         // ACTIVITY_TRACKING_NOTIFIED is an internal one-shot flag set
         // by the bot when it DMs the owner about activity tracking;
         // there's no admin-facing reason to toggle it from the web UI.
+        // INSTALL_MODE / INSTALLED_AT are sentinels written by the
+        // in-Discord /install wizard — owners interact with that flow
+        // directly, never through the moderation web UI.
         val internalOnly = setOf(
             ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED,
+            ConfigDto.Configurations.INSTALL_MODE,
+            ConfigDto.Configurations.INSTALLED_AT,
         )
 
         val templates = listOf(
@@ -499,7 +504,7 @@ class ModerationTemplateRowsTest {
         )
         // And that the allowlist isn't quietly absorbing every enum case.
         assertEquals(
-            1, internalOnly.size,
+            3, internalOnly.size,
             "internalOnly grew unexpectedly. Each entry must be justified — " +
                 "explain in a comment above why the key never gets a UI surface."
         )
