@@ -158,12 +158,11 @@ internal class SetConfigFieldValidatorTest {
         assertEquals(FieldResult.Write("7"), r)
     }
 
-    // Note: the `"0" → clear` shortcut was removed when channel fields
-    // switched from typed-id TextInputs to EntitySelectMenu pickers in
-    // the modal. The picker UX surfaces no path that produces "0", and
-    // "clear my channel override" was rarely used in practice. Owners
-    // who need to drop an override can use SQL or, in future, a
-    // dedicated `/setconfig clear-channel` command.
+    @Test
+    fun `ChannelByIdStoreId allows 0 to clear`() {
+        val r = SetConfigFieldValidator.validate("0", FieldSpec.ChannelByIdStoreId("Lottery channel"), guild = null)
+        assertEquals(FieldResult.Write(""), r)
+    }
 
     // ----- validateAll() collecting writes vs errors -----
 

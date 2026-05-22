@@ -83,10 +83,8 @@ class SetConfigGeneralModalTest {
     }
 
     @Test
-    fun `MOVE picker resolves to the channel name on submit`() {
-        // Channel fields submit via EntitySelectMenu → asLongList rather
-        // than typed-id TextInput → asString.
-        stubChannelPick(SetConfigGeneralModal.FIELD_MOVE, 42L)
+    fun `MOVE resolves the channel name from a numeric id`() {
+        stub(SetConfigGeneralModal.FIELD_MOVE, "42")
         val channel = mockk<TextChannel> { every { name } returns "general" }
         every { guild.getTextChannelById(42L) } returns channel
         val rowsSlot = slot<List<Pair<String, String>>>()
@@ -102,8 +100,8 @@ class SetConfigGeneralModalTest {
     }
 
     @Test
-    fun `MOVE picker with a stale channel id fails with an error and writes nothing`() {
-        stubChannelPick(SetConfigGeneralModal.FIELD_MOVE, 999L)
+    fun `MOVE with unknown id fails with an error and writes nothing`() {
+        stub(SetConfigGeneralModal.FIELD_MOVE, "999")
         every { guild.getTextChannelById(999L) } returns null
         every { guild.getVoiceChannelById(999L) } returns null
 
@@ -131,11 +129,6 @@ class SetConfigGeneralModalTest {
 
     private fun stub(field: String, value: String) {
         val mapping = mockk<ModalMapping> { every { asString } returns value }
-        every { event.getValue(field) } returns mapping
-    }
-
-    private fun stubChannelPick(field: String, channelId: Long) {
-        val mapping = mockk<ModalMapping> { every { asLongList } returns listOf(channelId) }
         every { event.getValue(field) } returns mapping
     }
 }
