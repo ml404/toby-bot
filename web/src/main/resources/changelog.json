@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "In-Discord install wizard (Express + Custom paths)",
+    "summary": "Server owners now get a **welcome message + `/install` slash command** that opens a streamlined setup wizard with two paths: **Express setup** — one click; writes `INSTALL_MODE=express` + `INSTALLED_AT` and shows a done embed. Defaults handle everything else. **Custom setup** — picks categories to tune via a two-tier section menu. Selecting a category opens the existing `SetConfig*Modal` (no modal duplication). **Skip for now** — dismiss; `/install` is still available late…",
+    "emoji": "🛡️",
+    "prNumber": 534
+  },
+  {
+    "date": "May 2026",
     "title": "Split head fragments — stops the double in-page toast",
     "summary": "Closes the double-toast loop. Root cause traced via PR #532's `[diag]` logging: ``` [diag] NotificationSseService.onLevelUp fired ... # once [diag] fanOut key=… eventName=levelUp bucketSize=6 # but bucket has 6 [diag] publish AchievementUnlockedEvent ... # once [diag] NotificationSseService.onAchievementUnlocked # once [diag] fanOut key=… eventName=achievement bucketSize=2 # bucket has 2 ``` Server-side fires exactly **once** at every layer. The doubling is in the wire-to-…",
     "emoji": "🔨",
