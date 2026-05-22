@@ -365,7 +365,14 @@ class ConfigDto(
         // Optional Discord text-channel id where achievement-unlock
         // shoutouts post in addition to the unlocker's DM. When unset,
         // unlocks are DM-only. Stored as a stringified Long.
-        ACHIEVEMENT_ANNOUNCE_CHANNEL("ACHIEVEMENT_ANNOUNCE_CHANNEL");
+        ACHIEVEMENT_ANNOUNCE_CHANNEL("ACHIEVEMENT_ANNOUNCE_CHANNEL"),
+
+        // Install-wizard sentinel. One of "express" or "custom". Presence
+        // (regardless of value) suppresses the auto-welcome on subsequent
+        // GuildJoinEvent fires when the bot is re-invited.
+        INSTALL_MODE("INSTALL_MODE"),
+        // Epoch-millis string recording when the install wizard was completed.
+        INSTALLED_AT("INSTALLED_AT");
     }
 
     override fun toString(): String {

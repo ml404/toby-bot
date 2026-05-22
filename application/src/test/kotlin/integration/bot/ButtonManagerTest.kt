@@ -4,6 +4,13 @@ import app.Application
 import bot.configuration.*
 import bot.toby.button.buttons.*
 import bot.toby.helpers.*
+import bot.toby.install.button.InstallBackButton
+import bot.toby.install.button.InstallCustomButton
+import bot.toby.install.button.InstallExpressButton
+import bot.toby.install.button.InstallFeaturesButton
+import bot.toby.install.button.InstallFinishButton
+import bot.toby.install.button.InstallSkipButton
+import bot.toby.install.button.InstallToggleButton
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
@@ -85,10 +92,17 @@ class ButtonManagerTest {
             TeamCancelButton::class.java,
             TeamConfirmButton::class.java,
             TeamRerollButton::class.java,
+            InstallExpressButton::class.java,
+            InstallCustomButton::class.java,
+            InstallSkipButton::class.java,
+            InstallFinishButton::class.java,
+            InstallBackButton::class.java,
+            InstallFeaturesButton::class.java,
+            InstallToggleButton::class.java,
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
-        assertEquals(15, buttonManager.buttons.size)
+        assertEquals(availableButtons.size, buttonManager.buttons.size)
     }
 
     @Test

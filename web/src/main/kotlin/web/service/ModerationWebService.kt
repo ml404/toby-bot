@@ -1106,6 +1106,9 @@ class ModerationWebService(
                 if (n < 0L) return "Value must be zero or positive."
                 n.toString()
             }
+            ConfigDto.Configurations.INSTALL_MODE,
+            ConfigDto.Configurations.INSTALLED_AT ->
+                return "Install-wizard sentinel — managed by /install in Discord."
         }
 
         val guildIdString = guild.id
