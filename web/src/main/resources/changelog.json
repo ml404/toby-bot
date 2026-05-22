@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Commands wiki was truncating mid-render — host loop on th:block",
+    "summary": "`/commands/wiki` was shipping a truncated `200 OK` to production — the response cut off mid-stream at `<div class=\"cmd-grid\">` (14,233 bytes, no `</main>`, no `</body>`, no script tag). Browsers drew the static fallback and the empty-state 🔍 sat visible mid-page because `commands.js` never loaded. **Cause:** the cmd-grid loop placed `th:each` and `th:replace` on the same `<div>`. Thymeleaf attribute precedence is `th:replace = 100` and `th:each = 200` (lower runs first),…",
+    "emoji": "🔨",
+    "prNumber": 538
+  },
+  {
+    "date": "May 2026",
     "title": "Unstick custom-setup section pick (deferEdit + bot-webhook)",
     "summary": "Fixes the install wizard hanging after the first section pick in Custom setup. The embed swapped to the section-detail header but the components stayed as the disabled previous view (section menu + Optional features/Finish row) — owner stuck. ### Root cause Race between `DefaultMenuManager.handle` and `InstallCategoryMenu`'s non-modal branches: 1. **Manager** (bot-webhook): `event.message.editMessageComponents(disabledRows).queue()` queued *before* dispatch. 2. **Handler**…",
     "emoji": "🔨",
