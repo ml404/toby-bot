@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Channel picker modals — min_values=1, plus Activity announce channels",
+    "summary": "**Two changes in one PR — hotfix + small follow-up.** ### 1. Hotfix: `min_values >= 1` on every picker modal Every wizard channel-picker modal (Quick channels, Jackpot, Lottery) failed to open with \"Interaction failed\". Discord rejects modal payloads where a `Label`-wrapped `EntitySelectMenu` has `min_values=0` — `Label` children are implicitly required, and required + min=0 is a contradiction the API enforces: ``` 50035 Invalid Form Body data.components[0].component.min_v…",
+    "emoji": "🎰",
+    "prNumber": 544
+  },
+  {
+    "date": "May 2026",
     "title": "Quick channels picker for jackpot + lottery sections",
     "summary": "Follow-up to the revert PR. The General section already has a \"Quick channels\" entry (Move + Leaderboard channel pickers via `InstallQuickChannelsModal`). This adds the same UX to the Jackpot and Lottery sections so owners never have to type a channel ID anywhere in the wizard. > **Stacks on top of #542** (the revert). Merge that one first; this PR is independent of its content but its branch was created from #542 to avoid conflicts. ### New modals | Modal | Section | Writ…",
     "emoji": "🎰",
