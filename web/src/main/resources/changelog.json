@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "ConfigService.upsertAll — collapse multi-row config writes",
+    "summary": "Adds `ConfigService.upsertAll(guildId, rows): List<UpsertResult>` so multi-row config writes land in **one transactional commit** instead of N sequential commits. Migrates every looping / multi-row caller in `discord-bot`. ### Why `InstallAllStakesModal.handle` writes up to 20 rows in a `forEach` loop, each one its own JPA transaction (the persistence layer is `@Transactional` per-method, the service layer wasn't). The TODO comment on that loop already flagged `upsertAll(l…",
+    "emoji": "✨",
+    "prNumber": 535
+  },
+  {
+    "date": "May 2026",
     "title": "In-Discord install wizard (Express + Custom paths)",
     "summary": "Server owners now get a **welcome message + `/install` slash command** that opens a streamlined setup wizard with two paths: **Express setup** — one click; writes `INSTALL_MODE=express` + `INSTALLED_AT` and shows a done embed. Defaults handle everything else. **Custom setup** — picks categories to tune via a two-tier section menu. Selecting a category opens the existing `SetConfig*Modal` (no modal duplication). **Skip for now** — dismiss; `/install` is still available late…",
     "emoji": "🛡️",
