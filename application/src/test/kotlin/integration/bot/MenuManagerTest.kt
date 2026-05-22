@@ -4,6 +4,7 @@ import app.Application
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
+import bot.toby.install.menu.InstallCategoryMenu
 import bot.toby.managers.DefaultMenuManager
 import bot.toby.menu.menus.ActivityContribMenu
 import bot.toby.menu.menus.DeleteIntroMenu
@@ -62,6 +63,7 @@ internal class MenuManagerTest {
             EditIntroMenu::class.java,
             DeleteIntroMenu::class.java,
             ActivityContribMenu::class.java,
+            InstallCategoryMenu::class.java,
         )
         assertEquals(availableMenus.size, menuManager.menus.size)
         assertTrue(availableMenus.containsAll(menuManager.menus.map { it.javaClass }.toList()))

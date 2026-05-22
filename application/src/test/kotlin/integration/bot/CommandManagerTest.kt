@@ -34,6 +34,7 @@ import bot.toby.command.commands.music.intro.EditIntroCommand
 import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.command.commands.music.player.*
 import bot.toby.helpers.*
+import bot.toby.install.InstallCommand
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.DefaultCommandManager
 import common.configuration.TestCachingConfig
@@ -161,11 +162,12 @@ class CommandManagerTest {
             DailyCommand::class.java,
             AchievementsCommand::class.java,
             NotifyCommand::class.java,
+            InstallCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
-        Assertions.assertEquals(67, commandManager.allCommands.size)
-        Assertions.assertEquals(67, commandManager.allSlashCommands.size)
+        Assertions.assertEquals(availableCommands.size, commandManager.allCommands.size)
+        Assertions.assertEquals(availableCommands.size, commandManager.allSlashCommands.size)
     }
 
     @Test
