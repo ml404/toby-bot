@@ -452,16 +452,20 @@
         padding: 12px 0 10px;
         gap: 10px;
     }
-    .commands-search { width: 100%; }
+    /* `.commands-search` carries `flex: 1 1 320px` for desktop sizing.
+       In a column-direction flex container that 320px basis becomes the
+       *vertical* basis and `flex-grow: 1` stretches the search div to
+       fill the toolbar's main axis — producing a giant gap between the
+       input and the chips. Reset to natural height on mobile. */
+    .commands-search { flex: 0 0 auto; width: 100%; }
+    /* Wrap chips onto multiple rows rather than horizontal-scrolling —
+       all six categories fit comfortably in two rows on a phone, and
+       the horizontal-scroll strip was also leaking past the viewport
+       and letting the whole page pan sideways. */
     .commands-chips {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 2px;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
+        flex-wrap: wrap;
+        gap: 6px;
     }
-    .commands-chips::-webkit-scrollbar { display: none; }
-    .cat-chip { flex-shrink: 0; }
 
     .cmd-grid { grid-template-columns: 1fr; gap: 12px; }
     .cat-header {
