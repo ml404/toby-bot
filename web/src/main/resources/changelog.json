@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Keep commands toolbar below the nav drawer stacking context",
+    "summary": "When the mobile nav drawer is open on `/commands/wiki`, the sticky `.commands-toolbar` (search input + category chips) visibly renders **on top of** the drawer instead of being covered by it. **Cause:** stacking-context isolation. `body > nav` (`nav.css` line 32) sets `position: relative; z-index: 10`, making the entire navbar a stacking context at z=10. The drawer panel inside it bumps to `z-index: 1000` (`nav.css` line 360), but that 1000 is only meaningful within the na…",
+    "emoji": "🔨",
+    "prNumber": 545
+  },
+  {
+    "date": "May 2026",
     "title": "Channel picker modals — min_values=1, plus Activity announce channels",
     "summary": "**Two changes in one PR — hotfix + small follow-up.** ### 1. Hotfix: `min_values >= 1` on every picker modal Every wizard channel-picker modal (Quick channels, Jackpot, Lottery) failed to open with \"Interaction failed\". Discord rejects modal payloads where a `Label`-wrapped `EntitySelectMenu` has `min_values=0` — `Label` children are implicitly required, and required + min=0 is a contradiction the API enforces: ``` 50035 Invalid Form Body data.components[0].component.min_v…",
     "emoji": "🎰",
