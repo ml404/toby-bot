@@ -20,10 +20,16 @@ import net.dv8tion.jda.api.modals.Modal as JdaModal
  * mixing `TextInput` + `EntitySelectMenu` in one modal triggers
  * client-side "Interaction failed".
  *
- * No selection = skip-write (matches the
- * "blank means don't overwrite" convention used elsewhere in setconfig).
- * If the picked channel has been deleted between modal open and submit,
- * the write is rejected with no DB changes.
+ * The picker uses `setRequiredRange(1, 1)`: Discord rejects a
+ * `Label`-wrapped select menu with `min_values=0` (Label children are
+ * implicitly required, and the API enforces this with
+ * `COMPONENT_REQUIRED_ZERO_MIN_VALUES`). Owners must pick a channel
+ * or cancel the modal (X / Esc) to back out without writing.
+ *
+ * The "no selection" defensive branch in [handle] is unreachable in
+ * normal use but kept as a no-op fallback. If the picked channel has
+ * been deleted between modal open and submit, the write is rejected
+ * with no DB changes.
  */
 @Component
 class InstallJackpotChannelsModal(
@@ -35,7 +41,7 @@ class InstallJackpotChannelsModal(
     fun buildModal(): JdaModal {
         val menu = EntitySelectMenu.create(FIELD_MODLOG, EntitySelectMenu.SelectTarget.CHANNEL)
             .setChannelTypes(ChannelType.TEXT)
-            .setRequiredRange(0, 1)
+            .setRequiredRange(1, 1)
             .build()
         return JdaModal.create(MODAL_NAME, "Quick jackpot channel setup")
             .addComponents(Label.of("Casino modlog channel", menu))
