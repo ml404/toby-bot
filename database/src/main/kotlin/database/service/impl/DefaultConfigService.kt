@@ -8,6 +8,7 @@ import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 @Service
 class DefaultConfigService : ConfigService {
@@ -50,6 +51,23 @@ class DefaultConfigService : ConfigService {
             createNewConfig(dto)
             ConfigService.UpsertResult.Created(dto)
         }
+    }
+
+    /**
+     * Batched upsert. Class-level transaction-per-method is the default;
+     * marking this `@Transactional` puts every row write in one boundary
+     * so the underlying [ConfigPersistence] (also `@Transactional`)
+     * participates in the outer transaction instead of opening its own
+     * per-call. Per-row `@CachePut` annotations on [createNewConfig] /
+     * [updateConfig] still fire so the cache stays consistent.
+     */
+    @Transactional
+    override fun upsertAll(
+        guildId: String,
+        rows: List<Pair<String, String>>,
+    ): List<ConfigService.UpsertResult> {
+        if (rows.isEmpty()) return emptyList()
+        return rows.map { (name, value) -> upsertConfig(name, value, guildId) }
     }
 
     @CacheEvict(value = ["configs"], allEntries = true)

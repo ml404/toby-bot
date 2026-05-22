@@ -308,5 +308,10 @@ class XpAwardServiceTest {
                 ConfigService.UpsertResult.Updated(rows[key]!!, previousValue = existing.value)
             }
         }
+        override fun upsertAll(
+            guildId: String,
+            entries: List<Pair<String, String>>,
+        ): List<ConfigService.UpsertResult> =
+            entries.map { (name, value) -> upsertConfig(name, value, guildId) }
     }
 }

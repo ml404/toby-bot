@@ -18,11 +18,12 @@ object InstallSentinel {
     fun writeIfFresh(configService: ConfigService, guildId: String, mode: String) {
         val existing = configService.getConfigByName(Configurations.INSTALL_MODE.configValue, guildId)?.value
         if (!existing.isNullOrBlank()) return
-        configService.upsertConfig(Configurations.INSTALL_MODE.configValue, mode, guildId)
-        configService.upsertConfig(
-            Configurations.INSTALLED_AT.configValue,
-            System.currentTimeMillis().toString(),
+        configService.upsertAll(
             guildId,
+            listOf(
+                Configurations.INSTALL_MODE.configValue to mode,
+                Configurations.INSTALLED_AT.configValue to System.currentTimeMillis().toString(),
+            ),
         )
     }
 }

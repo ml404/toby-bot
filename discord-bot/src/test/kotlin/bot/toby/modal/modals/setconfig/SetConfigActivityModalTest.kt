@@ -61,11 +61,11 @@ class SetConfigActivityModalTest {
     @Test
     fun `first-enable from previously-disabled fires the notifier`() {
         stub(SetConfigActivityModal.FIELD_ACTIVITY_TRACKING, "true")
-        every {
-            configService.upsertConfig(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId)
-        } returns ConfigService.UpsertResult.Updated(
-            ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
-            previousValue = "false",
+        every { configService.upsertAll(guildId, any()) } returns listOf(
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
+                previousValue = "false",
+            ),
         )
 
         modal.handle(ctx, 0)
@@ -76,10 +76,10 @@ class SetConfigActivityModalTest {
     @Test
     fun `first-enable from never-set (Created) also fires the notifier`() {
         stub(SetConfigActivityModal.FIELD_ACTIVITY_TRACKING, "true")
-        every {
-            configService.upsertConfig(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId)
-        } returns ConfigService.UpsertResult.Created(
-            ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
+        every { configService.upsertAll(guildId, any()) } returns listOf(
+            ConfigService.UpsertResult.Created(
+                ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
+            ),
         )
 
         modal.handle(ctx, 0)
@@ -90,11 +90,11 @@ class SetConfigActivityModalTest {
     @Test
     fun `re-enable when previously enabled does NOT re-fire the notifier`() {
         stub(SetConfigActivityModal.FIELD_ACTIVITY_TRACKING, "true")
-        every {
-            configService.upsertConfig(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId)
-        } returns ConfigService.UpsertResult.Updated(
-            ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
-            previousValue = "true",
+        every { configService.upsertAll(guildId, any()) } returns listOf(
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "true", guildId),
+                previousValue = "true",
+            ),
         )
 
         modal.handle(ctx, 0)
@@ -105,11 +105,11 @@ class SetConfigActivityModalTest {
     @Test
     fun `disabling never fires the notifier`() {
         stub(SetConfigActivityModal.FIELD_ACTIVITY_TRACKING, "false")
-        every {
-            configService.upsertConfig(Configurations.ACTIVITY_TRACKING.configValue, "false", guildId)
-        } returns ConfigService.UpsertResult.Updated(
-            ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "false", guildId),
-            previousValue = "true",
+        every { configService.upsertAll(guildId, any()) } returns listOf(
+            ConfigService.UpsertResult.Updated(
+                ConfigDto(Configurations.ACTIVITY_TRACKING.configValue, "false", guildId),
+                previousValue = "true",
+            ),
         )
 
         modal.handle(ctx, 0)
@@ -122,6 +122,7 @@ class SetConfigActivityModalTest {
         // Default: all event.getValue calls return null → Skip outcome
         modal.handle(ctx, 0)
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         verify(exactly = 0) { notifier.notifyMembersOnFirstEnable(any()) }
         assertTrue(messageSlot.captured.contains("No fields filled"))
@@ -131,21 +132,24 @@ class SetConfigActivityModalTest {
     fun `numeric fields parse and upsert in order`() {
         stub(SetConfigActivityModal.FIELD_UBI_DAILY_AMOUNT, "50")
         stub(SetConfigActivityModal.FIELD_DAILY_CREDIT_CAP, "200")
-        every {
-            configService.upsertConfig(Configurations.UBI_DAILY_AMOUNT.configValue, "50", guildId)
-        } returns ConfigService.UpsertResult.Created(
-            ConfigDto(Configurations.UBI_DAILY_AMOUNT.configValue, "50", guildId),
-        )
-        every {
-            configService.upsertConfig(Configurations.DAILY_CREDIT_CAP.configValue, "200", guildId)
-        } returns ConfigService.UpsertResult.Created(
-            ConfigDto(Configurations.DAILY_CREDIT_CAP.configValue, "200", guildId),
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll(guildId, capture(rowsSlot)) } returns listOf(
+            ConfigService.UpsertResult.Created(
+                ConfigDto(Configurations.UBI_DAILY_AMOUNT.configValue, "50", guildId),
+            ),
+            ConfigService.UpsertResult.Created(
+                ConfigDto(Configurations.DAILY_CREDIT_CAP.configValue, "200", guildId),
+            ),
         )
 
         modal.handle(ctx, 0)
 
-        verify(exactly = 1) { configService.upsertConfig(Configurations.UBI_DAILY_AMOUNT.configValue, "50", guildId) }
-        verify(exactly = 1) { configService.upsertConfig(Configurations.DAILY_CREDIT_CAP.configValue, "200", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        // Order matches the modal's spec map iteration; UBI comes before cap.
+        assertTrue(
+            rowsSlot.captured.contains(Configurations.UBI_DAILY_AMOUNT.configValue to "50") &&
+                rowsSlot.captured.contains(Configurations.DAILY_CREDIT_CAP.configValue to "200")
+        )
         verify(exactly = 0) { notifier.notifyMembersOnFirstEnable(any()) }
     }
 
@@ -155,6 +159,7 @@ class SetConfigActivityModalTest {
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         assertTrue(messageSlot.captured.contains("Couldn't save"))
         assertTrue(messageSlot.captured.contains("UBI daily amount"))

@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.modals.ModalMapping
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -58,17 +59,17 @@ class SetConfigGeneralModalTest {
     fun `happy path writes the filled fields`() {
         stub(SetConfigGeneralModal.FIELD_VOLUME, "120")
         stub(SetConfigGeneralModal.FIELD_DELETE_DELAY, "10")
-        every {
-            configService.upsertConfig(Configurations.VOLUME.configValue, "120", guildId)
-        } returns ConfigService.UpsertResult.Created(ConfigDto(Configurations.VOLUME.configValue, "120", guildId))
-        every {
-            configService.upsertConfig(Configurations.DELETE_DELAY.configValue, "10", guildId)
-        } returns ConfigService.UpsertResult.Created(ConfigDto(Configurations.DELETE_DELAY.configValue, "10", guildId))
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll(guildId, capture(rowsSlot)) } returns listOf(
+            ConfigService.UpsertResult.Created(ConfigDto(Configurations.VOLUME.configValue, "120", guildId)),
+            ConfigService.UpsertResult.Created(ConfigDto(Configurations.DELETE_DELAY.configValue, "10", guildId)),
+        )
 
         modal.handle(ctx, 0)
 
-        verify { configService.upsertConfig(Configurations.VOLUME.configValue, "120", guildId) }
-        verify { configService.upsertConfig(Configurations.DELETE_DELAY.configValue, "10", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        assertTrue(rowsSlot.captured.contains(Configurations.VOLUME.configValue to "120"))
+        assertTrue(rowsSlot.captured.contains(Configurations.DELETE_DELAY.configValue to "10"))
         assertTrue(messageSlot.captured.startsWith("Saved 2 settings"))
     }
 
@@ -76,6 +77,7 @@ class SetConfigGeneralModalTest {
     fun `all-blank submission is a no-op with a friendly reply`() {
         modal.handle(ctx, 0)
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         assertTrue(messageSlot.captured.contains("No fields filled"))
     }
@@ -85,14 +87,16 @@ class SetConfigGeneralModalTest {
         stub(SetConfigGeneralModal.FIELD_MOVE, "42")
         val channel = mockk<TextChannel> { every { name } returns "general" }
         every { guild.getTextChannelById(42L) } returns channel
-        every {
-            configService.upsertConfig(Configurations.MOVE.configValue, "general", guildId)
-        } returns ConfigService.UpsertResult.Created(ConfigDto(Configurations.MOVE.configValue, "general", guildId))
+        val rowsSlot = slot<List<Pair<String, String>>>()
+        every { configService.upsertAll(guildId, capture(rowsSlot)) } returns listOf(
+            ConfigService.UpsertResult.Created(ConfigDto(Configurations.MOVE.configValue, "general", guildId)),
+        )
 
         modal.handle(ctx, 0)
 
         // Must persist the channel NAME (legacy MoveCommand contract), not the id.
-        verify(exactly = 1) { configService.upsertConfig(Configurations.MOVE.configValue, "general", guildId) }
+        verify(exactly = 1) { configService.upsertAll(guildId, any()) }
+        assertEquals(listOf(Configurations.MOVE.configValue to "general"), rowsSlot.captured)
     }
 
     @Test

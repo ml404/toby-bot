@@ -83,9 +83,13 @@ abstract class SetConfigCategoryModal(
                         .setEphemeral(true).queue()
                     return
                 }
-                val results = outcome.pairs.map { (key, value) ->
-                    key to configService.upsertConfig(key.configValue, value, guild.id)
-                }
+                // One transactional batch instead of N sequential commits.
+                // Pair the (key, UpsertResult) results back up by index so
+                // the existing `afterWrites` hook (which keys side-effects
+                // off the Configurations enum) still works.
+                val rows = outcome.pairs.map { (key, value) -> key.configValue to value }
+                val upsertResults = configService.upsertAll(guild.id, rows)
+                val results = outcome.pairs.zip(upsertResults) { (key, _), result -> key to result }
                 event.hook.sendMessage(buildSummary(outcome.pairs, specs))
                     .setEphemeral(true).queue()
                 afterWrites(ctx, results)
