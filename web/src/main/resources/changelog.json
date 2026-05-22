@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Revert mixed-modal channel pickers — Discord rejects them",
+    "summary": "**Hotfix**: PR #541 broke the setconfig modals for General, Jackpot, and Lottery pools — all show client-side \"Interaction failed\" on open. Discord's modal API rejects modals that mix `TextInput` and `EntitySelectMenu` components. Reproduced by the user on General; same root cause for the other two mixed modals. This PR reverts the rendering change. Channel fields render as `TextInput` again across every setconfig modal, restoring the pre-#541 working behavior. Picker UX i…",
+    "emoji": "🔨",
+    "prNumber": 542
+  },
+  {
+    "date": "May 2026",
     "title": "Channel pickers replace typed-ID boxes",
     "summary": "Replaces the typed-channel-ID `TextInput` boxes in `/setconfig` with Discord's native `EntitySelectMenu` channel picker — owners click their channel from a list, no IDs to copy. Affects four channel fields across three modals: `MOVE` (voice, store name) — `SetConfigGeneralModal` `LEADERBOARD_CHANNEL` (text, store id) — `SetConfigGeneralModal` `CASINO_MODLOG_CHANNEL_ID` (text, store id) — `SetConfigJackpotModal` `LOTTERY_CHANNEL` (text, store id) — `SetConfigLotteryPoolsMod…",
     "emoji": "🛡️",
