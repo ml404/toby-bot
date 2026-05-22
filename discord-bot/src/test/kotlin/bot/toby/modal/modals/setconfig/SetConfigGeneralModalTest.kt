@@ -83,8 +83,10 @@ class SetConfigGeneralModalTest {
     }
 
     @Test
-    fun `MOVE resolves the channel name from a numeric id`() {
-        stub(SetConfigGeneralModal.FIELD_MOVE, "42")
+    fun `MOVE picker resolves to the channel name on submit`() {
+        // Channel fields submit via EntitySelectMenu → asLongList rather
+        // than typed-id TextInput → asString.
+        stubChannelPick(SetConfigGeneralModal.FIELD_MOVE, 42L)
         val channel = mockk<TextChannel> { every { name } returns "general" }
         every { guild.getTextChannelById(42L) } returns channel
         val rowsSlot = slot<List<Pair<String, String>>>()
@@ -100,13 +102,14 @@ class SetConfigGeneralModalTest {
     }
 
     @Test
-    fun `MOVE with unknown id fails with an error and writes nothing`() {
-        stub(SetConfigGeneralModal.FIELD_MOVE, "999")
+    fun `MOVE picker with a stale channel id fails with an error and writes nothing`() {
+        stubChannelPick(SetConfigGeneralModal.FIELD_MOVE, 999L)
         every { guild.getTextChannelById(999L) } returns null
         every { guild.getVoiceChannelById(999L) } returns null
 
         modal.handle(ctx, 0)
 
+        verify(exactly = 0) { configService.upsertAll(any(), any()) }
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         assertTrue(messageSlot.captured.contains("Couldn't save"))
     }
@@ -128,6 +131,11 @@ class SetConfigGeneralModalTest {
 
     private fun stub(field: String, value: String) {
         val mapping = mockk<ModalMapping> { every { asString } returns value }
+        every { event.getValue(field) } returns mapping
+    }
+
+    private fun stubChannelPick(field: String, channelId: Long) {
+        val mapping = mockk<ModalMapping> { every { asLongList } returns listOf(channelId) }
         every { event.getValue(field) } returns mapping
     }
 }

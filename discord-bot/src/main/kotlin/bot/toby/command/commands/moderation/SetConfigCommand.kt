@@ -106,17 +106,17 @@ class SetConfigCommand @Autowired constructor(
             { key -> configService.getConfigByName(key.configValue, guildId)?.value }
 
         val modal = when (sub) {
-            SUB_GENERAL -> general.buildModal(SetConfigGeneralModal.MODAL_NAME, reader)
-            SUB_ACTIVITY -> activity.buildModal(SetConfigActivityModal.MODAL_NAME, reader)
-            SUB_FEES -> fees.buildModal(SetConfigFeesModal.MODAL_NAME, reader)
-            SUB_JACKPOT -> jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, reader)
-            SUB_JACKPOT_ACTIVITY -> jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, reader)
-            SUB_POKER_STAKES -> pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, reader)
-            SUB_POKER_TABLE -> pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, reader)
-            SUB_BLACKJACK_RULES -> blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, reader)
-            SUB_BLACKJACK_TABLE -> blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, reader)
-            SUB_LOTTERY_BASICS -> lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, reader)
-            SUB_LOTTERY_POOLS -> lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, reader)
+            SUB_GENERAL -> general.buildModal(SetConfigGeneralModal.MODAL_NAME, guild, reader)
+            SUB_ACTIVITY -> activity.buildModal(SetConfigActivityModal.MODAL_NAME, guild, reader)
+            SUB_FEES -> fees.buildModal(SetConfigFeesModal.MODAL_NAME, guild, reader)
+            SUB_JACKPOT -> jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, guild, reader)
+            SUB_JACKPOT_ACTIVITY -> jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, guild, reader)
+            SUB_POKER_STAKES -> pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, guild, reader)
+            SUB_POKER_TABLE -> pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, guild, reader)
+            SUB_BLACKJACK_RULES -> blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, guild, reader)
+            SUB_BLACKJACK_TABLE -> blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, guild, reader)
+            SUB_LOTTERY_BASICS -> lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, guild, reader)
+            SUB_LOTTERY_POOLS -> lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, guild, reader)
             SUB_STAKES -> {
                 val token = event.getOption(OPT_GAME)?.asString
                 val game = token?.let { SetConfigStakesModal.Game.byToken(it) } ?: run {
@@ -124,7 +124,7 @@ class SetConfigCommand @Autowired constructor(
                         .setEphemeral(true).queue()
                     return
                 }
-                stakes.buildModal(SetConfigStakesModal.customIdFor(game), reader)
+                stakes.buildModal(SetConfigStakesModal.customIdFor(game), guild, reader)
             }
             else -> {
                 event.reply("Unknown subcommand `$sub`.").setEphemeral(true).queue()

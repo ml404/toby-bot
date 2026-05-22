@@ -139,7 +139,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             sub = SetConfigCommand.SUB_GENERAL,
             modalIdExpected = SetConfigGeneralModal.MODAL_NAME,
-            stubReturn = { every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any()) } returns it },
+            stubReturn = { every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -148,7 +148,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_ACTIVITY,
             SetConfigActivityModal.MODAL_NAME,
-            { every { activity.buildModal(SetConfigActivityModal.MODAL_NAME, any()) } returns it },
+            { every { activity.buildModal(SetConfigActivityModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -157,7 +157,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_FEES,
             SetConfigFeesModal.MODAL_NAME,
-            { every { fees.buildModal(SetConfigFeesModal.MODAL_NAME, any()) } returns it },
+            { every { fees.buildModal(SetConfigFeesModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -166,7 +166,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_JACKPOT,
             SetConfigJackpotModal.MODAL_NAME,
-            { every { jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, any()) } returns it },
+            { every { jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -175,7 +175,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_JACKPOT_ACTIVITY,
             SetConfigJackpotActivityModal.MODAL_NAME,
-            { every { jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, any()) } returns it },
+            { every { jackpotActivity.buildModal(SetConfigJackpotActivityModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -184,7 +184,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_POKER_STAKES,
             SetConfigPokerStakesModal.MODAL_NAME,
-            { every { pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, any()) } returns it },
+            { every { pokerStakes.buildModal(SetConfigPokerStakesModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -193,7 +193,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_POKER_TABLE,
             SetConfigPokerTableModal.MODAL_NAME,
-            { every { pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, any()) } returns it },
+            { every { pokerTable.buildModal(SetConfigPokerTableModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -202,7 +202,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_BLACKJACK_RULES,
             SetConfigBlackjackRulesModal.MODAL_NAME,
-            { every { blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, any()) } returns it },
+            { every { blackjackRules.buildModal(SetConfigBlackjackRulesModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -211,7 +211,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_BLACKJACK_TABLE,
             SetConfigBlackjackTableModal.MODAL_NAME,
-            { every { blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, any()) } returns it },
+            { every { blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -220,7 +220,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_LOTTERY_BASICS,
             SetConfigLotteryBasicsModal.MODAL_NAME,
-            { every { lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, any()) } returns it },
+            { every { lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -229,7 +229,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             SetConfigCommand.SUB_LOTTERY_POOLS,
             SetConfigLotteryPoolsModal.MODAL_NAME,
-            { every { lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, any()) } returns it },
+            { every { lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 
@@ -239,7 +239,7 @@ internal class SetConfigCommandTest : CommandTest {
         assertOpensModal(
             sub = SetConfigCommand.SUB_STAKES,
             modalIdExpected = expectedId,
-            stubReturn = { every { stakes.buildModal(expectedId, any()) } returns it },
+            stubReturn = { every { stakes.buildModal(expectedId, any(), any()) } returns it },
             extraEventStubs = {
                 val opt = mockk<OptionMapping> { every { asString } returns "dice" }
                 every { event.getOption(SetConfigCommand.OPT_GAME) } returns opt
@@ -266,7 +266,7 @@ internal class SetConfigCommandTest : CommandTest {
         val readerSlot = slot<(Configurations) -> String?>()
         every { event.subcommandName } returns SetConfigCommand.SUB_GENERAL
         val builtModal = mockk<Modal>(relaxed = true) { every { id } returns SetConfigGeneralModal.MODAL_NAME }
-        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, capture(readerSlot)) } returns builtModal
+        every { general.buildModal(SetConfigGeneralModal.MODAL_NAME, any(), capture(readerSlot)) } returns builtModal
         // Use any() because a relaxed-mock ConfigService returns a default
         // ConfigDto (value="") for unstubbed calls — the literal-arg stub
         // matcher fights that default.

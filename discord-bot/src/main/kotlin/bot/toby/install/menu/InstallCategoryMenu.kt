@@ -24,6 +24,7 @@ import common.logging.DiscordLogger
 import core.menu.Menu
 import core.menu.MenuContext
 import database.service.ConfigService
+import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.modals.Modal
 import org.springframework.stereotype.Component
@@ -76,7 +77,7 @@ class InstallCategoryMenu(
      *   the menu for a sub-menu) without opening a modal.
      */
     private val categoryActions: Map<String, CategoryAction> = mapOf(
-        QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { quickChannels.buildModal() },
+        QUICK_CHANNELS_TOKEN to CategoryAction.OpenModal { _, _ -> quickChannels.buildModal() },
         SetConfigCommand.SUB_GENERAL to setconfigModal(general, SetConfigGeneralModal.MODAL_NAME),
         SetConfigCommand.SUB_ACTIVITY to setconfigModal(activity, SetConfigActivityModal.MODAL_NAME),
         SetConfigCommand.SUB_FEES to setconfigModal(fees, SetConfigFeesModal.MODAL_NAME),
@@ -95,7 +96,7 @@ class InstallCategoryMenu(
         modal: bot.toby.modal.modals.setconfig.SetConfigCategoryModal,
         modalName: String,
     ): CategoryAction.OpenModal =
-        CategoryAction.OpenModal { reader -> modal.buildModal(modalName, reader) }
+        CategoryAction.OpenModal { guild, reader -> modal.buildModal(modalName, guild, reader) }
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.event
@@ -164,7 +165,7 @@ class InstallCategoryMenu(
             return
         }
         when (action) {
-            is CategoryAction.OpenModal -> openModalAndRearm(ctx, section, action.build(reader))
+            is CategoryAction.OpenModal -> openModalAndRearm(ctx, section, action.build(ctx.guild, reader))
             is CategoryAction.Transition -> action.run(ctx)
         }
     }
@@ -182,7 +183,7 @@ class InstallCategoryMenu(
             event.reply("Unknown game `$selectedToken`.").setEphemeral(true).queue()
             return
         }
-        openModalAndRearm(ctx, section, stakes.buildModal(SetConfigStakesModal.customIdFor(game), reader))
+        openModalAndRearm(ctx, section, stakes.buildModal(SetConfigStakesModal.customIdFor(game), ctx.guild, reader))
     }
 
     private fun showStakesGameMenu(ctx: MenuContext) {
@@ -218,7 +219,7 @@ class InstallCategoryMenu(
     }
 
     private sealed interface CategoryAction {
-        class OpenModal(val build: (ConfigReader) -> Modal) : CategoryAction
+        class OpenModal(val build: (Guild, ConfigReader) -> Modal) : CategoryAction
         class Transition(val run: (MenuContext) -> Unit) : CategoryAction
     }
 }
