@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Trim Hikari pool + gate non-core Lavaplayer sources",
+    "summary": "Memory dashboard shows the 512 MB dyno sitting pinned at the cap with 102% peaks. Daily reset means this is a **steady-state baseline** problem, not a multi-day leak — so the unbounded-cache fixes I considered first (`IntroHelper.pendingIntros`, `EventWaiter`, `TrackScheduler` overflow, push-row prune) are deferred; they're bounded within a day's runtime and wouldn't move this graph. Two unaddressed contributors to the per-restart baseline: **HikariCP** had no explicit siz…",
+    "emoji": "🎵",
+    "prNumber": 536
+  },
+  {
+    "date": "May 2026",
     "title": "ConfigService.upsertAll — collapse multi-row config writes",
     "summary": "Adds `ConfigService.upsertAll(guildId, rows): List<UpsertResult>` so multi-row config writes land in **one transactional commit** instead of N sequential commits. Migrates every looping / multi-row caller in `discord-bot`. ### Why `InstallAllStakesModal.handle` writes up to 20 rows in a `forEach` loop, each one its own JPA transaction (the persistence layer is `@Transactional` per-method, the service layer wasn't). The TODO comment on that loop already flagged `upsertAll(l…",
     "emoji": "✨",
