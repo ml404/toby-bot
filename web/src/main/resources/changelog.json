@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Un-overlap the commands search icon and placeholder",
+    "summary": "The search SVG on `/commands/wiki` was overlapping the first character of the \"Search commands…\" placeholder text (visible in user screenshot of the input). **Cause:** CSS specificity collision with the shared input styling. `web/src/main/resources/static/css/commands.css` line 81: `.commands-search-input { padding: 11px 44px 11px 40px }` — specificity **(0,1,0)**. `web/src/main/resources/static/css/base.css` line 282: `input[type=search] { padding: 10px 12px }` — specific…",
+    "emoji": "🔨",
+    "prNumber": 540
+  },
+  {
+    "date": "May 2026",
     "title": "Commands wiki was truncating mid-render — host loop on th:block",
     "summary": "`/commands/wiki` was shipping a truncated `200 OK` to production — the response cut off mid-stream at `<div class=\"cmd-grid\">` (14,233 bytes, no `</main>`, no `</body>`, no script tag). Browsers drew the static fallback and the empty-state 🔍 sat visible mid-page because `commands.js` never loaded. **Cause:** the cmd-grid loop placed `th:each` and `th:replace` on the same `<div>`. Thymeleaf attribute precedence is `th:replace = 100` and `th:each = 200` (lower runs first),…",
     "emoji": "🔨",
