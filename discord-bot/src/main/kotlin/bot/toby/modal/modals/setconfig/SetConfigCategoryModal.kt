@@ -7,11 +7,9 @@ import core.modal.ModalContext
 import database.dto.ConfigDto.Configurations
 import database.service.ConfigService
 import net.dv8tion.jda.api.components.label.Label
-import net.dv8tion.jda.api.components.selections.EntitySelectMenu
 import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.components.textinput.TextInputStyle
 import net.dv8tion.jda.api.entities.Guild
-import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.modals.Modal as JdaModal
 
 /**
@@ -19,10 +17,13 @@ import net.dv8tion.jda.api.modals.Modal as JdaModal
  * read-fields → validate-all → write-all-or-error flow so each
  * concrete category just declares its spec map + field-id map.
  *
- * Channel-typed fields ([FieldSpec.ChannelByIdStoreName] /
- * [FieldSpec.ChannelByIdStoreId]) render as Discord native channel
- * pickers ([EntitySelectMenu]) instead of typed-id [TextInput] fields.
- * Owners click their channel from a list; no IDs typed.
+ * All fields render as [TextInput] inside a [Label]. Discord modals
+ * do not support mixing `TextInput` and `EntitySelectMenu` in a
+ * single modal — an earlier attempt to render channel fields as
+ * native channel pickers ([EntitySelectMenu]) inside this modal made
+ * the entire payload fail to open with "Interaction failed". Picker
+ * UX for channel fields lives in dedicated channel-only modals (e.g.
+ * `InstallQuickChannelsModal`) reached from the install wizard.
  *
  * Subclasses override [afterWrites] when they need a side effect
  * keyed off an upsert result (e.g. ACTIVITY_TRACKING's first-enable
@@ -48,9 +49,8 @@ abstract class SetConfigCategoryModal(
     protected abstract fun specsFor(modalId: String): LinkedHashMap<Configurations, FieldSpec>
 
     /**
-     * Discord-side field id (TextInput / EntitySelectMenu component
-     * id) for each config key. Must match the lookup keys used by
-     * `event.getValue(...)`.
+     * Discord-side field id (TextInput component id) for each config
+     * key. Must match the lookup keys used by `event.getValue(...)`.
      */
     protected abstract fun fieldIdsFor(modalId: String): Map<Configurations, String>
 
@@ -71,21 +71,8 @@ abstract class SetConfigCategoryModal(
         val specs = specsFor(modalId)
         val fieldIds = fieldIdsFor(modalId)
 
-        // Channel-picker fields submit their value via `asLongList`;
-        // text fields use `asString`. Branch on the spec so the
-        // validator receives a single uniform String to parse.
-        val readField: (Configurations) -> String? = { key ->
-            val fieldId = fieldIds.getValue(key)
-            when (specs.getValue(key)) {
-                is FieldSpec.ChannelByIdStoreName,
-                is FieldSpec.ChannelByIdStoreId,
-                    -> event.getValue(fieldId)?.asLongList?.firstOrNull()?.toString()
-                else -> event.getValue(fieldId)?.asString
-            }
-        }
-
         val outcome = SetConfigFieldValidator.validateAll(
-            readField = readField,
+            readField = { key -> event.getValue(fieldIds.getValue(key))?.asString },
             specs = specs,
             guild = guild,
         )
@@ -125,14 +112,15 @@ abstract class SetConfigCategoryModal(
      * parameterised modals can vary their fields per-call; for
      * simple modals it's the bare [name].
      *
-     * [guild] is needed to pre-resolve channel-picker default values
-     * — `MOVE` stores a channel name, so we look it up to recover the
-     * channel id for [EntitySelectMenu.Builder.setDefaultValues]. The
-     * other channel-picker fields store the id directly.
+     * [guild] is currently unused — kept on the signature so future
+     * picker-modal experiments can resolve channel ids without
+     * breaking every caller. (See class doc for why mixed-component
+     * modals don't work.)
      *
      * [currentValues] is read once by the caller and passed in as a
      * lookup — the modal handler does no DB reads at open time.
      */
+    @Suppress("UNUSED_PARAMETER")
     fun buildModal(
         modalId: String,
         guild: Guild,
@@ -143,70 +131,16 @@ abstract class SetConfigCategoryModal(
         val fieldIds = fieldIdsFor(modalId)
         val builder = JdaModal.create(modalId, title)
         for ((key, spec) in specs) {
-            val fieldId = fieldIds.getValue(key)
-            val current = currentValues(key)
-            val component = when (spec) {
-                is FieldSpec.ChannelByIdStoreName ->
-                    buildChannelPicker(fieldId, ChannelType.VOICE, current, guild, storeMode = ChannelStore.BY_NAME)
-                is FieldSpec.ChannelByIdStoreId ->
-                    buildChannelPicker(fieldId, ChannelType.TEXT, current, guild, storeMode = ChannelStore.BY_ID)
-                else -> buildTextInput(fieldId, spec, current)
-            }
-            builder.addComponents(Label.of(truncateLabel(spec.label), component))
-        }
-        return builder.build()
-    }
-
-    private fun buildTextInput(fieldId: String, spec: FieldSpec, current: String?): TextInput =
-        TextInput.create(fieldId, TextInputStyle.SHORT)
-            .setRequired(false)
-            .apply {
-                current?.takeIf { it.isNotEmpty() }?.let { setValue(it) }
-                placeholderFor(spec)?.let { setPlaceholder(it) }
-            }
-            .build()
-
-    private enum class ChannelStore { BY_NAME, BY_ID }
-
-    /**
-     * Build a channel-picker [EntitySelectMenu] filtered to
-     * [channelType]. Pre-populates the picker's default value from
-     * [current] — interpreting it as a channel name when [storeMode]
-     * is [ChannelStore.BY_NAME], else as a channel id string.
-     *
-     * No selection = skip the write (matches the existing
-     * "blank means don't overwrite" convention on text fields).
-     */
-    private fun buildChannelPicker(
-        fieldId: String,
-        channelType: ChannelType,
-        current: String?,
-        guild: Guild,
-        storeMode: ChannelStore,
-    ): EntitySelectMenu {
-        val builder = EntitySelectMenu.create(fieldId, EntitySelectMenu.SelectTarget.CHANNEL)
-            .setChannelTypes(channelType)
-            .setRequiredRange(0, 1)
-        val resolvedId: Long? = current?.takeIf { it.isNotEmpty() }?.let { value ->
-            when (storeMode) {
-                ChannelStore.BY_NAME -> when (channelType) {
-                    ChannelType.VOICE -> guild.getVoiceChannelsByName(value, true).firstOrNull()?.idLong
-                    ChannelType.TEXT -> guild.getTextChannelsByName(value, true).firstOrNull()?.idLong
-                    else -> null
+            val input = TextInput.create(fieldIds.getValue(key), TextInputStyle.SHORT)
+                .setRequired(false)
+                .apply {
+                    currentValues(key)?.takeIf { it.isNotEmpty() }?.let { setValue(it) }
+                    placeholderFor(spec)?.let { setPlaceholder(it) }
                 }
-                ChannelStore.BY_ID -> value.toLongOrNull()?.takeIf { guildHasChannel(guild, channelType, it) }
-            }
-        }
-        if (resolvedId != null) {
-            builder.setDefaultValues(EntitySelectMenu.DefaultValue.channel(resolvedId))
+                .build()
+            builder.addComponents(Label.of(truncateLabel(spec.label), input))
         }
         return builder.build()
-    }
-
-    private fun guildHasChannel(guild: Guild, channelType: ChannelType, id: Long): Boolean = when (channelType) {
-        ChannelType.TEXT -> guild.getTextChannelById(id) != null
-        ChannelType.VOICE -> guild.getVoiceChannelById(id) != null
-        else -> false
     }
 
     private fun buildSummary(
@@ -226,10 +160,8 @@ abstract class SetConfigCategoryModal(
         is FieldSpec.DoubleRange -> "${spec.range.start}–${spec.range.endInclusive}"
         is FieldSpec.BoolStrict -> "true / false"
         is FieldSpec.EnumChoice -> spec.allowed.joinToString(" / ")
-        // Channel specs render as EntitySelectMenu, not TextInput — no placeholder applies.
-        is FieldSpec.ChannelByIdStoreName,
-        is FieldSpec.ChannelByIdStoreId,
-            -> null
+        is FieldSpec.ChannelByIdStoreName -> "channel id"
+        is FieldSpec.ChannelByIdStoreId -> if (spec.allowClear) "channel id (0 to clear)" else "channel id"
     }
 
     private fun truncateLabel(label: String): String =
