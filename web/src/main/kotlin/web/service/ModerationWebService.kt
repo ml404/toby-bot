@@ -5,6 +5,7 @@ import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.dto.LevelRoleRewardDto
+import database.service.AutoRoleService
 import database.service.ConfigService
 import database.service.LevelRoleRewardService
 import database.service.LotteryHelper
@@ -44,6 +45,7 @@ class ModerationWebService(
     private val snapshotService: MonthlyCreditSnapshotService,
     private val ubiDailyService: UbiDailyService,
     private val levelRoleRewardService: LevelRoleRewardService,
+    private val autoRoleService: AutoRoleService,
     private val casinoAuditService: CasinoAuditService,
     private val eventPublisher: ApplicationEventPublisher
 ) {
@@ -413,6 +415,67 @@ class ModerationWebService(
         levelRoleRewardService.upsert(
             LevelRoleRewardDto(guildId = guildId, level = level, roleId = roleId)
         )
+        return null
+    }
+
+    /**
+     * Subset of guild data needed to render the welcome moderation tab.
+     * The three welcome config keys + three goodbye config keys ride
+     * through the standard `GuildOverview.config` map (and the existing
+     * POST `/{guildId}/config` save endpoint) so this view only needs to
+     * supply the multi-row auto-role data alongside the role picker.
+     * Returns null if JDA can't see the guild.
+     */
+    fun getWelcomeOverview(guildId: Long): WelcomeOverview? {
+        val guild = jda.getGuildById(guildId) ?: return null
+        val rows = autoRoleService.listForGuild(guildId).map { dto ->
+            val role = guild.getRoleById(dto.roleId)
+            AutoRoleView(
+                roleId = dto.roleId.toString(),
+                roleName = role?.name ?: "(deleted role)",
+                roleColorHex = role?.colorRaw?.takeIf { it != 0 }?.let { String.format("#%06x", it and 0xFFFFFF) },
+                roleMissing = role == null,
+            )
+        }
+        val roles = guild.roles
+            .filter { !it.isManaged && it.idLong != guild.idLong }
+            .sortedByDescending { it.position }
+            .map { RoleInfo(id = it.id, name = it.name) }
+        return WelcomeOverview(
+            guildId = guild.id,
+            guildName = guild.name,
+            autoRoles = rows,
+            roles = roles,
+        )
+    }
+
+    /**
+     * Add a role to the per-guild auto-assign list. Owner-only. Same
+     * "role exists / not managed / bot can interact" guardrails as
+     * [upsertLevelReward] — the join listener applies these too, but
+     * surfacing the failure at config time gives a clearer error than
+     * silently dropping new-member assignments later.
+     */
+    fun addAutoRole(actorDiscordId: Long, guildId: Long, roleId: Long): String? {
+        if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
+        val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
+        val role = guild.getRoleById(roleId) ?: return "Role not found in this server."
+        if (role.isPublicRole) return "Cannot auto-assign @everyone."
+        if (role.isManaged) return "That role is managed by an integration and can't be assigned by the bot."
+        if (!guild.selfMember.canInteract(role)) {
+            return "The bot's highest role is below ${role.name} — move TobyBot's role above it to allow assignment."
+        }
+        autoRoleService.add(guildId, roleId)
+        return null
+    }
+
+    /**
+     * Drop an `(guildId, roleId)` auto-role binding. Owner-only. No-op
+     * if no row exists — the UI's per-row delete button is idempotent.
+     */
+    fun removeAutoRole(actorDiscordId: Long, guildId: Long, roleId: Long): String? {
+        if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
+        autoRoleService.delete(guildId, roleId)
         return null
     }
 
@@ -1109,6 +1172,38 @@ class ModerationWebService(
             ConfigDto.Configurations.INSTALL_MODE,
             ConfigDto.Configurations.INSTALLED_AT ->
                 return "Install-wizard sentinel — managed by /install in Discord."
+            // Welcome / goodbye announcement settings. Channel keys store
+            // the Discord text-channel id as a string and validate that
+            // the channel exists; blank clears the override (the listener
+            // falls back to the guild's system channel). Message keys are
+            // free-form and only sanity-checked for length (Discord embed
+            // description cap is 4096; we cap at 2000 for normal messages
+            // with placeholder expansion headroom).
+            ConfigDto.Configurations.WELCOME_ENABLED,
+            ConfigDto.Configurations.GOODBYE_ENABLED -> {
+                val v = rawValue.trim().lowercase()
+                if (v != "true" && v != "false") return "Value must be true or false."
+                v
+            }
+            ConfigDto.Configurations.WELCOME_CHANNEL,
+            ConfigDto.Configurations.GOODBYE_CHANNEL -> {
+                val v = rawValue.trim()
+                if (v.isEmpty()) {
+                    ""
+                } else {
+                    val id = v.toLongOrNull()
+                        ?: return "Channel id must be numeric."
+                    val channel = guild.getTextChannelById(id)
+                        ?: return "No text channel with that id exists in this server."
+                    channel.id
+                }
+            }
+            ConfigDto.Configurations.WELCOME_MESSAGE,
+            ConfigDto.Configurations.GOODBYE_MESSAGE -> {
+                val v = rawValue
+                if (v.length > 2000) return "Message must be 2000 characters or fewer."
+                v
+            }
         }
 
         val guildIdString = guild.id
@@ -1532,6 +1627,29 @@ data class TitleGateView(
     val colorHex: String?,
     val cost: Long,
     val requiredLevel: Int,
+)
+
+/**
+ * Subset of guild data needed to render the welcome moderation tab.
+ * The six welcome / goodbye config keys ride through the standard
+ * [GuildOverview.config] map (and the existing POST `.../config`
+ * endpoint); this struct adds the multi-row auto-role projection plus
+ * the role picker source. Parallels [LevelingOverview]'s shape.
+ */
+data class WelcomeOverview(
+    val guildId: String,
+    val guildName: String,
+    val autoRoles: List<AutoRoleView>,
+    val roles: List<RoleInfo>,
+)
+
+data class AutoRoleView(
+    val roleId: String,
+    val roleName: String,
+    val roleColorHex: String?,
+    /** True if the role id no longer resolves in JDA — surfaced in the
+     *  UI so admins can clean up dangling bindings after a role delete. */
+    val roleMissing: Boolean,
 )
 
 /**

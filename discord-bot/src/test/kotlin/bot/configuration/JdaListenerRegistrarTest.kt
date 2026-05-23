@@ -11,6 +11,7 @@ import bot.toby.handler.ModalEventListener
 import bot.toby.handler.SlashCommandEventListener
 import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
+import bot.toby.handler.WelcomeAndAutoRoleHandler
 import bot.toby.install.InstallWelcomeHandler
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,6 +35,7 @@ class JdaListenerRegistrarTest {
         val eventWaiter = mockk<EventWaiter>()
         val guildLeaveCleanupHandler = mockk<GuildLeaveCleanupHandler>()
         val installWelcomeHandler = mockk<InstallWelcomeHandler>()
+        val welcomeAndAutoRoleHandler = mockk<WelcomeAndAutoRoleHandler>()
 
         JdaListenerRegistrar(
             jda,
@@ -49,6 +51,7 @@ class JdaListenerRegistrarTest {
             eventWaiter,
             guildLeaveCleanupHandler,
             installWelcomeHandler,
+            welcomeAndAutoRoleHandler,
         )
 
         verify {
@@ -65,6 +68,7 @@ class JdaListenerRegistrarTest {
                 eventWaiter,
                 guildLeaveCleanupHandler,
                 installWelcomeHandler,
+                welcomeAndAutoRoleHandler,
             )
         }
     }

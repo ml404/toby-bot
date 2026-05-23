@@ -11,6 +11,7 @@ import bot.toby.handler.ModalEventListener
 import bot.toby.handler.SlashCommandEventListener
 import bot.toby.handler.StartUpHandler
 import bot.toby.handler.VoiceEventHandler
+import bot.toby.handler.WelcomeAndAutoRoleHandler
 import bot.toby.install.InstallWelcomeHandler
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
@@ -31,6 +32,7 @@ class JdaListenerRegistrar @Autowired constructor(
     eventWaiter: EventWaiter,
     guildLeaveCleanupHandler: GuildLeaveCleanupHandler,
     installWelcomeHandler: InstallWelcomeHandler,
+    welcomeAndAutoRoleHandler: WelcomeAndAutoRoleHandler,
 ) {
     init {
         jda.addEventListener(
@@ -46,6 +48,7 @@ class JdaListenerRegistrar @Autowired constructor(
             eventWaiter,
             guildLeaveCleanupHandler,
             installWelcomeHandler,
+            welcomeAndAutoRoleHandler,
         )
     }
 }
