@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3  # Check out the code from the repository
+        uses: actions/checkout@v4  # Check out the code from the repository
 
       - name: Fetch Commands Documentation
         env:
