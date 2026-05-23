@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.dto.UserDto
-import database.economy.Plinko
+import common.economy.Plinko
 import database.service.PlinkoService
 import io.mockk.clearAllMocks
 import io.mockk.every

@@ -3,7 +3,7 @@ package database.service
 import common.events.RpsResolvedEvent
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.rps.RpsEngine
+import common.rps.RpsEngine
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

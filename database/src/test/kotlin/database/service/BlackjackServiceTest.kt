@@ -1,13 +1,13 @@
 package database.service
 
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.blackjack.bestTotal
-import database.card.Card
-import database.card.Deck
-import database.card.Rank
-import database.card.Suit
+import common.blackjack.bestTotal
+import common.card.Card
+import common.card.Deck
+import common.card.Rank
+import common.card.Suit
 import database.dto.UserDto
 import io.mockk.every
 import io.mockk.mockk

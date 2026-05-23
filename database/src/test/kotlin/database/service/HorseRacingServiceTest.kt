@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.UserDto
-import database.economy.HorseRacing
+import common.economy.HorseRacing
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

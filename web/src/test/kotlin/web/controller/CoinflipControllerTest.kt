@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.Coinflip
+import common.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
 import io.mockk.every

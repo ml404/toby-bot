@@ -5,7 +5,7 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.poker.PokerTable
+import common.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.PokerService
 import database.service.PokerService.BuyInOutcome
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component
  * `/poker create|join|start|leave|tables` — multiplayer fixed-limit
  * Texas Hold'em over the social-credit economy.
  *
- * The state machine lives in [database.poker.PokerEngine] and is driven
+ * The state machine lives in [common.poker.PokerEngine] and is driven
  * by [PokerService], which keeps tables in [PokerTableRegistry] (shared
  * with the web layer) and routes 5 % of every settled pot into the
  * existing per-guild jackpot pool. Per-turn betting is handled by

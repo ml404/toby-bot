@@ -2,7 +2,7 @@ package database.service
 
 import common.events.KenoPerfectEvent
 import database.dto.ConfigDto
-import database.economy.Keno
+import common.economy.Keno
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

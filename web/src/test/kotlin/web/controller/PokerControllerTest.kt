@@ -1,7 +1,7 @@
 package web.controller
 
-import database.poker.PokerEngine
-import database.poker.PokerTable
+import common.poker.PokerEngine
+import common.poker.PokerTable
 import database.service.JackpotService
 import database.service.PokerService
 import database.service.PokerService.ActionOutcome

@@ -7,7 +7,7 @@ import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.economy.RpsEmbeds
 import database.dto.UserDto
-import database.rps.RpsEngine
+import common.rps.RpsEngine
 import database.rps.RpsSessionRegistry
 import database.service.RpsService
 import io.mockk.Runs

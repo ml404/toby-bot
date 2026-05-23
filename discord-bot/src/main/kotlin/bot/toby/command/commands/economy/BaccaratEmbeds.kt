@@ -1,7 +1,7 @@
 package bot.toby.command.commands.economy
 
-import database.card.Card
-import database.economy.Baccarat
+import common.card.Card
+import common.economy.Baccarat
 import database.service.BaccaratService.PlayOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

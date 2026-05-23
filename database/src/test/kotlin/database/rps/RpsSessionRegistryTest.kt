@@ -1,5 +1,6 @@
 package database.rps
 
+import common.rps.RpsEngine
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

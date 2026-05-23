@@ -3,7 +3,7 @@ package bot.toby.command.commands.economy
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.poker.CasinoHoldem
+import common.poker.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.DealOutcome

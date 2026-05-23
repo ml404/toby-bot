@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.Roulette
+import common.economy.Roulette
 import database.service.RouletteService
 import database.service.RouletteService.SpinOutcome
 import io.mockk.every

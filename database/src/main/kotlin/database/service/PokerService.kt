@@ -1,17 +1,17 @@
 package database.service
 
 import common.events.PokerRoyalFlushEvent
-import database.card.Rank
+import common.card.Rank
 import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
 import database.dto.PokerHandPotDto
 import database.dto.UserDto
 import database.persistence.PokerHandLogPersistence
 import database.persistence.PokerHandPotPersistence
-import database.poker.HandEvaluator
-import database.poker.PokerEngine
-import database.poker.PokerEngine.PokerAction
-import database.poker.PokerTable
+import common.poker.HandEvaluator
+import common.poker.PokerEngine
+import common.poker.PokerEngine.PokerAction
+import common.poker.PokerTable
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
@@ -853,8 +853,8 @@ class PokerService @Autowired constructor(
      */
     internal fun publishRoyalFlushes(
         guildId: Long,
-        revealedHoleCards: Map<Long, List<database.card.Card>>,
-        board: List<database.card.Card>,
+        revealedHoleCards: Map<Long, List<common.card.Card>>,
+        board: List<common.card.Card>,
     ) {
         val publisher = eventPublisher ?: return
         revealedHoleCards.forEach { (seatDiscordId, hole) ->

@@ -105,7 +105,7 @@ internal object WagerHelper {
 
     /**
      * Fractional-multiplier variant for games whose payout schedule
-     * isn't a clean integer (currently only [database.economy.Highlow]'s
+     * isn't a clean integer (currently only [common.economy.Highlow]'s
      * anchor-aware payouts). payout truncates toward zero so any
      * remainder stays with the house, matching the Long overload's
      * implicit semantics.

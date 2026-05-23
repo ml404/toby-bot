@@ -2,7 +2,7 @@ package bot.toby.command.commands.economy
 
 import core.command.CommandContext
 import database.dto.UserDto
-import database.economy.Coinflip
+import common.economy.Coinflip
 import database.service.CoinflipService
 import database.service.CoinflipService.FlipOutcome
 import net.dv8tion.jda.api.EmbedBuilder

@@ -2,7 +2,7 @@ package bot.toby.command.commands.economy
 
 import core.command.CommandContext
 import database.dto.UserDto
-import database.economy.Plinko
+import common.economy.Plinko
 import database.service.PlinkoService
 import database.service.PlinkoService.DropOutcome
 import net.dv8tion.jda.api.EmbedBuilder

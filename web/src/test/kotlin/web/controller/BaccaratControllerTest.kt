@@ -1,9 +1,9 @@
 package web.controller
 
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
-import database.economy.Baccarat
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
+import common.economy.Baccarat
 import database.service.BaccaratService
 import database.service.BaccaratService.PlayOutcome
 import io.mockk.every

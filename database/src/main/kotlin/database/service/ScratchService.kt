@@ -3,8 +3,8 @@ package database.service
 import common.casino.CasinoCommonFailure
 import common.events.ScratchJackpotEvent
 import database.dto.ConfigDto
-import database.economy.ScratchCard
-import database.economy.SlotMachine
+import common.economy.ScratchCard
+import common.economy.SlotMachine
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -36,8 +36,8 @@ class ScratchService(
             val stake: Long,
             val payout: Long,
             val net: Long,
-            val cells: List<database.economy.SlotMachine.Symbol>,
-            val winningSymbol: database.economy.SlotMachine.Symbol,
+            val cells: List<common.economy.SlotMachine.Symbol>,
+            val winningSymbol: common.economy.SlotMachine.Symbol,
             val matchCount: Int,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
@@ -49,7 +49,7 @@ class ScratchService(
 
         data class Lose(
             val stake: Long,
-            val cells: List<database.economy.SlotMachine.Symbol>,
+            val cells: List<common.economy.SlotMachine.Symbol>,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,
@@ -87,11 +87,12 @@ class ScratchService(
 
         val result = card.scratch(random)
         val wager = WagerHelper.applyMultiplier(userService, resolved.user, resolved.balance, stake, result.multiplier)
-        return if (result.isWin && result.winningSymbol != null) {
+        val winningSymbol = result.winningSymbol
+        return if (result.isWin && winningSymbol != null) {
             // All-STAR sweep (matchCount == CELL_COUNT, winningSymbol == STAR)
             // is the 200× top-tier jackpot.
             if (result.matchCount == ScratchCard.CELL_COUNT &&
-                result.winningSymbol == SlotMachine.Symbol.STAR) {
+                winningSymbol == SlotMachine.Symbol.STAR) {
                 eventPublisher?.publishEvent(ScratchJackpotEvent(discordId = discordId, guildId = guildId))
             }
             val jackpot = JackpotHelper.rollOnWin(
@@ -103,7 +104,7 @@ class ScratchService(
                 payout = wager.payout,
                 net = wager.net,
                 cells = result.cells,
-                winningSymbol = result.winningSymbol,
+                winningSymbol = winningSymbol,
                 matchCount = result.matchCount,
                 newBalance = wager.newBalance + jackpot.amount,
                 jackpotPayout = jackpot.amount,

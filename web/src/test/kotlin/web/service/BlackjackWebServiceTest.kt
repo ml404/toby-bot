@@ -1,10 +1,10 @@
 package web.service
 
-import database.blackjack.BlackjackTable
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

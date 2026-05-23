@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.UserDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import database.service.EconomyTradeService.TradeOutcome
 
 /**

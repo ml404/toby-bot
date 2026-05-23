@@ -4,7 +4,7 @@ import bot.toby.command.commands.economy.CasinoHoldemEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.poker.CasinoHoldem
+import common.poker.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.ActionOutcome

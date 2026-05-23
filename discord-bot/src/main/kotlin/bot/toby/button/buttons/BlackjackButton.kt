@@ -3,10 +3,10 @@ package bot.toby.button.buttons
 import bot.toby.command.commands.economy.BlackjackEmbeds
 import core.button.Button
 import core.button.ButtonContext
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.blackjack.canSplit
+import common.blackjack.canSplit
 import database.dto.UserDto
 import database.service.BlackjackService
 import database.service.BlackjackService.MultiActionOutcome

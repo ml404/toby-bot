@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.Highlow
+import common.economy.Highlow
 import database.service.HighlowService
 import database.service.HighlowService.PlayOutcome
 import io.mockk.every

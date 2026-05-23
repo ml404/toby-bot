@@ -3,7 +3,7 @@ package database.service
 import common.casino.CasinoCommonFailure
 import common.events.PlinkoJackpotEvent
 import database.dto.ConfigDto
-import database.economy.Plinko
+import common.economy.Plinko
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

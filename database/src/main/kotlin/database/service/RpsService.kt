@@ -2,7 +2,7 @@ package database.service
 
 import common.events.RpsResolvedEvent
 import database.dto.ConfigDto
-import database.rps.RpsEngine
+import common.rps.RpsEngine
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

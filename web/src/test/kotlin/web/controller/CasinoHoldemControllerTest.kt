@@ -1,10 +1,10 @@
 package web.controller
 
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
-import database.poker.CasinoHoldem
-import database.poker.CasinoHoldemTable
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
+import common.poker.CasinoHoldem
+import common.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
 import database.service.CasinoHoldemService
 import database.service.CasinoHoldemService.ActionOutcome

@@ -4,7 +4,7 @@ import common.events.DuelResolvedEvent
 import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.duel.RecentDuelResolutions
-import database.economy.Coinflip
+import common.economy.Coinflip
 import database.persistence.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher

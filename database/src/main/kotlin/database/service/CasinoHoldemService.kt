@@ -4,8 +4,8 @@ import common.casino.CasinoCommonFailure
 import common.events.CasinoHoldemWonEvent
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.poker.CasinoHoldem
-import database.poker.CasinoHoldemTable
+import common.poker.CasinoHoldem
+import common.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired

@@ -7,7 +7,7 @@ import common.notification.NotificationChannelKind
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.UserPriceTriggerDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
 import database.service.UserPriceTriggerService

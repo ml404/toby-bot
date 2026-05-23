@@ -9,7 +9,7 @@ import database.service.TitlePurchasePolicy
 import database.service.TitleService
 import database.service.TobyCoinMarketService
 import database.service.UserService
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

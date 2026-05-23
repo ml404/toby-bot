@@ -5,8 +5,8 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.economy.BlackjackEmbeds
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.dto.UserDto
 import database.service.BlackjackService
