@@ -132,6 +132,33 @@ class ModerationController(
         ra: RedirectAttributes
     ): String = renderSubPage(guildId, user, model, ra, "moderation/lottery")
 
+    @GetMapping("/{guildId}/welcome")
+    fun welcomePage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/moderation/guilds",
+        check = moderationWebService::canModerate,
+        deniedMessage = "You are not allowed to moderate that server.",
+    ) { discordId ->
+        val overview = moderationWebService.getGuildOverview(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireForPage "redirect:/moderation/guilds"
+        }
+        val welcome = moderationWebService.getWelcomeOverview(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireForPage "redirect:/moderation/guilds"
+        }
+        model.addAttribute("overview", overview)
+        model.addAttribute("welcome", welcome)
+        model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("actorDiscordId", discordId.toString())
+        "moderation/welcome"
+    }
+
     @GetMapping("/{guildId}/leveling")
     fun levelingPage(
         @PathVariable guildId: Long,
@@ -558,6 +585,44 @@ class ModerationController(
     }
 
     /**
+     * Add a role to the per-guild auto-assign list. Owner-only.
+     * Triggered by the "Add auto-role" form on the welcome moderation tab.
+     */
+    @PostMapping("/{guildId}/auto-role", consumes = ["application/json"])
+    @ResponseBody
+    fun addAutoRole(
+        @PathVariable guildId: Long,
+        @RequestBody body: AutoRoleRequest,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val roleId = body.roleId.toLongOrNull()
+            ?: return@requireSignedInForJson ResponseEntity.badRequest().body(ApiResult(false, "Invalid role id."))
+        val error = moderationWebService.addAutoRole(actor, guildId, roleId)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    /**
+     * Drop a `(guildId, roleId)` auto-role binding. Owner-only.
+     * Triggered by the per-row Delete button on the welcome moderation tab.
+     */
+    @DeleteMapping("/{guildId}/auto-role/{roleId}")
+    @ResponseBody
+    fun removeAutoRole(
+        @PathVariable guildId: Long,
+        @PathVariable roleId: Long,
+        @AuthenticationPrincipal user: OAuth2User
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { actor ->
+        val error = moderationWebService.removeAutoRole(actor, guildId, roleId)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
+    /**
      * Upsert a level → role-reward binding. Owner-only. Triggered by
      * the "Add reward" form on the leveling moderation tab.
      */
@@ -660,6 +725,7 @@ data class MoveRequest(val targetChannelId: String = "", val memberIds: List<Str
 data class PollRequest(val channelId: String = "", val question: String = "", val options: List<String> = emptyList())
 data class LevelRewardRequest(val level: Int = 0, val roleId: String = "")
 data class RequiredLevelRequest(val requiredLevel: Int = 0)
+data class AutoRoleRequest(val roleId: String = "")
 
 data class PurgeResponse(
     val ok: Boolean,

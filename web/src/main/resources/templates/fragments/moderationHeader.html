@@ -53,6 +53,10 @@
            class="mod-subnav-link"
            th:classappend="${active == 'leveling'} ? ' active'"
            th:attr="aria-current=${active == 'leveling'} ? 'page'">Leveling</a>
+        <a th:href="@{/moderation/{id}/welcome(id=${overview.guildId})}"
+           class="mod-subnav-link"
+           th:classappend="${active == 'welcome'} ? ' active'"
+           th:attr="aria-current=${active == 'welcome'} ? 'page'">Welcome</a>
     </nav>
 </div>
 </body>
