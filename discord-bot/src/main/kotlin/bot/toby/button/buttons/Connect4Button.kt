@@ -1,15 +1,15 @@
 package bot.toby.button.buttons
 
+import bot.toby.command.commands.economy.Connect4Embeds
 import bot.toby.command.commands.economy.PvpEmbeds
-import bot.toby.command.commands.economy.TicTacToeEmbeds
-import common.tictactoe.TicTacToeEngine
+import common.connect4.Connect4Engine
 import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService
+import database.connect4.Connect4SessionRegistry
 import database.dto.UserDto
+import database.service.Connect4Service
 import database.service.PvpWagerService
-import database.service.TicTacToeService
-import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
@@ -17,41 +17,41 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * Routes every `/tictactoe` button click. The component ID prefix is
- * `"tictactoe"` — [bot.toby.managers.DefaultButtonManager] dispatches
+ * Routes every `/connect4` button click. The component ID prefix is
+ * `"connect4"` — [bot.toby.managers.DefaultButtonManager] dispatches
  * by that prefix to this single bean, which parses the rest of the id
- * via [TicTacToeEmbeds.parseButtonId] and switches on the action.
+ * via [Connect4Embeds.parseButtonId] and switches on the action.
  *
- * Race safety: every state transition on [TicTacToeSessionRegistry]
+ * Race safety: every state transition on [Connect4SessionRegistry]
  * uses atomic remove (`decline`, `consumeForResolution`, `forfeit`)
  * or `synchronized` on the session (`accept`, `applyMove`), so
  * concurrent clicks / timeouts collapse to "exactly one path wins".
  */
 @Component
-class TicTacToeButton @Autowired constructor(
-    private val ticTacToeService: TicTacToeService,
-    private val ticTacToeSessionRegistry: TicTacToeSessionRegistry,
+class Connect4Button @Autowired constructor(
+    private val connect4Service: Connect4Service,
+    private val connect4SessionRegistry: Connect4SessionRegistry,
 ) : Button {
 
-    override val name: String get() = TicTacToeEmbeds.BUTTON_NAME
-    override val description: String get() = "Routes /tictactoe accept/decline + place + forfeit clicks."
+    override val name: String get() = Connect4Embeds.BUTTON_NAME
+    override val description: String get() = "Routes /connect4 accept/decline + drop + forfeit clicks."
 
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        val parsed = TicTacToeEmbeds.parseButtonId(event.componentId) ?: run {
-            event.hook.sendMessage("Couldn't parse this Tic-Tac-Toe button.").setEphemeral(true).queue()
+        val parsed = Connect4Embeds.parseButtonId(event.componentId) ?: run {
+            event.hook.sendMessage("Couldn't parse this Connect 4 button.").setEphemeral(true).queue()
             return
         }
         when (parsed.action) {
-            TicTacToeEmbeds.Action.ACCEPT -> handleAccept(event, requestingUserDto, parsed)
-            TicTacToeEmbeds.Action.DECLINE -> handleDecline(event, requestingUserDto, parsed)
-            TicTacToeEmbeds.Action.FORFEIT -> handleForfeit(event, requestingUserDto, parsed)
+            Connect4Embeds.Action.ACCEPT -> handleAccept(event, requestingUserDto, parsed)
+            Connect4Embeds.Action.DECLINE -> handleDecline(event, requestingUserDto, parsed)
+            Connect4Embeds.Action.FORFEIT -> handleForfeit(event, requestingUserDto, parsed)
             else -> {
-                val cell = TicTacToeEmbeds.cellFor(parsed.action) ?: run {
+                val column = Connect4Embeds.columnFor(parsed.action) ?: run {
                     event.hook.sendMessage("Unknown action.").setEphemeral(true).queue()
                     return
                 }
-                handlePlace(event, requestingUserDto, parsed, cell)
+                handleDrop(event, requestingUserDto, parsed, column)
             }
         }
     }
@@ -59,7 +59,7 @@ class TicTacToeButton @Autowired constructor(
     private fun handleDecline(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
-        parsed: TicTacToeEmbeds.ParsedButtonId,
+        parsed: Connect4Embeds.ParsedButtonId,
     ) {
         if (requestingUserDto.discordId != parsed.payload) {
             event.hook.sendMessage(
@@ -67,18 +67,18 @@ class TicTacToeButton @Autowired constructor(
             ).setEphemeral(true).queue()
             return
         }
-        val session = ticTacToeSessionRegistry.decline(parsed.sessionId) ?: run {
+        val session = connect4SessionRegistry.decline(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         event.message.editMessageEmbeds(
-            TicTacToeEmbeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
+            Connect4Embeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
         ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
     }
 
     private fun handleAccept(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
-        parsed: TicTacToeEmbeds.ParsedButtonId,
+        parsed: Connect4Embeds.ParsedButtonId,
     ) {
         if (requestingUserDto.discordId != parsed.payload) {
             event.hook.sendMessage(
@@ -86,38 +86,38 @@ class TicTacToeButton @Autowired constructor(
             ).setEphemeral(true).queue()
             return
         }
-        val session = ticTacToeSessionRegistry.accept(parsed.sessionId) { expired ->
-            // Move-clock timeout: current actor never placed. Treat
+        val session = connect4SessionRegistry.accept(parsed.sessionId) { expired ->
+            // Move-clock timeout: current actor never dropped. Treat
             // as forfeit by them — opponent wins by walkover.
             resolveTimeout(event, expired)
         } ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
 
-        val outcome = ticTacToeService.acceptMatch(
+        val outcome = connect4Service.acceptMatch(
             initiatorDiscordId = session.initiatorDiscordId,
             opponentDiscordId = session.opponentDiscordId,
             guildId = session.guildId,
             stake = session.stake,
         )
         if (outcome !is PvpWagerService.AcceptOutcome.Ok) {
-            ticTacToeSessionRegistry.forfeit(session.id)
+            connect4SessionRegistry.forfeit(session.id)
             event.message.editMessageEmbeds(PvpEmbeds.acceptErrorEmbed(PvpButtonHelpers.describeAccept(outcome)))
                 .setComponents(emptyList<MessageTopLevelComponent>()).queue()
             return
         }
 
-        event.message.editMessageEmbeds(TicTacToeEmbeds.turnEmbed(session))
-            .setComponents(TicTacToeEmbeds.liveButtons(session)).queue()
+        event.message.editMessageEmbeds(Connect4Embeds.turnEmbed(session))
+            .setComponents(Connect4Embeds.liveButtons(session)).queue()
     }
 
-    private fun handlePlace(
+    private fun handleDrop(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
-        parsed: TicTacToeEmbeds.ParsedButtonId,
-        cell: Int,
+        parsed: Connect4Embeds.ParsedButtonId,
+        column: Int,
     ) {
-        val live = ticTacToeSessionRegistry.get(parsed.sessionId) ?: run {
+        val live = connect4SessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
@@ -128,27 +128,27 @@ class TicTacToeButton @Autowired constructor(
             ).setEphemeral(true).queue()
             return
         }
-        val result = ticTacToeSessionRegistry.applyMove(parsed.sessionId, requestingUserDto.discordId, cell) { expired ->
+        val result = connect4SessionRegistry.applyMove(parsed.sessionId, requestingUserDto.discordId, column) { expired ->
             resolveTimeout(event, expired)
         }
         when (result) {
             null -> {
-                // Either: not their turn, session gone, or some race.
                 event.hook.sendMessage("It's not your turn yet.").setEphemeral(true).queue()
             }
-            TicTacToeEngine.MoveResult.IllegalCell,
-            TicTacToeEngine.MoveResult.Occupied -> {
-                event.hook.sendMessage("That cell is taken.").setEphemeral(true).queue()
+            Connect4Engine.MoveResult.InvalidColumn -> {
+                event.hook.sendMessage("Invalid column.").setEphemeral(true).queue()
             }
-            is TicTacToeEngine.MoveResult.Continued -> {
-                // Re-render with the new board + the *other* player's turn.
-                val refreshed = ticTacToeSessionRegistry.get(parsed.sessionId) ?: return
-                event.message.editMessageEmbeds(TicTacToeEmbeds.turnEmbed(refreshed))
-                    .setComponents(TicTacToeEmbeds.liveButtons(refreshed)).queue()
+            Connect4Engine.MoveResult.ColumnFull -> {
+                event.hook.sendMessage("That column is full.").setEphemeral(true).queue()
             }
-            is TicTacToeEngine.MoveResult.Win,
-            is TicTacToeEngine.MoveResult.Draw -> {
-                val consumed = ticTacToeSessionRegistry.consumeForResolution(parsed.sessionId) ?: return
+            is Connect4Engine.MoveResult.Continued -> {
+                val refreshed = connect4SessionRegistry.get(parsed.sessionId) ?: return
+                event.message.editMessageEmbeds(Connect4Embeds.turnEmbed(refreshed))
+                    .setComponents(Connect4Embeds.liveButtons(refreshed)).queue()
+            }
+            is Connect4Engine.MoveResult.Win,
+            is Connect4Engine.MoveResult.Draw -> {
+                val consumed = connect4SessionRegistry.consumeForResolution(parsed.sessionId) ?: return
                 resolveAndEdit(event, consumed, forfeit = false)
             }
         }
@@ -157,9 +157,9 @@ class TicTacToeButton @Autowired constructor(
     private fun handleForfeit(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
-        parsed: TicTacToeEmbeds.ParsedButtonId,
+        parsed: Connect4Embeds.ParsedButtonId,
     ) {
-        val live = ticTacToeSessionRegistry.get(parsed.sessionId) ?: run {
+        val live = connect4SessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
@@ -168,7 +168,7 @@ class TicTacToeButton @Autowired constructor(
             event.hook.sendMessage("This isn't your match to forfeit.").setEphemeral(true).queue()
             return
         }
-        val consumed = ticTacToeSessionRegistry.forfeit(parsed.sessionId) ?: run {
+        val consumed = connect4SessionRegistry.forfeit(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         // Stamp the winner: the *other* player wins by walkover.
@@ -178,7 +178,7 @@ class TicTacToeButton @Autowired constructor(
         resolveAndEdit(event, consumed, forfeit = true, explicitWinnerDiscordId = winnerDiscordId)
     }
 
-    private fun resolveTimeout(event: ButtonInteractionEvent, expired: TicTacToeSessionRegistry.Session) {
+    private fun resolveTimeout(event: ButtonInteractionEvent, expired: Connect4SessionRegistry.Session) {
         // Whoever's turn it was timed out — opponent wins by walkover.
         val winnerDiscordId = if (expired.currentActorDiscordId() == expired.initiatorDiscordId)
             expired.opponentDiscordId else expired.initiatorDiscordId
@@ -188,7 +188,7 @@ class TicTacToeButton @Autowired constructor(
 
     private fun resolveAndEdit(
         event: ButtonInteractionEvent,
-        session: TicTacToeSessionRegistry.Session,
+        session: Connect4SessionRegistry.Session,
         forfeit: Boolean,
         explicitWinnerDiscordId: Long? = null,
     ) {
@@ -197,11 +197,11 @@ class TicTacToeButton @Autowired constructor(
         val winnerDiscordId = explicitWinnerDiscordId
             ?: session.winner?.let {
                 when (it) {
-                    TicTacToeEngine.Mark.X -> session.initiatorDiscordId
-                    TicTacToeEngine.Mark.O -> session.opponentDiscordId
+                    Connect4Engine.Mark.RED -> session.initiatorDiscordId
+                    Connect4Engine.Mark.YELLOW -> session.opponentDiscordId
                 }
             }
-        val outcome = ticTacToeService.resolveMatch(
+        val outcome = connect4Service.resolveMatch(
             initiatorDiscordId = session.initiatorDiscordId,
             opponentDiscordId = session.opponentDiscordId,
             guildId = session.guildId,
@@ -209,8 +209,8 @@ class TicTacToeButton @Autowired constructor(
             winnerDiscordId = winnerDiscordId,
         )
         val embed: MessageEmbed = when (outcome) {
-            is TurnBasedBoardWagerService.ResolveOutcome.Win -> TicTacToeEmbeds.winEmbed(session, outcome, forfeit)
-            is TurnBasedBoardWagerService.ResolveOutcome.Draw -> TicTacToeEmbeds.drawEmbed(session, outcome)
+            is TurnBasedBoardWagerService.ResolveOutcome.Win -> Connect4Embeds.winEmbed(session, outcome, forfeit)
+            is TurnBasedBoardWagerService.ResolveOutcome.Draw -> Connect4Embeds.drawEmbed(session, outcome)
             TurnBasedBoardWagerService.ResolveOutcome.Unknown -> PvpEmbeds.acceptErrorEmbed(
                 "Couldn't resolve the match — both players' profiles must exist."
             )

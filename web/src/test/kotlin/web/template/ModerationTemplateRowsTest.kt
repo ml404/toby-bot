@@ -134,6 +134,8 @@ class ModerationTemplateRowsTest {
             ConfigDto.Configurations.RPS_MAX_STAKE,
             ConfigDto.Configurations.TICTACTOE_MIN_STAKE,
             ConfigDto.Configurations.TICTACTOE_MAX_STAKE,
+            ConfigDto.Configurations.CONNECT4_MIN_STAKE,
+            ConfigDto.Configurations.CONNECT4_MAX_STAKE,
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
             ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
             ConfigDto.Configurations.POKER_SMALL_BLIND,

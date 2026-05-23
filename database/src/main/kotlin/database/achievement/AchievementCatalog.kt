@@ -472,6 +472,49 @@ object AchievementCatalog {
             threshold = 5
         ),
 
+        // Connect 4 — same shape as the TTT achievements above.
+        // Triggered by `Connect4ResolvedEvent`; published on every
+        // winner-bearing match (free play included), skipped on draw.
+        AchievementSpec(
+            code = "first_connect4_win",
+            name = "Four in a Row",
+            description = "Win your first Connect 4 match.",
+            category = "casino",
+            icon = "🔴",
+            xpReward = 50,
+            creditReward = 50
+        ),
+        AchievementSpec(
+            code = "connect4_wins_10",
+            name = "Gravity Well",
+            description = "Win 10 Connect 4 matches.",
+            category = "casino",
+            icon = "🟡",
+            xpReward = 150,
+            creditReward = 200,
+            threshold = 10
+        ),
+        AchievementSpec(
+            code = "connect4_wins_25",
+            name = "Diagonal Dominator",
+            description = "Win 25 Connect 4 matches.",
+            category = "casino",
+            icon = "🔷",
+            xpReward = 300,
+            creditReward = 400,
+            threshold = 25
+        ),
+        AchievementSpec(
+            code = "connect4_losses_5",
+            name = "Disconnected",
+            description = "Lose 5 Connect 4 matches.",
+            category = "consolation",
+            icon = "⚫",
+            xpReward = 50,
+            creditReward = 100,
+            threshold = 5
+        ),
+
         // Roadmap stubs for casino games that don't yet publish domain
         // events. Hidden until a future PR adds the corresponding event
         // and wires up an AchievementEventHandler listener; the codes

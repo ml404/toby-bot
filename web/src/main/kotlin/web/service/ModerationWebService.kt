@@ -891,11 +891,12 @@ class ModerationWebService(
                 if (n < 1L) return "Value must be at least 1 credit."
                 n.toString()
             }
-            // RPS_MIN_STAKE and TICTACTOE_MIN_STAKE allow 0 — both PvP
-            // mini-games support free play. Validated separately
-            // because the other min-stake keys require >= 1.
+            // RPS / TICTACTOE / CONNECT4 min-stake all allow 0 —
+            // the three PvP mini-games support free play. Validated
+            // separately because the other min-stake keys require >= 1.
             ConfigDto.Configurations.RPS_MIN_STAKE,
-            ConfigDto.Configurations.TICTACTOE_MIN_STAKE -> {
+            ConfigDto.Configurations.TICTACTOE_MIN_STAKE,
+            ConfigDto.Configurations.CONNECT4_MIN_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 0L) return "Value must be zero (free play) or a positive number of credits."
@@ -919,7 +920,8 @@ class ModerationWebService(
             ConfigDto.Configurations.HORSE_RACING_MAX_STAKE,
             ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE,
             ConfigDto.Configurations.RPS_MAX_STAKE,
-            ConfigDto.Configurations.TICTACTOE_MAX_STAKE -> {
+            ConfigDto.Configurations.TICTACTOE_MAX_STAKE,
+            ConfigDto.Configurations.CONNECT4_MAX_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 0L) return "Value must be 0 (unlimited) or a positive number of credits."
