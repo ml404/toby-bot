@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Per-guild welcome/goodbye announcements + auto-role-on-join",
+    "summary": "Adds the table-stakes \"this bot greets new members\" feature that big servers expect from a main bot. Three independently-toggleable surfaces, configurable from both Discord (`/welcome` slash command) and the web dashboard (`/moderation/{guild}/welcome` tab). This is the first wave from the [feature-recommendations plan](https://claude.ai/code/session_017tRi5q6K3NYHvYeZYzLzBD) — picked as the single biggest unlock for admin appeal.",
+    "emoji": "🛡️",
+    "prNumber": 546
+  },
+  {
+    "date": "May 2026",
     "title": "Keep commands toolbar below the nav drawer stacking context",
     "summary": "When the mobile nav drawer is open on `/commands/wiki`, the sticky `.commands-toolbar` (search input + category chips) visibly renders **on top of** the drawer instead of being covered by it. **Cause:** stacking-context isolation. `body > nav` (`nav.css` line 32) sets `position: relative; z-index: 10`, making the entire navbar a stacking context at z=10. The drawer panel inside it bumps to `z-index: 1000` (`nav.css` line 360), but that 1000 is only meaningful within the na…",
     "emoji": "🔨",
