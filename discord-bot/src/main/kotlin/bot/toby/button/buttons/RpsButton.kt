@@ -1,10 +1,12 @@
 package bot.toby.button.buttons
 
+import bot.toby.command.commands.economy.PvpEmbeds
 import bot.toby.command.commands.economy.RpsEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
+import database.service.PvpWagerService
 import database.service.RpsService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -60,7 +62,7 @@ class RpsButton @Autowired constructor(
             return
         }
         val session = rpsSessionRegistry.decline(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         event.message.editMessageEmbeds(
             RpsEmbeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
@@ -87,7 +89,7 @@ class RpsButton @Autowired constructor(
             // handles all four branches.
             resolveAndEdit(event, expired)
         } ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
 
         // Debit both stakes now (no-op for stake=0). If insufficient,
@@ -99,9 +101,9 @@ class RpsButton @Autowired constructor(
             guildId = session.guildId,
             stake = session.stake,
         )
-        if (outcome !is RpsService.AcceptOutcome.Ok) {
+        if (outcome !is PvpWagerService.AcceptOutcome.Ok) {
             rpsSessionRegistry.forfeit(session.id) // tear down the LIVE session
-            event.message.editMessageEmbeds(RpsEmbeds.acceptErrorEmbed(describeAccept(outcome)))
+            event.message.editMessageEmbeds(PvpEmbeds.acceptErrorEmbed(PvpButtonHelpers.describeAccept(outcome)))
                 .setComponents(emptyList<MessageTopLevelComponent>()).queue()
             return
         }
@@ -125,7 +127,7 @@ class RpsButton @Autowired constructor(
     ) {
         val choice = RpsEmbeds.choiceFor(parsed.action) ?: return
         val live = rpsSessionRegistry.get(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
             requestingUserDto.discordId != live.opponentDiscordId
@@ -136,7 +138,7 @@ class RpsButton @Autowired constructor(
             return
         }
         val updated = rpsSessionRegistry.recordPick(parsed.sessionId, requestingUserDto.discordId, choice) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         // Confirm the pick to the player privately so the opponent
         // doesn't see what they chose.
@@ -168,7 +170,7 @@ class RpsButton @Autowired constructor(
         parsed: RpsEmbeds.ParsedButtonId,
     ) {
         val live = rpsSessionRegistry.get(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
             requestingUserDto.discordId != live.opponentDiscordId
@@ -181,7 +183,7 @@ class RpsButton @Autowired constructor(
         // Forfeit = the other player wins by walkover. Atomically remove
         // the session so the pick-timeout can't double-resolve.
         val consumed = rpsSessionRegistry.forfeit(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         // Strip the forfeiter's pick from the snapshot so the resolver
         // sees them as "didn't pick" → opponent wins.
@@ -206,28 +208,13 @@ class RpsButton @Autowired constructor(
             is RpsService.ResolveOutcome.DoubleRefund -> RpsEmbeds.doubleRefundEmbed(
                 session.initiatorDiscordId, session.opponentDiscordId, outcome.stake,
             )
-            else -> RpsEmbeds.acceptErrorEmbed("Couldn't resolve the match — both players' profiles must exist.")
+            RpsService.ResolveOutcome.Unknown -> PvpEmbeds.acceptErrorEmbed(
+                "Couldn't resolve the match — both players' profiles must exist."
+            )
         }
         runCatching {
             event.message.editMessageEmbeds(embed)
                 .setComponents(emptyList<MessageTopLevelComponent>()).queue()
         }
-    }
-
-    private fun ephemeralAlreadyResolved(event: ButtonInteractionEvent) {
-        event.hook.sendMessage("This match already resolved or expired.")
-            .setEphemeral(true).queue()
-    }
-
-    private fun describeAccept(outcome: RpsService.AcceptOutcome): String = when (outcome) {
-        is RpsService.AcceptOutcome.InitiatorInsufficient ->
-            "The challenger no longer has enough credits to cover the stake."
-        is RpsService.AcceptOutcome.OpponentInsufficient ->
-            "You no longer have enough credits (have ${outcome.have}, need ${outcome.needed})."
-        RpsService.AcceptOutcome.UnknownInitiator ->
-            "We couldn't find the challenger's profile."
-        RpsService.AcceptOutcome.UnknownOpponent ->
-            "We couldn't find your profile."
-        is RpsService.AcceptOutcome.Ok -> "" // never surfaced
     }
 }

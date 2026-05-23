@@ -4,9 +4,9 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.rps.RpsSessionRegistry
 import database.service.PvpWagerService
-import database.service.RpsService
+import database.service.TicTacToeService
+import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -15,28 +15,29 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * `/rps user:<member> [stake:<int>]` — challenge another user to a
- * round of Rock-Paper-Scissors. Optional wager: when `stake > 0` both
- * players ante on accept and the winner takes the pot minus the
- * per-guild jackpot tribute (same model as `/duel`). When `stake` is
- * omitted or 0, the match is pure-fun and the winner only earns a
- * small XP grant via [database.service.XpAwardService].
+ * `/tictactoe user:<member> [stake:<int>]` — challenge another user to
+ * a round of Tic-Tac-Toe. Optional wager: when `stake > 0` both players
+ * ante on accept and the winner takes the pot minus the per-guild
+ * jackpot tribute (same model as `/rps`). When `stake` is omitted or
+ * 0, the match is pure-fun and the winner only earns a small XP grant.
  *
- * The opponent's accept/decline + both players' pick clicks are
- * handled by [bot.toby.button.buttons.RpsButton], which routes through
- * [RpsSessionRegistry] (in-memory session state) and [RpsService]
- * (wager arithmetic).
+ * Initiator plays ❌ (moves first); opponent plays ⭕.
+ *
+ * Accept/decline + per-cell place + forfeit clicks are handled by
+ * [bot.toby.button.buttons.TicTacToeButton], which routes through
+ * [TicTacToeSessionRegistry] (in-memory board + turn state) and
+ * [TicTacToeService] (wager arithmetic).
  */
 @Component
-class RpsCommand @Autowired constructor(
-    private val rpsService: RpsService,
-    private val rpsSessionRegistry: RpsSessionRegistry,
+class TicTacToeCommand @Autowired constructor(
+    private val ticTacToeService: TicTacToeService,
+    private val ticTacToeSessionRegistry: TicTacToeSessionRegistry,
     private val userDtoHelper: UserDtoHelper,
 ) : EconomyCommand {
 
-    override val name: String = "rps"
+    override val name: String = "tictactoe"
     override val description: String =
-        "Challenge another user to Rock-Paper-Scissors. Stake is optional — leave it off for free play."
+        "Challenge another user to Tic-Tac-Toe. Stake is optional — leave it off for free play."
 
     companion object {
         private const val OPT_USER = "user"
@@ -50,8 +51,7 @@ class RpsCommand @Autowired constructor(
             OPT_STAKE,
             "Credits to wager each (optional; per-guild bounds; 0 = free play)",
             false,
-        )
-            .setMinValue(0L),
+        ).setMinValue(0L),
     )
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -72,10 +72,9 @@ class RpsCommand @Autowired constructor(
         }
         val stake = event.getOption(OPT_STAKE)?.asLong ?: 0L
 
-        // Lazy-create the opponent's user row so pre-flight balance check can read it.
         userDtoHelper.calculateUserDto(targetUser.idLong, guild.idLong)
 
-        val start = rpsService.startMatch(
+        val start = ticTacToeService.startMatch(
             initiatorDiscordId = requestingUserDto.discordId,
             opponentDiscordId = targetUser.idLong,
             guildId = guild.idLong,
@@ -91,26 +90,22 @@ class RpsCommand @Autowired constructor(
 
         val initiatorId = requestingUserDto.discordId
         val opponentId = targetUser.idLong
-        val session = rpsSessionRegistry.register(
+        val session = ticTacToeSessionRegistry.register(
             guildId = guild.idLong,
             initiatorDiscordId = initiatorId,
             opponentDiscordId = opponentId,
             stake = stake,
         ) { expired ->
-            // Pending-phase timeout — nothing was ever debited so just
-            // edit the message in place. Best-effort: if the hook has
-            // already expired or the message is gone there's nothing
-            // useful to log.
             runCatching {
                 event.hook.editOriginalEmbeds(
-                    RpsEmbeds.pendingTimeoutEmbed(expired.initiatorDiscordId, expired.opponentDiscordId)
+                    TicTacToeEmbeds.pendingTimeoutEmbed(expired.initiatorDiscordId, expired.opponentDiscordId)
                 ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
             }
         }
 
-        event.hook.sendMessageEmbeds(RpsEmbeds.pendingEmbed(initiatorId, opponentId, stake))
+        event.hook.sendMessageEmbeds(TicTacToeEmbeds.pendingEmbed(initiatorId, opponentId, stake))
             .addContent("<@$opponentId>")
-            .addComponents(RpsEmbeds.pendingButtons(session.id, opponentId))
+            .addComponents(TicTacToeEmbeds.pendingButtons(session.id, opponentId))
             .queue()
     }
 

@@ -176,6 +176,11 @@ class ConfigDto(
         // to members with zero credit. Defaults to 0-500.
         RPS_MIN_STAKE("RPS_MIN_STAKE"),
         RPS_MAX_STAKE("RPS_MAX_STAKE"),
+        // Per-guild stake bounds for `/tictactoe`. Same shape as RPS —
+        // 0 minimum is allowed (free-play matches still grant XP).
+        // Defaults to 0-500.
+        TICTACTOE_MIN_STAKE("TICTACTOE_MIN_STAKE"),
+        TICTACTOE_MAX_STAKE("TICTACTOE_MAX_STAKE"),
 
         // Reference stake size for jackpot probability scaling. Bets at
         // or above this anchor roll at the full JACKPOT_WIN_PCT base

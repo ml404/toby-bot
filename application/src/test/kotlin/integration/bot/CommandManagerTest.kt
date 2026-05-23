@@ -21,6 +21,7 @@ import bot.toby.command.commands.economy.RouletteCommand
 import bot.toby.command.commands.economy.RpsCommand
 import bot.toby.command.commands.economy.ScratchCommand
 import bot.toby.command.commands.economy.SlotsCommand
+import bot.toby.command.commands.economy.TicTacToeCommand
 import bot.toby.command.commands.economy.TipCommand
 import bot.toby.command.commands.economy.TitleCommand
 import bot.toby.command.commands.economy.TobyCoinCommand
@@ -167,6 +168,7 @@ class CommandManagerTest {
             WelcomeCommand::class.java,
             ProfileCommand::class.java,
             RpsCommand::class.java,
+            TicTacToeCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
