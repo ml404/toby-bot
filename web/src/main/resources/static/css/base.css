@@ -1143,7 +1143,8 @@ td { font-size: 0.95rem; }
         grid-template-columns: auto 1fr auto;
         grid-template-areas:
             "rank   member  title"
-            "m1     m2      m3";
+            "m1     m2      m3"
+            "m4     m4      m4";
         align-items: center;
         column-gap: 10px;
         row-gap: 6px;
@@ -1189,7 +1190,8 @@ td { font-size: 0.95rem; }
     .lb-standings-table.mod-table td[data-label="TOBY"],
     .lb-standings-table.mod-table td[data-label="This month"],
     .lb-standings-table.mod-table td[data-label="Voice"],
-    .lb-standings-table.mod-table td[data-label="Portfolio"] {
+    .lb-standings-table.mod-table td[data-label="Portfolio"],
+    .lb-standings-table.mod-table td[data-label="XP"] {
         display: flex;
         flex-direction: column;
         gap: 1px;
@@ -1210,11 +1212,20 @@ td { font-size: 0.95rem; }
         align-items: flex-end;
         text-align: right;
     }
+    /* XP gets its own full-width row below the other metrics so the
+       Credits/Month/Voice strip stays the visual hero of the card.
+       Centered to balance the 3-cell row above. */
+    .lb-standings-table.mod-table td[data-label="XP"] {
+        grid-area: m4;
+        align-items: center;
+        text-align: center;
+    }
     .lb-standings-table.mod-table td[data-label="Credits"]::before,
     .lb-standings-table.mod-table td[data-label="TOBY"]::before,
     .lb-standings-table.mod-table td[data-label="This month"]::before,
     .lb-standings-table.mod-table td[data-label="Voice"]::before,
-    .lb-standings-table.mod-table td[data-label="Portfolio"]::before {
+    .lb-standings-table.mod-table td[data-label="Portfolio"]::before,
+    .lb-standings-table.mod-table td[data-label="XP"]::before {
         display: block;
         content: attr(data-label);
         font-size: 0.6rem;
