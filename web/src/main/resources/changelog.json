@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Broken activity page — pre-compute chart view in controller",
+    "summary": "The Activity sub-page at `/moderation/{guildId}/activity` (added in PR #558) is rendering the bot's generic \"Something went wrong / Error 200 — OK\" error block mid-page and cutting off the second chart. User reproduced on a deployed guild — screenshot showed the page intro and \"MESSAGES PER DAY\" heading render correctly, then \"Total over window:\" with no value, then the error block + footer. ### Root cause The template called `T(web.service.ActivityChartsService).totalValu…",
+    "emoji": "🛡️",
+    "prNumber": 561
+  },
+  {
+    "date": "May 2026",
     "title": "Label XP on mobile leaderboard cards",
     "summary": "PR #558 added an XP column to the Members standings table but missed updating the mobile card view (≤ 600px). The standings table collapses to a CSS-grid card per row on mobile; the XP cell had `data-label=\"XP\"` set in the template but no `grid-area` rule and wasn't in the `::before { content: attr(data-label) }` allow-list. CSS Grid auto-placed it into row 3 col 1 as a bare unlabelled number floating below the three labelled metric cells. User confirmed via screenshot — t…",
     "emoji": "🔨",
