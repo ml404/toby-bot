@@ -1,8 +1,10 @@
 package database.service
 
+import common.events.RpsResolvedEvent
 import database.dto.ConfigDto
 import database.rps.RpsEngine
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -38,6 +40,7 @@ class RpsService @Autowired constructor(
     private val jackpotService: JackpotService,
     private val configService: ConfigService,
     private val xpAwardService: XpAwardService,
+    private val eventPublisher: ApplicationEventPublisher? = null,
 ) {
     sealed interface StartOutcome {
         data class Ok(val initiatorBalance: Long) : StartOutcome
@@ -259,22 +262,6 @@ class RpsService @Autowired constructor(
         )
     }
 
-    /**
-     * Refund both players the stake — only used on PENDING-stage
-     * timeout / decline when [acceptMatch] hasn't fired yet. Safe
-     * no-op when stake is 0.
-     *
-     * (Kept separate from [resolveMatch] because at the pending stage
-     * no one has been debited; resolveMatch's accounting assumes the
-     * stake is already locked in the users' negative balance.)
-     */
-    fun refundPending(@Suppress("UNUSED_PARAMETER") initiatorDiscordId: Long, @Suppress("UNUSED_PARAMETER") opponentDiscordId: Long, @Suppress("UNUSED_PARAMETER") guildId: Long, @Suppress("UNUSED_PARAMETER") stake: Long) {
-        // No-op by design — the pending stage never debits. Method
-        // exists so callers can call it unconditionally and read like
-        // the lifecycle is symmetric, the same way `cancel()` on the
-        // pending duel registry produces no DB writes.
-    }
-
     private fun payWinner(
         winner: database.dto.UserDto,
         loser: database.dto.UserDto,
@@ -298,7 +285,7 @@ class RpsService @Autowired constructor(
             amount = WIN_XP,
             reason = "rps:win",
         )
-        return ResolveOutcome.Win(
+        val outcome = ResolveOutcome.Win(
             winnerDiscordId = winner.discordId,
             loserDiscordId = loser.discordId,
             winnerChoice = winnerChoice,
@@ -310,6 +297,8 @@ class RpsService @Autowired constructor(
             lossTribute = tribute,
             xpGranted = xpGranted,
         )
+        publishResolved(outcome, guildId)
+        return outcome
     }
 
     private fun resolveFreePlay(
@@ -361,7 +350,7 @@ class RpsService @Autowired constructor(
             amount = WIN_XP,
             reason = "rps:win",
         )
-        return ResolveOutcome.Win(
+        val outcome = ResolveOutcome.Win(
             winnerDiscordId = winnerDiscordId,
             loserDiscordId = loserDiscordId,
             winnerChoice = winnerChoice,
@@ -372,6 +361,27 @@ class RpsService @Autowired constructor(
             loserNewBalance = 0L,
             lossTribute = 0L,
             xpGranted = xpGranted,
+        )
+        publishResolved(outcome, guildId)
+        return outcome
+    }
+
+    /**
+     * Surfaces the resolution to `AchievementEventHandler` for
+     * `first_rps_win` / `rps_wins_*` / `rps_losses_*` progression.
+     * Draws and double-no-pick never publish — no winner, no loser.
+     * Free-play wins DO publish so achievements unlock regardless of
+     * whether anyone bet.
+     */
+    private fun publishResolved(outcome: ResolveOutcome.Win, guildId: Long) {
+        eventPublisher?.publishEvent(
+            RpsResolvedEvent(
+                winnerDiscordId = outcome.winnerDiscordId,
+                loserDiscordId = outcome.loserDiscordId,
+                guildId = guildId,
+                stake = outcome.stake,
+                pot = outcome.pot,
+            )
         )
     }
 

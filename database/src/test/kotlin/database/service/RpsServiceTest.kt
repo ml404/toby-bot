@@ -1,5 +1,6 @@
 package database.service
 
+import common.events.RpsResolvedEvent
 import database.dto.ConfigDto
 import database.dto.UserDto
 import database.rps.RpsEngine
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.springframework.context.ApplicationEventPublisher
 
 /**
  * Behavioural tests for [RpsService]. Cover the four resolve branches
@@ -29,6 +31,7 @@ class RpsServiceTest {
     private lateinit var jackpotService: JackpotService
     private lateinit var configService: ConfigService
     private lateinit var xpAwardService: XpAwardService
+    private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var service: RpsService
 
     @BeforeEach
@@ -37,7 +40,8 @@ class RpsServiceTest {
         jackpotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         xpAwardService = mockk(relaxed = true)
-        service = RpsService(userService, jackpotService, configService, xpAwardService)
+        eventPublisher = mockk(relaxed = true)
+        service = RpsService(userService, jackpotService, configService, xpAwardService, eventPublisher)
 
         // Default stake bounds: 0..500 (the RPS defaults).
         every { configService.getConfigByName(ConfigDto.Configurations.RPS_MIN_STAKE.configValue, any()) } returns null
@@ -222,6 +226,81 @@ class RpsServiceTest {
         assertEquals(10L, win.xpGranted)
         // No user-table writes on free play.
         verify(exactly = 0) { userService.updateUser(any()) }
+    }
+
+    // ---- achievement event publishing ----
+
+    @Test
+    fun `resolveMatch publishes RpsResolvedEvent on a clean win`() {
+        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
+        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+
+        service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = RpsEngine.Choice.ROCK,
+            opponentChoice = RpsEngine.Choice.SCISSORS,
+        )
+
+        verify(exactly = 1) {
+            eventPublisher.publishEvent(
+                match<RpsResolvedEvent> {
+                    it.winnerDiscordId == initiatorId &&
+                        it.loserDiscordId == opponentId &&
+                        it.guildId == guildId &&
+                        it.stake == 50L &&
+                        it.pot == 100L
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `resolveMatch publishes RpsResolvedEvent on free-play wins too`() {
+        // Free-play wins must still fire the event so `first_rps_win`
+        // can unlock for players who never bet a credit.
+        service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 0L,
+            initiatorChoice = RpsEngine.Choice.ROCK,
+            opponentChoice = RpsEngine.Choice.SCISSORS,
+        )
+
+        verify(exactly = 1) {
+            eventPublisher.publishEvent(
+                match<RpsResolvedEvent> {
+                    it.winnerDiscordId == initiatorId &&
+                        it.stake == 0L &&
+                        it.pot == 0L
+                }
+            )
+        }
+    }
+
+    @Test
+    fun `resolveMatch does NOT publish on a draw`() {
+        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
+        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+
+        service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = RpsEngine.Choice.PAPER,
+            opponentChoice = RpsEngine.Choice.PAPER,
+        )
+
+        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
+    }
+
+    @Test
+    fun `resolveMatch does NOT publish on double-no-pick`() {
+        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
+        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+
+        service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = null,
+            opponentChoice = null,
+        )
+
+        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
     }
 
     @Test

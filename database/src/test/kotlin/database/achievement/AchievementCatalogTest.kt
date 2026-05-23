@@ -75,6 +75,7 @@ class AchievementCatalogTest {
             "tip_giver", "tips_sent_10", "tips_sent_50",
             "first_duel_win", "duel_wins_10", "duel_wins_25", "duel_wins_50", "duel_wins_100",
             "duel_losses_5", "duel_losses_25",
+            "first_rps_win", "rps_wins_10", "rps_wins_25", "rps_losses_5",
         ).forEach { code ->
             assertNotNull(AchievementCatalog.byCode(code), "missing achievement '$code'")
         }
@@ -107,6 +108,7 @@ class AchievementCatalogTest {
             "tip_giver", "tips_sent_10", "tips_sent_50",
             "first_duel_win", "duel_wins_10", "duel_wins_25", "duel_wins_50", "duel_wins_100",
             "duel_losses_5", "duel_losses_25",
+            "first_rps_win", "rps_wins_10", "rps_wins_25", "rps_losses_5",
             "lottery_winner", "lottery_wins_3", "lottery_wins_10", "lottery_wins_25",
             "intro_set",
             "voice_10h", "voice_100h", "voice_250h", "voice_500h", "voice_1000h",
