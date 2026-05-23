@@ -429,6 +429,49 @@ object AchievementCatalog {
             threshold = 5
         ),
 
+        // Tic-Tac-Toe — same shape as the RPS achievements above.
+        // Triggered by `TicTacToeResolvedEvent`; published on every
+        // winner-bearing match (free play included), skipped on draw.
+        AchievementSpec(
+            code = "first_tictactoe_win",
+            name = "Three in a Row",
+            description = "Win your first Tic-Tac-Toe match.",
+            category = "casino",
+            icon = "❌",
+            xpReward = 50,
+            creditReward = 50
+        ),
+        AchievementSpec(
+            code = "tictactoe_wins_10",
+            name = "Grid Tactician",
+            description = "Win 10 Tic-Tac-Toe matches.",
+            category = "casino",
+            icon = "⭕",
+            xpReward = 150,
+            creditReward = 200,
+            threshold = 10
+        ),
+        AchievementSpec(
+            code = "tictactoe_wins_25",
+            name = "Center Square",
+            description = "Win 25 Tic-Tac-Toe matches.",
+            category = "casino",
+            icon = "🟦",
+            xpReward = 300,
+            creditReward = 400,
+            threshold = 25
+        ),
+        AchievementSpec(
+            code = "tictactoe_losses_5",
+            name = "Cornered",
+            description = "Lose 5 Tic-Tac-Toe matches.",
+            category = "consolation",
+            icon = "🟥",
+            xpReward = 50,
+            creditReward = 100,
+            threshold = 5
+        ),
+
         // Roadmap stubs for casino games that don't yet publish domain
         // events. Hidden until a future PR adds the corresponding event
         // and wires up an AchievementEventHandler listener; the codes

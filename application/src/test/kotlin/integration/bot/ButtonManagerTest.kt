@@ -93,6 +93,7 @@ class ButtonManagerTest {
             TeamCancelButton::class.java,
             TeamConfirmButton::class.java,
             TeamRerollButton::class.java,
+            TicTacToeButton::class.java,
             InstallExpressButton::class.java,
             InstallCustomButton::class.java,
             InstallSkipButton::class.java,
