@@ -148,7 +148,7 @@ class RpsSessionRegistryTest {
         val scheduler = ScheduledThreadPoolExecutor(1)
         try {
             val registry = RpsSessionRegistry(
-                pendingTtl = Duration.ofMillis(50),
+                pendingTtl = Duration.ofMillis(100),
                 pickTtl = Duration.ofMinutes(5),
                 scheduler = scheduler,
             )
@@ -156,7 +156,9 @@ class RpsSessionRegistryTest {
             registry.register(guildId, initiatorId, opponentId, stake = 10L) { _ ->
                 fired.incrementAndGet()
             }
-            Thread.sleep(150)
+            // Wide margin (1s for a 100ms TTL) so a slow CI runner can't
+            // race the assertion ahead of the scheduled fire.
+            Thread.sleep(1_000)
             assertEquals(1, fired.get(), "pending timeout must fire exactly once")
         } finally {
             scheduler.shutdownNow()
@@ -168,7 +170,7 @@ class RpsSessionRegistryTest {
         val scheduler = ScheduledThreadPoolExecutor(1)
         try {
             val registry = RpsSessionRegistry(
-                pendingTtl = Duration.ofMillis(50),
+                pendingTtl = Duration.ofMillis(100),
                 pickTtl = Duration.ofMinutes(5),
                 scheduler = scheduler,
             )
@@ -179,7 +181,7 @@ class RpsSessionRegistryTest {
             // Accept immediately — the still-pending pending-timeout
             // should observe LIVE and bail.
             registry.accept(session.id)
-            Thread.sleep(150)
+            Thread.sleep(1_000)
             assertEquals(0, fired.get(), "pending timeout must NOT fire once the session went LIVE")
         } finally {
             scheduler.shutdownNow()
