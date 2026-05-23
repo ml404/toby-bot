@@ -29,35 +29,25 @@ object WelcomeMessageRenderer {
     const val DEFAULT_WELCOME = "Welcome to {server}, {user}! You're our {membercount}-th member 🎉"
     const val DEFAULT_GOODBYE = "{user.name} has left {server}. We're now down to {membercount}."
 
+    /**
+     * Renders [template] (or [default] when [template] is blank/null) by
+     * substituting the four supported placeholders against the live JDA
+     * context. The welcome / goodbye distinction is collapsed into the
+     * caller's choice of [default] so the renderer doesn't need to know
+     * which surface it's serving — see [AnnouncementKind] for the bundle
+     * of (config keys, default template, embed accent) per surface.
+     */
     fun render(
         template: String?,
+        default: String,
         guild: Guild,
         user: User,
         memberDisplayName: String? = null,
     ): String {
-        val effective = template?.takeIf { it.isNotBlank() } ?: DEFAULT_WELCOME
-        return substitute(effective, guild, user, memberDisplayName)
-    }
-
-    fun renderGoodbye(
-        template: String?,
-        guild: Guild,
-        user: User,
-        memberDisplayName: String? = null,
-    ): String {
-        val effective = template?.takeIf { it.isNotBlank() } ?: DEFAULT_GOODBYE
-        return substitute(effective, guild, user, memberDisplayName)
-    }
-
-    private fun substitute(
-        template: String,
-        guild: Guild,
-        user: User,
-        memberDisplayName: String?,
-    ): String {
+        val effective = template?.takeIf { it.isNotBlank() } ?: default
         val displayName = memberDisplayName?.takeIf { it.isNotBlank() } ?: user.name
         val memberCount = guild.members.count { !it.user.isBot }
-        return template
+        return effective
             .replace("{user.name}", displayName)
             .replace("{user}", user.asMention)
             .replace("{server}", guild.name)

@@ -1,13 +1,13 @@
 package bot.toby.command.commands.moderation
 
-import bot.toby.welcome.WelcomeMessageRenderer
+import bot.toby.welcome.AnnouncementKind
+import common.discord.AutoRoleValidator
 import core.command.CommandContext
 import database.dto.ConfigDto.Configurations
 import database.dto.UserDto
 import database.service.AutoRoleService
 import database.service.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
-import net.dv8tion.jda.api.entities.Role
 import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -88,8 +88,8 @@ class WelcomeCommand @Autowired constructor(
             return
         }
         when (sub) {
-            SUB_CONFIGURE_WELCOME -> handleConfigure(event, guild.id, isWelcome = true)
-            SUB_CONFIGURE_GOODBYE -> handleConfigure(event, guild.id, isWelcome = false)
+            SUB_CONFIGURE_WELCOME -> handleConfigure(event, guild.id, AnnouncementKind.WELCOME)
+            SUB_CONFIGURE_GOODBYE -> handleConfigure(event, guild.id, AnnouncementKind.GOODBYE)
             SUB_AUTOROLE_ADD -> handleAutoRoleAdd(event, guild.idLong)
             SUB_AUTOROLE_REMOVE -> handleAutoRoleRemove(event, guild.idLong)
             else -> event.reply("Unknown subcommand `$sub`.").setEphemeral(true).queue()
@@ -99,7 +99,7 @@ class WelcomeCommand @Autowired constructor(
     private fun handleConfigure(
         event: SlashCommandInteractionEvent,
         guildId: String,
-        isWelcome: Boolean,
+        kind: AnnouncementKind,
     ) {
         val enabled = event.getOption(OPT_ENABLED)?.asBoolean ?: return
         // `setChannelTypes(ChannelType.TEXT)` on the OptionData guarantees
@@ -108,23 +108,18 @@ class WelcomeCommand @Autowired constructor(
         val channelOpt = event.getOption(OPT_CHANNEL)?.asChannel?.asTextChannel()
         val message = event.getOption(OPT_MESSAGE)?.asString
 
-        val keyEnabled = if (isWelcome) Configurations.WELCOME_ENABLED else Configurations.GOODBYE_ENABLED
-        val keyChannel = if (isWelcome) Configurations.WELCOME_CHANNEL else Configurations.GOODBYE_CHANNEL
-        val keyMessage = if (isWelcome) Configurations.WELCOME_MESSAGE else Configurations.GOODBYE_MESSAGE
-
         val rows = mutableListOf<Pair<String, String>>()
-        rows += keyEnabled.configValue to enabled.toString()
+        rows += kind.enabledKey.configValue to enabled.toString()
         if (channelOpt != null) {
-            rows += keyChannel.configValue to channelOpt.id
+            rows += kind.channelKey.configValue to channelOpt.id
         }
         if (message != null) {
-            rows += keyMessage.configValue to message
+            rows += kind.messageKey.configValue to message
         }
         configService.upsertAll(guildId, rows)
 
-        val label = if (isWelcome) "Welcome" else "Goodbye"
         val summary = buildString {
-            append("**$label settings saved**\n")
+            append("**${kind.label} settings saved**\n")
             append("• Enabled: ").append(enabled).append('\n')
             if (channelOpt != null) append("• Channel: ").append(channelOpt.asMention).append('\n')
             if (message != null) append("• Message: `").append(message).append('`')
@@ -134,8 +129,11 @@ class WelcomeCommand @Autowired constructor(
 
     private fun handleAutoRoleAdd(event: SlashCommandInteractionEvent, guildId: Long) {
         val role = event.getOption(OPT_ROLE)?.asRole ?: return
-        validateRole(event, role)?.let {
-            event.reply(it).setEphemeral(true).queue()
+        val self = event.guild?.selfMember
+        val error = if (self == null) "Could not resolve the bot's member entry in this server."
+        else AutoRoleValidator.validate(role, self)
+        if (error != null) {
+            event.reply(error).setEphemeral(true).queue()
             return
         }
         autoRoleService.add(guildId, role.idLong)
@@ -150,45 +148,20 @@ class WelcomeCommand @Autowired constructor(
             .setEphemeral(true).queue()
     }
 
-    private fun validateRole(event: SlashCommandInteractionEvent, role: Role): String? {
-        if (role.isPublicRole) return "Cannot auto-assign @everyone."
-        if (role.isManaged) return "${role.asMention} is managed by an integration and can't be assigned by the bot."
-        val self = event.guild?.selfMember
-        if (self != null && !self.canInteract(role)) {
-            return "${role.asMention} sits above TobyBot's role — move TobyBot's role higher to allow assignment."
-        }
-        return null
-    }
-
     private fun handleShow(event: SlashCommandInteractionEvent, guildId: Long, guildName: String) {
-        val welcomeEnabled = readBool(guildId.toString(), Configurations.WELCOME_ENABLED)
-        val welcomeChannel = readConfig(guildId.toString(), Configurations.WELCOME_CHANNEL)
-        val welcomeMessage = readConfig(guildId.toString(), Configurations.WELCOME_MESSAGE)
-        val goodbyeEnabled = readBool(guildId.toString(), Configurations.GOODBYE_ENABLED)
-        val goodbyeChannel = readConfig(guildId.toString(), Configurations.GOODBYE_CHANNEL)
-        val goodbyeMessage = readConfig(guildId.toString(), Configurations.GOODBYE_MESSAGE)
         val autoRoles = autoRoleService.listForGuild(guildId)
 
         val embed = EmbedBuilder()
             .setTitle("Welcome & Auto-role for $guildName")
-            .addField(
-                "Welcome announcement",
-                buildString {
-                    append("Enabled: ").append(welcomeEnabled).append('\n')
-                    append("Channel: ").append(formatChannel(welcomeChannel)).append('\n')
-                    append("Message: ").append(formatMessage(welcomeMessage, WelcomeMessageRenderer.DEFAULT_WELCOME))
-                },
-                false,
-            )
-            .addField(
-                "Goodbye announcement",
-                buildString {
-                    append("Enabled: ").append(goodbyeEnabled).append('\n')
-                    append("Channel: ").append(formatChannel(goodbyeChannel)).append('\n')
-                    append("Message: ").append(formatMessage(goodbyeMessage, WelcomeMessageRenderer.DEFAULT_GOODBYE))
-                },
-                false,
-            )
+            .also { builder ->
+                for (kind in AnnouncementKind.entries) {
+                    builder.addField(
+                        "${kind.label} announcement",
+                        renderShowSection(guildId.toString(), kind),
+                        false,
+                    )
+                }
+            }
             .addField(
                 "Auto-assigned roles (${autoRoles.size})",
                 if (autoRoles.isEmpty()) "_None_"
@@ -197,6 +170,12 @@ class WelcomeCommand @Autowired constructor(
             )
             .build()
         event.replyEmbeds(embed).setEphemeral(true).queue()
+    }
+
+    private fun renderShowSection(guildId: String, kind: AnnouncementKind): String = buildString {
+        append("Enabled: ").append(readBool(guildId, kind.enabledKey)).append('\n')
+        append("Channel: ").append(formatChannel(readConfig(guildId, kind.channelKey))).append('\n')
+        append("Message: ").append(formatMessage(readConfig(guildId, kind.messageKey), kind.defaultTemplate))
     }
 
     private fun readConfig(guildId: String, key: Configurations): String? =

@@ -1,6 +1,8 @@
 package bot.toby.handler
 
+import bot.toby.welcome.AnnouncementKind
 import bot.toby.welcome.WelcomeMessageRenderer
+import common.discord.AutoRoleValidator
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations
 import database.service.AutoRoleService
@@ -24,8 +26,12 @@ import org.springframework.stereotype.Service
  *  - `onGuildMemberRemove` — posts the goodbye embed (if `GOODBYE_ENABLED`).
  *
  * Each side is independently toggled so admins can run one without the
- * other. Channel resolution prefers the configured `*_CHANNEL`; if that
- * row is blank, unparseable, missing, or non-postable, falls back to the
+ * other. The welcome / goodbye paths are otherwise structurally identical
+ * — both collapse onto [postIfEnabled] with the per-surface knowledge
+ * (config keys, default text, embed accent) carried by [AnnouncementKind].
+ *
+ * Channel resolution prefers the configured `*_CHANNEL`; if that row is
+ * blank, unparseable, missing, or non-postable, falls back to the
  * guild's system channel. If neither is postable the listener logs and
  * returns silently — never let a transient JDA-side failure kill the
  * dispatch thread.
@@ -42,31 +48,16 @@ class WelcomeAndAutoRoleHandler(
         val guild = event.guild
         val member = event.member
         runCatching { assignAutoRoles(guild, member) }
-            .onFailure {
-                logger.error {
-                    "Auto-role assignment failed for guild ${guild.id} member ${member.id}: " +
-                        "${it.javaClass.simpleName}: ${it.message}"
-                }
-            }
-        runCatching { postWelcomeIfEnabled(guild, member) }
-            .onFailure {
-                logger.error {
-                    "Welcome announcement failed for guild ${guild.id} member ${member.id}: " +
-                        "${it.javaClass.simpleName}: ${it.message}"
-                }
-            }
+            .onFailure { logFailure("Auto-role assignment", guild, member.id, it) }
+        runCatching { postIfEnabled(AnnouncementKind.WELCOME, guild, member.user, member.effectiveName) }
+            .onFailure { logFailure("Welcome announcement", guild, member.id, it) }
     }
 
     override fun onGuildMemberRemove(event: GuildMemberRemoveEvent) {
         val guild = event.guild
         val user = event.user
-        runCatching { postGoodbyeIfEnabled(guild, user, event.member) }
-            .onFailure {
-                logger.error {
-                    "Goodbye announcement failed for guild ${guild.id} user ${user.id}: " +
-                        "${it.javaClass.simpleName}: ${it.message}"
-                }
-            }
+        runCatching { postIfEnabled(AnnouncementKind.GOODBYE, guild, user, event.member?.effectiveName) }
+            .onFailure { logFailure("Goodbye announcement", guild, user.id, it) }
     }
 
     private fun assignAutoRoles(guild: Guild, member: Member) {
@@ -74,9 +65,7 @@ class WelcomeAndAutoRoleHandler(
         if (rows.isEmpty()) return
         val self = guild.selfMember
         if (!self.hasPermission(Permission.MANAGE_ROLES)) {
-            logger.warn {
-                "Skipping auto-role for guild ${guild.id} — bot lacks MANAGE_ROLES"
-            }
+            logger.warn { "Skipping auto-role for guild ${guild.id} — bot lacks MANAGE_ROLES" }
             return
         }
         for (row in rows) {
@@ -85,14 +74,9 @@ class WelcomeAndAutoRoleHandler(
                 logger.warn { "Auto-role ${row.roleId} no longer exists in guild ${guild.id}" }
                 continue
             }
-            if (role.isManaged) {
-                logger.warn { "Skipping managed role ${role.id} (${role.name}) — integration-owned" }
-                continue
-            }
-            if (!self.canInteract(role)) {
-                logger.warn {
-                    "Bot can't assign role ${role.id} (${role.name}) — its role sits above the bot's"
-                }
+            val error = AutoRoleValidator.validate(role, self)
+            if (error != null) {
+                logger.warn { "Skipping role ${role.id} (${role.name}) for guild ${guild.id}: $error" }
                 continue
             }
             guild.addRoleToMember(member, role).queue(
@@ -106,39 +90,23 @@ class WelcomeAndAutoRoleHandler(
         }
     }
 
-    private fun postWelcomeIfEnabled(guild: Guild, member: Member) {
-        if (!isFlagEnabled(guild.id, Configurations.WELCOME_ENABLED)) return
-        val channel = resolveChannel(guild, Configurations.WELCOME_CHANNEL) ?: run {
-            logger.warn { "Welcome enabled for ${guild.id} but no postable channel resolved" }
+    private fun postIfEnabled(
+        kind: AnnouncementKind,
+        guild: Guild,
+        user: User,
+        memberDisplayName: String?,
+    ) {
+        if (!isFlagEnabled(guild.id, kind.enabledKey)) return
+        val channel = resolveChannel(guild, kind.channelKey) ?: run {
+            logger.warn { "${kind.label} enabled for ${guild.id} but no postable channel resolved" }
             return
         }
-        val template = readConfig(guild.id, Configurations.WELCOME_MESSAGE)
-        val text = WelcomeMessageRenderer.render(template, guild, member.user, member.effectiveName)
-        channel.sendMessageEmbeds(buildEmbed(member.user, text, isWelcome = true)).queue(
-            { logger.info { "Posted welcome to ${guild.id} #${channel.name}" } },
+        val template = readConfig(guild.id, kind.messageKey)
+        val text = WelcomeMessageRenderer.render(template, kind.defaultTemplate, guild, user, memberDisplayName)
+        channel.sendMessageEmbeds(buildEmbed(user, text, kind.embedColor)).queue(
+            { logger.info { "Posted ${kind.label} to ${guild.id} #${channel.name}" } },
             { err ->
-                logger.warn { "Failed to post welcome to ${guild.id} #${channel.name}: ${err.message}" }
-            },
-        )
-    }
-
-    private fun postGoodbyeIfEnabled(guild: Guild, user: User, member: Member?) {
-        if (!isFlagEnabled(guild.id, Configurations.GOODBYE_ENABLED)) return
-        val channel = resolveChannel(guild, Configurations.GOODBYE_CHANNEL) ?: run {
-            logger.warn { "Goodbye enabled for ${guild.id} but no postable channel resolved" }
-            return
-        }
-        val template = readConfig(guild.id, Configurations.GOODBYE_MESSAGE)
-        val text = WelcomeMessageRenderer.renderGoodbye(
-            template,
-            guild,
-            user,
-            member?.effectiveName,
-        )
-        channel.sendMessageEmbeds(buildEmbed(user, text, isWelcome = false)).queue(
-            { logger.info { "Posted goodbye to ${guild.id} #${channel.name}" } },
-            { err ->
-                logger.warn { "Failed to post goodbye to ${guild.id} #${channel.name}: ${err.message}" }
+                logger.warn { "Failed to post ${kind.label} to ${guild.id} #${channel.name}: ${err.message}" }
             },
         )
     }
@@ -166,16 +134,17 @@ class WelcomeAndAutoRoleHandler(
         return self.hasPermission(channel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
     }
 
-    private fun buildEmbed(user: User, text: String, isWelcome: Boolean): MessageEmbed {
-        val builder = EmbedBuilder()
+    private fun buildEmbed(user: User, text: String, color: Int): MessageEmbed =
+        EmbedBuilder()
             .setDescription(text)
-            .setColor(if (isWelcome) WELCOME_COLOR else GOODBYE_COLOR)
+            .setColor(color)
             .setThumbnail(user.effectiveAvatarUrl)
-        return builder.build()
-    }
+            .build()
 
-    companion object {
-        private const val WELCOME_COLOR = 0x57F287 // Discord "green"
-        private const val GOODBYE_COLOR = 0xED4245 // Discord "red"
+    private fun logFailure(label: String, guild: Guild, subjectId: String, error: Throwable) {
+        logger.error {
+            "$label failed for guild ${guild.id} subject $subjectId: " +
+                "${error.javaClass.simpleName}: ${error.message}"
+        }
     }
 }

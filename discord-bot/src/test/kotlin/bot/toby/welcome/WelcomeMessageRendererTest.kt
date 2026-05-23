@@ -43,12 +43,14 @@ class WelcomeMessageRendererTest {
         every { guild.members } returns listOf(humanMember, humanMember, humanMember, botMember)
     }
 
-    // ---- welcome path ----
+    // ---- substitution ----
 
     @Test
     fun `render substitutes all four placeholders`() {
         val template = "Hi {user} aka {user.name}, welcome to {server} (member #{membercount})"
-        val out = WelcomeMessageRenderer.render(template, guild, user, memberDisplayName = "Alice")
+        val out = WelcomeMessageRenderer.render(
+            template, WelcomeMessageRenderer.DEFAULT_WELCOME, guild, user, memberDisplayName = "Alice",
+        )
         assertEquals("Hi <@123> aka Alice, welcome to My Cool Guild (member #3)", out)
     }
 
@@ -56,6 +58,7 @@ class WelcomeMessageRendererTest {
     fun `render falls back to user name when member display name is blank`() {
         val out = WelcomeMessageRenderer.render(
             template = "Hi {user.name}",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
             guild = guild,
             user = user,
             memberDisplayName = "   ",
@@ -67,6 +70,7 @@ class WelcomeMessageRendererTest {
     fun `render falls back to user name when member display name is null`() {
         val out = WelcomeMessageRenderer.render(
             template = "Hi {user.name}",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
             guild = guild,
             user = user,
             memberDisplayName = null,
@@ -76,7 +80,13 @@ class WelcomeMessageRendererTest {
 
     @Test
     fun `render uses default template when caller supplies blank text`() {
-        val out = WelcomeMessageRenderer.render(template = "", guild = guild, user = user, memberDisplayName = "Alice")
+        val out = WelcomeMessageRenderer.render(
+            template = "",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
+            guild = guild,
+            user = user,
+            memberDisplayName = "Alice",
+        )
         // Default template expands {user}, {server}, {membercount}
         assertTrue(out.contains("<@123>"), "expected user mention in default template: $out")
         assertTrue(out.contains("My Cool Guild"), "expected guild name in default template: $out")
@@ -85,7 +95,12 @@ class WelcomeMessageRendererTest {
 
     @Test
     fun `render uses default template when caller supplies null text`() {
-        val out = WelcomeMessageRenderer.render(template = null, guild = guild, user = user)
+        val out = WelcomeMessageRenderer.render(
+            template = null,
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
+            guild = guild,
+            user = user,
+        )
         assertTrue(out.contains("My Cool Guild"), out)
     }
 
@@ -93,6 +108,7 @@ class WelcomeMessageRendererTest {
     fun `render passes unknown placeholders through verbatim`() {
         val out = WelcomeMessageRenderer.render(
             template = "Hi {usernme} (typo) — {user.name}",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
             guild = guild,
             user = user,
             memberDisplayName = "Alice",
@@ -107,6 +123,7 @@ class WelcomeMessageRendererTest {
     fun `render counts only non-bot members`() {
         val out = WelcomeMessageRenderer.render(
             template = "{membercount}",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
             guild = guild,
             user = user,
             memberDisplayName = "Alice",
@@ -122,6 +139,7 @@ class WelcomeMessageRendererTest {
         // consume `{user.name}` and leave a literal `.name` artefact.
         val out = WelcomeMessageRenderer.render(
             template = "{user} {user.name}",
+            default = WelcomeMessageRenderer.DEFAULT_WELCOME,
             guild = guild,
             user = user,
             memberDisplayName = "Alice",
@@ -130,39 +148,29 @@ class WelcomeMessageRendererTest {
         assertFalse(out.contains(".name"), "user_name token must be consumed before user: $out")
     }
 
-    // ---- goodbye path ----
+    // ---- default selection ----
 
     @Test
-    fun `renderGoodbye uses the goodbye default when template is blank`() {
-        val out = WelcomeMessageRenderer.renderGoodbye(
+    fun `render uses the supplied default for goodbye when template is blank`() {
+        val out = WelcomeMessageRenderer.render(
             template = null,
+            default = WelcomeMessageRenderer.DEFAULT_GOODBYE,
             guild = guild,
             user = user,
             memberDisplayName = null,
         )
-        // Default goodbye references {user.name} and {server}
+        // DEFAULT_GOODBYE references {user.name} and {server}
         assertTrue(out.contains("alice"), out)
         assertTrue(out.contains("My Cool Guild"), out)
     }
 
     @Test
-    fun `renderGoodbye substitutes placeholders the same way as render`() {
-        val out = WelcomeMessageRenderer.renderGoodbye(
-            template = "Goodbye {user.name} from {server}",
-            guild = guild,
-            user = user,
-            memberDisplayName = "Alice",
-        )
-        assertEquals("Goodbye Alice from My Cool Guild", out)
-    }
-
-    @Test
-    fun `default templates differ between welcome and goodbye`() {
+    fun `render with goodbye default produces different text than welcome default`() {
         // Same fixture, blank template, but the welcome and goodbye defaults
         // must produce different text — otherwise admins who opt into both
         // get duplicate messages on a quick join-then-leave.
-        val welcome = WelcomeMessageRenderer.render(null, guild, user, "Alice")
-        val goodbye = WelcomeMessageRenderer.renderGoodbye(null, guild, user, "Alice")
+        val welcome = WelcomeMessageRenderer.render(null, WelcomeMessageRenderer.DEFAULT_WELCOME, guild, user, "Alice")
+        val goodbye = WelcomeMessageRenderer.render(null, WelcomeMessageRenderer.DEFAULT_GOODBYE, guild, user, "Alice")
         assertFalse(welcome == goodbye, "welcome and goodbye defaults must differ")
     }
 }

@@ -206,7 +206,7 @@ class ModerationWebServiceWelcomeTest {
     fun `addAutoRole rejects role above the bot`() {
         val role = stubRole(7L, managed = false, public = false, canInteract = false)
         val err = service.addAutoRole(ownerId, guildId, role.idLong)
-        assertTrue(err!!.contains("move TobyBot's role above"))
+        assertTrue(err!!.contains("move TobyBot's role higher"))
         verify(exactly = 0) { autoRoleService.add(any(), any()) }
     }
 

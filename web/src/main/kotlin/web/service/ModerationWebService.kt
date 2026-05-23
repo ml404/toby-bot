@@ -1,5 +1,6 @@
 package web.service
 
+import common.discord.AutoRoleValidator
 import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
@@ -450,21 +451,16 @@ class ModerationWebService(
     }
 
     /**
-     * Add a role to the per-guild auto-assign list. Owner-only. Same
-     * "role exists / not managed / bot can interact" guardrails as
-     * [upsertLevelReward] — the join listener applies these too, but
-     * surfacing the failure at config time gives a clearer error than
-     * silently dropping new-member assignments later.
+     * Add a role to the per-guild auto-assign list. Owner-only. Defers
+     * to [AutoRoleValidator] for the "role assignable?" check so the
+     * three call sites (slash command, this endpoint, the join listener)
+     * never drift on error wording or the rule set.
      */
     fun addAutoRole(actorDiscordId: Long, guildId: Long, roleId: Long): String? {
         if (!isOwner(actorDiscordId, guildId)) return "Only the server owner can change guild config."
         val guild = jda.getGuildById(guildId) ?: return "Bot is not in that server."
         val role = guild.getRoleById(roleId) ?: return "Role not found in this server."
-        if (role.isPublicRole) return "Cannot auto-assign @everyone."
-        if (role.isManaged) return "That role is managed by an integration and can't be assigned by the bot."
-        if (!guild.selfMember.canInteract(role)) {
-            return "The bot's highest role is below ${role.name} — move TobyBot's role above it to allow assignment."
-        }
+        AutoRoleValidator.validate(role, guild.selfMember)?.let { return it }
         autoRoleService.add(guildId, roleId)
         return null
     }
