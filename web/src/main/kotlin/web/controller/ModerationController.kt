@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.ActivityChartsService
 import web.service.ModerationWebService
 import web.util.DefaultGuildCookie
 import web.util.DefaultGuildRedirect
@@ -32,6 +33,7 @@ import web.util.displayName
 @RequestMapping("/moderation")
 class ModerationController(
     private val moderationWebService: ModerationWebService,
+    private val activityChartsService: ActivityChartsService,
     @param:Value($$"${spring.security.oauth2.client.registration.discord.client-id}")
     private val discordClientId: String
 ) {
@@ -184,6 +186,32 @@ class ModerationController(
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())
         "moderation/leveling"
+    }
+
+    @GetMapping("/{guildId}/activity")
+    fun activityPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = WebGuildAccess.requireForPage(
+        user, guildId, ra, lobbyPath = "/moderation/guilds",
+        check = moderationWebService::canModerate,
+        deniedMessage = "You are not allowed to moderate that server.",
+    ) { discordId ->
+        val overview = moderationWebService.getGuildOverview(guildId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireForPage "redirect:/moderation/guilds"
+        }
+        val messages = activityChartsService.messagesPerDay(guildId)
+        val voiceHours = activityChartsService.voiceHoursPerDay(guildId)
+        model.addAttribute("overview", overview)
+        model.addAttribute("messagesPerDay", messages)
+        model.addAttribute("voiceHoursPerDay", voiceHours)
+        model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("actorDiscordId", discordId.toString())
+        "moderation/activity"
     }
 
     /**

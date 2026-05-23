@@ -3,6 +3,7 @@ package bot.toby.handler
 import bot.toby.emote.Emotes
 import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
+import database.service.MessageActivityBuffer
 import database.service.XpAwardService
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -24,7 +25,8 @@ import java.util.concurrent.TimeUnit
  */
 @Service
 class MessageChatListener @Autowired constructor(
-    private val xpAwardService: XpAwardService
+    private val xpAwardService: XpAwardService,
+    private val messageActivityBuffer: MessageActivityBuffer,
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -46,6 +48,11 @@ class MessageChatListener @Autowired constructor(
             val guild = event.guild
             val member = event.member
             if (author.isBot || event.isWebhookMessage) return
+
+            // Coarse per-guild per-day counter feeding the moderation Activity
+            // chart. Runs before awardMessageXp so even a user past their daily
+            // XP cap still shows up in the messages-per-day total.
+            messageActivityBuffer.record(guild.idLong)
 
             awardMessageXp(event)
 

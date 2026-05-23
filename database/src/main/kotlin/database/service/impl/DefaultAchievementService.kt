@@ -153,6 +153,18 @@ class DefaultAchievementService(
             }
     }
 
+    override fun progressByCodesForGuild(
+        guildId: Long,
+        codes: Collection<String>,
+    ): List<AchievementService.ProgressByCode> =
+        persistence.progressByCodesForGuild(guildId, codes).map { row ->
+            AchievementService.ProgressByCode(
+                discordId = row.discordId,
+                code = row.code,
+                progress = row.progress,
+            )
+        }
+
     private fun finalizeUnlock(
         discordId: Long,
         guildId: Long,

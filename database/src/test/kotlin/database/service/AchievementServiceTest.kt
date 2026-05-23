@@ -312,6 +312,20 @@ class AchievementServiceTest {
             progress[Triple(row.discordId, row.guildId, row.achievementId)] = row
             return row
         }
+        override fun progressByCodesForGuild(
+            guildId: Long,
+            codes: Collection<String>,
+        ): List<database.persistence.ProgressByCodeRow> {
+            val codesSet = codes.toSet()
+            return progress.values.asSequence()
+                .filter { it.guildId == guildId }
+                .mapNotNull { p ->
+                    val code = catalogue[p.achievementId]?.code ?: return@mapNotNull null
+                    if (code !in codesSet || p.progress <= 0L) return@mapNotNull null
+                    database.persistence.ProgressByCodeRow(p.discordId, code, p.progress)
+                }
+                .toList()
+        }
     }
 
     private class RecordingEventPublisher : ApplicationEventPublisher {

@@ -1,5 +1,6 @@
 package web.service
 
+import database.service.AchievementService
 import database.service.ActivityMonthlyRollupService
 import database.service.MonthlyCreditSnapshotService
 import database.service.TitleService
@@ -23,6 +24,7 @@ class LeaderboardWebService(
     private val snapshotService: MonthlyCreditSnapshotService,
     private val membership: GuildMembership,
     private val rollupService: ActivityMonthlyRollupService,
+    private val achievementService: AchievementService,
 ) {
 
     companion object {
@@ -35,6 +37,31 @@ class LeaderboardWebService(
         const val HISTORY_MONTHS = 12
         const val SPARK_WIDTH = 80
         const val SPARK_HEIGHT = 20
+
+        /**
+         * Per-game win-counter codes consumed by the Champions tab. Each
+         * code is the smallest-tier counter on the achievement catalog
+         * (`*_wins_10`); every PvP match resolution increments all tiers
+         * of the same game by 1, so reading the `_wins_10` counter gives
+         * the user's total wins regardless of whether higher tiers have
+         * unlocked.
+         */
+        val CHAMPIONS_WIN_CODES: List<String> = listOf(
+            "duel_wins_10",
+            "rps_wins_10",
+            "tictactoe_wins_10",
+            "connect4_wins_10",
+        )
+
+        /** UI labels for each champion-tracked game, indexed by the win-counter code. */
+        val CHAMPION_GAME_LABELS: Map<String, String> = mapOf(
+            "duel_wins_10" to "Duel",
+            "rps_wins_10" to "RPS",
+            "tictactoe_wins_10" to "Tic-Tac-Toe",
+            "connect4_wins_10" to "Connect 4",
+        )
+
+        const val CHAMPIONS_LIMIT = 10
     }
 
     fun getGuildsWhereUserCanView(accessToken: String, discordId: Long): List<LeaderboardGuildCard> {
@@ -78,6 +105,7 @@ class LeaderboardWebService(
         val resorted = when (sort) {
             LeaderboardSort.THIS_MONTH -> rawRows.sortedByDescending { it.creditsEarnedThisMonth }
             LeaderboardSort.LIFETIME -> rawRows
+            LeaderboardSort.XP -> rawRows.sortedByDescending { it.xp }
         }.mapIndexed { i, r -> r.copy(rank = i + 1) }
 
         val totalCreditsThisMonth = rawRows.sumOf { it.creditsEarnedThisMonth }
@@ -110,7 +138,52 @@ class LeaderboardWebService(
             topGames = topGamesPanel.rows,
             topGamesMonth = topGamesPanel.selectedMonth,
             topGamesMonthOptions = topGamesPanel.monthOptions,
+            champions = buildChampions(guild, guildId),
         )
+    }
+
+    /**
+     * Top [CHAMPIONS_LIMIT] users by total PvP wins across the four games
+     * (`/duel`, `/rps`, `/tictactoe`, `/connect4`). Reads the `_wins_10`
+     * achievement counter for each game — every match resolution
+     * increments all tiers of the same game by 1, so the lowest-tier
+     * counter holds the user's total wins.
+     */
+    private fun buildChampions(
+        guild: net.dv8tion.jda.api.entities.Guild,
+        guildId: Long,
+    ): List<ChampionRow> {
+        val rows = runCatching {
+            achievementService.progressByCodesForGuild(guildId, CHAMPIONS_WIN_CODES)
+        }.getOrElse { return emptyList() }
+        if (rows.isEmpty()) return emptyList()
+        val byUser: Map<Long, Map<String, Long>> = rows
+            .groupBy { it.discordId }
+            .mapValues { (_, ownerRows) ->
+                ownerRows.associate { it.code to it.progress }
+            }
+        return byUser.entries.asSequence()
+            .map { (discordId, perCode) ->
+                val totalWins = perCode.values.sum()
+                val member = guild.getMemberById(discordId)
+                ChampionRow(
+                    rank = 0, // assigned after sorting
+                    discordId = discordId.toString(),
+                    name = member?.effectiveName ?: "Unknown",
+                    avatarUrl = member?.effectiveAvatarUrl,
+                    totalWins = totalWins,
+                    perGame = CHAMPIONS_WIN_CODES.map { code ->
+                        ChampionGameWinCount(
+                            label = CHAMPION_GAME_LABELS[code] ?: code,
+                            wins = perCode[code] ?: 0L,
+                        )
+                    },
+                )
+            }
+            .sortedByDescending { it.totalWins }
+            .take(CHAMPIONS_LIMIT)
+            .mapIndexed { index, row -> row.copy(rank = index + 1) }
+            .toList()
     }
 
     private data class TopGamesPanel(
@@ -350,6 +423,7 @@ data class LeaderboardGuildView(
     val topGames: List<TopGameRow> = emptyList(),
     val topGamesMonth: LocalDate? = null,
     val topGamesMonthOptions: List<MonthOption> = emptyList(),
+    val champions: List<ChampionRow> = emptyList(),
 ) {
     @Suppress("unused") // consumed by templates/leaderboard.html via Thymeleaf
     val totalVoiceThisMonthDisplay: String get() = formatDuration(totalVoiceThisMonth)
@@ -363,7 +437,8 @@ data class LeaderboardGuildView(
 
 enum class LeaderboardSort(val queryValue: String) {
     THIS_MONTH("month"),
-    LIFETIME("lifetime");
+    LIFETIME("lifetime"),
+    XP("xp");
 
     companion object {
         fun fromQuery(s: String?): LeaderboardSort =
@@ -427,4 +502,22 @@ data class MonthOption(
     val label: String,
     val isSelected: Boolean,
     val hasData: Boolean,
+)
+
+/**
+ * One row on the Champions tab — a user with a total PvP-wins count
+ * across the four games plus the per-game breakdown for the badge stack.
+ */
+data class ChampionRow(
+    val rank: Int,
+    val discordId: String,
+    val name: String,
+    val avatarUrl: String?,
+    val totalWins: Long,
+    val perGame: List<ChampionGameWinCount>,
+)
+
+data class ChampionGameWinCount(
+    val label: String,
+    val wins: Long,
 )

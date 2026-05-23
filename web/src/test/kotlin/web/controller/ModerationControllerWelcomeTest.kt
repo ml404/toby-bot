@@ -36,7 +36,7 @@ class ModerationControllerWelcomeTest {
             every { getAttribute<String>("id") } returns actorId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
-        controller = ModerationController(moderationWebService, "test-client-id")
+        controller = ModerationController(moderationWebService, mockk(relaxed = true), "test-client-id")
     }
 
     // ---- addAutoRole ----

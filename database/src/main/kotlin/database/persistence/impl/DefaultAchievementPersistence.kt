@@ -4,6 +4,7 @@ import database.dto.AchievementDto
 import database.dto.AchievementProgressDto
 import database.dto.UserAchievementDto
 import database.persistence.AchievementPersistence
+import database.persistence.ProgressByCodeRow
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.TypedQuery
@@ -89,5 +90,32 @@ class DefaultAchievementPersistence : AchievementPersistence {
             updatedAt = row.updatedAt
         } ?: row
         return entityManager.saveOrMerge(target, isNew = { existing == null })
+    }
+
+    override fun progressByCodesForGuild(
+        guildId: Long,
+        codes: Collection<String>,
+    ): List<ProgressByCodeRow> {
+        if (codes.isEmpty()) return emptyList()
+        // One pass: join progress + catalog, filter by code, keep non-zero so the
+        // result set scales with active winners rather than members × codes.
+        val jpql = "select p.discordId, a.code, p.progress " +
+            "from AchievementProgressDto p, AchievementDto a " +
+            "where a.id = p.achievementId " +
+            "and p.guildId = :guildId " +
+            "and a.code in :codes " +
+            "and p.progress > 0"
+        val query = entityManager.createQuery(jpql)
+        query.setParameter("guildId", guildId)
+        query.setParameter("codes", codes)
+        @Suppress("UNCHECKED_CAST")
+        val rows = query.resultList as List<Array<Any?>>
+        return rows.map { cols ->
+            ProgressByCodeRow(
+                discordId = (cols[0] as Number).toLong(),
+                code = cols[1] as String,
+                progress = (cols[2] as Number).toLong(),
+            )
+        }
     }
 }

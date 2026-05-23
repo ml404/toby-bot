@@ -157,6 +157,12 @@
             <span class="lb-section-tab-label">🎮 Games</span>
             <span class="lb-section-tab-count" th:text="|${#lists.size(view.topGames)} games|">0 games</span>
         </button>
+        <button type="button" role="tab" class="lb-sort-option" data-tab="champions"
+                aria-selected="false"
+                th:if="${not #lists.isEmpty(view.champions)}">
+            <span class="lb-section-tab-label">⚔️ Champions</span>
+            <span class="lb-section-tab-count" th:text="|${#lists.size(view.champions)} winners|">0 winners</span>
+        </button>
     </nav>
 
     <div class="lb-tab-panel" data-tab-panel="members" role="tabpanel">
@@ -175,6 +181,13 @@
            th:classappend="${view.sort.name() == 'LIFETIME' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'LIFETIME'}">
             Current total
+        </a>
+        <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='xp')}"
+           role="tab"
+           class="lb-sort-option"
+           th:classappend="${view.sort.name() == 'XP' ? 'active' : ''}"
+           th:aria-selected="${view.sort.name() == 'XP'}">
+            XP
         </a>
     </nav>
 
@@ -196,6 +209,10 @@
                         <th class="lb-col-rank">#</th>
                         <th>Member</th>
                         <th>Prestige</th>
+                        <th class="lb-col-value"
+                            th:attr="aria-sort=${view.sort.name() == 'XP' ? 'descending' : 'none'}">
+                            ✨ XP
+                        </th>
                         <th class="lb-col-value"
                             th:attr="aria-sort=${view.sort.name() == 'LIFETIME' ? 'descending' : 'none'}">
                             💰 Credits
@@ -223,6 +240,9 @@
                                       th:text="'LVL ' + ${row.level}">LVL 0</span>
                                 <span th:if="${row.title != null}" class="lb-title-pill" th:text="${row.title}"></span>
                             </div>
+                        </td>
+                        <td data-label="XP" class="lb-col-value">
+                            <span class="lb-value" th:text="${row.xp}">0</span>
                         </td>
                         <td data-label="Credits" class="lb-col-value">
                             <strong class="lb-value lb-value-credits" th:text="${row.socialCredit}">0</strong>
@@ -416,6 +436,59 @@
     </div>
 
     </div><!-- /lb-tab-panel topgames -->
+
+    <div class="lb-tab-panel" data-tab-panel="champions" role="tabpanel" hidden
+         th:if="${not #lists.isEmpty(view.champions)}">
+
+    <details class="lb-collapse" data-section="champions" open>
+        <summary class="lb-collapse-header">
+            <span class="lb-collapse-icon" aria-hidden="true">⚔️</span>
+            <span class="lb-collapse-title">PvP champions</span>
+            <span class="lb-collapse-count" th:text="${#lists.size(view.champions)} + ' winners'">0 winners</span>
+            <span class="lb-collapse-caret" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="18" height="18"><path fill="currentColor" d="M6 4l8 6-8 6V4z"/></svg>
+            </span>
+        </summary>
+        <div class="lb-collapse-body">
+            <div class="mod-table-wrap">
+                <table class="mod-table lb-standings-table">
+                    <thead>
+                    <tr>
+                        <th class="lb-col-rank">#</th>
+                        <th>Member</th>
+                        <th class="lb-col-value" aria-sort="descending">🏆 Total wins</th>
+                        <th>Per game</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${view.champions}">
+                        <td data-label="#">
+                            <span class="lb-rank"
+                                  th:classappend="${row.rank == 1 ? 'lb-rank-1' : (row.rank == 2 ? 'lb-rank-2' : (row.rank == 3 ? 'lb-rank-3' : ''))}"
+                                  th:text="${row.rank}">1</span>
+                        </td>
+                        <td data-label="Member">
+                            <div th:replace="~{fragments/memberCell :: cellLink(${row.name}, ${row.avatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${row.discordId})})}"></div>
+                        </td>
+                        <td data-label="Total wins" class="lb-col-value">
+                            <strong class="lb-value" th:text="${row.totalWins}">0</strong>
+                        </td>
+                        <td data-label="Per game">
+                            <div class="lb-prestige">
+                                <span class="lb-title-pill"
+                                      th:each="g : ${row.perGame}"
+                                      th:if="${g.wins > 0}"
+                                      th:text="${g.label} + ': ' + ${g.wins}">Duel: 0</span>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+
+    </div><!-- /lb-tab-panel champions -->
 
     <div class="empty-hero" th:if="${#lists.isEmpty(view.podium) and #lists.isEmpty(view.standings)}">
         <span class="emoji" aria-hidden="true">🏁</span>
