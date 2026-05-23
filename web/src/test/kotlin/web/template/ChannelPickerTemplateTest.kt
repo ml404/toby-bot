@@ -29,6 +29,7 @@ class ChannelPickerTemplateTest {
     private val pollHtml: String by lazy { readTemplate("templates/moderation/poll.html") }
     private val lotteryHtml: String by lazy { readTemplate("templates/moderation/lottery.html") }
     private val levelingHtml: String by lazy { readTemplate("templates/moderation/leveling.html") }
+    private val welcomeHtml: String by lazy { readTemplate("templates/moderation/welcome.html") }
 
     private fun readTemplate(path: String): String {
         val url = javaClass.classLoader.getResource(path)
@@ -139,6 +140,22 @@ class ChannelPickerTemplateTest {
         assertTrue(block.contains("valueField='id'"))
     }
 
+    @Test
+    fun `welcome WELCOME_CHANNEL row uses channelPicker`() {
+        val block = sectionForDataKey(welcomeHtml, "WELCOME_CHANNEL")
+        assertTrue(block.contains("fragments/channelPicker :: channelPicker"))
+        assertTrue(block.contains("valueField='id'"))
+        assertTrue(block.contains("valuePrefix='#'"))
+    }
+
+    @Test
+    fun `welcome GOODBYE_CHANNEL row uses channelPicker`() {
+        val block = sectionForDataKey(welcomeHtml, "GOODBYE_CHANNEL")
+        assertTrue(block.contains("fragments/channelPicker :: channelPicker"))
+        assertTrue(block.contains("valueField='id'"))
+        assertTrue(block.contains("valuePrefix='#'"))
+    }
+
     // ------------------------------------------------------------------------
     // Cross-template regression guard
     // ------------------------------------------------------------------------
@@ -179,6 +196,7 @@ class ChannelPickerTemplateTest {
             "poll" to pollHtml,
             "lottery" to lotteryHtml,
             "leveling" to levelingHtml,
+            "welcome" to welcomeHtml,
         )
         for ((name, html) in pages) {
             assertTrue(
