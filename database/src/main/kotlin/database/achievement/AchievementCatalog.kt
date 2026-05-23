@@ -386,6 +386,49 @@ object AchievementCatalog {
             threshold = 25
         ),
 
+        // RPS — same shape as the duel achievements above. Triggered by
+        // `RpsResolvedEvent`; published on every winner-bearing match
+        // (free play included), skipped on draw / double-no-pick.
+        AchievementSpec(
+            code = "first_rps_win",
+            name = "Best of One",
+            description = "Win your first Rock-Paper-Scissors match.",
+            category = "casino",
+            icon = "✊",
+            xpReward = 50,
+            creditReward = 50
+        ),
+        AchievementSpec(
+            code = "rps_wins_10",
+            name = "Mind Reader",
+            description = "Win 10 Rock-Paper-Scissors matches.",
+            category = "casino",
+            icon = "✋",
+            xpReward = 150,
+            creditReward = 200,
+            threshold = 10
+        ),
+        AchievementSpec(
+            code = "rps_wins_25",
+            name = "Tournament Hopeful",
+            description = "Win 25 Rock-Paper-Scissors matches.",
+            category = "casino",
+            icon = "✌️",
+            xpReward = 300,
+            creditReward = 400,
+            threshold = 25
+        ),
+        AchievementSpec(
+            code = "rps_losses_5",
+            name = "Predictable",
+            description = "Lose 5 Rock-Paper-Scissors matches.",
+            category = "consolation",
+            icon = "🪨",
+            xpReward = 50,
+            creditReward = 100,
+            threshold = 5
+        ),
+
         // Roadmap stubs for casino games that don't yet publish domain
         // events. Hidden until a future PR adds the corresponding event
         // and wires up an AchievementEventHandler listener; the codes

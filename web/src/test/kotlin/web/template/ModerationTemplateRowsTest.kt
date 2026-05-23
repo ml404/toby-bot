@@ -130,6 +130,8 @@ class ModerationTemplateRowsTest {
             ConfigDto.Configurations.HOLDEM_MAX_STAKE,
             ConfigDto.Configurations.DUEL_MIN_STAKE,
             ConfigDto.Configurations.DUEL_MAX_STAKE,
+            ConfigDto.Configurations.RPS_MIN_STAKE,
+            ConfigDto.Configurations.RPS_MAX_STAKE,
             ConfigDto.Configurations.BLACKJACK_MIN_ANTE,
             ConfigDto.Configurations.BLACKJACK_MAX_ANTE,
             ConfigDto.Configurations.POKER_SMALL_BLIND,
