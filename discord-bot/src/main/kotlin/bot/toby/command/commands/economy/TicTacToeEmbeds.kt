@@ -10,7 +10,11 @@ import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.entities.MessageEmbed
 
 /**
- * Embed + button rendering for `/tictactoe`.
+ * Embed + button rendering specific to `/tictactoe`. The cross-game
+ * bits (Accept/Decline button row, stake-line text, error / decline /
+ * timeout embeds, start-error description) live in [PvpEmbeds] —
+ * this file only owns the TTT-specific board rendering, cell buttons,
+ * and turn / win / draw embeds.
  *
  * Component IDs are colon-delimited so [DefaultButtonManager] can
  * route by the `"tictactoe"` prefix and this object can parse the
@@ -21,17 +25,12 @@ import net.dv8tion.jda.api.entities.MessageEmbed
  * - `action`: ACCEPT / DECLINE during PENDING; PLACE_<0..8> /
  *   FORFEIT during LIVE.
  * - `scopedDiscordIdOrCell`: the opponent's discord id for
- *   ACCEPT/DECLINE; the cell index for PLACE_*; 0 for FORFEIT
- *   (kept in the format for parser symmetry).
- *
- * The board renders inside the embed description as a 3×3 emoji grid
- * (❌ / ⭕ / ⬜). Underneath sit the cell buttons: each cell is its
- * own button, disabled if already occupied or the game is over. A
- * "Forfeit" button sits on its own row.
+ *   ACCEPT/DECLINE; the cell index for PLACE_*; 0 for FORFEIT.
  */
 object TicTacToeEmbeds {
 
     const val BUTTON_NAME = "tictactoe"
+    private const val GAME_NAME = "Tic-Tac-Toe"
 
     private const val X_EMOJI = "❌"
     private const val O_EMOJI = "⭕"
@@ -106,7 +105,7 @@ object TicTacToeEmbeds {
         else -> error("cell $cell out of range")
     }
 
-    // ---- embeds ----
+    // ---- TTT-specific embeds ----
 
     fun pendingEmbed(
         initiatorDiscordId: Long,
@@ -116,7 +115,7 @@ object TicTacToeEmbeds {
         .setTitle("❌ ⭕  Tic-Tac-Toe")
         .setDescription(
             "<@${opponentDiscordId}> — <@${initiatorDiscordId}> has challenged you to Tic-Tac-Toe." +
-                stakeLine(stake) +
+                PvpEmbeds.stakeLine(stake) +
                 "\nAccept to start, or decline to walk away." +
                 "\n\nWinner gets ❌ (moves first). Loser plays ⭕."
         )
@@ -130,7 +129,7 @@ object TicTacToeEmbeds {
             .setTitle(title)
             .setDescription(
                 "<@${session.initiatorDiscordId}> (❌) vs <@${session.opponentDiscordId}> (⭕)" +
-                    stakeLine(session.stake) +
+                    PvpEmbeds.stakeLine(session.stake) +
                     "\n\n" + board
             )
             .setColor(0x5B8DEF)
@@ -174,36 +173,21 @@ object TicTacToeEmbeds {
         .setColor(0xFEE75C)
         .build()
 
-    fun pendingDeclineEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Challenge declined")
-        .setDescription("<@${opponentDiscordId}> declined <@${initiatorDiscordId}>'s Tic-Tac-Toe challenge.")
-        .setColor(0xED4245)
-        .build()
+    // ---- shared-embed pass-throughs (game-name pre-filled) ----
 
-    fun pendingTimeoutEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed = EmbedBuilder()
-        .setTitle("⌛ Challenge expired")
-        .setDescription("<@${opponentDiscordId}> didn't respond to <@${initiatorDiscordId}>'s Tic-Tac-Toe challenge.")
-        .setColor(0xED4245)
-        .build()
+    fun pendingDeclineEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed =
+        PvpEmbeds.pendingDeclineEmbed(GAME_NAME, initiatorDiscordId, opponentDiscordId)
 
-    fun startErrorEmbed(message: String): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Can't start that match")
-        .setDescription(message)
-        .setColor(0xED4245)
-        .build()
-
-    fun acceptErrorEmbed(message: String): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Can't accept that match")
-        .setDescription(message)
-        .setColor(0xED4245)
-        .build()
+    fun pendingTimeoutEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed =
+        PvpEmbeds.pendingTimeoutEmbed(GAME_NAME, initiatorDiscordId, opponentDiscordId)
 
     // ---- button rows ----
 
-    fun pendingButtons(sessionId: Long, opponentDiscordId: Long): ActionRow = ActionRow.of(
-        Button.success(acceptButtonId(sessionId, opponentDiscordId), "Accept"),
-        Button.danger(declineButtonId(sessionId, opponentDiscordId), "Decline"),
-    )
+    fun pendingButtons(sessionId: Long, opponentDiscordId: Long): ActionRow =
+        PvpEmbeds.pendingButtons(
+            acceptButtonId = acceptButtonId(sessionId, opponentDiscordId),
+            declineButtonId = declineButtonId(sessionId, opponentDiscordId),
+        )
 
     /**
      * Cell-grid + forfeit. The 3×3 grid is laid out as three rows of
@@ -235,9 +219,6 @@ object TicTacToeEmbeds {
     }
 
     // ---- helpers ----
-
-    private fun stakeLine(stake: Long): String =
-        if (stake > 0L) "\nStake: **${stake}** credits each (winner takes the pot)." else ""
 
     /**
      * Render the 9-cell board as a 3×3 emoji grid. Cells in

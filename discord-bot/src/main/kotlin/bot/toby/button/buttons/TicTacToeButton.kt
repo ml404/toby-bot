@@ -1,10 +1,12 @@
 package bot.toby.button.buttons
 
+import bot.toby.command.commands.economy.PvpEmbeds
 import bot.toby.command.commands.economy.TicTacToeEmbeds
 import common.tictactoe.TicTacToeEngine
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
+import database.service.PvpWagerService
 import database.service.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
@@ -65,7 +67,7 @@ class TicTacToeButton @Autowired constructor(
             return
         }
         val session = ticTacToeSessionRegistry.decline(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         event.message.editMessageEmbeds(
             TicTacToeEmbeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
@@ -88,7 +90,7 @@ class TicTacToeButton @Autowired constructor(
             // as forfeit by them — opponent wins by walkover.
             resolveTimeout(event, expired)
         } ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
 
         val outcome = ticTacToeService.acceptMatch(
@@ -97,9 +99,9 @@ class TicTacToeButton @Autowired constructor(
             guildId = session.guildId,
             stake = session.stake,
         )
-        if (outcome !is TicTacToeService.AcceptOutcome.Ok) {
+        if (outcome !is PvpWagerService.AcceptOutcome.Ok) {
             ticTacToeSessionRegistry.forfeit(session.id)
-            event.message.editMessageEmbeds(TicTacToeEmbeds.acceptErrorEmbed(describeAccept(outcome)))
+            event.message.editMessageEmbeds(PvpEmbeds.acceptErrorEmbed(PvpButtonHelpers.describeAccept(outcome)))
                 .setComponents(emptyList<MessageTopLevelComponent>()).queue()
             return
         }
@@ -115,7 +117,7 @@ class TicTacToeButton @Autowired constructor(
         cell: Int,
     ) {
         val live = ticTacToeSessionRegistry.get(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
             requestingUserDto.discordId != live.opponentDiscordId
@@ -157,7 +159,7 @@ class TicTacToeButton @Autowired constructor(
         parsed: TicTacToeEmbeds.ParsedButtonId,
     ) {
         val live = ticTacToeSessionRegistry.get(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         if (requestingUserDto.discordId != live.initiatorDiscordId &&
             requestingUserDto.discordId != live.opponentDiscordId
@@ -166,7 +168,7 @@ class TicTacToeButton @Autowired constructor(
             return
         }
         val consumed = ticTacToeSessionRegistry.forfeit(parsed.sessionId) ?: run {
-            ephemeralAlreadyResolved(event); return
+            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
         // Stamp the winner: the *other* player wins by walkover.
         val winnerDiscordId = if (requestingUserDto.discordId == consumed.initiatorDiscordId)
@@ -208,27 +210,13 @@ class TicTacToeButton @Autowired constructor(
         val embed: MessageEmbed = when (outcome) {
             is TicTacToeService.ResolveOutcome.Win -> TicTacToeEmbeds.winEmbed(session, outcome, forfeit)
             is TicTacToeService.ResolveOutcome.Draw -> TicTacToeEmbeds.drawEmbed(session, outcome)
-            else -> TicTacToeEmbeds.acceptErrorEmbed("Couldn't resolve the match — both players' profiles must exist.")
+            TicTacToeService.ResolveOutcome.Unknown -> PvpEmbeds.acceptErrorEmbed(
+                "Couldn't resolve the match — both players' profiles must exist."
+            )
         }
         runCatching {
             event.message.editMessageEmbeds(embed)
                 .setComponents(emptyList<MessageTopLevelComponent>()).queue()
         }
-    }
-
-    private fun ephemeralAlreadyResolved(event: ButtonInteractionEvent) {
-        event.hook.sendMessage("This match already resolved or expired.").setEphemeral(true).queue()
-    }
-
-    private fun describeAccept(outcome: TicTacToeService.AcceptOutcome): String = when (outcome) {
-        is TicTacToeService.AcceptOutcome.InitiatorInsufficient ->
-            "The challenger no longer has enough credits to cover the stake."
-        is TicTacToeService.AcceptOutcome.OpponentInsufficient ->
-            "You no longer have enough credits (have ${outcome.have}, need ${outcome.needed})."
-        TicTacToeService.AcceptOutcome.UnknownInitiator ->
-            "We couldn't find the challenger's profile."
-        TicTacToeService.AcceptOutcome.UnknownOpponent ->
-            "We couldn't find your profile."
-        is TicTacToeService.AcceptOutcome.Ok -> "" // never surfaced
     }
 }

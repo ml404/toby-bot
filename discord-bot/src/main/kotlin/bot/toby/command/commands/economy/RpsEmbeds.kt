@@ -9,7 +9,11 @@ import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.entities.MessageEmbed
 
 /**
- * Embed + button rendering for `/rps`.
+ * Embed + button rendering specific to `/rps`. The cross-game bits
+ * (Accept/Decline button row, stake-line text, error / decline /
+ * timeout embeds, start-error description) live in [PvpEmbeds] —
+ * this file only owns the RPS-specific pick buttons + pick/win/draw
+ * embeds.
  *
  * Component IDs are colon-delimited so [DefaultButtonManager] can route
  * by the `"rps"` prefix and this object can parse the rest by index:
@@ -19,18 +23,13 @@ import net.dv8tion.jda.api.entities.MessageEmbed
  * - `action`: ACCEPT / DECLINE during PENDING; PICK_ROCK / PICK_PAPER /
  *   PICK_SCISSORS / FORFEIT during LIVE.
  * - `scopedDiscordId`: the discord id of the *player whose button this
- *   is*. ACCEPT/DECLINE belong to the opponent; PICK belongs to either
- *   player (each player sees the same buttons but the handler routes
- *   the click to the clicking user). FORFEIT belongs to either player.
- *
- * For PICK and FORFEIT buttons we don't actually need to encode the
- * clicker in the id — the click event already carries the user — so
- * we use `0` as a sentinel. Kept in the format for symmetry with the
- * accept-side encoding so the parser is single-shape.
+ *   is*. ACCEPT/DECLINE belong to the opponent; PICK/FORFEIT use `0`
+ *   as a sentinel (clicker is known from the event).
  */
 object RpsEmbeds {
 
     const val BUTTON_NAME = "rps"
+    private const val GAME_NAME = "RPS"
 
     enum class Action {
         ACCEPT,
@@ -89,7 +88,7 @@ object RpsEmbeds {
         else -> null
     }
 
-    // ---- embeds ----
+    // ---- RPS-specific embeds ----
 
     fun pendingEmbed(
         initiatorDiscordId: Long,
@@ -99,7 +98,7 @@ object RpsEmbeds {
         .setTitle("✊ ✋ ✌️  Rock-Paper-Scissors")
         .setDescription(
             "<@${opponentDiscordId}> — <@${initiatorDiscordId}> has challenged you to RPS." +
-                stakeLine(stake) +
+                PvpEmbeds.stakeLine(stake) +
                 "\nAccept to start, or decline to walk away."
         )
         .setColor(0x5B8DEF)
@@ -115,7 +114,7 @@ object RpsEmbeds {
         .setTitle("✊ ✋ ✌️  Make your pick")
         .setDescription(
             "<@${initiatorDiscordId}> vs <@${opponentDiscordId}>" +
-                stakeLine(stake) +
+                PvpEmbeds.stakeLine(stake) +
                 "\n\nClick one of the three moves below — your choice stays hidden until both players have picked." +
                 "\n\n" + pickStatus(initiatorDiscordId, opponentDiscordId, initiatorPicked, opponentPicked)
         )
@@ -159,36 +158,21 @@ object RpsEmbeds {
         .setColor(0xED4245)
         .build()
 
-    fun pendingDeclineEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Challenge declined")
-        .setDescription("<@${opponentDiscordId}> declined <@${initiatorDiscordId}>'s RPS challenge.")
-        .setColor(0xED4245)
-        .build()
+    // ---- shared-embed pass-throughs (game-name pre-filled) ----
 
-    fun pendingTimeoutEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed = EmbedBuilder()
-        .setTitle("⌛ Challenge expired")
-        .setDescription("<@${opponentDiscordId}> didn't respond to <@${initiatorDiscordId}>'s RPS challenge.")
-        .setColor(0xED4245)
-        .build()
+    fun pendingDeclineEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed =
+        PvpEmbeds.pendingDeclineEmbed(GAME_NAME, initiatorDiscordId, opponentDiscordId)
 
-    fun startErrorEmbed(message: String): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Can't start that match")
-        .setDescription(message)
-        .setColor(0xED4245)
-        .build()
-
-    fun acceptErrorEmbed(message: String): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ Can't accept that match")
-        .setDescription(message)
-        .setColor(0xED4245)
-        .build()
+    fun pendingTimeoutEmbed(initiatorDiscordId: Long, opponentDiscordId: Long): MessageEmbed =
+        PvpEmbeds.pendingTimeoutEmbed(GAME_NAME, initiatorDiscordId, opponentDiscordId)
 
     // ---- button rows ----
 
-    fun pendingButtons(sessionId: Long, opponentDiscordId: Long): ActionRow = ActionRow.of(
-        Button.success(acceptButtonId(sessionId, opponentDiscordId), "Accept"),
-        Button.danger(declineButtonId(sessionId, opponentDiscordId), "Decline"),
-    )
+    fun pendingButtons(sessionId: Long, opponentDiscordId: Long): ActionRow =
+        PvpEmbeds.pendingButtons(
+            acceptButtonId = acceptButtonId(sessionId, opponentDiscordId),
+            declineButtonId = declineButtonId(sessionId, opponentDiscordId),
+        )
 
     fun pickButtons(sessionId: Long): List<ActionRow> = listOf(
         ActionRow.of(
@@ -202,9 +186,6 @@ object RpsEmbeds {
     )
 
     // ---- helpers ----
-
-    private fun stakeLine(stake: Long): String =
-        if (stake > 0L) "\nStake: **${stake}** credits each (winner takes the pot)." else ""
 
     private fun pickStatus(
         initiatorDiscordId: Long,

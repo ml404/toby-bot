@@ -4,8 +4,8 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
+import database.service.PvpWagerService
 import database.service.TicTacToeService
-import database.service.TicTacToeService.StartOutcome
 import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -80,8 +80,11 @@ class TicTacToeCommand @Autowired constructor(
             guildId = guild.idLong,
             stake = stake,
         )
-        if (start !is StartOutcome.Ok) {
-            event.hook.replyEmbedAndDelete(TicTacToeEmbeds.startErrorEmbed(describe(start)), deleteDelay)
+        if (start !is PvpWagerService.StartOutcome.Ok) {
+            event.hook.replyEmbedAndDelete(
+                PvpEmbeds.startErrorEmbed(PvpEmbeds.describeStartOutcome(start)),
+                deleteDelay,
+            )
             return
         }
 
@@ -106,24 +109,11 @@ class TicTacToeCommand @Autowired constructor(
             .queue()
     }
 
-    private fun describe(outcome: StartOutcome): String = when (outcome) {
-        is StartOutcome.InvalidStake -> "Stake must be between ${outcome.min} and ${outcome.max} credits for this server."
-        is StartOutcome.InvalidOpponent -> when (outcome.reason) {
-            StartOutcome.InvalidOpponent.Reason.SELF -> "You can't challenge yourself."
-            StartOutcome.InvalidOpponent.Reason.BOT -> "You can't challenge a bot."
-        }
-        is StartOutcome.InitiatorInsufficient -> "You need ${outcome.needed} credits but only have ${outcome.have}."
-        is StartOutcome.OpponentInsufficient -> "Your opponent only has ${outcome.have} credits but the stake requires ${outcome.needed}."
-        StartOutcome.UnknownInitiator -> "We couldn't find your profile — try a credit-earning command first."
-        StartOutcome.UnknownOpponent -> "We couldn't find your opponent's profile — they need to be active in the server first."
-        is StartOutcome.Ok -> ""
-    }
-
     private fun replyError(
         event: SlashCommandInteractionEvent,
         message: String,
         deleteDelay: Int,
     ) {
-        event.hook.replyEmbedAndDelete(TicTacToeEmbeds.startErrorEmbed(message), deleteDelay)
+        event.hook.replyEmbedAndDelete(PvpEmbeds.startErrorEmbed(message), deleteDelay)
     }
 }

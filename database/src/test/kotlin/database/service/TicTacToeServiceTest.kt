@@ -1,8 +1,6 @@
 package database.service
 
 import common.events.TicTacToeResolvedEvent
-import database.dto.ConfigDto
-import database.dto.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -13,10 +11,14 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 
 /**
- * Behavioural tests for [TicTacToeService]. Covers the three resolve
- * branches (clean win by completed line, forfeit/timeout walkover via
- * explicit winner, draw) plus the preflight + accept guardrails, with
- * both stake-bearing and free-play paths exercised.
+ * Behavioural tests for the TTT-specific branching in [TicTacToeService].
+ * The wager primitives ([PvpWagerService.preflightStart] /
+ * [PvpWagerService.debitBoth] / [PvpWagerService.payWinner] /
+ * [PvpWagerService.refundBoth]) live in PvpWagerService and are
+ * covered by [PvpWagerServiceTest]; this suite mocks them and
+ * verifies that the three resolve cases (clean win, forfeit walkover,
+ * draw) route to the right primitive and the right ResolveOutcome +
+ * event.
  */
 class TicTacToeServiceTest {
 
@@ -24,198 +26,147 @@ class TicTacToeServiceTest {
     private val initiatorId = 1L
     private val opponentId = 2L
 
-    private lateinit var userService: UserService
-    private lateinit var jackpotService: JackpotService
-    private lateinit var configService: ConfigService
-    private lateinit var xpAwardService: XpAwardService
+    private lateinit var pvpWagerService: PvpWagerService
     private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var service: TicTacToeService
 
     @BeforeEach
     fun setUp() {
-        userService = mockk(relaxed = true)
-        jackpotService = mockk(relaxed = true)
-        configService = mockk(relaxed = true)
-        xpAwardService = mockk(relaxed = true)
+        pvpWagerService = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
-        service = TicTacToeService(userService, jackpotService, configService, xpAwardService, eventPublisher)
-
-        // Default stake bounds: 0..500.
-        every { configService.getConfigByName(ConfigDto.Configurations.TICTACTOE_MIN_STAKE.configValue, any()) } returns null
-        every { configService.getConfigByName(ConfigDto.Configurations.TICTACTOE_MAX_STAKE.configValue, any()) } returns null
-        // No tribute by default.
-        every { configService.getConfigByName(ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue, any()) } returns
-            ConfigDto(name = "JACKPOT_LOSS_TRIBUTE_PCT", value = "0", guildId = guildId.toString())
-        every { jackpotService.addToPool(any(), any()) } returns 0L
-        every { xpAwardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        service = TicTacToeService(pvpWagerService, eventPublisher)
     }
 
-    // ---- startMatch preflight ----
+    // ---- startMatch / acceptMatch are thin pass-throughs ----
 
     @Test
-    fun `startMatch rejects out-of-range stake`() {
-        every { configService.getConfigByName(ConfigDto.Configurations.TICTACTOE_MIN_STAKE.configValue, any()) } returns
-            ConfigDto(name = "TICTACTOE_MIN_STAKE", value = "10", guildId = guildId.toString())
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 5L)
-        assertTrue(outcome is TicTacToeService.StartOutcome.InvalidStake)
+    fun `startMatch returns whatever preflightStart returns`() {
+        val expected = PvpWagerService.StartOutcome.Ok(200L)
+        every { pvpWagerService.readStakeBounds(any(), any(), any(), any(), any()) } returns (0L to 500L)
+        every { pvpWagerService.preflightStart(initiatorId, opponentId, guildId, 50L, 0L, 500L) } returns expected
+
+        val outcome = service.startMatch(initiatorId, opponentId, guildId, 50L)
+        assertEquals(expected, outcome)
     }
 
     @Test
-    fun `startMatch rejects self-challenge`() {
-        val outcome = service.startMatch(initiatorId, initiatorId, guildId, stake = 0L)
-        assertTrue(outcome is TicTacToeService.StartOutcome.InvalidOpponent)
+    fun `acceptMatch returns whatever debitBoth returns`() {
+        val expected = PvpWagerService.AcceptOutcome.Ok(50L, 150L)
+        every { pvpWagerService.debitBoth(initiatorId, opponentId, guildId, 50L) } returns expected
+
+        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, 50L)
+        assertEquals(expected, outcome)
     }
 
-    @Test
-    fun `startMatch rejects unknown initiator`() {
-        every { userService.getUserById(initiatorId, guildId) } returns null
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 0L)
-        assertEquals(TicTacToeService.StartOutcome.UnknownInitiator, outcome)
-    }
+    // ---- resolveMatch: clean win / forfeit / timeout (all the same wager path) ----
 
     @Test
-    fun `startMatch rejects insufficient initiator balance`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 5L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 100L)
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertTrue(outcome is TicTacToeService.StartOutcome.InitiatorInsufficient)
-    }
-
-    @Test
-    fun `startMatch happy path returns Ok with initiator balance`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 200L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 200L)
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertEquals(TicTacToeService.StartOutcome.Ok(200L), outcome)
-    }
-
-    // ---- acceptMatch ----
-
-    @Test
-    fun `acceptMatch with zero stake skips the user-table update path`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 0L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 0L)
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 0L)
-        assertEquals(TicTacToeService.AcceptOutcome.Ok(0L, 0L), outcome)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    @Test
-    fun `acceptMatch debits both balances on stake-bearing match`() {
-        val initiator = userDto(initiatorId, balance = 100L)
-        val opponent = userDto(opponentId, balance = 200L)
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns initiator
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns opponent
-
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertEquals(TicTacToeService.AcceptOutcome.Ok(50L, 150L), outcome)
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 50L }) }
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == opponentId && it.socialCredit == 150L }) }
-    }
-
-    @Test
-    fun `acceptMatch refuses when balance fell below stake between start and accept`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 10L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 200L)
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertTrue(outcome is TicTacToeService.AcceptOutcome.InitiatorInsufficient)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    // ---- resolveMatch: stake-bearing ----
-
-    @Test
-    fun `resolveMatch credits winner and grants XP on clean win`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-        every { xpAwardService.award(initiatorId, guildId, 10L, "tictactoe:win", any(), any(), any()) } returns 10L
+    fun `resolveMatch with explicit winner routes to payWinner`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             winnerDiscordId = initiatorId,
         )
-        assertTrue(outcome is TicTacToeService.ResolveOutcome.Win, "expected Win, got $outcome")
         val win = outcome as TicTacToeService.ResolveOutcome.Win
         assertEquals(initiatorId, win.winnerDiscordId)
         assertEquals(opponentId, win.loserDiscordId)
-        assertEquals(150L, win.winnerNewBalance) // 50 (post-debit) + 100 (pot)
+        assertEquals(150L, win.winnerNewBalance)
         assertEquals(10L, win.xpGranted)
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 150L }) }
-        // Loser was already debited at accept time — no further write.
-        verify(exactly = 0) { userService.updateUser(match { it.discordId == opponentId }) }
+        verify(exactly = 1) { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, "tictactoe:win", 10L) }
+        verify(exactly = 0) { pvpWagerService.refundBoth(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `resolveMatch refunds both stakes on draw`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+    fun `resolveMatch flips winner and loser when opponent is the explicit winner`() {
+        every { pvpWagerService.payWinner(opponentId, initiatorId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(250L, 0L, 100L, 0L, 10L)
+
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            winnerDiscordId = opponentId,
+        )
+        val win = outcome as TicTacToeService.ResolveOutcome.Win
+        assertEquals(opponentId, win.winnerDiscordId)
+        assertEquals(initiatorId, win.loserDiscordId)
+    }
+
+    // ---- resolveMatch: draw ----
+
+    @Test
+    fun `resolveMatch with null winner routes to refundBoth and does not publish`() {
+        every { pvpWagerService.refundBoth(initiatorId, opponentId, 50L, guildId) } returns
+            PvpWagerService.RefundResult(100L, 200L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             winnerDiscordId = null,
         )
-        assertTrue(outcome is TicTacToeService.ResolveOutcome.Draw)
         val draw = outcome as TicTacToeService.ResolveOutcome.Draw
-        assertEquals(100L, draw.initiatorNewBalance) // 50 + 50 refund
-        assertEquals(200L, draw.opponentNewBalance) // 150 + 50 refund
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 100L }) }
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == opponentId && it.socialCredit == 200L }) }
-        verify(exactly = 0) { xpAwardService.award(any(), any(), any(), any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `resolveMatch credits the explicit winner on a forfeit walkover`() {
-        // Forfeit / timeout collapses to the same wager arithmetic as a
-        // clean win — the button passes the survivor's discord id and
-        // the service pays them the pot.
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-
-        val outcome = service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
-            winnerDiscordId = opponentId, // initiator forfeited
-        )
-        assertTrue(outcome is TicTacToeService.ResolveOutcome.Win)
-        val win = outcome as TicTacToeService.ResolveOutcome.Win
-        assertEquals(opponentId, win.winnerDiscordId)
-        assertEquals(initiatorId, win.loserDiscordId)
-        assertEquals(250L, win.winnerNewBalance) // 150 (post-debit) + 100 (pot)
+        assertEquals(100L, draw.initiatorNewBalance)
+        assertEquals(200L, draw.opponentNewBalance)
+        verify(exactly = 0) { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<TicTacToeResolvedEvent>()) }
     }
 
     // ---- resolveMatch: free play ----
 
     @Test
-    fun `resolveMatch with zero stake skips user updates and only grants XP`() {
-        every { xpAwardService.award(initiatorId, guildId, 10L, "tictactoe:win", any(), any(), any()) } returns 10L
+    fun `resolveMatch with zero stake routes to payWinner (which handles free-play internally)`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 0L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(0L, 0L, 0L, 0L, 10L)
+
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 0L,
             winnerDiscordId = initiatorId,
         )
-        assertTrue(outcome is TicTacToeService.ResolveOutcome.Win)
         val win = outcome as TicTacToeService.ResolveOutcome.Win
-        assertEquals(initiatorId, win.winnerDiscordId)
         assertEquals(0L, win.pot)
         assertEquals(10L, win.xpGranted)
-        verify(exactly = 0) { userService.updateUser(any()) }
     }
 
     @Test
-    fun `resolveMatch with zero stake and null winner returns a free-play draw without XP`() {
+    fun `resolveMatch with zero stake and null winner returns a free-play draw without payout`() {
+        // refundBoth handles the stake=0 short-circuit (returns zeros).
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 0L,
             winnerDiscordId = null,
         )
         assertTrue(outcome is TicTacToeService.ResolveOutcome.Draw)
-        verify(exactly = 0) { userService.updateUser(any()) }
-        verify(exactly = 0) { xpAwardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) }
     }
 
-    // ---- achievement event publishing ----
+    // ---- defensive: payWinner returns null / unknown winner id ----
+
+    @Test
+    fun `resolveMatch surfaces Unknown when payWinner returns null`() {
+        every { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) } returns null
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            winnerDiscordId = initiatorId,
+        )
+        assertEquals(TicTacToeService.ResolveOutcome.Unknown, outcome)
+        verify(exactly = 0) { eventPublisher.publishEvent(any<TicTacToeResolvedEvent>()) }
+    }
+
+    @Test
+    fun `resolveMatch surfaces Unknown when the winner id isn't in this match`() {
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            winnerDiscordId = 9999L,
+        )
+        assertEquals(TicTacToeService.ResolveOutcome.Unknown, outcome)
+        verify(exactly = 0) { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<TicTacToeResolvedEvent>()) }
+    }
+
+    // ---- event publishing ----
 
     @Test
     fun `resolveMatch publishes TicTacToeResolvedEvent on a clean win`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
 
         service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
@@ -237,10 +188,14 @@ class TicTacToeServiceTest {
 
     @Test
     fun `resolveMatch publishes TicTacToeResolvedEvent on free-play wins too`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 0L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(0L, 0L, 0L, 0L, 10L)
+
         service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 0L,
             winnerDiscordId = initiatorId,
         )
+
         verify(exactly = 1) {
             eventPublisher.publishEvent(
                 match<TicTacToeResolvedEvent> {
@@ -251,41 +206,4 @@ class TicTacToeServiceTest {
             )
         }
     }
-
-    @Test
-    fun `resolveMatch does NOT publish on a draw`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-
-        service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
-            winnerDiscordId = null,
-        )
-        verify(exactly = 0) { eventPublisher.publishEvent(any<TicTacToeResolvedEvent>()) }
-    }
-
-    @Test
-    fun `resolveMatch jackpot tribute is deducted from winner payout`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-        every { configService.getConfigByName(ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue, any()) } returns
-            ConfigDto(name = "JACKPOT_LOSS_TRIBUTE_PCT", value = "20", guildId = guildId.toString())
-        every { jackpotService.addToPool(guildId, any()) } returns 10L
-
-        val outcome = service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
-            winnerDiscordId = initiatorId,
-        )
-        val win = outcome as TicTacToeService.ResolveOutcome.Win
-        // Winner balance was 50 post-debit; gets pot (100) minus tribute (10) = 90 → 140.
-        assertEquals(140L, win.winnerNewBalance)
-        assertEquals(10L, win.lossTribute)
-        assertEquals(100L, win.pot)
-    }
-
-    private fun userDto(discordId: Long, balance: Long): UserDto = UserDto(
-        discordId = discordId,
-        guildId = guildId,
-        socialCredit = balance,
-    ).also { every { userService.updateUser(it) } answers { firstArg() } }
 }

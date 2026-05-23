@@ -9,6 +9,7 @@ import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
+import database.service.PvpWagerService
 import database.service.RpsService
 import io.mockk.every
 import io.mockk.just
@@ -61,7 +62,7 @@ internal class RpsCommandTest : CommandTest {
         val opponent = stubOpponent(idLong = 2L, isBot = false)
         every { event.getOption("user") } returns opponent
         every { event.getOption("stake") } returns stakeOpt(50L)
-        every { rpsService.startMatch(1L, 2L, 100L, 50L) } returns RpsService.StartOutcome.Ok(initiatorBalance = 500L)
+        every { rpsService.startMatch(1L, 2L, 100L, 50L) } returns PvpWagerService.StartOutcome.Ok(initiatorBalance = 500L)
         every { registry.register(100L, 1L, 2L, 50L, any(), any()) } returns RpsSessionRegistry.Session(
             id = 7L, guildId = 100L, initiatorDiscordId = 1L,
             opponentDiscordId = 2L, stake = 50L, createdAt = java.time.Instant.now(),
@@ -82,7 +83,7 @@ internal class RpsCommandTest : CommandTest {
         val opponent = stubOpponent(idLong = 2L, isBot = false)
         every { event.getOption("user") } returns opponent
         every { event.getOption("stake") } returns null
-        every { rpsService.startMatch(1L, 2L, 100L, 0L) } returns RpsService.StartOutcome.Ok(initiatorBalance = 100L)
+        every { rpsService.startMatch(1L, 2L, 100L, 0L) } returns PvpWagerService.StartOutcome.Ok(initiatorBalance = 100L)
         every { registry.register(100L, 1L, 2L, 0L, any(), any()) } returns RpsSessionRegistry.Session(
             id = 7L, guildId = 100L, initiatorDiscordId = 1L,
             opponentDiscordId = 2L, stake = 0L, createdAt = java.time.Instant.now(),
@@ -119,7 +120,7 @@ internal class RpsCommandTest : CommandTest {
         every { event.getOption("user") } returns opponent
         every { event.getOption("stake") } returns stakeOpt(50L)
         every { rpsService.startMatch(1L, 2L, 100L, 50L) } returns
-            RpsService.StartOutcome.InitiatorInsufficient(have = 10L, needed = 50L)
+            PvpWagerService.StartOutcome.InitiatorInsufficient(have = 10L, needed = 50L)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 

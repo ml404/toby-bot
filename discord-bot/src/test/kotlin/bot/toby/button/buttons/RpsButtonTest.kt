@@ -9,6 +9,7 @@ import bot.toby.command.commands.economy.RpsEmbeds
 import database.dto.UserDto
 import common.rps.RpsEngine
 import database.rps.RpsSessionRegistry
+import database.service.PvpWagerService
 import database.service.RpsService
 import io.mockk.Runs
 import io.mockk.every
@@ -109,7 +110,7 @@ class RpsButtonTest : ButtonTest {
         every { registry.accept(sessionId, any()) } returns liveSession()
         every {
             rpsService.acceptMatch(initiatorId, opponentId, guildId, stake)
-        } returns RpsService.AcceptOutcome.Ok(initiatorNewBalance = 100L, opponentNewBalance = 100L)
+        } returns PvpWagerService.AcceptOutcome.Ok(initiatorNewBalance = 100L, opponentNewBalance = 100L)
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 
@@ -124,7 +125,7 @@ class RpsButtonTest : ButtonTest {
         every { registry.accept(sessionId, any()) } returns liveSession()
         every {
             rpsService.acceptMatch(initiatorId, opponentId, guildId, stake)
-        } returns RpsService.AcceptOutcome.OpponentInsufficient(have = 10L, needed = 50L)
+        } returns PvpWagerService.AcceptOutcome.OpponentInsufficient(have = 10L, needed = 50L)
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 

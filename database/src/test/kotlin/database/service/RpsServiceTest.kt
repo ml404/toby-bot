@@ -1,12 +1,8 @@
 package database.service
 
 import common.events.RpsResolvedEvent
-import database.dto.ConfigDto
-import database.dto.UserDto
 import common.rps.RpsEngine
-import io.mockk.Runs
 import io.mockk.every
-import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,10 +12,14 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 
 /**
- * Behavioural tests for [RpsService]. Cover the four resolve branches
- * (clean win, draw, one-side forfeit, double-no-pick) plus the
- * preflight + accept guardrails, with both stake-bearing and free-play
- * paths exercised.
+ * Behavioural tests for the RPS-specific branching in [RpsService].
+ * The wager primitives ([PvpWagerService.preflightStart] /
+ * [PvpWagerService.debitBoth] / [PvpWagerService.payWinner] /
+ * [PvpWagerService.refundBoth]) live in PvpWagerService and are
+ * covered by [PvpWagerServiceTest]; this suite mocks them and
+ * verifies that the four resolve cases (both-picked-clean,
+ * both-picked-draw, one-picked-forfeit, neither-picked) route to the
+ * right primitive and the right ResolveOutcome + event.
  */
 class RpsServiceTest {
 
@@ -27,213 +27,165 @@ class RpsServiceTest {
     private val initiatorId = 1L
     private val opponentId = 2L
 
-    private lateinit var userService: UserService
-    private lateinit var jackpotService: JackpotService
-    private lateinit var configService: ConfigService
-    private lateinit var xpAwardService: XpAwardService
+    private lateinit var pvpWagerService: PvpWagerService
     private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var service: RpsService
 
     @BeforeEach
     fun setUp() {
-        userService = mockk(relaxed = true)
-        jackpotService = mockk(relaxed = true)
-        configService = mockk(relaxed = true)
-        xpAwardService = mockk(relaxed = true)
+        pvpWagerService = mockk(relaxed = true)
         eventPublisher = mockk(relaxed = true)
-        service = RpsService(userService, jackpotService, configService, xpAwardService, eventPublisher)
-
-        // Default stake bounds: 0..500 (the RPS defaults).
-        every { configService.getConfigByName(ConfigDto.Configurations.RPS_MIN_STAKE.configValue, any()) } returns null
-        every { configService.getConfigByName(ConfigDto.Configurations.RPS_MAX_STAKE.configValue, any()) } returns null
-        // No tribute by default (test-pure jackpot accounting).
-        // JackpotHelper.divertOnLoss reads JACKPOT_LOSS_TRIBUTE_PCT from
-        // configService and calls jackpotService.addToPool — default to
-        // "no tribute" so test-pure jackpot accounting just works.
-        every { configService.getConfigByName(ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue, any()) } returns
-            ConfigDto(name = "JACKPOT_LOSS_TRIBUTE_PCT", value = "0", guildId = guildId.toString())
-        every { jackpotService.addToPool(any(), any()) } returns 0L
-        // No-op XP grant by default.
-        every { xpAwardService.award(any(), any(), any(), any(), any(), any(), any()) } returns 0L
+        service = RpsService(pvpWagerService, eventPublisher)
     }
 
-    // ---- startMatch preflight ----
+    // ---- startMatch / acceptMatch are thin pass-throughs ----
 
     @Test
-    fun `startMatch rejects out-of-range stake`() {
-        every { configService.getConfigByName(ConfigDto.Configurations.RPS_MIN_STAKE.configValue, any()) } returns
-            ConfigDto(name = "RPS_MIN_STAKE", value = "10", guildId = guildId.toString())
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 5L)
-        assertTrue(outcome is RpsService.StartOutcome.InvalidStake)
+    fun `startMatch returns whatever preflightStart returns`() {
+        val expected = PvpWagerService.StartOutcome.Ok(200L)
+        every { pvpWagerService.readStakeBounds(any(), any(), any(), any(), any()) } returns (0L to 500L)
+        every { pvpWagerService.preflightStart(initiatorId, opponentId, guildId, 50L, 0L, 500L) } returns expected
+
+        val outcome = service.startMatch(initiatorId, opponentId, guildId, 50L)
+        assertEquals(expected, outcome)
     }
 
     @Test
-    fun `startMatch rejects self-challenge`() {
-        val outcome = service.startMatch(initiatorId, initiatorId, guildId, stake = 0L)
-        assertTrue(outcome is RpsService.StartOutcome.InvalidOpponent)
+    fun `acceptMatch returns whatever debitBoth returns`() {
+        val expected = PvpWagerService.AcceptOutcome.Ok(50L, 150L)
+        every { pvpWagerService.debitBoth(initiatorId, opponentId, guildId, 50L) } returns expected
+
+        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, 50L)
+        assertEquals(expected, outcome)
     }
 
-    @Test
-    fun `startMatch rejects unknown initiator`() {
-        every { userService.getUserById(initiatorId, guildId) } returns null
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 0L)
-        assertEquals(RpsService.StartOutcome.UnknownInitiator, outcome)
-    }
+    // ---- resolveMatch: clean win ----
 
     @Test
-    fun `startMatch rejects insufficient initiator balance`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 5L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 100L)
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertTrue(outcome is RpsService.StartOutcome.InitiatorInsufficient)
-    }
-
-    @Test
-    fun `startMatch happy path returns Ok with initiator balance`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 200L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 200L)
-        val outcome = service.startMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertEquals(RpsService.StartOutcome.Ok(200L), outcome)
-    }
-
-    // ---- acceptMatch ----
-
-    @Test
-    fun `acceptMatch with zero stake skips the user-table update path`() {
-        every { userService.getUserById(initiatorId, guildId) } returns userDto(initiatorId, balance = 0L)
-        every { userService.getUserById(opponentId, guildId) } returns userDto(opponentId, balance = 0L)
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 0L)
-        assertEquals(RpsService.AcceptOutcome.Ok(0L, 0L), outcome)
-        // Stake-free path must not lock or write.
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    @Test
-    fun `acceptMatch debits both balances on stake-bearing match`() {
-        val initiator = userDto(initiatorId, balance = 100L)
-        val opponent = userDto(opponentId, balance = 200L)
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns initiator
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns opponent
-
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertEquals(RpsService.AcceptOutcome.Ok(50L, 150L), outcome)
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 50L }) }
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == opponentId && it.socialCredit == 150L }) }
-    }
-
-    @Test
-    fun `acceptMatch refuses when balance fell below stake between start and accept`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 10L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 200L)
-        val outcome = service.acceptMatch(initiatorId, opponentId, guildId, stake = 50L)
-        assertTrue(outcome is RpsService.AcceptOutcome.InitiatorInsufficient)
-        verify(exactly = 0) { userService.updateUser(any()) }
-    }
-
-    // ---- resolveMatch: both picked ----
-
-    @Test
-    fun `resolveMatch credits winner and grants XP on clean win`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-        every { xpAwardService.award(initiatorId, guildId, 10L, "rps:win", any(), any(), any()) } returns 10L
+    fun `resolveMatch on first-wins routes to payWinner with the initiator as winner`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             initiatorChoice = RpsEngine.Choice.ROCK,
             opponentChoice = RpsEngine.Choice.SCISSORS,
         )
-        // Initiator (winner) gets pot = 100; their balance was 50 (post-accept-debit), so 50 + 100 = 150.
-        assertTrue(outcome is RpsService.ResolveOutcome.Win, "expected Win, got $outcome")
         val win = outcome as RpsService.ResolveOutcome.Win
         assertEquals(initiatorId, win.winnerDiscordId)
         assertEquals(opponentId, win.loserDiscordId)
+        assertEquals(RpsEngine.Choice.ROCK, win.winnerChoice)
+        assertEquals(RpsEngine.Choice.SCISSORS, win.loserChoice)
         assertEquals(150L, win.winnerNewBalance)
         assertEquals(10L, win.xpGranted)
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 150L }) }
-        // Loser was already debited at accept time — NO further update.
-        verify(exactly = 0) { userService.updateUser(match { it.discordId == opponentId }) }
+        verify(exactly = 1) { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, "rps:win", 10L) }
+        verify(exactly = 0) { pvpWagerService.refundBoth(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `resolveMatch refunds both stakes on draw`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+    fun `resolveMatch on second-wins flips the winner and loser ids on payWinner`() {
+        every { pvpWagerService.payWinner(opponentId, initiatorId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(250L, 0L, 100L, 0L, 10L)
+
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = RpsEngine.Choice.ROCK,
+            opponentChoice = RpsEngine.Choice.PAPER,
+        )
+        val win = outcome as RpsService.ResolveOutcome.Win
+        assertEquals(opponentId, win.winnerDiscordId)
+        assertEquals(initiatorId, win.loserDiscordId)
+    }
+
+    // ---- resolveMatch: draw ----
+
+    @Test
+    fun `resolveMatch on identical-pick routes to refundBoth and does not publish`() {
+        every { pvpWagerService.refundBoth(initiatorId, opponentId, 50L, guildId) } returns
+            PvpWagerService.RefundResult(100L, 200L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             initiatorChoice = RpsEngine.Choice.PAPER,
             opponentChoice = RpsEngine.Choice.PAPER,
         )
-        assertTrue(outcome is RpsService.ResolveOutcome.Draw, "expected Draw, got $outcome")
         val draw = outcome as RpsService.ResolveOutcome.Draw
-        assertEquals(100L, draw.initiatorNewBalance) // 50 + 50 refund
-        assertEquals(200L, draw.opponentNewBalance) // 150 + 50 refund
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 100L }) }
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == opponentId && it.socialCredit == 200L }) }
-        // No XP grant on draw.
-        verify(exactly = 0) { xpAwardService.award(any(), any(), any(), any(), any(), any(), any()) }
+        assertEquals(RpsEngine.Choice.PAPER, draw.choice)
+        assertEquals(100L, draw.initiatorNewBalance)
+        assertEquals(200L, draw.opponentNewBalance)
+        verify(exactly = 0) { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
     }
+
+    // ---- resolveMatch: one-side forfeit ----
 
     @Test
     fun `resolveMatch credits picker when opponent never picked (forfeit)`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             initiatorChoice = RpsEngine.Choice.ROCK,
             opponentChoice = null,
         )
-        assertTrue(outcome is RpsService.ResolveOutcome.Win)
         val win = outcome as RpsService.ResolveOutcome.Win
         assertEquals(initiatorId, win.winnerDiscordId)
-        assertEquals(150L, win.winnerNewBalance)
     }
 
     @Test
-    fun `resolveMatch double-refunds when neither side picked`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+    fun `resolveMatch credits picker when initiator never picked`() {
+        every { pvpWagerService.payWinner(opponentId, initiatorId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(250L, 0L, 100L, 0L, 10L)
+
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = null,
+            opponentChoice = RpsEngine.Choice.SCISSORS,
+        )
+        val win = outcome as RpsService.ResolveOutcome.Win
+        assertEquals(opponentId, win.winnerDiscordId)
+    }
+
+    // ---- resolveMatch: double-no-pick ----
+
+    @Test
+    fun `resolveMatch double-refunds when neither side picked and does not publish`() {
+        every { pvpWagerService.refundBoth(initiatorId, opponentId, 50L, guildId) } returns
+            PvpWagerService.RefundResult(100L, 200L)
 
         val outcome = service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
             initiatorChoice = null,
             opponentChoice = null,
         )
-        assertTrue(outcome is RpsService.ResolveOutcome.DoubleRefund)
         val refund = outcome as RpsService.ResolveOutcome.DoubleRefund
         assertEquals(100L, refund.initiatorNewBalance)
         assertEquals(200L, refund.opponentNewBalance)
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == initiatorId && it.socialCredit == 100L }) }
-        verify(exactly = 1) { userService.updateUser(match { it.discordId == opponentId && it.socialCredit == 200L }) }
+        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
     }
 
-    // ---- resolveMatch: free play ----
+    // ---- defensive: payWinner returns null ----
 
     @Test
-    fun `resolveMatch with zero stake skips user updates and only grants XP`() {
-        every { xpAwardService.award(initiatorId, guildId, 10L, "rps:win", any(), any(), any()) } returns 10L
+    fun `resolveMatch surfaces Unknown when payWinner returns null`() {
+        every { pvpWagerService.payWinner(any(), any(), any(), any(), any(), any()) } returns null
+
         val outcome = service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 0L,
+            initiatorId, opponentId, guildId, stake = 50L,
             initiatorChoice = RpsEngine.Choice.ROCK,
             opponentChoice = RpsEngine.Choice.SCISSORS,
         )
-        assertTrue(outcome is RpsService.ResolveOutcome.Win)
-        val win = outcome as RpsService.ResolveOutcome.Win
-        assertEquals(initiatorId, win.winnerDiscordId)
-        assertEquals(0L, win.pot)
-        assertEquals(10L, win.xpGranted)
-        // No user-table writes on free play.
-        verify(exactly = 0) { userService.updateUser(any()) }
+        assertEquals(RpsService.ResolveOutcome.Unknown, outcome)
+        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
     }
 
-    // ---- achievement event publishing ----
+    // ---- event publishing ----
 
     @Test
     fun `resolveMatch publishes RpsResolvedEvent on a clean win`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
 
         service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 50L,
@@ -258,6 +210,9 @@ class RpsServiceTest {
     fun `resolveMatch publishes RpsResolvedEvent on free-play wins too`() {
         // Free-play wins must still fire the event so `first_rps_win`
         // can unlock for players who never bet a credit.
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 0L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(0L, 0L, 0L, 0L, 10L)
+
         service.resolveMatch(
             initiatorId, opponentId, guildId, stake = 0L,
             initiatorChoice = RpsEngine.Choice.ROCK,
@@ -276,57 +231,46 @@ class RpsServiceTest {
     }
 
     @Test
-    fun `resolveMatch does NOT publish on a draw`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-
-        service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
-            initiatorChoice = RpsEngine.Choice.PAPER,
-            opponentChoice = RpsEngine.Choice.PAPER,
-        )
-
-        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
-    }
-
-    @Test
-    fun `resolveMatch does NOT publish on double-no-pick`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-
-        service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
-            initiatorChoice = null,
-            opponentChoice = null,
-        )
-
-        verify(exactly = 0) { eventPublisher.publishEvent(any<RpsResolvedEvent>()) }
-    }
-
-    @Test
-    fun `resolveMatch jackpot tribute is deducted from winner payout`() {
-        every { userService.getUserByIdForUpdate(initiatorId, guildId) } returns userDto(initiatorId, balance = 50L)
-        every { userService.getUserByIdForUpdate(opponentId, guildId) } returns userDto(opponentId, balance = 150L)
-        // 20% tribute on a 50-credit stake → 10 credits routed to jackpot.
-        every { configService.getConfigByName(ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT.configValue, any()) } returns
-            ConfigDto(name = "JACKPOT_LOSS_TRIBUTE_PCT", value = "20", guildId = guildId.toString())
-        every { jackpotService.addToPool(guildId, any()) } returns 10L
-
+    fun `resolveMatch with zero stake routes to payWinner (which handles free-play internally)`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 0L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(0L, 0L, 0L, 0L, 10L)
         val outcome = service.resolveMatch(
-            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorId, opponentId, guildId, stake = 0L,
             initiatorChoice = RpsEngine.Choice.ROCK,
             opponentChoice = RpsEngine.Choice.SCISSORS,
         )
         val win = outcome as RpsService.ResolveOutcome.Win
-        // Winner balance was 50 post-debit; gets pot (100) minus tribute (10) = 90 → new balance 140.
-        assertEquals(140L, win.winnerNewBalance)
-        assertEquals(10L, win.lossTribute)
-        assertEquals(100L, win.pot)
+        assertEquals(0L, win.pot)
+        assertEquals(10L, win.xpGranted)
+        verify(exactly = 0) { pvpWagerService.refundBoth(any(), any(), any(), any()) }
     }
 
-    private fun userDto(discordId: Long, balance: Long): UserDto = UserDto(
-        discordId = discordId,
-        guildId = guildId,
-        socialCredit = balance,
-    ).also { every { userService.updateUser(it) } answers { firstArg() } }
+    @Test
+    fun `resolveMatch loser-choice placeholder is the move beaten by the winner-choice`() {
+        // Cosmetic: forfeit-win renders "Rock crushes Scissors" — the loser placeholder
+        // must be the choice that the winner's choice actually beats.
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
+
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = RpsEngine.Choice.ROCK,
+            opponentChoice = null,
+        )
+        val win = outcome as RpsService.ResolveOutcome.Win
+        assertEquals(RpsEngine.Choice.SCISSORS, win.loserChoice)
+    }
+
+    @Test
+    fun `loser-choice placeholder for PAPER win is ROCK`() {
+        every { pvpWagerService.payWinner(initiatorId, opponentId, 50L, guildId, any(), any()) } returns
+            PvpWagerService.PayResult(150L, 100L, 100L, 0L, 10L)
+        val outcome = service.resolveMatch(
+            initiatorId, opponentId, guildId, stake = 50L,
+            initiatorChoice = RpsEngine.Choice.PAPER,
+            opponentChoice = null,
+        )
+        val win = outcome as RpsService.ResolveOutcome.Win
+        assertTrue(win.loserChoice == RpsEngine.Choice.ROCK)
+    }
 }
