@@ -1,2 +1,2 @@
-web: java -Xms128m -Xmx224m -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=48m -Dio.netty.maxDirectMemory=0 -Dio.netty.allocator.numDirectArenas=2 -Dio.netty.allocator.numHeapArenas=2 -Xss256k -XX:+ExitOnOutOfMemoryError -Dserver.port=$PORT -jar application/build/libs/application-7.3-SNAPSHOT.jar
+web: java -Xms128m -Xmx224m -XX:+UseSerialGC -XX:MaxMetaspaceSize=192m -XX:ReservedCodeCacheSize=48m -XX:MaxDirectMemorySize=48m -Dio.netty.maxDirectMemory=0 -Dio.netty.allocator.numDirectArenas=2 -Dio.netty.allocator.numHeapArenas=2 -Xss256k -XX:+ExitOnOutOfMemoryError -Dserver.port=$PORT -jar application/build/libs/application-7.4-SNAPSHOT.jar
 release: ./bin/trigger_publish_wiki.sh  # This runs after deployment

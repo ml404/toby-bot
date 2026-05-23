@@ -4,7 +4,8 @@ import common.leveling.LevelCurve
 import database.service.AchievementService
 import database.service.TitleService
 import database.service.UserService
-import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service
 import web.profile.ProfileCardData
 
@@ -14,29 +15,37 @@ import web.profile.ProfileCardData
  *   - `/profile` slash command in the discord-bot module
  *   - `GET /profile/{guildId}/{discordId}/card.png` in [web.controller.ProfileController]
  *
- * Reuses the same JDA / UserService / TitleService / AchievementService
- * stack already aggregated by [ProfileWebService] for the HTML profile
- * page, so the PNG and the existing web view never disagree on a user's
- * numbers. Returns null when the bot can't see the guild or the target
- * user isn't a member — callers translate that into a 404 / ephemeral
- * "no profile" reply.
+ * **Takes [Guild] + [Member] directly rather than ids + a JDA lookup**.
+ * Earlier shape (`build(discordId, guildId)` with an injected `JDA`)
+ * crashed startup with a circular bean dependency:
  *
- * Lives next to [ProfileWebService] rather than in `discord-bot`
- * because every dependency it needs is already wired up here; the
- * discord-bot module pulls this via Spring DI (the
- * `discord-bot -> web` module edge already exists for the existing
- * notifier services).
+ * ```
+ *   JdaListenerRegistrar -> jda -> StartUpHandler -> CommandManager
+ *     -> List<Command> -> ProfileCommand -> ProfileCardAggregator -> jda
+ * ```
+ *
+ * Spring's `CommandManager` injects every `Command` bean, so any
+ * service reachable from a Command that depends on `JDA` re-enters the
+ * graph through the listener-registrar branch. The fix is to keep this
+ * aggregator JDA-free: callers already hold a `Guild` (from
+ * `event.guild` in slash commands, from a guild-scoped controller
+ * route in web) so passing it in is both cheaper and architecturally
+ * cleaner than re-fetching it.
+ *
+ * Returns null when the user has no record in this guild — the user's
+ * row may not exist yet if they've never earned XP or social credit.
+ * `Guild.getMemberById` returning null is already guarded by the
+ * caller before invoking this method.
  */
 @Service
 class ProfileCardAggregator(
-    private val jda: JDA,
     private val userService: UserService,
     private val titleService: TitleService,
     private val achievementService: AchievementService,
 ) {
-    fun build(discordId: Long, guildId: Long): ProfileCardData? {
-        val guild = jda.getGuildById(guildId) ?: return null
-        val member = guild.getMemberById(discordId) ?: return null
+    fun build(guild: Guild, member: Member): ProfileCardData {
+        val discordId = member.idLong
+        val guildId = guild.idLong
         val user = userService.getUserById(discordId, guildId)
 
         val xp = user?.xp ?: 0L

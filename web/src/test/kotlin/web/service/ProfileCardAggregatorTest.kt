@@ -8,29 +8,31 @@ import database.service.TitleService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
-import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
 /**
- * Unit tests for [ProfileCardAggregator]. The aggregator is the only
- * place where `UserDto` + leveling + title + achievement data converge
- * into the renderer's input, so this is the contract test that catches
- * mis-wiring (e.g. forgetting to filter unlocked achievements, picking
- * the wrong sort order, swallowing a null user).
+ * Unit tests for [ProfileCardAggregator]. The aggregator combines
+ * `UserDto` + leveling + title + achievement data into the renderer's
+ * input, so this is the contract test that catches mis-wiring (e.g.
+ * forgetting to filter unlocked achievements, picking the wrong sort
+ * order, mishandling a null user record).
+ *
+ * The aggregator takes pre-resolved `Guild` and `Member` parameters —
+ * not ids — so it has no `JDA` dependency. Callers are responsible for
+ * the JDA lookup. See the class doc on [ProfileCardAggregator] for the
+ * Spring-cycle reason.
  */
 class ProfileCardAggregatorTest {
 
     private val guildId = 222L
     private val discordId = 42L
 
-    private lateinit var jda: JDA
     private lateinit var userService: UserService
     private lateinit var titleService: TitleService
     private lateinit var achievementService: AchievementService
@@ -40,31 +42,18 @@ class ProfileCardAggregatorTest {
 
     @BeforeEach
     fun setUp() {
-        jda = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         achievementService = mockk(relaxed = true)
-        aggregator = ProfileCardAggregator(jda, userService, titleService, achievementService)
+        aggregator = ProfileCardAggregator(userService, titleService, achievementService)
 
         guild = mockk(relaxed = true)
         member = mockk(relaxed = true)
-        every { jda.getGuildById(guildId) } returns guild
-        every { guild.getMemberById(discordId) } returns member
+        every { guild.idLong } returns guildId
         every { guild.name } returns "Test Guild"
+        every { member.idLong } returns discordId
         every { member.effectiveAvatarUrl } returns "https://avatar/42.png"
         every { member.effectiveName } returns "Alice"
-    }
-
-    @Test
-    fun `build returns null when the guild is unknown`() {
-        every { jda.getGuildById(999L) } returns null
-        assertNull(aggregator.build(discordId, 999L))
-    }
-
-    @Test
-    fun `build returns null when the member is not in the guild`() {
-        every { guild.getMemberById(discordId) } returns null
-        assertNull(aggregator.build(discordId, guildId))
     }
 
     @Test
@@ -72,9 +61,8 @@ class ProfileCardAggregatorTest {
         every { userService.getUserById(discordId, guildId) } returns null
         every { achievementService.listFor(discordId, guildId) } returns emptyList()
 
-        val data = aggregator.build(discordId, guildId)
-        assertNotNull(data)
-        assertEquals(0L, data!!.totalXp)
+        val data = aggregator.build(guild, member)
+        assertEquals(0L, data.totalXp)
         assertEquals(0L, data.socialCredit)
         assertNull(data.equippedTitle)
         assertEquals(emptyList<Any>(), data.recentAchievements)
@@ -87,7 +75,7 @@ class ProfileCardAggregatorTest {
         every { titleService.getById(7L) } returns TitleDto(id = 7L, label = "🌱 Sprout", cost = 200, colorHex = "#57F287")
         every { achievementService.listFor(discordId, guildId) } returns emptyList()
 
-        val data = aggregator.build(discordId, guildId)!!
+        val data = aggregator.build(guild, member)
         assertEquals("🌱 Sprout", data.equippedTitle?.label)
         assertEquals("#57F287", data.equippedTitle?.colorHex)
     }
@@ -97,7 +85,7 @@ class ProfileCardAggregatorTest {
         every { userService.getUserById(discordId, guildId) } returns userDto(activeTitleId = null)
         every { achievementService.listFor(discordId, guildId) } returns emptyList()
 
-        assertNull(aggregator.build(discordId, guildId)!!.equippedTitle)
+        assertNull(aggregator.build(guild, member).equippedTitle)
     }
 
     @Test
@@ -115,7 +103,7 @@ class ProfileCardAggregatorTest {
             view("Eldest", "📜", unlockedAt = olderStill),
         )
 
-        val data = aggregator.build(discordId, guildId)!!
+        val data = aggregator.build(guild, member)
         // Three returned, newest first, locked entries filtered.
         assertEquals(listOf("5-day Streak", "Big Winner", "First Roll"), data.recentAchievements.map { it.name })
         // No locked entries.
@@ -129,7 +117,7 @@ class ProfileCardAggregatorTest {
         every { userService.getUserById(discordId, guildId) } returns userDto()
         every { achievementService.listFor(discordId, guildId) } returns emptyList()
 
-        val data = aggregator.build(discordId, guildId)!!
+        val data = aggregator.build(guild, member)
         assertEquals("https://avatar/42.png", data.avatarUrl)
         assertEquals("Alice", data.displayName)
         assertEquals("Test Guild", data.guildName)
@@ -137,15 +125,13 @@ class ProfileCardAggregatorTest {
 
     @Test
     fun `build derives level math from total XP via LevelCurve`() {
-        // 255 XP is exactly the cumulative XP to reach level 2 (100 + 155),
-        // so progress should report level 2 with 0 XP into the level and
-        // the next-level cost of 210 (5*4 + 100 + 100 + 110 = no, let's just
-        // assert the LevelCurve passthrough surfaces; the curve itself is
-        // covered by its own unit tests).
+        // 255 XP is exactly the cumulative XP to reach level 2 (100 + 155).
+        // The LevelCurve itself is covered by its own unit tests; this
+        // assertion just pins the passthrough.
         every { userService.getUserById(discordId, guildId) } returns userDto(xp = 255L)
         every { achievementService.listFor(discordId, guildId) } returns emptyList()
 
-        val data = aggregator.build(discordId, guildId)!!
+        val data = aggregator.build(guild, member)
         assertEquals(2, data.level)
         assertEquals(255L, data.totalXp)
         assertEquals(0L, data.xpIntoLevel)

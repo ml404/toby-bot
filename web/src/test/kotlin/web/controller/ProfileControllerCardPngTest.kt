@@ -2,6 +2,9 @@ package web.controller
 
 import io.mockk.every
 import io.mockk.mockk
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -15,11 +18,9 @@ import java.time.Instant
 
 /**
  * Unit-level tests for the `GET /profile/{guildId}/{discordId}/card.png`
- * endpoint. Driven directly through [ProfileController.cardPng] rather
- * than MockMvc since the route's behaviour is entirely determined by
- * the WebGuildAccess gate and the aggregator/renderer mock returns;
- * spinning up a Spring slice context just to verify status codes is
- * overkill for the same coverage we get here.
+ * endpoint. The controller resolves Guild + Member via JDA itself (the
+ * aggregator no longer takes JDA, by design — see [ProfileCardAggregator]),
+ * so these tests also pin the 404 paths for missing-guild / missing-member.
  */
 class ProfileControllerCardPngTest {
 
@@ -30,6 +31,7 @@ class ProfileControllerCardPngTest {
     private lateinit var profileWebService: ProfileWebService
     private lateinit var profileCardAggregator: ProfileCardAggregator
     private lateinit var profileCardRenderer: ProfileCardRenderer
+    private lateinit var jda: JDA
     private lateinit var user: OAuth2User
     private lateinit var controller: ProfileController
 
@@ -38,7 +40,8 @@ class ProfileControllerCardPngTest {
         profileWebService = mockk(relaxed = true)
         profileCardAggregator = mockk(relaxed = true)
         profileCardRenderer = mockk(relaxed = true)
-        controller = ProfileController(profileWebService, profileCardAggregator, profileCardRenderer)
+        jda = mockk(relaxed = true)
+        controller = ProfileController(profileWebService, profileCardAggregator, profileCardRenderer, jda)
         user = mockk {
             every { getAttribute<String>("id") } returns viewerDiscordId.toString()
             every { getAttribute<String>("username") } returns "viewer"
@@ -60,9 +63,19 @@ class ProfileControllerCardPngTest {
     }
 
     @Test
-    fun `returns 404 when the target has no profile data`() {
+    fun `returns 404 when the bot cannot see the guild`() {
         every { profileWebService.isMember(viewerDiscordId, guildId) } returns true
-        every { profileCardAggregator.build(targetDiscordId, guildId) } returns null
+        every { jda.getGuildById(guildId) } returns null
+        val response = controller.cardPng(guildId, targetDiscordId, user)
+        assertTrue(response.statusCode.value() == 404, "expected 404, got ${response.statusCode}")
+    }
+
+    @Test
+    fun `returns 404 when the target user is not in the guild`() {
+        every { profileWebService.isMember(viewerDiscordId, guildId) } returns true
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(targetDiscordId) } returns null
         val response = controller.cardPng(guildId, targetDiscordId, user)
         assertTrue(response.statusCode.value() == 404, "expected 404, got ${response.statusCode}")
     }
@@ -70,15 +83,17 @@ class ProfileControllerCardPngTest {
     @Test
     fun `returns 200 image png with cache-control on the happy path`() {
         every { profileWebService.isMember(viewerDiscordId, guildId) } returns true
-        every { profileCardAggregator.build(targetDiscordId, guildId) } returns sampleData()
+        val guild = mockk<Guild>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.getMemberById(targetDiscordId) } returns member
+        every { profileCardAggregator.build(guild, member) } returns sampleData()
         val pngStub = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) + ByteArray(100)
         every { profileCardRenderer.renderPng(any()) } returns pngStub
 
         val response = controller.cardPng(guildId, targetDiscordId, user)
         assertTrue(response.statusCode.is2xxSuccessful, "expected 2xx, got ${response.statusCode}")
         assertTrue(response.body!!.isNotEmpty(), "expected non-empty body")
-        // Content-Type set via @GetMapping(produces=...) is also stamped by the
-        // ResponseEntity.contentType() call — assert the latter.
         assertTrue(
             response.headers.contentType?.toString()?.startsWith("image/png") == true,
             "expected image/png content type, got ${response.headers.contentType}",
