@@ -1,22 +1,18 @@
 package database.rps
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * In-memory book of live `/rps` matches. Mirrors the shape of
- * [database.duel.PendingDuelRegistry] — same `ConcurrentHashMap +
- * AtomicLong` skeleton, same TTL-expiry-with-callback, same atomic
- * `consumeFor…` removes for race safety between picks, forfeit, and
- * timeout.
- *
- * Two stages live here:
+ * In-memory book of live `/rps` matches. Two stages:
  *   - PENDING — `/rps` posted; opponent hasn't yet hit Accept. Stakes
  *     are NOT yet debited from anyone.
  *   - LIVE — opponent accepted; both stakes locked. Each side privately
@@ -24,15 +20,33 @@ import java.util.concurrent.atomic.AtomicLong
  *     caller drains the session (via [consumeForResolution]) and
  *     resolves the wager.
  *
- * Lost-on-restart is acceptable: mid-flight matches are short-lived and
- * the worst case (a session evaporates mid-pick) just refunds anything
- * already debited — better than carrying half-state across deploys.
+ * **Storage**: backed by a Caffeine [Cache] (via `asMap()` for the
+ * familiar `ConcurrentMap` ops) so we get a hard upper bound on
+ * concurrent sessions ([MAX_SESSIONS]) and a TTL backstop
+ * ([MAX_LIFETIME]) on entries that the scheduler somehow misses. This
+ * matches the convention used by `MessageChatListener` and the SSE
+ * registry elsewhere in the codebase — belt-and-suspenders memory
+ * protection beyond the scheduler-driven phase callbacks.
+ *
+ * The phase timeouts (pending → expired, live-no-pick → expired) are
+ * still driven by [scheduler] because the callbacks close over JDA
+ * message-edit state. Caffeine's eviction-by-TTL kicks in only if a
+ * scheduled task somehow doesn't run (queue overflow, JVM pause,
+ * throw); the scheduler's `sessions.remove(id)` returns null in that
+ * case and skips the message edit — memory is already reclaimed.
+ *
+ * Lost-on-restart is acceptable: mid-flight matches are short-lived
+ * and the worst case (a session evaporates mid-pick) just refunds
+ * anything already debited — better than carrying half-state across
+ * deploys.
  */
 @Component
 class RpsSessionRegistry(
     val pendingTtl: Duration = DEFAULT_PENDING_TTL,
     val pickTtl: Duration = DEFAULT_PICK_TTL,
     private val scheduler: ScheduledExecutorService = RegistryScheduler.instance,
+    maximumSessions: Long = MAX_SESSIONS,
+    maxLifetime: Duration = MAX_LIFETIME,
 ) {
 
     data class Session(
@@ -50,7 +64,17 @@ class RpsSessionRegistry(
         val bothPicked: Boolean get() = picks.size == 2
     }
 
-    private val sessions = ConcurrentHashMap<Long, Session>()
+    /**
+     * Caffeine cache + `asMap()` view. Every read/write below uses
+     * [sessions] (the ConcurrentMap view) for atomic primitives;
+     * [cache] is kept only so the `expireAfterWrite` / `maximumSize`
+     * configuration stays in scope and the GC root chain is explicit.
+     */
+    private val cache: Cache<Long, Session> = Caffeine.newBuilder()
+        .expireAfterWrite(maxLifetime)
+        .maximumSize(maximumSessions)
+        .build()
+    private val sessions: ConcurrentMap<Long, Session> = cache.asMap()
     private val seq = AtomicLong()
 
     /**
@@ -155,5 +179,24 @@ class RpsSessionRegistry(
     companion object {
         val DEFAULT_PENDING_TTL: Duration = Duration.ofMinutes(3)
         val DEFAULT_PICK_TTL: Duration = Duration.ofMinutes(2)
+
+        /**
+         * Hard upper bound on concurrent in-flight sessions. Matches the
+         * convention used by `MessageChatListener.lastAwardAt` —
+         * generous enough that a real PvP burst (a server runs a
+         * tournament) doesn't trip it, low enough that a malformed
+         * `/rps` flood can't OOM the heap. Caffeine evicts least-
+         * recently-used entries above the cap.
+         */
+        const val MAX_SESSIONS: Long = 10_000L
+
+        /**
+         * Backstop lifetime for any single session: pending TTL (3m)
+         * + pick TTL (2m) + 1m slop = 6 minutes. Caffeine evicts
+         * entries past this even if the scheduler-driven phase
+         * timeouts somehow didn't run; protects against memory leaks
+         * if a scheduled task throws or the executor queue saturates.
+         */
+        val MAX_LIFETIME: Duration = Duration.ofMinutes(6)
     }
 }

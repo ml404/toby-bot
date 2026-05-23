@@ -188,6 +188,28 @@ class RpsSessionRegistryTest {
         }
     }
 
+    @Test
+    fun `Caffeine maximumSize cap evicts oldest entries to keep memory bounded`() {
+        // Belt-and-suspenders memory protection: even with a flood of
+        // /rps invocations, the cache caps at maximumSessions. Pin the
+        // behaviour with a low cap so an accidental change to the
+        // companion constant (or a regression to ConcurrentHashMap)
+        // surfaces immediately.
+        val registry = RpsSessionRegistry(
+            scheduler = noopScheduler(),
+            maximumSessions = 3L,
+        )
+        val ids = (1..10).map {
+            registry.register(guildId, initiatorId + it, opponentId + it, stake = 0L).id
+        }
+        // Caffeine performs eviction asynchronously; nudge it with a
+        // synchronous read so the cleanup completes before we assert.
+        ids.forEach { registry.get(it) }
+        Thread.sleep(50)
+        val surviving = ids.count { registry.get(it) != null }
+        assertTrue(surviving <= 3, "expected at most 3 survivors with maximumSessions=3, got $surviving")
+    }
+
     /**
      * A no-op scheduler for tests that don't care about timeouts.
      * Avoids spinning up real threads when we only want to drive the
