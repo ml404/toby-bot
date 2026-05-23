@@ -1,0 +1,50 @@
+<!--
+  Searchable channel picker. Renders a native <select> (so the form
+  still posts the same field with no JS) which channelPicker.js
+  progressively enhances into a typeahead combobox.
+
+  Mirrors templates/fragments/userPicker.html and reuses the same
+  .user-picker__* CSS classes (which are picker-shape styling, not
+  user-specific).
+
+  Params (use named args at the call site):
+    name           form field name (or null for .config-row selects
+                   that have no name attribute).
+    id             DOM id used by <label for="…"> (pass null when
+                   not needed — JS will generate one).
+    channels       iterable of objects exposing .id and .name. Works
+                   with both TextChannelInfo and VoiceChannelInfo.
+    selectedValue  pre-selected value (id or name); pass null for
+                   none.
+    placeholder    text shown when nothing is picked.
+    emptyLabel     label for the empty-string option (e.g. "— system
+                   channel —"). Pass null to omit — required selects
+                   rely on that.
+    required       boolean — forwards to the <select>.
+    valuePrefix    string prepended to display text (typically '#'
+                   for text channels, '' for voice).
+    valueField     'id' or 'name' — which field becomes the option
+                   value. Only the MOVE config uses 'name'; every
+                   other call site uses 'id'.
+    disabled       boolean — applied to the <select> for read-locked
+                   views (e.g. non-owner viewing settings).
+-->
+<div xmlns:th="http://www.thymeleaf.org"
+     th:fragment="channelPicker(name, id, channels, selectedValue, placeholder, emptyLabel, required, valuePrefix, valueField, disabled)"
+     class="user-picker"
+     th:attr="data-placeholder=${placeholder}">
+    <select th:id="${id}"
+            th:name="${name}"
+            th:required="${required}"
+            th:disabled="${disabled}"
+            data-channel-picker>
+        <option th:if="${emptyLabel != null}" value="" th:text="${emptyLabel}"
+                th:selected="${selectedValue == null or selectedValue == ''}"></option>
+        <option th:each="c : ${channels}"
+                th:value="${valueField == 'name' ? c.name : c.id}"
+                th:text="${valuePrefix + c.name}"
+                th:selected="${selectedValue != null
+                              and ((valueField == 'name' and c.name == selectedValue.toString())
+                                   or (valueField != 'name' and c.id == selectedValue.toString()))}"></option>
+    </select>
+</div>

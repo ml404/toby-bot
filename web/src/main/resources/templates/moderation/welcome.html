@@ -59,13 +59,17 @@
                                 system channel.
                             </span>
                         </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; fall back to system channel &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['WELCOME_CHANNEL'] == tc.id}"></option>
-                        </select>
+                        <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                name=null,
+                                id=null,
+                                channels=${overview.textChannels},
+                                selectedValue=${overview.config['WELCOME_CHANNEL']},
+                                placeholder='— fall back to system channel —',
+                                emptyLabel='— fall back to system channel —',
+                                required=false,
+                                valuePrefix='#',
+                                valueField='id',
+                                disabled=${!isOwner})}"></div>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="WELCOME_MESSAGE">
@@ -111,13 +115,17 @@
                                 system channel.
                             </span>
                         </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; fall back to system channel &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['GOODBYE_CHANNEL'] == tc.id}"></option>
-                        </select>
+                        <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                name=null,
+                                id=null,
+                                channels=${overview.textChannels},
+                                selectedValue=${overview.config['GOODBYE_CHANNEL']},
+                                placeholder='— fall back to system channel —',
+                                emptyLabel='— fall back to system channel —',
+                                required=false,
+                                valuePrefix='#',
+                                valueField='id',
+                                disabled=${!isOwner})}"></div>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-row" data-key="GOODBYE_MESSAGE">
@@ -198,6 +206,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/welcome.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>

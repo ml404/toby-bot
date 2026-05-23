@@ -142,12 +142,17 @@
         </p>
         <form class="mod-action-form" data-action="purge">
             <label>Channel
-                <select name="channelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"></option>
-                </select>
+                <div th:replace="~{fragments/channelPicker :: channelPicker(
+                        name='channelId',
+                        id='purge-channel',
+                        channels=${overview.textChannels},
+                        selectedValue=null,
+                        placeholder='— choose —',
+                        emptyLabel=null,
+                        required=true,
+                        valuePrefix='#',
+                        valueField='id',
+                        disabled=false)}"></div>
             </label>
             <label>Count (1-100)
                 <input type="number" name="count" min="1" max="100" value="10" required>
@@ -176,12 +181,17 @@
         </p>
         <form class="mod-action-form" data-action="lock">
             <label>Channel
-                <select name="channelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"></option>
-                </select>
+                <div th:replace="~{fragments/channelPicker :: channelPicker(
+                        name='channelId',
+                        id='lock-channel',
+                        channels=${overview.textChannels},
+                        selectedValue=null,
+                        placeholder='— choose —',
+                        emptyLabel=null,
+                        required=true,
+                        valuePrefix='#',
+                        valueField='id',
+                        disabled=false)}"></div>
             </label>
             <div class="lock-actions">
                 <button type="button" class="btn-danger" data-lock="true">Lock</button>
@@ -197,12 +207,17 @@
         </p>
         <form class="mod-action-form" data-action="slowmode">
             <label>Channel
-                <select name="channelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"></option>
-                </select>
+                <div th:replace="~{fragments/channelPicker :: channelPicker(
+                        name='channelId',
+                        id='slowmode-channel',
+                        channels=${overview.textChannels},
+                        selectedValue=null,
+                        placeholder='— choose —',
+                        emptyLabel=null,
+                        required=true,
+                        valuePrefix='#',
+                        valueField='id',
+                        disabled=false)}"></div>
             </label>
             <label>Seconds (0-21600, 0 to disable)
                 <input type="number" name="seconds" min="0" max="21600" value="0" required>
@@ -215,6 +230,7 @@
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/userPicker.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/actions.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>

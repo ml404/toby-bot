@@ -19,12 +19,17 @@
         <form class="poll-form">
             <label>
                 Channel
-                <select name="channelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="tc : ${overview.textChannels}"
-                            th:value="${tc.id}"
-                            th:text="'#' + ${tc.name}"></option>
-                </select>
+                <div th:replace="~{fragments/channelPicker :: channelPicker(
+                        name='channelId',
+                        id='poll-channel',
+                        channels=${overview.textChannels},
+                        selectedValue=null,
+                        placeholder='— choose —',
+                        emptyLabel=null,
+                        required=true,
+                        valuePrefix='#',
+                        valueField='id',
+                        disabled=false)}"></div>
             </label>
             <label>
                 Question
@@ -43,6 +48,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/poll.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>
