@@ -164,6 +164,7 @@ class CommandManagerTest {
             NotifyCommand::class.java,
             InstallCommand::class.java,
             WelcomeCommand::class.java,
+            ProfileCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))

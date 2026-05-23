@@ -1,6 +1,9 @@
 package web.controller
 
 import jakarta.servlet.http.HttpServletRequest
+import org.springframework.http.CacheControl
+import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.annotation.RegisteredOAuth2AuthorizedClient
@@ -12,17 +15,22 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.profile.ProfileCardRenderer
+import web.service.ProfileCardAggregator
 import web.service.ProfileWebService
 import web.util.DefaultGuildCookie
 import web.util.DefaultGuildRedirect
 import web.util.WebGuildAccess
 import web.util.discordIdOrNull
 import web.util.displayName
+import java.util.concurrent.TimeUnit
 
 @Controller
 @RequestMapping("/profile")
 class ProfileController(
-    private val profileWebService: ProfileWebService
+    private val profileWebService: ProfileWebService,
+    private val profileCardAggregator: ProfileCardAggregator,
+    private val profileCardRenderer: ProfileCardRenderer,
 ) {
 
     @GetMapping("/guilds")
@@ -107,5 +115,38 @@ class ProfileController(
         model.addAttribute("backLink", "/leaderboard/$guildId")
         model.addAttribute("backLabel", "Leaderboard")
         "profile"
+    }
+
+    /**
+     * Profile card as a PNG. Same image the `/profile` slash command
+     * posts in Discord — same aggregator + same renderer — so dropping
+     * the URL into Discord chat (or wiring it into an `<meta og:image>`
+     * for social sharing) yields a consistent card.
+     *
+     * Auth: must be a member of the same guild as the target — mirrors
+     * the read-only `publicProfile` route's gate. 401 anonymous, 403
+     * non-member, 404 when the user has no profile row yet, 200 with
+     * `image/png` body otherwise. 60-second client cache to absorb the
+     * common "Discord previews the same OG link three times in 10
+     * seconds" pattern without re-rendering the same bytes each hit.
+     */
+    @GetMapping("/{guildId}/{discordId}/card.png", produces = [MediaType.IMAGE_PNG_VALUE])
+    fun cardPng(
+        @PathVariable guildId: Long,
+        @PathVariable discordId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<ByteArray> = WebGuildAccess.requireForJson(
+        user = user,
+        guildId = guildId,
+        check = profileWebService::isMember,
+        errorBuilder = { status -> ResponseEntity.status(status).build() },
+    ) { _ ->
+        val data = profileCardAggregator.build(discordId, guildId)
+            ?: return@requireForJson ResponseEntity.notFound().build()
+        val png = profileCardRenderer.renderPng(data)
+        ResponseEntity.ok()
+            .contentType(MediaType.IMAGE_PNG)
+            .cacheControl(CacheControl.maxAge(60, TimeUnit.SECONDS).cachePublic())
+            .body(png)
     }
 }
