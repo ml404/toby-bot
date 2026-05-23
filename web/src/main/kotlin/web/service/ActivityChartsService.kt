@@ -9,6 +9,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.round
 
 /**
  * Reads the daily activity series feeding the moderation Activity tab.
@@ -23,6 +24,12 @@ import kotlin.math.min
  *
  * Both methods pre-fill empty days with zeros so the template never has
  * to worry about gaps in the X axis.
+ *
+ * The page renders via [ChartView] — a render-ready bundle of pre-
+ * computed polyline + headline numbers + date range — so the template
+ * never has to call helper functions through Thymeleaf SpEL. See
+ * [buildMessagesChart] and [buildVoiceHoursChart] for the controller-
+ * facing entry points.
  */
 @Service
 class ActivityChartsService(
@@ -38,6 +45,38 @@ class ActivityChartsService(
         /** The chart template renders both metrics through a single SVG fragment. */
         val valueLong: Long get() = value.toLong()
     }
+
+    /**
+     * Render-ready bundle for one chart. Everything the template needs
+     * is pre-computed in the service so the Thymeleaf page only has to
+     * read `${chart.field}` — no SpEL static-method calls, no `T(...)`
+     * type references. Matches the moderation-page convention used by
+     * `leveling.html`, `lottery.html`, etc.
+     */
+    data class ChartView(
+        val points: List<DailyPoint>,
+        /** Pre-rendered SVG `points="..."` value for `<polyline>`. */
+        val polyline: String,
+        val total: Double,
+        val max: Double,
+        val viewBoxWidth: Int,
+        val viewBoxHeight: Int,
+        val firstDate: LocalDate?,
+        val lastDate: LocalDate?,
+    ) {
+        /** Display-only int variants for headline strong-tags. */
+        val totalRounded: Long get() = round(total).toLong()
+        val maxRounded: Long get() = round(max).toLong()
+        val isEmpty: Boolean get() = points.isEmpty()
+    }
+
+    /** Build the messages-per-day chart for [guildId]. */
+    fun buildMessagesChart(guildId: Long, days: Int = DEFAULT_DAYS): ChartView =
+        toChartView(messagesPerDay(guildId, days))
+
+    /** Build the voice-hours-per-day chart for [guildId]. */
+    fun buildVoiceHoursChart(guildId: Long, days: Int = DEFAULT_DAYS): ChartView =
+        toChartView(voiceHoursPerDay(guildId, days))
 
     /**
      * Messages-per-day for [guildId] over the trailing [days] calendar
@@ -95,6 +134,42 @@ class ActivityChartsService(
         }
     }
 
+    private fun toChartView(series: List<DailyPoint>): ChartView = ChartView(
+        points = series,
+        polyline = polylinePoints(series),
+        total = series.sumOf { it.value },
+        max = series.maxOfOrNull { it.value } ?: 0.0,
+        viewBoxWidth = CHART_WIDTH,
+        viewBoxHeight = CHART_HEIGHT,
+        firstDate = series.firstOrNull()?.date,
+        lastDate = series.lastOrNull()?.date,
+    )
+
+    /**
+     * Build the `points="..."` value for an `<svg><polyline>` rendering
+     * of [series]. Y-axis normalises to the series max; an all-zero
+     * series renders along the bottom of the chart so the baseline is
+     * always visible. The chart is padded inside the SVG so the top
+     * edge doesn't clip the highest point.
+     *
+     * Internal — the controller never calls this directly; templates
+     * read [ChartView.polyline] from the bundle [buildMessagesChart]
+     * returns.
+     */
+    internal fun polylinePoints(series: List<DailyPoint>): String {
+        if (series.isEmpty()) return ""
+        val padding = 8.0
+        val innerW = CHART_WIDTH - 2 * padding
+        val innerH = CHART_HEIGHT - 2 * padding
+        val maxVal = series.maxOf { it.value }.coerceAtLeast(1.0)
+        val stepX = if (series.size <= 1) 0.0 else innerW / (series.size - 1)
+        return series.mapIndexed { i, point ->
+            val x = padding + i * stepX
+            val y = padding + innerH - (point.value / maxVal) * innerH
+            "%.1f,%.1f".format(x, y)
+        }.joinToString(" ")
+    }
+
     private fun fillRange(since: LocalDate, today: LocalDate): List<LocalDate> {
         val length = Duration.between(
             since.atStartOfDay(ZoneOffset.UTC),
@@ -110,34 +185,5 @@ class ActivityChartsService(
         /** Width / height for the per-chart SVG. Picked to match the moderation panel grid. */
         const val CHART_WIDTH: Int = 600
         const val CHART_HEIGHT: Int = 180
-
-        /**
-         * Build the `points="..."` value for an `<svg><polyline>` rendering
-         * of [series]. Y-axis normalises to the series max; an all-zero
-         * series renders along the bottom of the chart so the baseline
-         * is always visible. The chart is padded inside the SVG so the
-         * top edge doesn't clip the highest point.
-         */
-        fun polylinePoints(series: List<DailyPoint>): String {
-            if (series.isEmpty()) return ""
-            val padding = 8.0
-            val innerW = CHART_WIDTH - 2 * padding
-            val innerH = CHART_HEIGHT - 2 * padding
-            val max = series.maxOf { it.value }.coerceAtLeast(1.0)
-            val stepX = if (series.size <= 1) 0.0 else innerW / (series.size - 1)
-            return series.mapIndexed { i, point ->
-                val x = padding + i * stepX
-                val y = padding + innerH - (point.value / max) * innerH
-                "%.1f,%.1f".format(x, y)
-            }.joinToString(" ")
-        }
-
-        /** Largest value across [series], for the per-chart legend. */
-        fun maxValue(series: List<DailyPoint>): Double =
-            series.maxOfOrNull { it.value } ?: 0.0
-
-        /** Sum of values across [series], for the per-chart legend. */
-        fun totalValue(series: List<DailyPoint>): Double =
-            series.sumOf { it.value }
     }
 }
