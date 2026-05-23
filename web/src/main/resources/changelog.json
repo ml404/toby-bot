@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Shared searchable channel picker across moderation pages",
+    "summary": "Every channel `<select>` dropdown in the moderation UI now uses a searchable typeahead combobox that mirrors the existing `userPicker` UX (filter-as-you-type, keyboard nav, accessible combobox roles). The new `channelPicker` fragment + JS module progressively enhances a native `<select>`, so the form-save handlers in `moderationCommon.js`, `actions.js`, `poll.js`, `voice.js`, `lottery.js`, and `leveling.js` keep reading `.value` unchanged. Eleven sites migrated across: `se…",
+    "emoji": "🛡️",
+    "prNumber": 547
+  },
+  {
+    "date": "May 2026",
     "title": "Per-guild welcome/goodbye announcements + auto-role-on-join",
     "summary": "Adds the table-stakes \"this bot greets new members\" feature that big servers expect from a main bot. Three independently-toggleable surfaces, configurable from both Discord (`/welcome` slash command) and the web dashboard (`/moderation/{guild}/welcome` tab). This is the first wave from the [feature-recommendations plan](https://claude.ai/code/session_017tRi5q6K3NYHvYeZYzLzBD) — picked as the single biggest unlock for admin appeal.",
     "emoji": "🛡️",
