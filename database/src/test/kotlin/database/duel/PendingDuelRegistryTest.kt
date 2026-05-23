@@ -111,4 +111,26 @@ class PendingDuelRegistryTest {
         assertEquals("1m 30s", PendingDuelRegistry.formatTtl(Duration.ofSeconds(90)))
         assertEquals("1h 5m", PendingDuelRegistry.formatTtl(Duration.ofMinutes(65)))
     }
+
+    @Test
+    fun `Caffeine maximumSize cap evicts oldest entries to keep memory bounded`() {
+        // Belt-and-suspenders memory protection: even with a flood of
+        // /duel invocations the registry caps at maximumOffers. Pin
+        // the behaviour with a low cap so an accidental regression
+        // back to ConcurrentHashMap surfaces immediately.
+        val registry = PendingDuelRegistry(
+            ttl = Duration.ofSeconds(60),
+            scheduler = scheduler,
+            maximumOffers = 3L,
+        )
+        val ids = (1..10).map {
+            registry.register(guildId = 1L, initiatorDiscordId = 10L + it, opponentDiscordId = 20L + it, stake = 50L).id
+        }
+        // Caffeine performs eviction asynchronously; nudge it with a
+        // synchronous read so cleanup completes before we assert.
+        ids.forEach { registry.get(it) }
+        Thread.sleep(50)
+        val surviving = ids.count { registry.get(it) != null }
+        assertTrue(surviving <= 3, "expected at most 3 survivors with maximumOffers=3, got $surviving")
+    }
 }

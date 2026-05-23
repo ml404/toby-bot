@@ -151,4 +151,24 @@ class RecentDuelResolutionsTest {
         capturedTasks[0].run()
         assertTrue(cache.consumeForInitiator(initiator, guildId).isEmpty())
     }
+
+    @Test
+    fun `Caffeine maximumSize cap evicts oldest entries to keep memory bounded`() {
+        // Belt-and-suspenders memory protection: even if a malformed
+        // surge of resolutions never gets consumed, the cache caps
+        // total retained entries. Pin the behaviour with a low cap so
+        // an accidental regression to ConcurrentHashMap surfaces.
+        val cache = RecentDuelResolutions(
+            ttl = Duration.ofSeconds(60),
+            scheduler = scheduler,
+            maximumEntries = 3L,
+        )
+        repeat(10) { cache.record(sample()) }
+        // Caffeine performs eviction asynchronously; force a read
+        // through to flush pending eviction work.
+        cache.consumeForInitiator(initiator + 9999L, guildId)
+        Thread.sleep(50)
+        val surviving = cache.consumeForInitiator(initiator, guildId)
+        assertTrue(surviving.size <= 3, "expected at most 3 survivors with maximumEntries=3, got ${surviving.size}")
+    }
 }
