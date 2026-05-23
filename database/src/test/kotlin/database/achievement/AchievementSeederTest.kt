@@ -117,5 +117,9 @@ class AchievementSeederTest {
         override fun getProgress(discordId: Long, guildId: Long, achievementId: Long): AchievementProgressDto? = null
         override fun listProgressByUser(discordId: Long, guildId: Long): List<AchievementProgressDto> = emptyList()
         override fun upsertProgress(row: AchievementProgressDto): AchievementProgressDto = row
+        override fun progressByCodesForGuild(
+            guildId: Long,
+            codes: Collection<String>,
+        ): List<database.persistence.ProgressByCodeRow> = emptyList()
     }
 }

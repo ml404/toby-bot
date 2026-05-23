@@ -17,4 +17,22 @@ interface AchievementPersistence {
     fun getProgress(discordId: Long, guildId: Long, achievementId: Long): AchievementProgressDto?
     fun listProgressByUser(discordId: Long, guildId: Long): List<AchievementProgressDto>
     fun upsertProgress(row: AchievementProgressDto): AchievementProgressDto
+
+    /**
+     * Per-(discordId, code) progress values for every user in [guildId] whose
+     * progress on any of [codes] is > 0. Returned rows are flat
+     * `(discordId, code, progress)` triples — the caller aggregates as it
+     * sees fit (e.g. total-wins-across-games for the leaderboard).
+     *
+     * Used by the leaderboard "Champions" tab to surface top PvP winners
+     * without N round-trips through [getProgress].
+     */
+    fun progressByCodesForGuild(guildId: Long, codes: Collection<String>): List<ProgressByCodeRow>
 }
+
+/** Flat projection used by [AchievementPersistence.progressByCodesForGuild]. */
+data class ProgressByCodeRow(
+    val discordId: Long,
+    val code: String,
+    val progress: Long,
+)

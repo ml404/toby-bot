@@ -52,4 +52,10 @@ class DefaultVoiceSessionService @Autowired constructor(
 
     override fun sumCountedSecondsLifetimeByUser(guildId: Long): Map<Long, Long> =
         persistence.sumCountedSecondsLifetimeByUser(guildId)
+
+    override fun findClosedOverlapping(
+        guildId: Long,
+        from: Instant,
+        until: Instant
+    ): List<VoiceSessionDto> = persistence.findClosedOverlapping(guildId, from, until)
 }

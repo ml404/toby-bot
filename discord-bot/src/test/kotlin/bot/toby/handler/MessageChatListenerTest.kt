@@ -21,7 +21,8 @@ import io.mockk.junit5.MockKExtension
 class MessageChatListenerTest {
 
     private val xpAwardService: XpAwardService = mockk(relaxed = true)
-    private val listener = spyk(MessageChatListener(xpAwardService))
+    private val messageActivityBuffer: database.service.MessageActivityBuffer = mockk(relaxed = true)
+    private val listener = spyk(MessageChatListener(xpAwardService, messageActivityBuffer))
 
     @Test
     fun `onMessageReceived should respond correctly to toby message`() {

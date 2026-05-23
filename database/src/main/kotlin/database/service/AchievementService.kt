@@ -59,6 +59,20 @@ interface AchievementService {
      */
     fun listFor(discordId: Long, guildId: Long): List<AchievementView>
 
+    /**
+     * Per-(discordId, code) progress values for every user in [guildId]
+     * whose progress on any of [codes] is > 0. Used by the leaderboard
+     * "Champions" tab to surface top winners across multiple PvP games
+     * with one query.
+     */
+    fun progressByCodesForGuild(guildId: Long, codes: Collection<String>): List<ProgressByCode>
+
+    data class ProgressByCode(
+        val discordId: Long,
+        val code: String,
+        val progress: Long,
+    )
+
     data class ProgressResult(
         val achievement: AchievementDto?,
         val newProgress: Long,

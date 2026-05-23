@@ -1,5 +1,6 @@
 package web.service
 
+import database.service.AchievementService
 import database.service.TobyCoinMarketService
 import database.service.UserService
 import io.mockk.every
@@ -22,6 +23,7 @@ class LeaderboardWebServiceTest {
     private lateinit var moderationWebService: ModerationWebService
     private lateinit var userService: UserService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var achievementService: AchievementService
     private lateinit var service: LeaderboardWebService
 
     private val guildId = 42L
@@ -34,13 +36,15 @@ class LeaderboardWebServiceTest {
         moderationWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        achievementService = mockk(relaxed = true)
         // Real GuildMembership over the mocked JDA — keeps the existing
         // `isMember` tests black-boxed against JDA, not against the helper.
         service = LeaderboardWebService(
             jda, introWebService, moderationWebService, userService, marketService,
             mockk(relaxed = true), mockk(relaxed = true),
             GuildMembership(jda),
-            mockk(relaxed = true)
+            mockk(relaxed = true),
+            achievementService,
         )
     }
 
@@ -251,8 +255,74 @@ class LeaderboardWebServiceTest {
     fun `LeaderboardSort fromQuery maps tokens and falls back to THIS_MONTH`() {
         assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery("month"))
         assertEquals(LeaderboardSort.LIFETIME, LeaderboardSort.fromQuery("lifetime"))
+        assertEquals(LeaderboardSort.XP, LeaderboardSort.fromQuery("xp"))
         assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery(null))
         assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery(""))
         assertEquals(LeaderboardSort.THIS_MONTH, LeaderboardSort.fromQuery("garbage"))
+    }
+
+    @Test
+    fun `getGuildView builds champions from achievement progress sorted by total wins`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "Champions test"
+        every { moderationWebService.getLeaderboard(guildId) } returns emptyList()
+        // Discord 1 = 5 RPS + 3 TTT = 8 wins. Discord 2 = 10 duel wins.
+        // Discord 3 = 1 connect4 win. Sorted desc: 2 (10), 1 (8), 3 (1).
+        every { achievementService.progressByCodesForGuild(guildId, LeaderboardWebService.CHAMPIONS_WIN_CODES) } returns listOf(
+            AchievementService.ProgressByCode(discordId = 1L, code = "rps_wins_10", progress = 5L),
+            AchievementService.ProgressByCode(discordId = 1L, code = "tictactoe_wins_10", progress = 3L),
+            AchievementService.ProgressByCode(discordId = 2L, code = "duel_wins_10", progress = 10L),
+            AchievementService.ProgressByCode(discordId = 3L, code = "connect4_wins_10", progress = 1L),
+        )
+        every { guild.getMemberById(any<Long>()) } returns null
+
+        val view = service.getGuildView(guildId)!!
+
+        assertEquals(3, view.champions.size, "all three users with non-zero wins show up")
+        assertEquals(2L, view.champions[0].discordId.toLong())
+        assertEquals(10L, view.champions[0].totalWins)
+        assertEquals(1, view.champions[0].rank)
+        assertEquals(1L, view.champions[1].discordId.toLong())
+        assertEquals(8L, view.champions[1].totalWins)
+        assertEquals(3L, view.champions[2].discordId.toLong())
+        assertEquals(1L, view.champions[2].totalWins)
+    }
+
+    @Test
+    fun `getGuildView returns empty champions when achievement service fails`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "Failure test"
+        every { moderationWebService.getLeaderboard(guildId) } returns emptyList()
+        every { achievementService.progressByCodesForGuild(any(), any()) } throws RuntimeException("DB down")
+
+        // The view must still render — Champions becomes empty rather than 500-ing the page.
+        val view = service.getGuildView(guildId)!!
+        assertTrue(view.champions.isEmpty())
+    }
+
+    @Test
+    fun `getGuildView with XP sort ranks by xp desc and reassigns ranks`() {
+        val guild = mockk<Guild>(relaxed = true)
+        every { jda.getGuildById(guildId) } returns guild
+        every { guild.name } returns "XP sort test"
+        // Alice has the most credits, Carol has the most XP — XP sort surfaces Carol.
+        every { moderationWebService.getLeaderboard(guildId) } returns listOf(
+            LeaderboardRow(rank = 1, discordId = "1", name = "Alice", avatarUrl = null,
+                socialCredit = 1_000, xp = 100L, creditsEarnedThisMonth = 10),
+            LeaderboardRow(rank = 2, discordId = "2", name = "Bob", avatarUrl = null,
+                socialCredit = 500, xp = 500L, creditsEarnedThisMonth = 0),
+            LeaderboardRow(rank = 3, discordId = "3", name = "Carol", avatarUrl = null,
+                socialCredit = 200, xp = 5_000L, creditsEarnedThisMonth = 0)
+        )
+
+        val view = service.getGuildView(guildId, LeaderboardSort.XP)!!
+
+        assertEquals(LeaderboardSort.XP, view.sort)
+        assertEquals("Carol", view.podium[0].name)
+        assertEquals(1, view.podium[0].rank)
+        assertEquals("Bob", view.podium[1].name)
+        assertEquals("Alice", view.podium[2].name)
     }
 }

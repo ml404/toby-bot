@@ -86,5 +86,28 @@ class DefaultVoiceSessionPersistence : VoiceSessionPersistence {
         }
     }
 
+    override fun findClosedOverlapping(
+        guildId: Long,
+        from: Instant,
+        until: Instant,
+    ): List<VoiceSessionDto> {
+        // Inline JPQL — no NamedQuery on the entity since this is the only
+        // call site and the overlap predicate would lock readers into the
+        // exact column choice for a future tweak.
+        val q: TypedQuery<VoiceSessionDto> = entityManager.createQuery(
+            "select s from VoiceSessionDto s " +
+                "where s.guildId = :guildId " +
+                "and s.leftAt is not null " +
+                "and s.joinedAt < :until " +
+                "and s.leftAt >= :from " +
+                "order by s.joinedAt asc",
+            VoiceSessionDto::class.java,
+        )
+        q.setParameter("guildId", guildId)
+        q.setParameter("from", from)
+        q.setParameter("until", until)
+        return q.resultList
+    }
+
     private fun Long?.orZero(): Long = this ?: 0L
 }

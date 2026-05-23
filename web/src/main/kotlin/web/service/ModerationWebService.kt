@@ -266,6 +266,7 @@ class ModerationWebService(
                     socialCredit = current,
                     title = title,
                     level = common.leveling.LevelCurve.progress(dto.xp).level,
+                    xp = dto.xp,
                     voiceSecondsLifetime = lifetimeVoice[dto.discordId] ?: 0L,
                     voiceSecondsThisMonth = thisMonthVoice[dto.discordId] ?: 0L,
                     creditsEarnedThisMonth = creditsDelta
@@ -1681,6 +1682,7 @@ data class LeaderboardRow(
     val socialCredit: Long,
     val title: String? = null,
     val level: Int = 0,
+    val xp: Long = 0L,
     val voiceSecondsLifetime: Long = 0,
     val voiceSecondsThisMonth: Long = 0,
     val creditsEarnedThisMonth: Long = 0

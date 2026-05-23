@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Activity', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'activity')}"></div>
+
+    <!--
+        Server-wide activity charts. 30-day rolling window, UTC-bucketed.
+        Two metrics:
+          - Messages/day: from `message_daily_count`, populated by
+            `MessageActivityBuffer` (in-memory accumulator flushed once
+            a minute off the JDA dispatch thread).
+          - Voice hours/day: aggregated at query time over closed
+            voice sessions, splitting each session across the calendar
+            days it touched.
+        Both series are pre-padded with zero-days so the SVG always has
+        one point per calendar day in the window.
+    -->
+    <section class="mod-panel" data-panel="activity">
+        <p class="muted mb-4">
+            30-day rolling activity for this server. Messages start being
+            counted once the bot is rolled out with this feature — historical
+            messages from before deployment are not backfilled.
+        </p>
+
+        <div class="mod-card mod-card-wide">
+            <h3>💬 Messages per day</h3>
+            <p class="muted">
+                Total over window:
+                <strong th:text="${T(java.lang.Math).round(T(web.service.ActivityChartsService).totalValue(messagesPerDay))}">0</strong>
+                · Peak day:
+                <strong th:text="${T(java.lang.Math).round(T(web.service.ActivityChartsService).maxValue(messagesPerDay))}">0</strong>
+            </p>
+            <svg th:if="${not #lists.isEmpty(messagesPerDay)}"
+                 class="activity-chart"
+                 role="img"
+                 aria-label="Messages per day, 30-day rolling"
+                 th:attr="viewBox=|0 0 ${T(web.service.ActivityChartsService).CHART_WIDTH} ${T(web.service.ActivityChartsService).CHART_HEIGHT}|"
+                 preserveAspectRatio="none">
+                <polyline fill="none"
+                          stroke="#5b8def"
+                          stroke-width="2"
+                          th:attr="points=${T(web.service.ActivityChartsService).polylinePoints(messagesPerDay)}"/>
+            </svg>
+            <p class="muted small">
+                <span th:text="${messagesPerDay[0].date}">2026-04-23</span>
+                →
+                <span th:text="${messagesPerDay[#lists.size(messagesPerDay) - 1].date}">2026-05-23</span>
+            </p>
+        </div>
+
+        <div class="mod-card mod-card-wide">
+            <h3>🎤 Voice hours per day</h3>
+            <p class="muted">
+                Total over window:
+                <strong th:text="${#numbers.formatDecimal(T(web.service.ActivityChartsService).totalValue(voiceHoursPerDay), 1, 1)}">0</strong>
+                hours · Peak day:
+                <strong th:text="${#numbers.formatDecimal(T(web.service.ActivityChartsService).maxValue(voiceHoursPerDay), 1, 1)}">0</strong>
+                hours
+            </p>
+            <svg th:if="${not #lists.isEmpty(voiceHoursPerDay)}"
+                 class="activity-chart"
+                 role="img"
+                 aria-label="Voice hours per day, 30-day rolling"
+                 th:attr="viewBox=|0 0 ${T(web.service.ActivityChartsService).CHART_WIDTH} ${T(web.service.ActivityChartsService).CHART_HEIGHT}|"
+                 preserveAspectRatio="none">
+                <polyline fill="none"
+                          stroke="#57f287"
+                          stroke-width="2"
+                          th:attr="points=${T(web.service.ActivityChartsService).polylinePoints(voiceHoursPerDay)}"/>
+            </svg>
+            <p class="muted small">
+                <span th:text="${voiceHoursPerDay[0].date}">2026-04-23</span>
+                →
+                <span th:text="${voiceHoursPerDay[#lists.size(voiceHoursPerDay) - 1].date}">2026-05-23</span>
+            </p>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+</body>
+</html>
