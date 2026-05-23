@@ -1,6 +1,7 @@
 package web.controller
 
 import jakarta.servlet.http.HttpServletRequest
+import net.dv8tion.jda.api.JDA
 import org.springframework.http.CacheControl
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -31,6 +32,7 @@ class ProfileController(
     private val profileWebService: ProfileWebService,
     private val profileCardAggregator: ProfileCardAggregator,
     private val profileCardRenderer: ProfileCardRenderer,
+    private val jda: JDA,
 ) {
 
     @GetMapping("/guilds")
@@ -141,8 +143,15 @@ class ProfileController(
         check = profileWebService::isMember,
         errorBuilder = { status -> ResponseEntity.status(status).build() },
     ) { _ ->
-        val data = profileCardAggregator.build(discordId, guildId)
+        // Resolve guild + member here rather than in the aggregator so
+        // the aggregator stays JDA-free (it's reachable from the Command
+        // dependency graph; injecting JDA there closes a Spring cycle
+        // through JdaListenerRegistrar -> StartUpHandler -> CommandManager).
+        val guild = jda.getGuildById(guildId)
             ?: return@requireForJson ResponseEntity.notFound().build()
+        val member = guild.getMemberById(discordId)
+            ?: return@requireForJson ResponseEntity.notFound().build()
+        val data = profileCardAggregator.build(guild, member)
         val png = profileCardRenderer.renderPng(data)
         ResponseEntity.ok()
             .contentType(MediaType.IMAGE_PNG)

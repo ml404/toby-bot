@@ -59,13 +59,13 @@ internal class ProfileCommandTest : CommandTest {
     @Test
     fun `happy path defers and posts an embed with an attached PNG`() {
         every { event.getOption("user") } returns null
-        every { aggregator.build(1L, 100L) } returns sampleData()
+        every { aggregator.build(guild, member) } returns sampleData()
         every { renderer.renderPng(any()) } returns ByteArray(2048)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
         verify(exactly = 1) { event.deferReply() }
-        verify(exactly = 1) { aggregator.build(1L, 100L) }
+        verify(exactly = 1) { aggregator.build(guild, member) }
         verify(exactly = 1) { renderer.renderPng(any()) }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
@@ -79,34 +79,18 @@ internal class ProfileCommandTest : CommandTest {
         }
         val opt = mockk<OptionMapping>(relaxed = true).also { every { it.asMember } returns targetMember }
         every { event.getOption("user") } returns opt
-        every { aggregator.build(7L, 100L) } returns sampleData()
+        every { aggregator.build(guild, targetMember) } returns sampleData()
         every { renderer.renderPng(any()) } returns ByteArray(2048)
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
-        verify(exactly = 1) { aggregator.build(7L, 100L) }
-    }
-
-    @Test
-    fun `replies with no-profile message when aggregator returns null`() {
-        every { event.getOption("user") } returns null
-        every { aggregator.build(1L, 100L) } returns null
-        val reply = captureReply()
-
-        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
-
-        verify(exactly = 0) { renderer.renderPng(any()) }
-        assertTrue(reply.isCaptured, "expected a sendMessage call on the no-profile branch")
-        assertTrue(
-            reply.captured.contains("No profile data"),
-            "reply text should explain the empty-profile case, got: ${reply.captured}",
-        )
+        verify(exactly = 1) { aggregator.build(guild, targetMember) }
     }
 
     @Test
     fun `replies with a render-error message when the renderer throws`() {
         every { event.getOption("user") } returns null
-        every { aggregator.build(1L, 100L) } returns sampleData()
+        every { aggregator.build(guild, member) } returns sampleData()
         every { renderer.renderPng(any()) } throws RuntimeException("boom")
         val reply = captureReply()
 

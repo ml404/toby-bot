@@ -49,12 +49,7 @@ class ProfileCommand @Autowired constructor(
             event.hook.replyEphemeralAndDelete("Could not resolve a member.", deleteDelay)
             return
         }
-        val data = aggregator.build(target.idLong, guild.idLong) ?: run {
-            event.hook.replyEphemeralAndDelete(
-                "No profile data for ${target.effectiveName} in this server yet.", deleteDelay
-            )
-            return
-        }
+        val data = aggregator.build(guild, target)
         val png = runCatching { renderer.renderPng(data) }
             .onFailure {
                 logger.error {
