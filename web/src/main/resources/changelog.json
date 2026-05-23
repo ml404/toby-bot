@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Back PendingDuelRegistry + RecentDuelResolutions with Caffeine",
+    "summary": "Brings the two duel-area in-memory registries onto the same belt-and-suspenders memory protection that `RpsSessionRegistry` got in #553's review pass. Both `PendingDuelRegistry` and `RecentDuelResolutions` used raw `ConcurrentHashMap + ScheduledExecutorService` — fine on the happy path but no upper bound on heap and no backstop if a scheduled task throws or the executor queue saturates.",
+    "emoji": "🧹",
+    "prNumber": 554
+  },
+  {
+    "date": "May 2026",
     "title": "/rps slash command with optional social-credit wager (first of 3 mini-games)",
     "summary": "First of the planned mini PvP games — Rock-Paper-Scissors as a 2-player challenge with hidden picks. Mirrors `/duel`'s offer + accept + resolve lifecycle but adds a pick-phase between accept and resolution: ``` PENDING (no debit) → opponent Accept → LIVE (both debited) ↘ Decline / timeout (no-op) LIVE → both pick → resolve (winner credited pot − jackpot tribute) → one picks → other forfeits (picker wins by walkover) → neither picks → DoubleRefund ``` Stake is optional — `/…",
     "emoji": "🛡️",
