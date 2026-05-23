@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "/rps slash command with optional social-credit wager (first of 3 mini-games)",
+    "summary": "First of the planned mini PvP games — Rock-Paper-Scissors as a 2-player challenge with hidden picks. Mirrors `/duel`'s offer + accept + resolve lifecycle but adds a pick-phase between accept and resolution: ``` PENDING (no debit) → opponent Accept → LIVE (both debited) ↘ Decline / timeout (no-op) LIVE → both pick → resolve (winner credited pot − jackpot tribute) → one picks → other forfeits (picker wins by walkover) → neither picks → DoubleRefund ``` Stake is optional — `/…",
+    "emoji": "🛡️",
+    "prNumber": 553
+  },
+  {
+    "date": "May 2026",
     "title": "Break Spring cycle by removing JDA from ProfileCardAggregator",
     "summary": "**Hotfix — production bot crash-looping on main.** Spring fails to start with: ``` APPLICATION FAILED TO START The dependencies of some of the beans in the application context form a cycle: JdaListenerRegistrar ┌─────┐ | jda ↑ ↓ | StartUpHandler ↑ ↓ | CommandManager ↑ ↓ | HelpCommand ↑ ↓ | ProfileCommand ↑ ↓ | ProfileCardAggregator ← cycle closes here └─────┘ ``` `CommandManager` and `HelpCommand` both inject `List<Command>` (Spring fills with every `Command` bean), so any…",
     "emoji": "🔨",
