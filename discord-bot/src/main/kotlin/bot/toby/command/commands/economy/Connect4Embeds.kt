@@ -1,8 +1,8 @@
 package bot.toby.command.commands.economy
 
-import common.tictactoe.TicTacToeEngine
+import common.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardWagerService
-import database.tictactoe.TicTacToeSessionRegistry
+import database.connect4.Connect4SessionRegistry
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -10,47 +10,45 @@ import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.entities.MessageEmbed
 
 /**
- * Embed + button rendering specific to `/tictactoe`. The cross-game
+ * Embed + button rendering specific to `/connect4`. The cross-game
  * bits (Accept/Decline button row, stake-line text, error / decline /
  * timeout embeds, start-error description) live in [PvpEmbeds] —
- * this file only owns the TTT-specific board rendering, cell buttons,
- * and turn / win / draw embeds.
+ * this file only owns the C4-specific board rendering, column-drop
+ * buttons, and turn / win / draw embeds.
  *
  * Component IDs are colon-delimited so [DefaultButtonManager] can
- * route by the `"tictactoe"` prefix and this object can parse the
+ * route by the `"connect4"` prefix and this object can parse the
  * rest by index:
  *
- *   `tictactoe:<action>:<sessionId>:<scopedDiscordIdOrCell>`
+ *   `connect4:<action>:<sessionId>:<payload>`
  *
- * - `action`: ACCEPT / DECLINE during PENDING; PLACE_<0..8> /
+ * - `action`: ACCEPT / DECLINE during PENDING; DROP_<0..6> /
  *   FORFEIT during LIVE.
- * - `scopedDiscordIdOrCell`: the opponent's discord id for
- *   ACCEPT/DECLINE; the cell index for PLACE_*; 0 for FORFEIT.
+ * - `payload`: the opponent's discord id for ACCEPT/DECLINE; the
+ *   column index for DROP_*; 0 for FORFEIT.
  */
-object TicTacToeEmbeds {
+object Connect4Embeds {
 
-    const val BUTTON_NAME = "tictactoe"
-    private const val GAME_NAME = "Tic-Tac-Toe"
+    const val BUTTON_NAME = "connect4"
+    private const val GAME_NAME = "Connect 4"
 
-    private const val X_EMOJI = "❌"
-    private const val O_EMOJI = "⭕"
-    private const val EMPTY_EMOJI = "⬜"
-    private const val WIN_X_EMOJI = "🟥"
-    private const val WIN_O_EMOJI = "🟦"
+    private const val RED_EMOJI = "🔴"
+    private const val YELLOW_EMOJI = "🟡"
+    private const val EMPTY_EMOJI = "⚪"
+    private const val WIN_RED_EMOJI = "🟥"
+    private const val WIN_YELLOW_EMOJI = "🟨"
 
     enum class Action {
         ACCEPT,
         DECLINE,
-        PLACE_0, PLACE_1, PLACE_2,
-        PLACE_3, PLACE_4, PLACE_5,
-        PLACE_6, PLACE_7, PLACE_8,
+        DROP_0, DROP_1, DROP_2, DROP_3, DROP_4, DROP_5, DROP_6,
         FORFEIT,
     }
 
     data class ParsedButtonId(
         val action: Action,
         val sessionId: Long,
-        /** Discord id for ACCEPT/DECLINE; cell index for PLACE_*; 0 for FORFEIT. */
+        /** Discord id for ACCEPT/DECLINE; column index for DROP_*; 0 for FORFEIT. */
         val payload: Long,
     )
 
@@ -60,8 +58,8 @@ object TicTacToeEmbeds {
     fun declineButtonId(sessionId: Long, opponentDiscordId: Long): String =
         encode(Action.DECLINE, sessionId, opponentDiscordId)
 
-    fun placeButtonId(sessionId: Long, cell: Int): String =
-        encode(placeAction(cell), sessionId, cell.toLong())
+    fun dropButtonId(sessionId: Long, column: Int): String =
+        encode(dropAction(column), sessionId, column.toLong())
 
     fun forfeitButtonId(sessionId: Long): String = encode(Action.FORFEIT, sessionId, 0L)
 
@@ -78,57 +76,53 @@ object TicTacToeEmbeds {
         return ParsedButtonId(action, sessionId, payload)
     }
 
-    /** Maps PLACE_<n> → cell index `n`; returns null for non-PLACE actions. */
-    fun cellFor(action: Action): Int? = when (action) {
-        Action.PLACE_0 -> 0
-        Action.PLACE_1 -> 1
-        Action.PLACE_2 -> 2
-        Action.PLACE_3 -> 3
-        Action.PLACE_4 -> 4
-        Action.PLACE_5 -> 5
-        Action.PLACE_6 -> 6
-        Action.PLACE_7 -> 7
-        Action.PLACE_8 -> 8
+    /** Maps DROP_<n> → column index `n`; returns null for non-DROP actions. */
+    fun columnFor(action: Action): Int? = when (action) {
+        Action.DROP_0 -> 0
+        Action.DROP_1 -> 1
+        Action.DROP_2 -> 2
+        Action.DROP_3 -> 3
+        Action.DROP_4 -> 4
+        Action.DROP_5 -> 5
+        Action.DROP_6 -> 6
         else -> null
     }
 
-    private fun placeAction(cell: Int): Action = when (cell) {
-        0 -> Action.PLACE_0
-        1 -> Action.PLACE_1
-        2 -> Action.PLACE_2
-        3 -> Action.PLACE_3
-        4 -> Action.PLACE_4
-        5 -> Action.PLACE_5
-        6 -> Action.PLACE_6
-        7 -> Action.PLACE_7
-        8 -> Action.PLACE_8
-        else -> error("cell $cell out of range")
+    private fun dropAction(column: Int): Action = when (column) {
+        0 -> Action.DROP_0
+        1 -> Action.DROP_1
+        2 -> Action.DROP_2
+        3 -> Action.DROP_3
+        4 -> Action.DROP_4
+        5 -> Action.DROP_5
+        6 -> Action.DROP_6
+        else -> error("column $column out of range")
     }
 
-    // ---- TTT-specific embeds ----
+    // ---- C4-specific embeds ----
 
     fun pendingEmbed(
         initiatorDiscordId: Long,
         opponentDiscordId: Long,
         stake: Long,
     ): MessageEmbed = EmbedBuilder()
-        .setTitle("❌ ⭕  Tic-Tac-Toe")
+        .setTitle("🔴 🟡  Connect 4")
         .setDescription(
-            "<@${opponentDiscordId}> — <@${initiatorDiscordId}> has challenged you to Tic-Tac-Toe." +
+            "<@${opponentDiscordId}> — <@${initiatorDiscordId}> has challenged you to Connect 4." +
                 PvpEmbeds.stakeLine(stake) +
                 "\nAccept to start, or decline to walk away." +
-                "\n\nWinner gets ❌ (moves first). Loser plays ⭕."
+                "\n\nChallenger plays 🔴 (drops first). Opponent plays 🟡."
         )
         .setColor(0x5B8DEF)
         .build()
 
-    fun turnEmbed(session: TicTacToeSessionRegistry.Session): MessageEmbed {
-        val title = "❌ ⭕  Tic-Tac-Toe — <@${session.currentActorDiscordId()}>'s turn"
+    fun turnEmbed(session: Connect4SessionRegistry.Session): MessageEmbed {
+        val title = "🔴 🟡  Connect 4 — <@${session.currentActorDiscordId()}>'s turn"
         val board = renderBoard(session.board, winningLine = null)
         return EmbedBuilder()
             .setTitle(title)
             .setDescription(
-                "<@${session.initiatorDiscordId}> (❌) vs <@${session.opponentDiscordId}> (⭕)" +
+                "<@${session.initiatorDiscordId}> (🔴) vs <@${session.opponentDiscordId}> (🟡)" +
                     PvpEmbeds.stakeLine(session.stake) +
                     "\n\n" + board
             )
@@ -137,7 +131,7 @@ object TicTacToeEmbeds {
     }
 
     fun winEmbed(
-        session: TicTacToeSessionRegistry.Session,
+        session: Connect4SessionRegistry.Session,
         outcome: TurnBasedBoardWagerService.ResolveOutcome.Win,
         forfeit: Boolean,
     ): MessageEmbed {
@@ -146,7 +140,7 @@ object TicTacToeEmbeds {
         val markLabel = winnerMark?.let { " (${prettyMark(it)})" } ?: ""
         val board = renderBoard(session.board, winningLine = session.winningLine)
         return EmbedBuilder()
-            .setTitle("🏆 Tic-Tac-Toe — <@${outcome.winnerDiscordId}>$markLabel $verb!")
+            .setTitle("🏆 Connect 4 — <@${outcome.winnerDiscordId}>$markLabel $verb!")
             .setDescription(
                 board +
                     if (outcome.pot > 0) {
@@ -161,13 +155,13 @@ object TicTacToeEmbeds {
     }
 
     fun drawEmbed(
-        session: TicTacToeSessionRegistry.Session,
+        session: Connect4SessionRegistry.Session,
         outcome: TurnBasedBoardWagerService.ResolveOutcome.Draw,
     ): MessageEmbed = EmbedBuilder()
-        .setTitle("🤝 Tic-Tac-Toe — draw!")
+        .setTitle("🤝 Connect 4 — draw!")
         .setDescription(
             renderBoard(session.board, winningLine = null) +
-                "\n\nNo three in a row." +
+                "\n\nBoard full, no four in a row." +
                 if (outcome.stake > 0) " Stakes refunded to both players." else ""
         )
         .setColor(0xFEE75C)
@@ -190,67 +184,66 @@ object TicTacToeEmbeds {
         )
 
     /**
-     * Cell-grid + forfeit. The 3×3 grid is laid out as three rows of
-     * three buttons. Each cell button is disabled when occupied so the
-     * client surfaces the rule without round-tripping through the bot.
+     * Column-drop buttons + forfeit. 7 columns + 1 forfeit = 8 buttons.
+     * Discord allows max 5 buttons per row, so split 4 + 4: cols 1–4
+     * in row 1, cols 5–7 + forfeit in row 2. A column button is
+     * disabled once its top row is filled so the client surfaces the
+     * "column full" rule without round-tripping.
      */
-    fun liveButtons(session: TicTacToeSessionRegistry.Session): List<ActionRow> {
-        val rows = (0 until 3).map { row ->
-            ActionRow.of(
-                (0 until 3).map { col ->
-                    val cell = row * 3 + col
-                    cellButton(session.id, cell, session.board[cell])
-                }
-            )
-        }
-        val forfeitRow = ActionRow.of(
-            Button.of(ButtonStyle.SECONDARY, forfeitButtonId(session.id), "Forfeit"),
+    fun liveButtons(session: Connect4SessionRegistry.Session): List<ActionRow> {
+        val cols = (0 until Connect4Engine.COLS).map { col -> columnButton(session, col) }
+        val row1 = ActionRow.of(cols.subList(0, 4))
+        val row2 = ActionRow.of(
+            cols.subList(4, 7) + Button.of(ButtonStyle.SECONDARY, forfeitButtonId(session.id), "Forfeit"),
         )
-        return rows + forfeitRow
+        return listOf(row1, row2)
     }
 
-    private fun cellButton(sessionId: Long, cell: Int, mark: TicTacToeEngine.Mark?): Button {
-        val id = placeButtonId(sessionId, cell)
-        return when (mark) {
-            null -> Button.of(ButtonStyle.SECONDARY, id, EMPTY_EMOJI)
-            TicTacToeEngine.Mark.X -> Button.of(ButtonStyle.DANGER, id, X_EMOJI).asDisabled()
-            TicTacToeEngine.Mark.O -> Button.of(ButtonStyle.PRIMARY, id, O_EMOJI).asDisabled()
-        }
+    private fun columnButton(session: Connect4SessionRegistry.Session, col: Int): Button {
+        val id = dropButtonId(session.id, col)
+        // The top row of a column is row 0; if it's occupied, the column is full.
+        val full = session.board[0, col] != null
+        // Label with the column number (1-indexed for human readability).
+        val label = "${col + 1}"
+        val btn = Button.of(ButtonStyle.PRIMARY, id, label)
+        return if (full) btn.asDisabled() else btn
     }
 
     // ---- helpers ----
 
     /**
-     * Render the 9-cell board as a 3×3 emoji grid. Cells in
+     * Render the 7×6 board as a 7-wide emoji grid. Cells in
      * [winningLine] are highlighted with team-coloured squares so the
-     * winning row is visually obvious in the final embed.
+     * winning four are visually obvious in the final embed.
      */
     private fun renderBoard(
-        board: TicTacToeEngine.Board,
+        board: Connect4Engine.Board,
         winningLine: List<Int>?,
     ): String {
         val highlight = winningLine?.toSet() ?: emptySet()
         return buildString {
-            for (row in 0 until 3) {
-                for (col in 0 until 3) {
-                    val cell = row * 3 + col
-                    append(cellEmoji(board[cell], cell in highlight))
+            for (row in 0 until Connect4Engine.ROWS) {
+                for (col in 0 until Connect4Engine.COLS) {
+                    val cellIndex = row * Connect4Engine.COLS + col
+                    append(cellEmoji(board[row, col], cellIndex in highlight))
                 }
                 append('\n')
             }
+            // Column-number footer so players can map button labels to columns.
+            for (col in 0 until Connect4Engine.COLS) append(":${col + 1}️⃣")
         }.trimEnd()
     }
 
-    private fun cellEmoji(mark: TicTacToeEngine.Mark?, winning: Boolean): String = when {
-        mark == TicTacToeEngine.Mark.X && winning -> WIN_X_EMOJI
-        mark == TicTacToeEngine.Mark.O && winning -> WIN_O_EMOJI
-        mark == TicTacToeEngine.Mark.X -> X_EMOJI
-        mark == TicTacToeEngine.Mark.O -> O_EMOJI
+    private fun cellEmoji(mark: Connect4Engine.Mark?, winning: Boolean): String = when {
+        mark == Connect4Engine.Mark.RED && winning -> WIN_RED_EMOJI
+        mark == Connect4Engine.Mark.YELLOW && winning -> WIN_YELLOW_EMOJI
+        mark == Connect4Engine.Mark.RED -> RED_EMOJI
+        mark == Connect4Engine.Mark.YELLOW -> YELLOW_EMOJI
         else -> EMPTY_EMOJI
     }
 
-    fun prettyMark(mark: TicTacToeEngine.Mark): String = when (mark) {
-        TicTacToeEngine.Mark.X -> "❌"
-        TicTacToeEngine.Mark.O -> "⭕"
+    fun prettyMark(mark: Connect4Engine.Mark): String = when (mark) {
+        Connect4Engine.Mark.RED -> "🔴"
+        Connect4Engine.Mark.YELLOW -> "🟡"
     }
 }

@@ -181,6 +181,10 @@ class ConfigDto(
         // Defaults to 0-500.
         TICTACTOE_MIN_STAKE("TICTACTOE_MIN_STAKE"),
         TICTACTOE_MAX_STAKE("TICTACTOE_MAX_STAKE"),
+        // Per-guild stake bounds for `/connect4`. Same shape as the
+        // other two PvP mini-games. Defaults to 0-500.
+        CONNECT4_MIN_STAKE("CONNECT4_MIN_STAKE"),
+        CONNECT4_MAX_STAKE("CONNECT4_MAX_STAKE"),
 
         // Reference stake size for jackpot probability scaling. Bets at
         // or above this anchor roll at the full JACKPOT_WIN_PCT base

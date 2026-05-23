@@ -5,13 +5,13 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
-import bot.toby.command.commands.economy.TicTacToeEmbeds
-import common.tictactoe.TicTacToeEngine
+import bot.toby.command.commands.economy.Connect4Embeds
+import common.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardWagerService
+import database.connect4.Connect4SessionRegistry
 import database.dto.UserDto
+import database.service.Connect4Service
 import database.service.PvpWagerService
-import database.service.TicTacToeService
-import database.tictactoe.TicTacToeSessionRegistry
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -26,11 +26,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
-class TicTacToeButtonTest : ButtonTest {
+class Connect4ButtonTest : ButtonTest {
 
-    private lateinit var ticTacToeService: TicTacToeService
-    private lateinit var registry: TicTacToeSessionRegistry
-    private lateinit var button: TicTacToeButton
+    private lateinit var connect4Service: Connect4Service
+    private lateinit var registry: Connect4SessionRegistry
+    private lateinit var button: Connect4Button
 
     private val initiatorId = 1L
     private val opponentId = 2L
@@ -45,9 +45,9 @@ class TicTacToeButtonTest : ButtonTest {
         super.setup()
         every { mockGuild.idLong } returns guildId
 
-        ticTacToeService = mockk(relaxed = true)
+        connect4Service = mockk(relaxed = true)
         registry = mockk(relaxed = true)
-        button = TicTacToeButton(ticTacToeService, registry)
+        button = Connect4Button(connect4Service, registry)
 
         message = mockk(relaxed = true)
         every { event.message } returns message
@@ -70,7 +70,7 @@ class TicTacToeButtonTest : ButtonTest {
         super.tearDown()
     }
 
-    private fun pendingSession() = TicTacToeSessionRegistry.Session(
+    private fun pendingSession() = Connect4SessionRegistry.Session(
         id = sessionId, guildId = guildId,
         initiatorDiscordId = initiatorId, opponentDiscordId = opponentId,
         stake = stake, createdAt = Instant.now(),
@@ -84,7 +84,7 @@ class TicTacToeButtonTest : ButtonTest {
 
     @Test
     fun `non-opponent decline gets ephemeral reject`() {
-        every { event.componentId } returns TicTacToeEmbeds.declineButtonId(sessionId, opponentId)
+        every { event.componentId } returns Connect4Embeds.declineButtonId(sessionId, opponentId)
         button.handle(DefaultButtonContext(event), UserDto(999L, guildId), 0)
         verify(exactly = 0) { registry.decline(any()) }
         verify { mockHook.sendMessage(any<String>()) }
@@ -92,7 +92,7 @@ class TicTacToeButtonTest : ButtonTest {
 
     @Test
     fun `opponent decline removes the session and edits the message`() {
-        every { event.componentId } returns TicTacToeEmbeds.declineButtonId(sessionId, opponentId)
+        every { event.componentId } returns Connect4Embeds.declineButtonId(sessionId, opponentId)
         every { registry.decline(sessionId) } returns pendingSession()
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
@@ -105,25 +105,25 @@ class TicTacToeButtonTest : ButtonTest {
 
     @Test
     fun `opponent accept transitions to LIVE and posts turn embed`() {
-        every { event.componentId } returns TicTacToeEmbeds.acceptButtonId(sessionId, opponentId)
+        every { event.componentId } returns Connect4Embeds.acceptButtonId(sessionId, opponentId)
         every { registry.accept(sessionId, any()) } returns liveSession()
         every {
-            ticTacToeService.acceptMatch(initiatorId, opponentId, guildId, stake)
+            connect4Service.acceptMatch(initiatorId, opponentId, guildId, stake)
         } returns PvpWagerService.AcceptOutcome.Ok(initiatorNewBalance = 100L, opponentNewBalance = 100L)
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 
         verify(exactly = 1) { registry.accept(sessionId, any()) }
-        verify(exactly = 1) { ticTacToeService.acceptMatch(initiatorId, opponentId, guildId, stake) }
+        verify(exactly = 1) { connect4Service.acceptMatch(initiatorId, opponentId, guildId, stake) }
         verify(exactly = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
     fun `accept failure on insufficient balance tears down the live session`() {
-        every { event.componentId } returns TicTacToeEmbeds.acceptButtonId(sessionId, opponentId)
+        every { event.componentId } returns Connect4Embeds.acceptButtonId(sessionId, opponentId)
         every { registry.accept(sessionId, any()) } returns liveSession()
         every {
-            ticTacToeService.acceptMatch(initiatorId, opponentId, guildId, stake)
+            connect4Service.acceptMatch(initiatorId, opponentId, guildId, stake)
         } returns PvpWagerService.AcceptOutcome.OpponentInsufficient(have = 10L, needed = 50L)
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
@@ -134,20 +134,20 @@ class TicTacToeButtonTest : ButtonTest {
 
     @Test
     fun `accept on an already-resolved session sends ephemeral`() {
-        every { event.componentId } returns TicTacToeEmbeds.acceptButtonId(sessionId, opponentId)
+        every { event.componentId } returns Connect4Embeds.acceptButtonId(sessionId, opponentId)
         every { registry.accept(sessionId, any()) } returns null
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
 
-        verify(exactly = 0) { ticTacToeService.acceptMatch(any(), any(), any(), any()) }
+        verify(exactly = 0) { connect4Service.acceptMatch(any(), any(), any(), any()) }
         verify { mockHook.sendMessage(any<String>()) }
     }
 
-    // ---- PLACE ----
+    // ---- DROP ----
 
     @Test
-    fun `place by a non-player is rejected ephemerally`() {
-        every { event.componentId } returns TicTacToeEmbeds.placeButtonId(sessionId, cell = 0)
+    fun `drop by a non-player is rejected ephemerally`() {
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 0)
         every { registry.get(sessionId) } returns liveSession()
 
         button.handle(DefaultButtonContext(event), UserDto(999L, guildId), 0)
@@ -157,32 +157,31 @@ class TicTacToeButtonTest : ButtonTest {
     }
 
     @Test
-    fun `place on a continued move re-renders the board`() {
+    fun `drop on a continued move re-renders the board`() {
         val live = liveSession()
-        every { event.componentId } returns TicTacToeEmbeds.placeButtonId(sessionId, cell = 0)
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 3)
         every { registry.get(sessionId) } returns live
-        every { registry.applyMove(sessionId, initiatorId, 0, any()) } returns
-            TicTacToeEngine.MoveResult.Continued(TicTacToeEngine.empty())
+        every { registry.applyMove(sessionId, initiatorId, 3, any()) } returns
+            Connect4Engine.MoveResult.Continued(Connect4Engine.empty(), droppedRow = 5)
 
         button.handle(DefaultButtonContext(event), UserDto(initiatorId, guildId), 0)
 
-        verify(exactly = 1) { registry.applyMove(sessionId, initiatorId, 0, any()) }
-        // Continued path doesn't drain or resolve.
+        verify(exactly = 1) { registry.applyMove(sessionId, initiatorId, 3, any()) }
         verify(exactly = 0) { registry.consumeForResolution(any()) }
-        verify(exactly = 0) { ticTacToeService.resolveMatch(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { connect4Service.resolveMatch(any(), any(), any(), any(), any()) }
         verify(atLeast = 1) { message.editMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
-    fun `place that lands a Win drains and resolves with the engine winner`() {
-        val live = liveSession().also { it.winner = TicTacToeEngine.Mark.X }
-        every { event.componentId } returns TicTacToeEmbeds.placeButtonId(sessionId, cell = 2)
+    fun `drop that lands a Win drains and resolves with the engine winner`() {
+        val live = liveSession().also { it.winner = Connect4Engine.Mark.RED }
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 3)
         every { registry.get(sessionId) } returns live
-        every { registry.applyMove(sessionId, initiatorId, 2, any()) } returns
-            TicTacToeEngine.MoveResult.Win(TicTacToeEngine.empty(), TicTacToeEngine.Mark.X, listOf(0, 1, 2))
+        every { registry.applyMove(sessionId, initiatorId, 3, any()) } returns
+            Connect4Engine.MoveResult.Win(Connect4Engine.empty(), Connect4Engine.Mark.RED, listOf(35, 36, 37, 38), droppedRow = 5)
         every { registry.consumeForResolution(sessionId) } returns live
         every {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, initiatorId)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, initiatorId)
         } returns TurnBasedBoardWagerService.ResolveOutcome.Win(
             winnerDiscordId = initiatorId, loserDiscordId = opponentId,
             stake = stake, pot = 2 * stake,
@@ -194,35 +193,49 @@ class TicTacToeButtonTest : ButtonTest {
 
         verify(exactly = 1) { registry.consumeForResolution(sessionId) }
         verify(exactly = 1) {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, initiatorId)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, initiatorId)
         }
     }
 
     @Test
-    fun `place that lands a Draw drains and resolves with null winner`() {
+    fun `drop that lands a Draw drains and resolves with null winner`() {
         val live = liveSession() // winner stays null
-        every { event.componentId } returns TicTacToeEmbeds.placeButtonId(sessionId, cell = 8)
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 6)
         every { registry.get(sessionId) } returns live
-        every { registry.applyMove(sessionId, initiatorId, 8, any()) } returns
-            TicTacToeEngine.MoveResult.Draw(TicTacToeEngine.empty())
+        every { registry.applyMove(sessionId, initiatorId, 6, any()) } returns
+            Connect4Engine.MoveResult.Draw(Connect4Engine.empty())
         every { registry.consumeForResolution(sessionId) } returns live
         every {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, null)
-        } returns TurnBasedBoardWagerService.ResolveOutcome.Draw(stake = stake, initiatorNewBalance = stake, opponentNewBalance = stake)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, null)
+        } returns TurnBasedBoardWagerService.ResolveOutcome.Draw(
+            stake = stake, initiatorNewBalance = stake, opponentNewBalance = stake,
+        )
 
         button.handle(DefaultButtonContext(event), UserDto(initiatorId, guildId), 0)
 
         verify(exactly = 1) {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, null)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, null)
         }
     }
 
     @Test
-    fun `place by the wrong player (not their turn) sends ephemeral`() {
+    fun `drop on a full column sends ephemeral and does not edit board`() {
         val live = liveSession()
-        every { event.componentId } returns TicTacToeEmbeds.placeButtonId(sessionId, cell = 0)
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 0)
         every { registry.get(sessionId) } returns live
-        // Out-of-turn move → registry returns null.
+        every { registry.applyMove(sessionId, initiatorId, 0, any()) } returns Connect4Engine.MoveResult.ColumnFull
+
+        button.handle(DefaultButtonContext(event), UserDto(initiatorId, guildId), 0)
+
+        verify(exactly = 0) { message.editMessageEmbeds(any<MessageEmbed>()) }
+        verify { mockHook.sendMessage(any<String>()) }
+    }
+
+    @Test
+    fun `drop by the wrong player (not their turn) sends ephemeral`() {
+        val live = liveSession()
+        every { event.componentId } returns Connect4Embeds.dropButtonId(sessionId, column = 0)
+        every { registry.get(sessionId) } returns live
         every { registry.applyMove(sessionId, opponentId, 0, any()) } returns null
 
         button.handle(DefaultButtonContext(event), UserDto(opponentId, guildId), 0)
@@ -235,12 +248,12 @@ class TicTacToeButtonTest : ButtonTest {
 
     @Test
     fun `forfeit by a player removes the session and resolves the opponent as winner`() {
-        every { event.componentId } returns TicTacToeEmbeds.forfeitButtonId(sessionId)
+        every { event.componentId } returns Connect4Embeds.forfeitButtonId(sessionId)
         val live = liveSession()
         every { registry.get(sessionId) } returns live
         every { registry.forfeit(sessionId) } returns live
         every {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, opponentId)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, opponentId)
         } returns TurnBasedBoardWagerService.ResolveOutcome.Win(
             winnerDiscordId = opponentId, loserDiscordId = initiatorId,
             stake = stake, pot = 2 * stake,
@@ -253,13 +266,13 @@ class TicTacToeButtonTest : ButtonTest {
 
         verify(exactly = 1) { registry.forfeit(sessionId) }
         verify(exactly = 1) {
-            ticTacToeService.resolveMatch(initiatorId, opponentId, guildId, stake, opponentId)
+            connect4Service.resolveMatch(initiatorId, opponentId, guildId, stake, opponentId)
         }
     }
 
     @Test
     fun `forfeit by a non-player is rejected`() {
-        every { event.componentId } returns TicTacToeEmbeds.forfeitButtonId(sessionId)
+        every { event.componentId } returns Connect4Embeds.forfeitButtonId(sessionId)
         every { registry.get(sessionId) } returns liveSession()
 
         button.handle(DefaultButtonContext(event), UserDto(999L, guildId), 0)

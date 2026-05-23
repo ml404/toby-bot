@@ -18,6 +18,7 @@ import common.events.LotteryWonEvent
 import common.events.PlinkoJackpotEvent
 import common.events.PokerRoyalFlushEvent
 import common.events.RouletteStraightWinEvent
+import common.events.Connect4ResolvedEvent
 import common.events.RpsResolvedEvent
 import common.events.TicTacToeResolvedEvent
 import common.events.ScratchJackpotEvent
@@ -184,6 +185,31 @@ class AchievementEventHandler(
                 discordId = event.loserDiscordId,
                 guildId = event.guildId,
                 code = "tictactoe_losses_$tier",
+                delta = 1L
+            )
+        }
+    }
+
+    @EventListener
+    fun onConnect4Resolved(event: Connect4ResolvedEvent) {
+        achievementService.unlock(
+            discordId = event.winnerDiscordId,
+            guildId = event.guildId,
+            code = "first_connect4_win"
+        )
+        CONNECT4_WIN_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.winnerDiscordId,
+                guildId = event.guildId,
+                code = "connect4_wins_$tier",
+                delta = 1L
+            )
+        }
+        CONNECT4_LOSS_TIERS.forEach { tier ->
+            achievementService.progress(
+                discordId = event.loserDiscordId,
+                guildId = event.guildId,
+                code = "connect4_losses_$tier",
                 delta = 1L
             )
         }
@@ -380,6 +406,8 @@ class AchievementEventHandler(
         private val RPS_LOSS_TIERS = listOf(5)
         private val TICTACTOE_WIN_TIERS = listOf(10, 25)
         private val TICTACTOE_LOSS_TIERS = listOf(5)
+        private val CONNECT4_WIN_TIERS = listOf(10, 25)
+        private val CONNECT4_LOSS_TIERS = listOf(5)
         private val LOTTERY_WIN_TIERS = listOf(3, 10, 25)
         private val BLACKJACK_NATURAL_TIERS = listOf(5, 25)
         private val TIP_SENT_TIERS = listOf(10, 50)
