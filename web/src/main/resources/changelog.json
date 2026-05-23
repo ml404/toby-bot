@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Break Spring cycle by removing JDA from ProfileCardAggregator",
+    "summary": "**Hotfix — production bot crash-looping on main.** Spring fails to start with: ``` APPLICATION FAILED TO START The dependencies of some of the beans in the application context form a cycle: JdaListenerRegistrar ┌─────┐ | jda ↑ ↓ | StartUpHandler ↑ ↓ | CommandManager ↑ ↓ | HelpCommand ↑ ↓ | ProfileCommand ↑ ↓ | ProfileCardAggregator ← cycle closes here └─────┘ ``` `CommandManager` and `HelpCommand` both inject `List<Command>` (Spring fills with every `Command` bean), so any…",
+    "emoji": "🔨",
+    "prNumber": 551
+  },
+  {
+    "date": "May 2026",
     "title": "Show role names in autorole errors, unbreak mobile forms",
     "summary": "Reporter (mobile) tried to bind an auto-role on **Welcome → Auto-assigned roles on join** and saw the rejection toast as a raw role mention (`<@&765616866554544130>` sits above TobyBot's role…), plus the **Message template** input above it was clipped to ~200px alongside its Save button so they could only see `{user.name`. Two fixes: ### 1. Autorole error: render role name, not Discord mention `AutoRoleValidator` interpolated `role.asMention`, which Discord turns into a ch…",
     "emoji": "🛡️",
