@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "/connect4 + extract TurnBasedBoardWager/SessionRegistry bases",
+    "summary": "Adds `/connect4 @opponent [stake:<int>]` — head-to-head 7×6 Connect 4. Third and final of the planned PvP mini-games trio (after `/rps` #553 and `/tictactoe` #556). Initiator plays 🔴 (drops first); opponent plays 🟡. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute. Free-play (stake omitted or 0) is also accepted — winner gets XP, no credits change hands. Draws refund both. Same PR also extracts the two ab…",
+    "emoji": "🛡️",
+    "prNumber": 557
+  },
+  {
+    "date": "May 2026",
     "title": "/tictactoe slash command with optional social-credit wager",
     "summary": "Adds `/tictactoe @opponent [stake:<int>]` — head-to-head 3×3 Tic-Tac-Toe between two users. Second of the three planned PvP mini-games (after `/rps` in #553; Connect 4 is the next follow-up). The initiator plays ❌ and moves first; the opponent plays ⭕. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute (same model as `/rps` and `/duel`). Free-play (stake omitted or 0) is also accepted — winner gets XP, no cre…",
     "emoji": "🛡️",
