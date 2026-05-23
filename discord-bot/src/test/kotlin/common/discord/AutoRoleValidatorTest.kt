@@ -46,11 +46,11 @@ class AutoRoleValidatorTest {
     }
 
     @Test
-    fun `managed role is rejected with the role mention in the message`() {
+    fun `managed role is rejected with the role name in the message`() {
         every { role.isManaged } returns true
         val msg = AutoRoleValidator.validate(role, selfMember)
         assertEquals(
-            "<@&100> is managed by an integration and can't be assigned by the bot.",
+            "Member is managed by an integration and can't be assigned by the bot.",
             msg,
         )
     }
@@ -60,7 +60,7 @@ class AutoRoleValidatorTest {
         every { selfMember.canInteract(role) } returns false
         val msg = AutoRoleValidator.validate(role, selfMember)
         assertEquals(
-            "<@&100> sits above TobyBot's role — move TobyBot's role higher to allow assignment.",
+            "Member sits above TobyBot's role — move TobyBot's role higher to allow assignment.",
             msg,
         )
     }

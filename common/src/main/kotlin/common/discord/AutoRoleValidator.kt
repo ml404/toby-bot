@@ -31,9 +31,9 @@ object AutoRoleValidator {
         role.isPublicRole ->
             "Cannot auto-assign @everyone."
         role.isManaged ->
-            "${role.asMention} is managed by an integration and can't be assigned by the bot."
+            "${role.name} is managed by an integration and can't be assigned by the bot."
         !selfMember.canInteract(role) ->
-            "${role.asMention} sits above TobyBot's role — move TobyBot's role higher to allow assignment."
+            "${role.name} sits above TobyBot's role — move TobyBot's role higher to allow assignment."
         else -> null
     }
 }
