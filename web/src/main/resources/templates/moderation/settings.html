@@ -913,6 +913,25 @@
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                 </div>
+                <div class="config-group">
+                    <h4>Rock-Paper-Scissors</h4>
+                    <div class="config-row" data-key="RPS_MIN_STAKE">
+                        <label>Minimum stake (0 = free play allowed; default 0)</label>
+                        <input type="number" min="0"
+                               th:value="${overview.config['RPS_MIN_STAKE']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="RPS_MAX_STAKE">
+                        <label>Maximum stake (0 = unlimited; default 500)</label>
+                        <input type="number" min="0"
+                               th:value="${overview.config['RPS_MAX_STAKE']}"
+                               placeholder="500"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
             </div>
         </details>
     </section>

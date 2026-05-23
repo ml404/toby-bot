@@ -170,6 +170,12 @@ class ConfigDto(
         HOLDEM_MAX_STAKE("HOLDEM_MAX_STAKE"),
         DUEL_MIN_STAKE("DUEL_MIN_STAKE"),
         DUEL_MAX_STAKE("DUEL_MAX_STAKE"),
+        // Per-guild stake bounds for `/rps` (Rock-Paper-Scissors).
+        // Minimum may be 0 — RPS is the only wager game that supports
+        // free play out of the box, so admins can leave it accessible
+        // to members with zero credit. Defaults to 0-500.
+        RPS_MIN_STAKE("RPS_MIN_STAKE"),
+        RPS_MAX_STAKE("RPS_MAX_STAKE"),
 
         // Reference stake size for jackpot probability scaling. Bets at
         // or above this anchor roll at the full JACKPOT_WIN_PCT base

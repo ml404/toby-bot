@@ -891,6 +891,15 @@ class ModerationWebService(
                 if (n < 1L) return "Value must be at least 1 credit."
                 n.toString()
             }
+            // RPS_MIN_STAKE allows 0 — `/rps` supports free play out of
+            // the box, the only wager game that does. Validated
+            // separately because the other min-stake keys require >= 1.
+            ConfigDto.Configurations.RPS_MIN_STAKE -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of credits."
+                if (n < 0L) return "Value must be zero (free play) or a positive number of credits."
+                n.toString()
+            }
             // Max-cap stake keys — accept 0 as "no upper cap"
             // (cfgLongMax expands stored 0 to Long.MAX_VALUE at read time).
             // Otherwise must be a positive whole number.
@@ -907,7 +916,8 @@ class ModerationWebService(
             ConfigDto.Configurations.DUEL_MAX_STAKE,
             ConfigDto.Configurations.PLINKO_MAX_STAKE,
             ConfigDto.Configurations.HORSE_RACING_MAX_STAKE,
-            ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE -> {
+            ConfigDto.Configurations.WHEEL_OF_FORTUNE_MAX_STAKE,
+            ConfigDto.Configurations.RPS_MAX_STAKE -> {
                 val n = rawValue.trim().toLongOrNull()
                     ?: return "Value must be a whole number of credits."
                 if (n < 0L) return "Value must be 0 (unlimited) or a positive number of credits."

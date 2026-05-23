@@ -18,6 +18,7 @@ import bot.toby.command.commands.economy.PlinkoCommand
 import bot.toby.command.commands.economy.PokerCommand
 import bot.toby.command.commands.economy.PriceAlertCommand
 import bot.toby.command.commands.economy.RouletteCommand
+import bot.toby.command.commands.economy.RpsCommand
 import bot.toby.command.commands.economy.ScratchCommand
 import bot.toby.command.commands.economy.SlotsCommand
 import bot.toby.command.commands.economy.TipCommand
@@ -165,6 +166,7 @@ class CommandManagerTest {
             InstallCommand::class.java,
             WelcomeCommand::class.java,
             ProfileCommand::class.java,
+            RpsCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
