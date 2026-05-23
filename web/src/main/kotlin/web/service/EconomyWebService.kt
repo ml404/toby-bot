@@ -3,7 +3,7 @@ package web.service
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.dto.UserPriceTriggerDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.TobyCoinMarketService
 import database.service.UserNotificationPrefService

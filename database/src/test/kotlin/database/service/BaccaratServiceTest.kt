@@ -1,10 +1,10 @@
 package database.service
 
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
 import database.dto.UserDto
-import database.economy.Baccarat
+import common.economy.Baccarat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

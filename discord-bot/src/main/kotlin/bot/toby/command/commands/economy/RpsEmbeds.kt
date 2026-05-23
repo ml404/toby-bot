@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import database.rps.RpsEngine
+import common.rps.RpsEngine
 import database.service.RpsService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow

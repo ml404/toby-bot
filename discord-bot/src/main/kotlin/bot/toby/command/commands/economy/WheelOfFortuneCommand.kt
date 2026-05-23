@@ -2,7 +2,7 @@ package bot.toby.command.commands.economy
 
 import core.command.CommandContext
 import database.dto.UserDto
-import database.economy.WheelOfFortune
+import common.economy.WheelOfFortune
 import database.service.WheelOfFortuneService
 import database.service.WheelOfFortuneService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder

@@ -5,8 +5,8 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.dto.UserDto
 import database.service.BlackjackService

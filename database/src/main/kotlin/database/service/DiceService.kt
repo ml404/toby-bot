@@ -3,7 +3,7 @@ package database.service
 import common.casino.CasinoCommonFailure
 import common.events.DiceWonEvent
 import database.dto.ConfigDto
-import database.economy.Dice
+import common.economy.Dice
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

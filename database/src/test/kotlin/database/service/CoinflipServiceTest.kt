@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.economy.Coinflip
+import common.economy.Coinflip
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

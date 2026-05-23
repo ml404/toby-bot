@@ -1,13 +1,13 @@
 package database.service
 
 import common.events.BlackjackNaturalEvent
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.blackjack.bestTotal
-import database.blackjack.canSplit
-import database.blackjack.isBlackjack
-import database.blackjack.isBust
+import common.blackjack.bestTotal
+import common.blackjack.canSplit
+import common.blackjack.isBlackjack
+import common.blackjack.isBust
 import database.dto.BlackjackHandLogDto
 import database.dto.ConfigDto
 import database.persistence.BlackjackHandLogPersistence
@@ -452,7 +452,7 @@ class BlackjackService @Autowired constructor(
         t: BlackjackTable,
         seat: BlackjackTable.Seat,
         action: Blackjack.Action,
-        deck: database.card.Deck,
+        deck: common.card.Deck,
     ) {
         val active = seat.activeHand
         // Defensive: a stale click + the 2s state poll could land an action
@@ -496,11 +496,11 @@ class BlackjackService @Autowired constructor(
     private fun splitActiveHand(
         seat: BlackjackTable.Seat,
         active: BlackjackTable.HandSlot,
-        deck: database.card.Deck,
+        deck: common.card.Deck,
     ) {
         val firstCard = active.cards[0]
         val secondCard = active.cards[1]
-        val acesSplit = firstCard.rank == database.card.Rank.ACE
+        val acesSplit = firstCard.rank == common.card.Rank.ACE
         // Reuse [active] as the first split branch. Wallet was pre-debited
         // by the same amount as the original ante, so total at-risk
         // doubles across the two slots.
@@ -610,7 +610,7 @@ class BlackjackService @Autowired constructor(
             if (!canSplit(active.cards)) return@lockTable StakePreCheck.Illegal
             if (seat.hands.size >= Blackjack.MAX_SPLIT_HANDS) return@lockTable StakePreCheck.Illegal
             // Re-splitting aces is disallowed by classic rules.
-            if (active.fromSplit && active.cards[0].rank == database.card.Rank.ACE) {
+            if (active.fromSplit && active.cards[0].rank == common.card.Rank.ACE) {
                 return@lockTable StakePreCheck.Illegal
             }
             // Each split adds exactly one new hand at the same per-hand
@@ -1305,7 +1305,7 @@ class BlackjackService @Autowired constructor(
             if (active.doubled) return@lockTable MultiPreflight.Illegal
             if (!canSplit(active.cards)) return@lockTable MultiPreflight.Illegal
             if (actorSeat.hands.size >= Blackjack.MAX_SPLIT_HANDS) return@lockTable MultiPreflight.Illegal
-            if (active.fromSplit && active.cards[0].rank == database.card.Rank.ACE) {
+            if (active.fromSplit && active.cards[0].rank == common.card.Rank.ACE) {
                 return@lockTable MultiPreflight.Illegal
             }
             MultiPreflight.Ok(active.stake)

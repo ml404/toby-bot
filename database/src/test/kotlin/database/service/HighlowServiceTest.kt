@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.UserDto
-import database.economy.Highlow
+import common.economy.Highlow
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

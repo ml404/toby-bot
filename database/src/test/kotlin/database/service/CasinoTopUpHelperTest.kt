@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import database.service.EconomyTradeService.TradeOutcome
 import io.mockk.every
 import io.mockk.mockk

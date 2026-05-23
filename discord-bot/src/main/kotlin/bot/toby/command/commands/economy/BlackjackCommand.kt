@@ -3,10 +3,10 @@ package bot.toby.command.commands.economy
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.blackjack.canSplit
+import common.blackjack.canSplit
 import database.dto.UserDto
 import database.service.BlackjackService
 import database.service.BlackjackService.MultiCreateOutcome

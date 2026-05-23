@@ -5,7 +5,7 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.DefaultButtonContext
 import database.dto.UserDto
-import database.economy.Highlow
+import common.economy.Highlow
 import database.service.HighlowService
 import io.mockk.Runs
 import io.mockk.every

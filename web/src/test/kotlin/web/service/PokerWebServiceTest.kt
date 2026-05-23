@@ -1,11 +1,11 @@
 package web.service
 
-import database.card.Card
-import database.poker.PokerEngine
-import database.poker.PokerTable
+import common.card.Card
+import common.poker.PokerEngine
+import common.poker.PokerTable
 import database.poker.PokerTableRegistry
-import database.card.Rank
-import database.card.Suit
+import common.card.Rank
+import common.card.Suit
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

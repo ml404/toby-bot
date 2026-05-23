@@ -2,10 +2,10 @@ package database.service
 
 import common.casino.CasinoCommonFailure
 import common.events.BaccaratWonEvent
-import database.card.Card
-import database.card.Deck
+import common.card.Card
+import common.card.Deck
 import database.dto.ConfigDto
-import database.economy.Baccarat
+import common.economy.Baccarat
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -3,7 +3,7 @@ package database.service
 import common.casino.CasinoCommonFailure
 import common.events.RouletteStraightWinEvent
 import database.dto.ConfigDto
-import database.economy.Roulette
+import common.economy.Roulette
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

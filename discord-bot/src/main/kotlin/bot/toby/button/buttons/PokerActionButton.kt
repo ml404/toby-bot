@@ -4,8 +4,8 @@ import bot.toby.command.commands.economy.PokerEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.poker.PokerEngine
-import database.poker.PokerTable
+import common.poker.PokerEngine
+import common.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.PokerService
 import database.service.PokerService.ActionOutcome

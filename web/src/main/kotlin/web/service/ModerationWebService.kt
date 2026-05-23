@@ -1000,7 +1000,7 @@ class ModerationWebService(
                 if (trimmed.isEmpty()) {
                     ""
                 } else {
-                    database.economy.JackpotWheel.validateConfigString(trimmed)?.let { return it }
+                    common.economy.JackpotWheel.validateConfigString(trimmed)?.let { return it }
                     trimmed
                 }
             }

@@ -4,7 +4,7 @@ import database.dto.ConfigDto
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.TobyCoinTradeDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant

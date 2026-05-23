@@ -1,7 +1,7 @@
 package web.controller
 
 import common.casino.CasinoCommonFailure
-import database.economy.Plinko
+import common.economy.Plinko
 import database.service.JackpotGame
 import database.service.PlinkoService
 import database.service.PlinkoService.DropOutcome

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import database.economy.Highlow
+import common.economy.Highlow
 import database.service.HighlowService.PlayOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

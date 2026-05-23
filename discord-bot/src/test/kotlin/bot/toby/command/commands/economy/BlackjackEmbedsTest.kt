@@ -1,10 +1,10 @@
 package bot.toby.command.commands.economy
 
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

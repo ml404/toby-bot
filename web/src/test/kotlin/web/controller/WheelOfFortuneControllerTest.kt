@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.WheelOfFortune
+import common.economy.WheelOfFortune
 import database.service.WheelOfFortuneService
 import database.service.WheelOfFortuneService.SpinOutcome
 import io.mockk.every

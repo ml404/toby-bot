@@ -1,10 +1,10 @@
 package bot.toby.command.commands.economy
 
-import database.blackjack.Blackjack
-import database.blackjack.BlackjackTable
-import database.blackjack.bestTotal
-import database.blackjack.isSoft
-import database.card.Card
+import common.blackjack.Blackjack
+import common.blackjack.BlackjackTable
+import common.blackjack.bestTotal
+import common.blackjack.isSoft
+import common.card.Card
 import database.dto.BlackjackHandLogDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

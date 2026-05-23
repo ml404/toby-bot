@@ -6,8 +6,8 @@ import database.dto.PokerHandPotDto
 import database.dto.UserDto
 import database.persistence.PokerHandLogPersistence
 import database.persistence.PokerHandPotPersistence
-import database.poker.PokerEngine
-import database.poker.PokerTable
+import common.poker.PokerEngine
+import common.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.EconomyTradeService.TradeOutcome
 import io.mockk.every
@@ -1027,19 +1027,19 @@ class PokerServiceTest {
         return withPublisher to publisher
     }
 
-    private fun card(rank: database.card.Rank, suit: database.card.Suit) =
-        database.card.Card(rank, suit)
+    private fun card(rank: common.card.Rank, suit: common.card.Suit) =
+        common.card.Card(rank, suit)
 
     @Test
     fun `showdown with an ace-high straight flush publishes one PokerRoyalFlushEvent`() {
         val (svc, publisher) = pokerServiceWithPublisher()
-        val s = database.card.Suit.HEARTS
+        val s = common.card.Suit.HEARTS
         // Hole: A♥ K♥; board: Q♥ J♥ 10♥ (royal flush).
-        val hole = listOf(card(database.card.Rank.ACE, s), card(database.card.Rank.KING, s))
+        val hole = listOf(card(common.card.Rank.ACE, s), card(common.card.Rank.KING, s))
         val board = listOf(
-            card(database.card.Rank.QUEEN, s),
-            card(database.card.Rank.JACK, s),
-            card(database.card.Rank.TEN, s),
+            card(common.card.Rank.QUEEN, s),
+            card(common.card.Rank.JACK, s),
+            card(common.card.Rank.TEN, s),
         )
 
         svc.publishRoyalFlushes(guildId, mapOf(host to hole), board)
@@ -1053,13 +1053,13 @@ class PokerServiceTest {
     @Test
     fun `showdown with a king-high straight flush publishes no PokerRoyalFlushEvent`() {
         val (svc, publisher) = pokerServiceWithPublisher()
-        val s = database.card.Suit.SPADES
+        val s = common.card.Suit.SPADES
         // Hole: 9♠ K♠; board: Q♠ J♠ 10♠ (king-high straight flush — not royal).
-        val hole = listOf(card(database.card.Rank.NINE, s), card(database.card.Rank.KING, s))
+        val hole = listOf(card(common.card.Rank.NINE, s), card(common.card.Rank.KING, s))
         val board = listOf(
-            card(database.card.Rank.QUEEN, s),
-            card(database.card.Rank.JACK, s),
-            card(database.card.Rank.TEN, s),
+            card(common.card.Rank.QUEEN, s),
+            card(common.card.Rank.JACK, s),
+            card(common.card.Rank.TEN, s),
         )
 
         svc.publishRoyalFlushes(guildId, mapOf(host to hole), board)
@@ -1070,19 +1070,19 @@ class PokerServiceTest {
     @Test
     fun `multi-seat showdown emits one PokerRoyalFlushEvent per royal-flush seat`() {
         val (svc, publisher) = pokerServiceWithPublisher()
-        val h = database.card.Suit.HEARTS
-        val d = database.card.Suit.DIAMONDS
+        val h = common.card.Suit.HEARTS
+        val d = common.card.Suit.DIAMONDS
         // Two players, both holding a royal flush via different suits, with
         // a board that supplies five of each — synthetic scenario, but the
         // helper just inspects best-hand per seat so the wiring stands.
-        val hostHole = listOf(card(database.card.Rank.ACE, h), card(database.card.Rank.KING, h))
-        val joinerHole = listOf(card(database.card.Rank.ACE, d), card(database.card.Rank.KING, d))
+        val hostHole = listOf(card(common.card.Rank.ACE, h), card(common.card.Rank.KING, h))
+        val joinerHole = listOf(card(common.card.Rank.ACE, d), card(common.card.Rank.KING, d))
         val board = listOf(
-            card(database.card.Rank.QUEEN, h),
-            card(database.card.Rank.JACK, h),
-            card(database.card.Rank.TEN, h),
-            card(database.card.Rank.QUEEN, d),
-            card(database.card.Rank.JACK, d),
+            card(common.card.Rank.QUEEN, h),
+            card(common.card.Rank.JACK, h),
+            card(common.card.Rank.TEN, h),
+            card(common.card.Rank.QUEEN, d),
+            card(common.card.Rank.JACK, d),
         )
         // joinerHole + this board only forms a king-high pair of straights
         // (no 10♦ on board), so swap the test to a single-royal scenario.
@@ -1096,12 +1096,12 @@ class PokerServiceTest {
 
     @Test
     fun `null publisher (default ctor) does not crash even with a royal flush hand`() {
-        val s = database.card.Suit.HEARTS
-        val hole = listOf(card(database.card.Rank.ACE, s), card(database.card.Rank.KING, s))
+        val s = common.card.Suit.HEARTS
+        val hole = listOf(card(common.card.Rank.ACE, s), card(common.card.Rank.KING, s))
         val board = listOf(
-            card(database.card.Rank.QUEEN, s),
-            card(database.card.Rank.JACK, s),
-            card(database.card.Rank.TEN, s),
+            card(common.card.Rank.QUEEN, s),
+            card(common.card.Rank.JACK, s),
+            card(common.card.Rank.TEN, s),
         )
         // `service` is the default-ctor instance from setup() — publisher is null.
         service.publishRoyalFlushes(guildId, mapOf(host to hole), board)

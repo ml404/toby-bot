@@ -2,6 +2,7 @@ package database.rps
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
+import common.rps.RpsEngine
 import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration

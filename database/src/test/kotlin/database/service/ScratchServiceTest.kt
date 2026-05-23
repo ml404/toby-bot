@@ -1,8 +1,8 @@
 package database.service
 
 import database.dto.UserDto
-import database.economy.ScratchCard
-import database.economy.SlotMachine
+import common.economy.ScratchCard
+import common.economy.SlotMachine
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

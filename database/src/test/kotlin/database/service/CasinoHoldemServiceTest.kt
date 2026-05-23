@@ -1,13 +1,13 @@
 package database.service
 
-import database.card.Card
-import database.card.Rank
-import database.card.Suit
+import common.card.Card
+import common.card.Rank
+import common.card.Suit
 import database.dto.UserDto
-import database.poker.CasinoHoldem
-import database.poker.CasinoHoldemTable
+import common.poker.CasinoHoldem
+import common.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
-import database.poker.HandEvaluator
+import common.poker.HandEvaluator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

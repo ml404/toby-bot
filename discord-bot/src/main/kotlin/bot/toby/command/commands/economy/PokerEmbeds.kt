@@ -1,9 +1,9 @@
 package bot.toby.command.commands.economy
 
 import database.dto.PokerHandLogDto
-import database.card.Card
-import database.poker.PokerTable
-import database.poker.PokerTable.Phase
+import common.card.Card
+import common.poker.PokerTable
+import common.poker.PokerTable.Phase
 import database.service.PokerService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

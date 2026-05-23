@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.SlotMachine
+import common.economy.SlotMachine
 import database.service.SlotsService
 import database.service.SlotsService.SpinOutcome
 import io.mockk.every

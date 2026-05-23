@@ -1,6 +1,6 @@
 package web.controller
 
-import database.economy.Plinko
+import common.economy.Plinko
 import database.service.PlinkoService
 import database.service.PlinkoService.DropOutcome
 import io.mockk.every

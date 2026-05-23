@@ -1,8 +1,8 @@
 package bot.toby.command.commands.economy
 
-import database.card.Card
-import database.poker.CasinoHoldem
-import database.poker.CasinoHoldemTable
+import common.card.Card
+import common.poker.CasinoHoldem
+import common.poker.CasinoHoldemTable
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

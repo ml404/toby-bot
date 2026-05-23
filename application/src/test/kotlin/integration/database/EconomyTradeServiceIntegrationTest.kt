@@ -7,7 +7,7 @@ import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.UserDto
-import database.economy.TobyCoinEngine
+import common.economy.TobyCoinEngine
 import database.service.EconomyTradeService
 import database.service.EconomyTradeService.TradeOutcome
 import database.service.TobyCoinMarketService

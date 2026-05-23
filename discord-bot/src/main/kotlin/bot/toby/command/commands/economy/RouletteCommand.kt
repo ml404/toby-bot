@@ -2,7 +2,7 @@ package bot.toby.command.commands.economy
 
 import core.command.CommandContext
 import database.dto.UserDto
-import database.economy.Roulette
+import common.economy.Roulette
 import database.service.RouletteService
 import database.service.RouletteService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder

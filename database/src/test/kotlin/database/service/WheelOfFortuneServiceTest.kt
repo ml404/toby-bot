@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.economy.WheelOfFortune
+import common.economy.WheelOfFortune
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.UserDto
-import database.economy.Roulette
+import common.economy.Roulette
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
