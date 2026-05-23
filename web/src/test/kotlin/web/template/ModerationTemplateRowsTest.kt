@@ -466,6 +466,7 @@ class ModerationTemplateRowsTest {
             readTemplate("templates/moderation/casino.html"),
             readTemplate("templates/moderation/lottery.html"),
             readTemplate("templates/moderation/leveling.html"),
+            readTemplate("templates/moderation/welcome.html"),
         )
         val combined = templates.joinToString("\n")
 

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Moderation: Welcome', '/css/moderation.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${overview.guildId},
+               data-actor-id=${actorDiscordId},
+               data-is-owner=${isOwner}">
+
+    <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'welcome')}"></div>
+
+    <!--
+        Welcome / goodbye announcements + auto-role-on-join. Three
+        independently-toggleable announcement systems share the standard
+        .config-row + .save-config wiring picked up by moderationCommon.js;
+        the auto-role list reuses the leveling.js role-binding patterns
+        wired in /js/moderation/welcome.js. Placeholders supported in the
+        message templates: {user}, {user.name}, {server}, {membercount}.
+    -->
+    <section class="mod-panel" data-panel="welcome">
+        <p class="muted mb-4">
+            Greet new members and acknowledge departures with a configurable
+            announcement, and auto-assign roles the moment someone joins.
+            Each announcement is independently toggleable; both fall back
+            to the server's system channel when no channel is set. Placeholders
+            in the message template are expanded at send time:
+            <code>{user}</code> (mention), <code>{user.name}</code> (display name),
+            <code>{server}</code>, <code>{membercount}</code>.
+        </p>
+
+        <div class="mod-card mod-card-wide welcome-admin-card">
+
+            <details class="config-section" open>
+                <summary>Welcome announcement</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="WELCOME_ENABLED">
+                        <label>
+                            Enabled
+                            <span class="config-hint">
+                                Whether to post a welcome embed when a member joins.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="false"
+                                    th:selected="${overview.config['WELCOME_ENABLED'] != 'true'}">Disabled</option>
+                            <option value="true"
+                                    th:selected="${overview.config['WELCOME_ENABLED'] == 'true'}">Enabled</option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="WELCOME_CHANNEL">
+                        <label>
+                            Channel
+                            <span class="config-hint">
+                                Channel to post in. Leave blank to fall back to the server's
+                                system channel.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="">&mdash; fall back to system channel &mdash;</option>
+                            <option th:each="tc : ${overview.textChannels}"
+                                    th:value="${tc.id}"
+                                    th:text="'#' + ${tc.name}"
+                                    th:selected="${overview.config['WELCOME_CHANNEL'] == tc.id}"></option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="WELCOME_MESSAGE">
+                        <label>
+                            Message template
+                            <span class="config-hint">
+                                Up to 2000 characters. Supports the four placeholders listed above.
+                                Leave blank to use the built-in default.
+                            </span>
+                        </label>
+                        <input type="text" maxlength="2000"
+                               th:value="${overview.config['WELCOME_MESSAGE']}"
+                               placeholder="Welcome to {server}, {user}! You're our {membercount}-th member 🎉"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Goodbye announcement</summary>
+                <div class="config-grid">
+                    <div class="config-row" data-key="GOODBYE_ENABLED">
+                        <label>
+                            Enabled
+                            <span class="config-hint">
+                                Whether to post a goodbye embed when a member leaves.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="false"
+                                    th:selected="${overview.config['GOODBYE_ENABLED'] != 'true'}">Disabled</option>
+                            <option value="true"
+                                    th:selected="${overview.config['GOODBYE_ENABLED'] == 'true'}">Enabled</option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="GOODBYE_CHANNEL">
+                        <label>
+                            Channel
+                            <span class="config-hint">
+                                Channel to post in. Leave blank to fall back to the server's
+                                system channel.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="">&mdash; fall back to system channel &mdash;</option>
+                            <option th:each="tc : ${overview.textChannels}"
+                                    th:value="${tc.id}"
+                                    th:text="'#' + ${tc.name}"
+                                    th:selected="${overview.config['GOODBYE_CHANNEL'] == tc.id}"></option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="GOODBYE_MESSAGE">
+                        <label>
+                            Message template
+                            <span class="config-hint">
+                                Up to 2000 characters. Supports the four placeholders listed above.
+                                Leave blank to use the built-in default.
+                            </span>
+                        </label>
+                        <input type="text" maxlength="2000"
+                               th:value="${overview.config['GOODBYE_MESSAGE']}"
+                               placeholder="{user.name} has left {server}. We're now down to {membercount}."
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Auto-assigned roles on join</summary>
+                <p class="muted config-section-lead">
+                    Bind one or more Discord roles &mdash; TobyBot assigns them the moment a new
+                    member joins. Common uses: a baseline &ldquo;Member&rdquo; role, a pronoun
+                    placeholder, or a temporary &ldquo;Unverified&rdquo; role.
+                </p>
+                <div class="config-warning">
+                    <strong>Heads up:</strong> TobyBot's role must sit
+                    <em>above</em> any role you bind here in your server's role list, or
+                    the assign will fail at runtime.
+                </div>
+
+                <div class="welcome-autoroles" id="welcome-autoroles-list">
+                    <p class="muted" th:if="${#lists.isEmpty(welcome.autoRoles)}">
+                        No auto-roles bound yet.
+                    </p>
+                    <table class="welcome-autoroles-table" th:if="${not #lists.isEmpty(welcome.autoRoles)}">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="r : ${welcome.autoRoles}" th:data-role-id="${r.roleId}">
+                                <td>
+                                    <span class="title-pill"
+                                          th:style="${r.roleColorHex != null ? 'color: ' + r.roleColorHex : ''}"
+                                          th:text="${r.roleName}">Role</span>
+                                    <span class="badge off" th:if="${r.roleMissing}">missing</span>
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-danger welcome-autorole-delete"
+                                            th:data-role-id="${r.roleId}"
+                                            th:disabled="${!isOwner}">Delete</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <form id="welcome-autorole-add" class="welcome-autorole-add">
+                    <label>
+                        <span>Role</span>
+                        <select name="roleId" th:disabled="${!isOwner}">
+                            <option value="">&mdash; pick a role &mdash;</option>
+                            <option th:each="role : ${welcome.roles}"
+                                    th:value="${role.id}"
+                                    th:text="${role.name}"></option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn" th:disabled="${!isOwner}">Add auto-role</button>
+                </form>
+            </details>
+        </div>
+    </section>
+</main>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/welcome.js}"></script>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

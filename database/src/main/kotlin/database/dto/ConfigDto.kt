@@ -372,7 +372,28 @@ class ConfigDto(
         // GuildJoinEvent fires when the bot is re-invited.
         INSTALL_MODE("INSTALL_MODE"),
         // Epoch-millis string recording when the install wizard was completed.
-        INSTALLED_AT("INSTALLED_AT");
+        INSTALLED_AT("INSTALLED_AT"),
+
+        // Per-member welcome announcement on GuildMemberJoin. Three keys:
+        //   WELCOME_ENABLED  — "true"/"false". Default "false" so a fresh
+        //                      install doesn't announce until an admin opts in.
+        //   WELCOME_CHANNEL  — Discord text-channel id (stringified Long)
+        //                      where the announcement posts. Falls back to
+        //                      the guild's system channel when blank or
+        //                      pointing at a non-postable channel.
+        //   WELCOME_MESSAGE  — Free-form announcement text with placeholders
+        //                      `{user}` (mention), `{user.name}` (display
+        //                      name), `{server}`, `{membercount}`. Blank
+        //                      falls back to a built-in default template.
+        // The corresponding GOODBYE_* trio fires on GuildMemberRemove with
+        // the same shape — separate keys so admins can run one without the
+        // other.
+        WELCOME_ENABLED("WELCOME_ENABLED"),
+        WELCOME_CHANNEL("WELCOME_CHANNEL"),
+        WELCOME_MESSAGE("WELCOME_MESSAGE"),
+        GOODBYE_ENABLED("GOODBYE_ENABLED"),
+        GOODBYE_CHANNEL("GOODBYE_CHANNEL"),
+        GOODBYE_MESSAGE("GOODBYE_MESSAGE");
     }
 
     override fun toString(): String {
