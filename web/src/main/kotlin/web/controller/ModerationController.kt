@@ -203,11 +203,11 @@ class ModerationController(
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireForPage "redirect:/moderation/guilds"
         }
-        val messages = activityChartsService.messagesPerDay(guildId)
-        val voiceHours = activityChartsService.voiceHoursPerDay(guildId)
+        val messagesChart = activityChartsService.buildMessagesChart(guildId)
+        val voiceHoursChart = activityChartsService.buildVoiceHoursChart(guildId)
         model.addAttribute("overview", overview)
-        model.addAttribute("messagesPerDay", messages)
-        model.addAttribute("voiceHoursPerDay", voiceHours)
+        model.addAttribute("messagesChart", messagesChart)
+        model.addAttribute("voiceHoursChart", voiceHoursChart)
         model.addAttribute("isOwner", moderationWebService.isOwner(discordId, guildId))
         model.addAttribute("username", user.displayName())
         model.addAttribute("actorDiscordId", discordId.toString())

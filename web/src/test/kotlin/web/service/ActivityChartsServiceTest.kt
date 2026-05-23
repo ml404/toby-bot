@@ -7,6 +7,7 @@ import database.service.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -95,12 +96,13 @@ class ActivityChartsServiceTest {
 
     @Test
     fun `polylinePoints emits one coord pair per day, scaled to the series max`() {
+        val service = serviceWithEmpty()
         val series = listOf(
             ActivityChartsService.DailyPoint(today.minusDays(2), 0.0),
             ActivityChartsService.DailyPoint(today.minusDays(1), 5.0),
             ActivityChartsService.DailyPoint(today, 10.0),
         )
-        val out = ActivityChartsService.polylinePoints(series)
+        val out = service.polylinePoints(series)
         // Three points → three space-separated `x,y` pairs.
         assertEquals(3, out.split(" ").size)
         // Last point's Y sits at the padded top of the chart (highest of the three).
@@ -111,19 +113,70 @@ class ActivityChartsServiceTest {
 
     @Test
     fun `polylinePoints with an empty series returns the empty string`() {
-        assertEquals("", ActivityChartsService.polylinePoints(emptyList()))
+        assertEquals("", serviceWithEmpty().polylinePoints(emptyList()))
     }
 
     @Test
     fun `polylinePoints with all-zero values renders along the baseline`() {
+        val service = serviceWithEmpty()
         val series = (0 until 5).map {
             ActivityChartsService.DailyPoint(today.minusDays((4 - it).toLong()), 0.0)
         }
-        val out = ActivityChartsService.polylinePoints(series)
+        val out = service.polylinePoints(series)
         // All Ys should be identical when the series max is zero (clamp to 1.0).
         val ys = out.split(" ").map { it.split(",")[1] }.toSet()
         assertEquals(1, ys.size, "all-zero series should be one horizontal line")
     }
+
+    // ---- ChartView builders ----
+
+    @Test
+    fun `buildMessagesChart returns a fully-populated ChartView bundle`() {
+        val messages = mockk<MessageDailyCountPersistence> {
+            every { findByGuildSince(any(), any()) } returns listOf(
+                MessageDailyCountDto(guildId = 1L, dayStart = today, count = 12L),
+                MessageDailyCountDto(guildId = 1L, dayStart = today.minusDays(1), count = 8L),
+            )
+        }
+        val service = ActivityChartsService(messages, mockk(relaxed = true), clock)
+
+        val chart = service.buildMessagesChart(guildId = 1L, days = 7)
+        assertEquals(7, chart.points.size)
+        assertEquals(20.0, chart.total)
+        assertEquals(20L, chart.totalRounded)
+        assertEquals(12.0, chart.max)
+        assertEquals(12L, chart.maxRounded)
+        assertEquals(ActivityChartsService.CHART_WIDTH, chart.viewBoxWidth)
+        assertEquals(ActivityChartsService.CHART_HEIGHT, chart.viewBoxHeight)
+        assertEquals(today.minusDays(6), chart.firstDate)
+        assertEquals(today, chart.lastDate)
+        assertTrue(chart.polyline.isNotEmpty(), "polyline must be ready for the template")
+        assertFalse(chart.isEmpty)
+    }
+
+    @Test
+    fun `buildVoiceHoursChart returns a fully-populated ChartView bundle`() {
+        val sessionStart = today.atStartOfDay(ZoneOffset.UTC).plusHours(10).toInstant()
+        val sessionEnd = sessionStart.plusSeconds(3600) // 1 hour exactly
+        val voice = mockk<VoiceSessionService> {
+            every { findClosedOverlapping(any(), any(), any()) } returns listOf(closedSession(sessionStart, sessionEnd))
+        }
+        val service = ActivityChartsService(mockk(relaxed = true), voice, clock)
+
+        val chart = service.buildVoiceHoursChart(guildId = 1L, days = 7)
+        assertEquals(7, chart.points.size)
+        assertEquals(1.0, chart.total, 0.001)
+        assertEquals(1.0, chart.max, 0.001)
+        assertEquals(today.minusDays(6), chart.firstDate)
+        assertEquals(today, chart.lastDate)
+        assertTrue(chart.polyline.isNotEmpty())
+    }
+
+    private fun serviceWithEmpty(): ActivityChartsService = ActivityChartsService(
+        messageDailyCounts = mockk(relaxed = true),
+        voiceSessions = mockk(relaxed = true),
+        clock = clock,
+    )
 
     private fun closedSession(startedAt: Instant, endedAt: Instant): VoiceSessionDto = VoiceSessionDto(
         id = 1L,
