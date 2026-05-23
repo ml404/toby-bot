@@ -173,21 +173,21 @@
            class="lb-sort-option"
            th:classappend="${view.sort.name() == 'THIS_MONTH' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'THIS_MONTH'}">
-            This month
+            💰 Credits this month
         </a>
         <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='lifetime')}"
            role="tab"
            class="lb-sort-option"
            th:classappend="${view.sort.name() == 'LIFETIME' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'LIFETIME'}">
-            Current total
+            💰 Lifetime credits
         </a>
         <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='xp')}"
            role="tab"
            class="lb-sort-option"
            th:classappend="${view.sort.name() == 'XP' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'XP'}">
-            XP
+            ✨ XP
         </a>
     </nav>
 
