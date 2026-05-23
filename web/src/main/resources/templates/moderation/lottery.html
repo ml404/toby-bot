@@ -174,13 +174,17 @@
                                 the guild's system channel.
                             </span>
                         </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; fall back to leaderboard / system &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['LOTTERY_CHANNEL'] == tc.id}"></option>
-                        </select>
+                        <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                name=null,
+                                id=null,
+                                channels=${overview.textChannels},
+                                selectedValue=${overview.config['LOTTERY_CHANNEL']},
+                                placeholder='— fall back to leaderboard / system —',
+                                emptyLabel='— fall back to leaderboard / system —',
+                                required=false,
+                                valuePrefix='#',
+                                valueField='id',
+                                disabled=${!isOwner})}"></div>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-create-channel">
@@ -482,6 +486,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/lottery.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>

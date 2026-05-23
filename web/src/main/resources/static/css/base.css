@@ -1241,10 +1241,13 @@ td { font-size: 0.95rem; }
     .lb-standings-table.mod-table td[data-label="Prestige"] .lb-prestige { gap: 3px; }
 }
 
-/* ---- Searchable user picker (templates/fragments/userPicker.html
-   + static/js/userPicker.js). Lives in base.css so every page that
-   includes the fragment gets the styling without an extra <link>. ---- */
+/* ---- Searchable picker styles, shared by userPicker.html/.js and
+   channelPicker.html/.js. The .user-picker__* prefix is historical;
+   these are picker-shape styles, not user-specific. Lives in base.css
+   so every page that includes either fragment gets the styling
+   without an extra <link>. ---- */
 .user-picker { position: relative; }
+.user-picker--disabled { opacity: 0.6; pointer-events: none; }
 .user-picker__native {
     position: absolute;
     left: 0; top: 0;

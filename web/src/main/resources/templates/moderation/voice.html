@@ -22,12 +22,17 @@
         <form class="move-form">
             <label>
                 Destination
-                <select name="targetChannelId" required>
-                    <option value="">&mdash; choose &mdash;</option>
-                    <option th:each="vc : ${overview.voiceChannels}"
-                            th:value="${vc.id}"
-                            th:text="${vc.name}"></option>
-                </select>
+                <div th:replace="~{fragments/channelPicker :: channelPicker(
+                        name='targetChannelId',
+                        id='move-target',
+                        channels=${overview.voiceChannels},
+                        selectedValue=null,
+                        placeholder='— choose —',
+                        emptyLabel=null,
+                        required=true,
+                        valuePrefix='',
+                        valueField='id',
+                        disabled=false)}"></div>
             </label>
             <label for="move-members">Members</label>
             <div th:replace="~{fragments/userPicker :: userPicker(
@@ -48,6 +53,7 @@
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/userPicker.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/voice.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>

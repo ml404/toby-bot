@@ -91,13 +91,17 @@
                                 level-ups).
                             </span>
                         </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; fall back to message/system &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['LEVEL_UP_CHANNEL'] == tc.id}"></option>
-                        </select>
+                        <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                name=null,
+                                id=null,
+                                channels=${overview.textChannels},
+                                selectedValue=${overview.config['LEVEL_UP_CHANNEL']},
+                                placeholder='— fall back to message/system —',
+                                emptyLabel='— fall back to message/system —',
+                                required=false,
+                                valuePrefix='#',
+                                valueField='id',
+                                disabled=${!isOwner})}"></div>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                     <div class="config-create-channel">
@@ -303,13 +307,17 @@
                                 their notification preferences. Leave blank to suppress the public shoutout.
                             </span>
                         </label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="">&mdash; no public shoutout &mdash;</option>
-                            <option th:each="tc : ${overview.textChannels}"
-                                    th:value="${tc.id}"
-                                    th:text="'#' + ${tc.name}"
-                                    th:selected="${overview.config['ACHIEVEMENT_ANNOUNCE_CHANNEL'] == tc.id}"></option>
-                        </select>
+                        <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                name=null,
+                                id=null,
+                                channels=${overview.textChannels},
+                                selectedValue=${overview.config['ACHIEVEMENT_ANNOUNCE_CHANNEL']},
+                                placeholder='— no public shoutout —',
+                                emptyLabel='— no public shoutout —',
+                                required=false,
+                                valuePrefix='#',
+                                valueField='id',
+                                disabled=${!isOwner})}"></div>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
                 </div>
@@ -364,6 +372,7 @@
 
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/channelPicker.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
 <script th:src="@{/js/moderation/leveling.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>
