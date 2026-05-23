@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Show role names in autorole errors, unbreak mobile forms",
+    "summary": "Reporter (mobile) tried to bind an auto-role on **Welcome → Auto-assigned roles on join** and saw the rejection toast as a raw role mention (`<@&765616866554544130>` sits above TobyBot's role…), plus the **Message template** input above it was clipped to ~200px alongside its Save button so they could only see `{user.name`. Two fixes: ### 1. Autorole error: render role name, not Discord mention `AutoRoleValidator` interpolated `role.asMention`, which Discord turns into a ch…",
+    "emoji": "🛡️",
+    "prNumber": 549
+  },
+  {
+    "date": "May 2026",
     "title": "Shared searchable channel picker across moderation pages",
     "summary": "Every channel `<select>` dropdown in the moderation UI now uses a searchable typeahead combobox that mirrors the existing `userPicker` UX (filter-as-you-type, keyboard nav, accessible combobox roles). The new `channelPicker` fragment + JS module progressively enhances a native `<select>`, so the form-save handlers in `moderationCommon.js`, `actions.js`, `poll.js`, `voice.js`, `lottery.js`, and `leveling.js` keep reading `.value` unchanged. Eleven sites migrated across: `se…",
     "emoji": "🛡️",
