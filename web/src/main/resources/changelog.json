@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "/tictactoe slash command with optional social-credit wager",
+    "summary": "Adds `/tictactoe @opponent [stake:<int>]` — head-to-head 3×3 Tic-Tac-Toe between two users. Second of the three planned PvP mini-games (after `/rps` in #553; Connect 4 is the next follow-up). The initiator plays ❌ and moves first; the opponent plays ⭕. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute (same model as `/rps` and `/duel`). Free-play (stake omitted or 0) is also accepted — winner gets XP, no cre…",
+    "emoji": "🛡️",
+    "prNumber": 556
+  },
+  {
+    "date": "May 2026",
     "title": "Move pure game engines from database/ to common/",
     "summary": "The casino / mini-game engines and their supporting value types (cards, hands, tables) are pure logic — no Spring, JPA, or JDA dependencies — so they belong in the `common` module alongside the other shared types rather than in `database` where they were originally placed. Moved from `database/` → `common/`: **Engines** (pure logic): `Blackjack`, `PokerEngine`, `CasinoHoldem`, `RpsEngine`, `Coinflip`, `Dice`, `Roulette`, `Keno`, `Plinko`, `SlotMachine`, `Highlow`, `Baccara…",
     "emoji": "🎰",
