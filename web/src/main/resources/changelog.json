@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Champions tab + XP ranking + Activity charts",
+    "summary": "Three additive gaps in the existing leaderboard + moderation surface, all leveraging data that's already in the database. ### 1. Champions tab on `/leaderboards` Fourth tab that ranks users by total PvP wins across `/duel`, `/rps`, `/tictactoe`, `/connect4`. Reads the smallest-tier `*_wins_10` achievement counters — each counter holds the user's actual win count for that game regardless of higher-tier unlocks, so a single per-guild aggregation query produces the leaderboar…",
+    "emoji": "🛡️",
+    "prNumber": 558
+  },
+  {
+    "date": "May 2026",
     "title": "/connect4 + extract TurnBasedBoardWager/SessionRegistry bases",
     "summary": "Adds `/connect4 @opponent [stake:<int>]` — head-to-head 7×6 Connect 4. Third and final of the planned PvP mini-games trio (after `/rps` #553 and `/tictactoe` #556). Initiator plays 🔴 (drops first); opponent plays 🟡. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute. Free-play (stake omitted or 0) is also accepted — winner gets XP, no credits change hands. Draws refund both. Same PR also extracts the two ab…",
     "emoji": "🛡️",
