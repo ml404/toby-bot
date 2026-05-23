@@ -429,7 +429,7 @@
 @media (max-width: 480px) {
     .volume-control input[type=range] { min-width: 0; }
     .volume-inline { min-width: 0; }
-    .slot-select-row select { min-width: 0; flex: 1 1 160px; }
+    .slot-select-row select { min-width: 0; flex: 1 1 100%; }
     .intros-table td.actions { white-space: normal; display: flex; flex-wrap: wrap; gap: 6px; }
     .name-edit-input { max-width: 100%; }
     .empty-hero { padding: 28px 16px; }

@@ -393,10 +393,13 @@ details.config-section.is-hidden { display: none; }
     grid-column: 3;
 }
 
-/* Narrow / mobile: stack to label-on-top, input+save-below on left. */
+/* Narrow / mobile: stack to label-on-top, input+save-below.
+   Input takes the full remaining width instead of being capped at the
+   200px desktop column, so long placeholders (e.g. the welcome /
+   goodbye message templates) don't clip on ~360px phones. */
 @media (max-width: 600px) {
     .config-row {
-        grid-template-columns: minmax(0, 200px) auto;
+        grid-template-columns: minmax(0, 1fr) auto;
         column-gap: var(--space-3);
     }
     .config-row label { grid-column: 1 / -1; }
@@ -1005,4 +1008,60 @@ details.config-section.is-hidden { display: none; }
     border: 1px solid var(--border-strong);
     background: var(--bg);
     color: var(--text);
+}
+
+/* ==============================================================
+   Welcome moderation tab — auto-role add form.
+   Mirrors .leveling-reward-add: bottom-aligned label + button on
+   desktop, stacks vertically on phones (see media block below).
+   ============================================================== */
+.welcome-autorole-add {
+    display: flex;
+    gap: var(--space-3);
+    align-items: end;
+    flex-wrap: wrap;
+    margin-top: var(--space-3);
+}
+.welcome-autorole-add label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    flex: 1 1 200px;
+    min-width: 0;
+}
+.welcome-autorole-add label > span {
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.72rem;
+}
+.welcome-autorole-add select {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-sizing: border-box;
+}
+
+/* ==============================================================
+   Phone breakpoint: stack the multi-field add-forms vertically so
+   their hard `min-width` / `flex-basis` columns don't push past a
+   320–400px viewport.
+   ============================================================== */
+@media (max-width: 480px) {
+    .leveling-reward-add label {
+        min-width: 0;
+        width: 100%;
+    }
+    .config-create-channel-field {
+        flex: 1 1 100%;
+    }
+    .welcome-autorole-add label {
+        flex: 1 1 100%;
+    }
 }
