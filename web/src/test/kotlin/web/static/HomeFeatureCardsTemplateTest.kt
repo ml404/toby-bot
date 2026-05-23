@@ -103,4 +103,64 @@ class HomeFeatureCardsTemplateTest {
                 "Management eyebrows."
         )
     }
+
+    @Test
+    fun `welcome and auto-role card is present in the server management section`() {
+        // Pins the welcome / goodbye / auto-role feature (PR #546) on the
+        // homepage. The "Server Management" section is the right home —
+        // admins are the audience, and the card lives next to the
+        // Moderation toolkit / Config / Polls cluster.
+        assertTrue(
+            html.contains("<h3>Welcome &amp; auto-role</h3>"),
+            "home.html must include a `<h3>Welcome &amp; auto-role</h3>` feature-card heading " +
+                "so the welcome / goodbye / auto-role feature is discoverable from the landing page."
+        )
+        val managementMarker = html.indexOf(">Server Management<")
+        val tabletopMarker = html.indexOf(">Tabletop &amp; Tools<")
+        val welcomeMarker = html.indexOf("<h3>Welcome &amp; auto-role</h3>")
+        check(managementMarker >= 0) { "expected a `>Server Management<` section eyebrow on home.html" }
+        check(tabletopMarker >= 0) { "expected a `>Tabletop &amp; Tools<` section eyebrow on home.html" }
+        assertTrue(
+            welcomeMarker in (managementMarker + 1) until tabletopMarker,
+            "the Welcome & auto-role card must sit inside the Server Management section, " +
+                "not engagement / casino / tabletop."
+        )
+    }
+
+    @Test
+    fun `how-it-works step 1 mentions the in-Discord install wizard`() {
+        // PR #534 shipped the /install wizard. The "How it works"
+        // first step used to imply admins set everything via slash
+        // commands; pin that the install wizard is now called out so
+        // owners know there's a guided onboarding path.
+        val howtoMarker = html.indexOf(">How it works<")
+        val casinoMarker = html.indexOf(">Casino &amp; Coin<")
+        check(howtoMarker >= 0) { "expected a `>How it works<` section eyebrow on home.html" }
+        check(casinoMarker >= 0) { "expected a `>Casino &amp; Coin<` section eyebrow on home.html" }
+        val howtoSection = html.substring(howtoMarker, casinoMarker)
+        assertTrue(
+            howtoSection.contains("<code>/install</code>"),
+            "the `How it works` step 1 must reference the `/install` wizard so owners " +
+                "discover the guided setup path, not just the slash-command-only setup."
+        )
+    }
+
+    @Test
+    fun `profile feature card mentions the slash-command PNG render`() {
+        // PR #548 shipped /profile + a PNG card. Pin that the homepage
+        // surfaces the slash-command path, not just the HTML profile
+        // page — otherwise members never discover the shareable PNG.
+        val profileMarker = html.indexOf("<h3>Profile</h3>")
+        check(profileMarker >= 0) { "expected a `<h3>Profile</h3>` feature card on home.html" }
+        // The card's `<p>` body sits immediately after the heading; walk
+        // to the next `</a>` (the card root) to bound the search.
+        val cardEnd = html.indexOf("</a>", profileMarker)
+        check(cardEnd > profileMarker) { "Profile card not terminated" }
+        val card = html.substring(profileMarker, cardEnd)
+        assertTrue(
+            card.contains("<code>/profile</code>"),
+            "the Profile feature card must reference `/profile` so members discover " +
+                "the slash-command PNG render, not just the HTML profile page:\n$card"
+        )
+    }
 }
