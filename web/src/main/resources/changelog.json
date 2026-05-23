@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Move pure game engines from database/ to common/",
+    "summary": "The casino / mini-game engines and their supporting value types (cards, hands, tables) are pure logic — no Spring, JPA, or JDA dependencies — so they belong in the `common` module alongside the other shared types rather than in `database` where they were originally placed. Moved from `database/` → `common/`: **Engines** (pure logic): `Blackjack`, `PokerEngine`, `CasinoHoldem`, `RpsEngine`, `Coinflip`, `Dice`, `Roulette`, `Keno`, `Plinko`, `SlotMachine`, `Highlow`, `Baccara…",
+    "emoji": "🎰",
+    "prNumber": 555
+  },
+  {
+    "date": "May 2026",
     "title": "Back PendingDuelRegistry + RecentDuelResolutions with Caffeine",
     "summary": "Brings the two duel-area in-memory registries onto the same belt-and-suspenders memory protection that `RpsSessionRegistry` got in #553's review pass. Both `PendingDuelRegistry` and `RecentDuelResolutions` used raw `ConcurrentHashMap + ScheduledExecutorService` — fine on the happy path but no upper bound on heap and no backstop if a scheduled task throws or the executor queue saturates.",
     "emoji": "🧹",
