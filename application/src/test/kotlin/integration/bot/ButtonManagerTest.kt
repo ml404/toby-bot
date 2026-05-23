@@ -88,6 +88,7 @@ class ButtonManagerTest {
             PokerActionButton::class.java,
             ResendLastRequestButton::class.java,
             RollButton::class.java,
+            RpsButton::class.java,
             StopButton::class.java,
             TeamCancelButton::class.java,
             TeamConfirmButton::class.java,
