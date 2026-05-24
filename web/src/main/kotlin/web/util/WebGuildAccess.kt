@@ -10,7 +10,7 @@ import web.service.EconomyWebService
  * member of this guild" check that opens nearly every per-guild
  * controller endpoint.
  *
- * Page-rendering controllers (`/duel/{guildId}`, `/casino/{guildId}/...`,
+ * Page-rendering controllers (`/pvp/{guildId}`, `/casino/{guildId}/...`,
  * `/poker/{guildId}/...`) all redirect anonymous or non-member callers
  * back to the appropriate lobby with an `error` flash. JSON endpoints
  * (`/.../state`, `/.../action` etc.) all return 401/403 with a body

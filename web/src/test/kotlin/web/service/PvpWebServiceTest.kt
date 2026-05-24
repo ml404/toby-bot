@@ -14,7 +14,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
 
-class DuelWebServiceTest {
+class PvpWebServiceTest {
 
     private val opponentId = 200L
     private val guildId = 42L
@@ -23,7 +23,7 @@ class DuelWebServiceTest {
     private lateinit var userService: UserService
     private lateinit var memberLookup: MemberLookupHelper
     private lateinit var recentDuelResolutions: RecentDuelResolutions
-    private lateinit var service: DuelWebService
+    private lateinit var service: PvpWebService
 
     @BeforeEach
     fun setup() {
@@ -36,7 +36,7 @@ class DuelWebServiceTest {
         recentDuelResolutions = mockk {
             every { consumeForInitiator(any(), any()) } returns emptyList()
         }
-        service = DuelWebService(pendingDuelRegistry, userService, memberLookup, recentDuelResolutions)
+        service = PvpWebService(pendingDuelRegistry, userService, memberLookup, recentDuelResolutions)
     }
 
     @Test
@@ -60,7 +60,7 @@ class DuelWebServiceTest {
             // 101L intentionally omitted — should fall back to "Player …"
         )
 
-        val rows = service.pendingForOpponent(opponentId, guildId)
+        val rows = service.duelPendingForOpponent(opponentId, guildId)
 
         assertEquals(2, rows.size)
         // Stringified to survive 18-digit Discord-snowflake JSON round-trips
@@ -96,7 +96,7 @@ class DuelWebServiceTest {
             opponentId to MemberLookupHelper.MemberDisplay(name = "Bob", avatarUrl = "https://cdn/bob.png"),
         )
 
-        val rows = service.pendingForInitiator(initiatorId, guildId)
+        val rows = service.duelPendingForInitiator(initiatorId, guildId)
 
         assertEquals(1, rows.size)
         assertEquals("Bob", rows[0].opponentName)
@@ -109,7 +109,7 @@ class DuelWebServiceTest {
     fun `empty registry result skips JDA lookup`() {
         every { pendingDuelRegistry.pendingForInitiator(any(), any()) } returns emptyList()
 
-        val rows = service.pendingForInitiator(opponentId, guildId)
+        val rows = service.duelPendingForInitiator(opponentId, guildId)
 
         assertTrue(rows.isEmpty())
         verify(exactly = 0) { memberLookup.resolveAll(any(), any()) }
@@ -145,7 +145,7 @@ class DuelWebServiceTest {
             opponentId to MemberLookupHelper.MemberDisplay(name = "Bob", avatarUrl = "https://cdn/b.png"),
         )
 
-        val payload = service.outgoingPayload(initiatorId, guildId)
+        val payload = service.duelOutgoingPayload(initiatorId, guildId)
 
         // Pending side
         assertEquals(1, payload.pending.size)
@@ -184,7 +184,7 @@ class DuelWebServiceTest {
         // JDA returns nothing — both members fall back.
         every { memberLookup.resolveAll(guildId, setOf(initiatorId, opponentId)) } returns emptyMap()
 
-        val payload = service.outgoingPayload(initiatorId, guildId)
+        val payload = service.duelOutgoingPayload(initiatorId, guildId)
 
         assertEquals(1, payload.resolutions.size)
         assertEquals("Player 100", payload.resolutions[0].initiatorName)
@@ -198,7 +198,7 @@ class DuelWebServiceTest {
         every { pendingDuelRegistry.pendingForInitiator(initiatorId, guildId) } returns emptyList()
         every { recentDuelResolutions.consumeForInitiator(initiatorId, guildId) } returns emptyList()
 
-        val payload = service.outgoingPayload(initiatorId, guildId)
+        val payload = service.duelOutgoingPayload(initiatorId, guildId)
 
         assertTrue(payload.pending.isEmpty())
         assertTrue(payload.resolutions.isEmpty())

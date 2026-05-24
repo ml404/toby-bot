@@ -1,11 +1,14 @@
-// /duel — challenge form posts to /duel/{guildId}/challenge; the
-// inbox panel polls /duel/{guildId}/pending every 5 seconds and posts
-// to /accept or /decline via the shared CSRF-aware fetch wrapper.
+// /pvp — unified PvP page. Tab strip switches between Duel, RPS,
+// TicTacToe, Connect 4 (the last three are placeholders until their
+// controller endpoints land). Duel: challenge form posts to
+// /pvp/{guildId}/duel/challenge; the inbox panel polls
+// /pvp/{guildId}/duel/pending every 5 seconds and posts to /accept or
+// /decline via the shared CSRF-aware fetch wrapper.
 //
 // UMD-style export: `playDuelResolution`, `makeFigure`, and `formatExpiry`
 // are pulled out for unit testing (see casino-jackpot-wheel.js for the
 // same pattern). Page-init code only runs when a real `document` with
-// the duel page DOM is present.
+// the pvp page DOM is present.
 (function (root) {
     'use strict';
 
@@ -187,6 +190,25 @@
     if (!guildId) return;
     const ttlSeconds = parseInt(main.dataset.ttlSeconds, 10) || 0;
 
+    // Tab strip — Duel + three placeholder tabs (RPS/TTT/C4 land in a
+    // follow-up PR). One panel visible at a time; chips drive `hidden`
+    // on the panels and `aria-selected` on the tabs.
+    const tabs = Array.prototype.slice.call(document.querySelectorAll('.pvp-tab'));
+    const panels = Array.prototype.slice.call(document.querySelectorAll('.pvp-panel'));
+    function activateTab(slug) {
+        tabs.forEach(function (t) {
+            const isActive = t.dataset.pvpTab === slug;
+            t.classList.toggle('is-active', isActive);
+            t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        panels.forEach(function (p) {
+            p.hidden = p.id !== ('pvp-panel-' + slug);
+        });
+    }
+    tabs.forEach(function (t) {
+        t.addEventListener('click', function () { activateTab(t.dataset.pvpTab); });
+    });
+
     const balanceEl = document.getElementById('duel-balance');
     const challengeForm = document.getElementById('duel-challenge');
     const pendingList = document.getElementById('duel-pending-list');
@@ -207,7 +229,7 @@
         const nameEl = document.createElement('span');
         nameEl.className = 'lb-name';
         // textContent prevents nicknames like "<script>" from breaking out
-        // of the cell — duel.html relies on Thymeleaf escaping for the same
+        // of the cell — pvp.html relies on Thymeleaf escaping for the same
         // reason, so the dynamic path needs the same guarantee.
         nameEl.textContent = name || '';
         cell.appendChild(nameEl);
@@ -300,7 +322,7 @@
     }
 
     function refreshPending() {
-        fetch('/duel/' + guildId + '/pending', { credentials: 'same-origin' })
+        fetch('/pvp/' + guildId + '/duel/pending', { credentials: 'same-origin' })
             .then(function (r) { return r.ok ? r.json() : []; })
             .then(renderPending)
             .catch(function () { /* keep last known state */ });
@@ -329,7 +351,7 @@
     }
 
     function refreshOutgoing() {
-        fetch('/duel/' + guildId + '/outgoing', { credentials: 'same-origin' })
+        fetch('/pvp/' + guildId + '/duel/outgoing', { credentials: 'same-origin' })
             .then(function (r) {
                 return r.ok ? r.json() : { pending: [], resolutions: [] };
             })
@@ -371,7 +393,7 @@
                 toast('error', 'Stake is required.');
                 return;
             }
-            window.TobyApi.postJson('/duel/' + guildId + '/challenge', {
+            window.TobyApi.postJson('/pvp/' + guildId + '/duel/challenge', {
                 opponentDiscordId: opponent,
                 stake: stake
             }).then(function (resp) {
@@ -397,7 +419,7 @@
             const isDecline = btn.classList.contains('duel-decline');
             if (!isAccept && !isDecline) return;
 
-            const path = '/duel/' + guildId + '/' + duelId + (isAccept ? '/accept' : '/decline');
+            const path = '/pvp/' + guildId + '/duel/' + duelId + (isAccept ? '/accept' : '/decline');
             window.TobyApi.postJson(path, {}).then(function (resp) {
                 if (!resp || !resp.ok) {
                     toast('error', (resp && resp.error) || 'Action failed.');
@@ -425,7 +447,7 @@
             if (!row) return;
             const duelId = row.dataset.duelId;
             if (!duelId) return;
-            window.TobyApi.postJson('/duel/' + guildId + '/' + duelId + '/cancel', {})
+            window.TobyApi.postJson('/pvp/' + guildId + '/duel/' + duelId + '/cancel', {})
                 .then(function (resp) {
                     if (!resp || !resp.ok) {
                         toast('error', (resp && resp.error) || 'Cancel failed.');

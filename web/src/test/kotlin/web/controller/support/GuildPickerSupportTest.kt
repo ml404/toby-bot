@@ -22,7 +22,7 @@ class GuildPickerSupportTest {
             guildIds = listOf(1L, 2L, 3L),
             cookieGuildId = 2L,
             pick = true,
-        ) { "/duel/$it" }
+        ) { "/pvp/$it" }
         assertNull(result)
     }
 
@@ -63,7 +63,7 @@ class GuildPickerSupportTest {
             guildIds = listOf(1L, 2L),
             cookieGuildId = null,
             pick = false,
-        ) { "/duel/$it" }
+        ) { "/pvp/$it" }
         assertNull(result)
     }
 

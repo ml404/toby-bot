@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - PvP', '/css/pvp.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container"
+      th:attr="data-guild-id=${guildId},
+               data-min-stake=${minStake},
+               data-max-stake=${maxStake},
+               data-ttl-seconds=${ttlSeconds},
+               data-user-id=${currentUserId},
+               data-user-name=${currentUserName},
+               data-user-avatar=${currentUserAvatarUrl}">
+
+    <div class="duel-header">
+        <a class="back-link" th:href="@{/pvp/guilds(pick=true)}">&larr; All servers</a>
+        <h1 th:text="'⚔️ PvP • ' + ${guildName}">⚔️ PvP</h1>
+        <p class="muted">
+            Head-to-head matches against other members. Each tab below covers a different
+            game — duel is a 50/50 coin flip, the rest are turn-based.
+        </p>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="pvp-tabs" role="tablist" aria-label="PvP games">
+        <button type="button" class="pvp-tab is-active" role="tab"
+                aria-selected="true" aria-controls="pvp-panel-duel"
+                id="pvp-tab-duel" data-pvp-tab="duel">⚔️ Duel</button>
+        <button type="button" class="pvp-tab" role="tab"
+                aria-selected="false" aria-controls="pvp-panel-rps"
+                id="pvp-tab-rps" data-pvp-tab="rps">✊ Rock-Paper-Scissors</button>
+        <button type="button" class="pvp-tab" role="tab"
+                aria-selected="false" aria-controls="pvp-panel-tictactoe"
+                id="pvp-tab-tictactoe" data-pvp-tab="tictactoe">⭕ Tic-Tac-Toe</button>
+        <button type="button" class="pvp-tab" role="tab"
+                aria-selected="false" aria-controls="pvp-panel-connect4"
+                id="pvp-tab-connect4" data-pvp-tab="connect4">🔴 Connect 4</button>
+    </div>
+
+    <section id="pvp-panel-duel" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-duel">
+        <section class="duel-card">
+            <h2>Challenge someone</h2>
+            <form id="duel-challenge" autocomplete="off">
+                <label for="duel-opponent">Opponent</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='opponentDiscordId',
+                        id='duel-opponent',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='Pick an opponent…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+                <p th:if="${#lists.isEmpty(members)}" class="muted">
+                    No other members found in this server. Try again in a moment if the bot just connected.
+                </p>
+
+                <label for="duel-stake">Stake (credits)</label>
+                <input id="duel-stake" name="stake" type="number"
+                       th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+
+                <div class="duel-form-actions">
+                    <button type="submit" id="duel-send" class="btn-primary">Send challenge</button>
+                    <button type="button" id="duel-preview" class="btn-secondary">Preview animation</button>
+                </div>
+            </form>
+
+            <div class="duel-balance">
+                Balance: <strong id="duel-balance" th:text="${balance}">0</strong> credits
+            </div>
+        </section>
+
+        <section class="duel-inbox">
+            <h2>Pending offers for you</h2>
+            <div id="duel-pending-list" class="duel-pending-list">
+                <div th:if="${#lists.isEmpty(pending)}" class="muted">No pending duels right now.</div>
+                <div class="duel-pending-row" th:each="p : ${pending}"
+                     th:attr="data-duel-id=${p.duelId},
+                              data-stake=${p.stake},
+                              data-created-at=${p.createdAtEpochSeconds},
+                              data-initiator-discord-id=${p.initiatorDiscordId},
+                              data-initiator-name=${p.initiatorName},
+                              data-initiator-avatar=${p.initiatorAvatarUrl},
+                              data-opponent-discord-id=${p.opponentDiscordId},
+                              data-opponent-name=${p.opponentName},
+                              data-opponent-avatar=${p.opponentAvatarUrl}">
+                    <div class="duel-pending-info">
+                        <div class="duel-pending-who">
+                            <span class="muted">From</span>
+                            <div th:replace="~{fragments/memberCell :: cellLink(${p.initiatorName}, ${p.initiatorAvatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${p.initiatorDiscordId})})}"></div>
+                        </div>
+                        <div class="duel-pending-meta">
+                            <span>for <strong th:text="${p.stake}">100</strong> credits</span>
+                            <span class="duel-expiry muted">expires soon</span>
+                        </div>
+                    </div>
+                    <div class="duel-pending-actions">
+                        <button class="btn-primary duel-accept" type="button">Accept</button>
+                        <button class="btn-secondary duel-decline" type="button">Decline</button>
+                    </div>
+                </div>
+            </div>
+            <p class="muted">Offers expire after <span th:text="${ttlLabel}">3m</span>. Refreshes automatically.</p>
+        </section>
+
+        <section class="duel-outbox">
+            <h2>Your outgoing offers</h2>
+            <div id="duel-outgoing-list" class="duel-pending-list">
+                <div th:if="${#lists.isEmpty(outgoing)}" class="muted">No outgoing challenges right now.</div>
+                <div class="duel-pending-row" th:each="p : ${outgoing}"
+                     th:attr="data-duel-id=${p.duelId}, data-stake=${p.stake}, data-created-at=${p.createdAtEpochSeconds}">
+                    <div class="duel-pending-info">
+                        <div class="duel-pending-who">
+                            <span class="muted">To</span>
+                            <div th:replace="~{fragments/memberCell :: cellLink(${p.opponentName}, ${p.opponentAvatarUrl}, @{/profile/{g}/{d}(g=${guildId}, d=${p.opponentDiscordId})})}"></div>
+                        </div>
+                        <div class="duel-pending-meta">
+                            <span>for <strong th:text="${p.stake}">100</strong> credits</span>
+                            <span class="duel-expiry muted">expires soon</span>
+                        </div>
+                    </div>
+                    <div class="duel-pending-actions">
+                        <button class="btn-secondary duel-cancel" type="button">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </section>
+
+    <section id="pvp-panel-rps" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-rps" hidden>
+        <div class="pvp-coming-soon">
+            <h2>✊ Rock-Paper-Scissors</h2>
+            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
+                <code>/rps @opponent stake:&lt;credits&gt;</code> and play the round through the embed buttons.</p>
+        </div>
+    </section>
+
+    <section id="pvp-panel-tictactoe" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-tictactoe" hidden>
+        <div class="pvp-coming-soon">
+            <h2>⭕ Tic-Tac-Toe</h2>
+            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
+                <code>/tictactoe @opponent stake:&lt;credits&gt;</code> and play moves through the embed buttons.</p>
+        </div>
+    </section>
+
+    <section id="pvp-panel-connect4" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-connect4" hidden>
+        <div class="pvp-coming-soon">
+            <h2>🔴 Connect 4</h2>
+            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
+                <code>/connect4 @opponent stake:&lt;credits&gt;</code> and play moves through the embed buttons.</p>
+        </div>
+    </section>
+</main>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+<script th:src="@{/js/api.js}"></script>
+<script th:src="@{/js/toasts.js}"></script>
+<script th:src="@{/js/userPicker.js}"></script>
+<script th:src="@{/js/pvp.js}"></script>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

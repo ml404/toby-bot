@@ -36,6 +36,7 @@ class WebSecurityConfig {
                 auth.requestMatchers("/economy/**").authenticated()
                 auth.requestMatchers("/tip/**").authenticated()
                 auth.requestMatchers("/duel/**").authenticated()
+                auth.requestMatchers("/pvp/**").authenticated()
                 auth.requestMatchers("/poker/**").authenticated()
                 auth.requestMatchers("/music-player/**").authenticated()
                 auth.anyRequest().authenticated()

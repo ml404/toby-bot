@@ -16,12 +16,12 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.oauth2.core.user.OAuth2User
 import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
-import web.service.DuelWebService
+import web.service.PvpWebService
 import web.service.EconomyWebService
 import web.service.MemberLookupHelper
 import java.time.Instant
 
-class DuelControllerTest {
+class PvpControllerTest {
 
     private val guildId = 42L
     private val discordId = 100L
@@ -29,7 +29,7 @@ class DuelControllerTest {
     private val duelId = 99L
 
     private lateinit var duelService: DuelService
-    private lateinit var duelWebService: DuelWebService
+    private lateinit var pvpWebService: PvpWebService
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
@@ -38,12 +38,12 @@ class DuelControllerTest {
     private lateinit var stakeBounds: StakeBounds
     private lateinit var memberLookup: MemberLookupHelper
     private lateinit var user: OAuth2User
-    private lateinit var controller: DuelController
+    private lateinit var controller: PvpController
 
     @BeforeEach
     fun setup() {
         duelService = mockk(relaxed = true)
-        duelWebService = mockk(relaxed = true)
+        pvpWebService = mockk(relaxed = true)
         pendingDuelRegistry = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
@@ -57,8 +57,8 @@ class DuelControllerTest {
         }
         every { economyWebService.isMember(discordId, guildId) } returns true
         every { economyWebService.isMember(opponentId, guildId) } returns true
-        controller = DuelController(
-            duelService, duelWebService, pendingDuelRegistry,
+        controller = PvpController(
+            duelService, pvpWebService, pendingDuelRegistry,
             economyWebService, userService, jda, eventPublisher, stakeBounds,
             memberLookup
         )
@@ -88,7 +88,7 @@ class DuelControllerTest {
         assertEquals(200, response.statusCode.value())
         assertTrue(response.body!!.ok)
         assertEquals(duelId, response.body!!.duelId)
-        verify { duelWebService.ensureOpponent(opponentId, guildId) }
+        verify { pvpWebService.ensureOpponent(opponentId, guildId) }
         verify(exactly = 1) {
             eventPublisher.publishEvent(
                 WebDuelOfferedEvent(
@@ -121,7 +121,7 @@ class DuelControllerTest {
 
         assertEquals(400, response.statusCode.value())
         assertFalse(response.body!!.ok)
-        verify(exactly = 0) { duelWebService.ensureOpponent(any(), any()) }
+        verify(exactly = 0) { pvpWebService.ensureOpponent(any(), any()) }
         verify(exactly = 0) { duelService.startDuel(any(), any(), any(), any()) }
         verify(exactly = 0) { eventPublisher.publishEvent(any<WebDuelOfferedEvent>()) }
     }
@@ -258,7 +258,7 @@ class DuelControllerTest {
 
     @Test
     fun `outgoingForMe returns the initiator's pending offers and recent resolutions`() {
-        val pending = DuelWebService.PendingDuelView(
+        val pending = PvpWebService.PendingDuelView(
             duelId = duelId,
             initiatorDiscordId = discordId.toString(),
             initiatorName = "Me",
@@ -269,7 +269,7 @@ class DuelControllerTest {
             stake = 50L,
             createdAtEpochSeconds = 1_700_000_000L,
         )
-        val resolution = DuelWebService.ResolutionView(
+        val resolution = PvpWebService.ResolutionView(
             initiatorDiscordId = discordId.toString(),
             initiatorName = "Me",
             initiatorAvatarUrl = null,
@@ -280,11 +280,11 @@ class DuelControllerTest {
             pot = 100L,
             lossTribute = 10L,
         )
-        val payload = DuelWebService.OutgoingPayload(
+        val payload = PvpWebService.OutgoingPayload(
             pending = listOf(pending),
             resolutions = listOf(resolution),
         )
-        every { duelWebService.outgoingPayload(discordId, guildId) } returns payload
+        every { pvpWebService.duelOutgoingPayload(discordId, guildId) } returns payload
 
         val response = controller.outgoingForMe(guildId, user)
 

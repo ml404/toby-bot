@@ -4,7 +4,7 @@
 // Animation timing is shortcut by passing `autoDismissMs`/`fadeOutMs` so
 // the timers fire fast under jest fake timers.
 
-const duel = require('../../main/resources/static/js/duel');
+const duel = require('../../main/resources/static/js/pvp');
 const { playDuelResolution, makeFigure, formatExpiry, playFromResolution } = duel;
 
 function makeRow({

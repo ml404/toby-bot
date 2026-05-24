@@ -19,8 +19,8 @@ import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
-import web.service.DuelWebService
 import web.service.EconomyWebService
+import web.service.PvpWebService
 import web.service.MemberLookupHelper
 import web.controller.support.GuildPickerSupport
 import web.util.DefaultGuildCookie
@@ -29,15 +29,22 @@ import web.util.discordIdOrNull
 import web.util.displayName
 
 /**
- * Web surface for /duel. Same [DuelService] the Discord command uses,
- * and the same in-memory [PendingDuelRegistry] — a duel offered in
- * Discord can be accepted via the web inbox and vice versa.
+ * Web surface for player-vs-player matchups. Today the only fully
+ * wired game is `/pvp/{guildId}/duel/...` — same [DuelService] the
+ * Discord command uses and the same in-memory [PendingDuelRegistry]
+ * so a duel offered in Discord can be accepted via the web inbox and
+ * vice versa. Rock-paper-scissors, tic-tac-toe, and connect 4 tabs
+ * render in the unified page but are placeholders until their
+ * controller endpoints land in a follow-up PR.
+ *
+ * Old `/duel/...` URLs are kept alive via [DuelRedirectController]
+ * which 301/308s every former route into the new `/pvp/...` space.
  */
 @Controller
-@RequestMapping("/duel")
-class DuelController(
+@RequestMapping("/pvp")
+class PvpController(
     private val duelService: DuelService,
-    private val duelWebService: DuelWebService,
+    private val pvpWebService: PvpWebService,
     private val pendingDuelRegistry: PendingDuelRegistry,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
@@ -64,12 +71,12 @@ class DuelController(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        ) { "/duel/$it" }?.let { return it }
+        ) { "/pvp/$it" }?.let { return it }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
         model.addAttribute("defaultGuildId", defaultGuildId)
-        return "duel-guilds"
+        return "pvp-guilds"
     }
 
     @GetMapping("/{guildId}")
@@ -79,17 +86,17 @@ class DuelController(
         model: Model,
         ra: RedirectAttributes,
     ): String = WebGuildAccess.requireMemberForPage(
-        user, guildId, economyWebService, ra, lobbyPath = "/duel/guilds"
+        user, guildId, economyWebService, ra, lobbyPath = "/pvp/guilds"
     ) { discordId ->
         val guild = jda.getGuildById(guildId) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
-            return@requireMemberForPage "redirect:/duel/guilds"
+            return@requireMemberForPage "redirect:/pvp/guilds"
         }
 
         val profile = userService.getUserById(discordId, guildId)
         val balance = profile?.socialCredit ?: 0L
-        val pending = duelWebService.pendingForOpponent(discordId, guildId)
-        val outgoing = duelWebService.pendingForInitiator(discordId, guildId)
+        val pending = pvpWebService.duelPendingForOpponent(discordId, guildId)
+        val outgoing = pvpWebService.duelPendingForInitiator(discordId, guildId)
         val members = economyWebService.getGuildMembers(guildId).filter { it.id != discordId.toString() }
 
         model.addAttribute("guildId", guildId.toString())
@@ -104,39 +111,39 @@ class DuelController(
         model.addAttribute("ttlSeconds", pendingDuelRegistry.ttl.seconds)
         model.addAttribute("members", members)
         // Plumb the current user's display info so the Preview-animation
-        // button on /duel can render the same Discord avatar + nickname
+        // button on /pvp can render the same Discord avatar + nickname
         // the inbox already shows for the initiator side.
         val me = memberLookup.resolve(guildId, discordId)
         model.addAttribute("currentUserId", discordId.toString())
         model.addAttribute("currentUserName", me?.name ?: memberLookup.fallbackName(discordId))
         model.addAttribute("currentUserAvatarUrl", me?.avatarUrl)
         model.addAttribute("username", user.displayName())
-        "duel"
+        "pvp"
     }
 
-    @GetMapping("/{guildId}/pending")
+    @GetMapping("/{guildId}/duel/pending")
     @ResponseBody
     fun pendingForMe(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<List<DuelWebService.PendingDuelView>> = WebGuildAccess.requireMemberForJsonNoBody(
+    ): ResponseEntity<List<PvpWebService.PendingDuelView>> = WebGuildAccess.requireMemberForJsonNoBody(
         user, guildId, economyWebService
     ) { discordId ->
-        ResponseEntity.ok(duelWebService.pendingForOpponent(discordId, guildId))
+        ResponseEntity.ok(pvpWebService.duelPendingForOpponent(discordId, guildId))
     }
 
-    @GetMapping("/{guildId}/outgoing")
+    @GetMapping("/{guildId}/duel/outgoing")
     @ResponseBody
     fun outgoingForMe(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<DuelWebService.OutgoingPayload> = WebGuildAccess.requireMemberForJsonNoBody(
+    ): ResponseEntity<PvpWebService.OutgoingPayload> = WebGuildAccess.requireMemberForJsonNoBody(
         user, guildId, economyWebService
     ) { discordId ->
-        ResponseEntity.ok(duelWebService.outgoingPayload(discordId, guildId))
+        ResponseEntity.ok(pvpWebService.duelOutgoingPayload(discordId, guildId))
     }
 
-    @PostMapping("/{guildId}/challenge")
+    @PostMapping("/{guildId}/duel/challenge")
     @ResponseBody
     fun challenge(
         @PathVariable guildId: Long,
@@ -165,7 +172,7 @@ class DuelController(
             )
         }
 
-        duelWebService.ensureOpponent(opponentDiscordId, guildId)
+        pvpWebService.ensureOpponent(opponentDiscordId, guildId)
 
         val start = duelService.startDuel(
             initiatorDiscordId = discordId,
@@ -199,7 +206,7 @@ class DuelController(
         )
     }
 
-    @PostMapping("/{guildId}/{duelId}/accept")
+    @PostMapping("/{guildId}/duel/{duelId}/accept")
     @ResponseBody
     fun accept(
         @PathVariable guildId: Long,
@@ -256,7 +263,7 @@ class DuelController(
         }
     }
 
-    @PostMapping("/{guildId}/{duelId}/decline")
+    @PostMapping("/{guildId}/duel/{duelId}/decline")
     @ResponseBody
     fun decline(
         @PathVariable guildId: Long,
@@ -279,7 +286,7 @@ class DuelController(
         return ResponseEntity.ok(DuelActionResponse(ok = true))
     }
 
-    @PostMapping("/{guildId}/{duelId}/cancel")
+    @PostMapping("/{guildId}/duel/{duelId}/cancel")
     @ResponseBody
     fun cancel(
         @PathVariable guildId: Long,
