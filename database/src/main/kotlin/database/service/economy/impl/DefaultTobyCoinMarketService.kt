@@ -3,9 +3,9 @@ package database.service.economy.impl
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.TobyCoinTradeDto
-import database.persistence.TobyCoinMarketPersistence
-import database.persistence.TobyCoinPriceHistoryPersistence
-import database.persistence.TobyCoinTradePersistence
+import database.persistence.economy.TobyCoinMarketPersistence
+import database.persistence.economy.TobyCoinPriceHistoryPersistence
+import database.persistence.economy.TobyCoinTradePersistence
 import database.service.economy.TobyCoinMarketService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CachePut

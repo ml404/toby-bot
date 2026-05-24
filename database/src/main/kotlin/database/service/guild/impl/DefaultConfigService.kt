@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
 import database.dto.ConfigDto
-import database.persistence.ConfigPersistence
+import database.persistence.guild.ConfigPersistence
 import database.service.guild.ConfigService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict

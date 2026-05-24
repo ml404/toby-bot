@@ -2,9 +2,9 @@ package database.service.economy
 
 import database.dto.TobyCoinJackpotDto
 import database.dto.TobyCoinJackpotWinnerDto
-import database.persistence.TobyCoinJackpotPersistence
-import database.persistence.TobyCoinJackpotWinnerPersistence
-import database.persistence.VoiceCreditDailyPersistence
+import database.persistence.economy.TobyCoinJackpotPersistence
+import database.persistence.economy.TobyCoinJackpotWinnerPersistence
+import database.persistence.activity.VoiceCreditDailyPersistence
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal

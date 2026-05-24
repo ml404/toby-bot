@@ -1,9 +1,0 @@
-package database.persistence
-
-import database.dto.XpDailyDto
-import java.time.LocalDate
-
-interface XpDailyPersistence {
-    fun get(discordId: Long, guildId: Long, date: LocalDate): XpDailyDto?
-    fun upsert(row: XpDailyDto): XpDailyDto
-}

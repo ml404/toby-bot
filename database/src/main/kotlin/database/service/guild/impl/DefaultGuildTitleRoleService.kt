@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
 import database.dto.GuildTitleRoleDto
-import database.persistence.GuildTitleRolePersistence
+import database.persistence.guild.GuildTitleRolePersistence
 import database.service.guild.GuildTitleRoleService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

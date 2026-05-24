@@ -5,7 +5,7 @@ import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.dto.UserDto
 import database.duel.RecentDuelResolutions
-import database.persistence.DuelLogPersistence
+import database.persistence.pvp.duel.DuelLogPersistence
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

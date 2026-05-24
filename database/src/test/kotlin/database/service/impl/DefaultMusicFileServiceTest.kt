@@ -3,7 +3,7 @@ package database.service.impl
 import common.events.IntroSetEvent
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.persistence.MusicFilePersistence
+import database.persistence.music.MusicFilePersistence
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

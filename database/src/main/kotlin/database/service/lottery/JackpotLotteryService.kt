@@ -3,7 +3,7 @@ package database.service.lottery
 import common.events.LotteryWonEvent
 import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
-import database.persistence.JackpotLotteryPersistence
+import database.persistence.lottery.JackpotLotteryPersistence
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

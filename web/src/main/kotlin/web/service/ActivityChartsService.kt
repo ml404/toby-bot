@@ -1,6 +1,6 @@
 package web.service
 
-import database.persistence.MessageDailyCountPersistence
+import database.persistence.activity.MessageDailyCountPersistence
 import database.service.activity.VoiceSessionService
 import org.springframework.stereotype.Service
 import java.time.Clock

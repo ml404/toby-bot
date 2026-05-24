@@ -2,7 +2,7 @@ package database.service.music.impl
 
 import database.dto.MusicPlaylistDto
 import database.dto.MusicPlaylistItemDto
-import database.persistence.MusicPlaylistPersistence
+import database.persistence.music.MusicPlaylistPersistence
 import database.service.music.MusicPlaylistService
 import database.service.music.MusicPlaylistService.PlaylistItemInput
 import database.service.music.MusicPlaylistService.PlaylistNameTakenException

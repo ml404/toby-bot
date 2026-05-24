@@ -4,7 +4,7 @@ import common.events.TipSentEvent
 import database.dto.TipDailyDto
 import database.dto.TipLogDto
 import database.dto.UserDto
-import database.persistence.TipLogPersistence
+import database.persistence.social.TipLogPersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

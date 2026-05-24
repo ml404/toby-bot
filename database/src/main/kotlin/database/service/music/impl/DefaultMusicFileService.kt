@@ -2,7 +2,7 @@ package database.service.music.impl
 
 import common.events.IntroSetEvent
 import database.dto.MusicDto
-import database.persistence.MusicFilePersistence
+import database.persistence.music.MusicFilePersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut

@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import database.persistence.PokerHandLogPersistence
-import database.persistence.PokerHandPotPersistence
+import database.persistence.casino.poker.PokerHandLogPersistence
+import database.persistence.casino.poker.PokerHandPotPersistence
 import database.dto.PokerHandLogDto
 import database.dto.PokerHandPotDto
 import database.poker.PokerTableRegistry

@@ -3,7 +3,7 @@ package database.service
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.dto.UserNotificationPrefDto
-import database.persistence.UserNotificationPrefPersistence
+import database.persistence.user.UserNotificationPrefPersistence
 import database.service.user.impl.DefaultUserNotificationPrefService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

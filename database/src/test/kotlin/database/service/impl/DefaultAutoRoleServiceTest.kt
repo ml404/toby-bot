@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.AutoRoleDto
-import database.persistence.AutoRolePersistence
+import database.persistence.guild.AutoRolePersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

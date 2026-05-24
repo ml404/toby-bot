@@ -1,7 +1,7 @@
 package database.service.leveling.impl
 
 import database.dto.XpDailyDto
-import database.persistence.XpDailyPersistence
+import database.persistence.leveling.XpDailyPersistence
 import database.service.leveling.XpDailyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

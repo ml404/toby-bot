@@ -13,7 +13,7 @@ import java.time.Instant
 @Service
 class DefaultExcuseService : ExcuseService {
     @Autowired
-    private lateinit var excuseService: database.persistence.ExcusePersistence
+    private lateinit var excuseService: database.persistence.social.ExcusePersistence
 
     // The cache key prefixes guarantee a list lookup for guild A can't be served
     // from a slot last written for guild B. The previous implementation omitted

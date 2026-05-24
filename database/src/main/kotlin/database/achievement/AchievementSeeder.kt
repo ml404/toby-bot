@@ -1,7 +1,7 @@
 package database.achievement
 
 import database.dto.AchievementDto
-import database.persistence.AchievementPersistence
+import database.persistence.guild.AchievementPersistence
 import org.springframework.boot.context.event.ApplicationReadyEvent
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component

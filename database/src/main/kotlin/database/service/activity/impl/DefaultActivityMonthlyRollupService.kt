@@ -1,7 +1,7 @@
 package database.service.activity.impl
 
 import database.dto.ActivityMonthlyRollupDto
-import database.persistence.ActivityMonthlyRollupPersistence
+import database.persistence.activity.ActivityMonthlyRollupPersistence
 import database.service.activity.ActivityMonthlyRollupService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.Cacheable

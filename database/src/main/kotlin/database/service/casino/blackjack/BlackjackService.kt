@@ -10,7 +10,7 @@ import common.blackjack.isBlackjack
 import common.blackjack.isBust
 import database.dto.BlackjackHandLogDto
 import database.dto.ConfigDto
-import database.persistence.BlackjackHandLogPersistence
+import database.persistence.casino.blackjack.BlackjackHandLogPersistence
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher

@@ -6,8 +6,8 @@ import database.dto.ConfigDto
 import database.dto.PokerHandLogDto
 import database.dto.PokerHandPotDto
 import database.dto.UserDto
-import database.persistence.PokerHandLogPersistence
-import database.persistence.PokerHandPotPersistence
+import database.persistence.casino.poker.PokerHandLogPersistence
+import database.persistence.casino.poker.PokerHandPotPersistence
 import common.poker.HandEvaluator
 import common.poker.PokerEngine
 import common.poker.PokerEngine.PokerAction

@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.ActivityMonthlyRollupDto
-import database.persistence.ActivityMonthlyRollupPersistence
+import database.persistence.activity.ActivityMonthlyRollupPersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
