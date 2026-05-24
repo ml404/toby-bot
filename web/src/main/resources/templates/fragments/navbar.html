@@ -81,16 +81,17 @@
             <a class="nav-item" href="/profile/guilds"><span class="nav-item-icon" aria-hidden="true">&#128100;</span><span>Profile</span></a>
             <a class="nav-item" href="/leaderboards"><span class="nav-item-icon" aria-hidden="true">&#127942;</span><span>Leaderboards</span></a>
             <a th:if="${username != null}" class="nav-item" href="/preferences/notifications"><span class="nav-item-icon" aria-hidden="true">&#128276;</span><span>Notifications</span></a>
+            <a class="nav-item" href="/commands/wiki"><span class="nav-item-icon" aria-hidden="true">&#128218;</span><span>Commands</span></a>
         </div>
 
         <div class="nav-section">
-            <div class="nav-section-eyebrow">Games</div>
+            <div class="nav-section-eyebrow">Casino</div>
             <div class="nav-dropdown">
                 <button type="button"
                         class="nav-dropdown-toggle"
                         aria-haspopup="true"
                         aria-expanded="false"
-                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127922;</span><span class="nav-dropdown-label">Play</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127922;</span><span class="nav-dropdown-label">Casino</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
                 <div class="nav-dropdown-menu" role="menu">
                     <a href="/casino/guilds?game=slots" role="menuitem">&#127920; Slots</a>
                     <a href="/casino/guilds?game=coinflip" role="menuitem">&#129689; Coinflip</a>
@@ -113,6 +114,23 @@
         </div>
 
         <div class="nav-section">
+            <div class="nav-section-eyebrow">PvP</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#9876;&#65039;</span><span class="nav-dropdown-label">PvP</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/pvp/guilds?game=duel" role="menuitem">&#9876;&#65039; Duel</a>
+                    <a href="/pvp/guilds?game=rps" role="menuitem">&#9994; Rock-Paper-Scissors</a>
+                    <a href="/pvp/guilds?game=tictactoe" role="menuitem">&#11093; Tic-Tac-Toe</a>
+                    <a href="/pvp/guilds?game=connect4" role="menuitem">&#128308; Connect 4</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
             <div class="nav-section-eyebrow">Economy</div>
             <div class="nav-dropdown">
                 <button type="button"
@@ -123,8 +141,7 @@
                 <div class="nav-dropdown-menu" role="menu">
                     <a href="/economy/guilds" role="menuitem">Market</a>
                     <a href="/titles/guilds" role="menuitem">Titles</a>
-                    <a href="/tip/guilds" role="menuitem">&#128184; Tip</a>
-                    <a href="/pvp/guilds" role="menuitem">&#9876;&#65039; PvP</a>
+                    <a href="/tip/guilds" role="menuitem">Tip</a>
                 </div>
             </div>
         </div>
@@ -157,7 +174,6 @@
                 <div class="nav-dropdown-menu" role="menu">
                     <a href="/utils" role="menuitem">Utils</a>
                     <a href="/dnd" role="menuitem">D&amp;D lookups</a>
-                    <a href="/commands/wiki" role="menuitem">Commands</a>
                 </div>
             </div>
         </div>

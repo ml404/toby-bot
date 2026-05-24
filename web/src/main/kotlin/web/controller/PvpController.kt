@@ -78,6 +78,7 @@ class PvpController(
         @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
         @AuthenticationPrincipal user: OAuth2User,
         @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        @RequestParam(required = false) game: String?,
         request: HttpServletRequest,
         model: Model,
     ): String {
@@ -86,23 +87,43 @@ class PvpController(
             economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
         } else emptyList()
 
+        val tab = sanitizeTabSlug(game)
+        val tabQuery = if (tab != null) "?tab=$tab" else ""
+
         val defaultGuildId = DefaultGuildCookie.read(request)
         GuildPickerSupport.resolveRedirect(
             guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
             cookieGuildId = defaultGuildId,
             pick = pick,
-        ) { "/pvp/$it" }?.let { return it }
+        ) { "/pvp/$it$tabQuery" }?.let { return it }
 
         model.addAttribute("guilds", guilds)
         model.addAttribute("username", user.displayName())
         model.addAttribute("defaultGuildId", defaultGuildId)
+        // Per-guild card links carry `?tab=<slug>` so picking a guild from the
+        // navbar's PvP dropdown still deep-links to the right tab after the
+        // round-trip through this picker page.
+        model.addAttribute("tabQuery", tabQuery)
         return "pvp-guilds"
+    }
+
+    /** Whitelist accepted PvP tab slugs so a navbar-driven `?game=` query
+     *  param can drive the in-page tab strip without opening a fuzzing
+     *  vector. Anything outside the four valid slugs is dropped silently. */
+    private fun sanitizeTabSlug(raw: String?): String? = when (raw?.lowercase()) {
+        "duel", "rps", "tictactoe", "connect4" -> raw.lowercase()
+        else -> null
     }
 
     @GetMapping("/{guildId}")
     fun page(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
+        // Both `?tab=` (the canonical query, used by guildList's redirect)
+        // and `?game=` (the navbar entry shape) drive the initial tab.
+        // Tab wins if both are present.
+        @RequestParam(required = false) tab: String?,
+        @RequestParam(required = false) game: String?,
         model: Model,
         ra: RedirectAttributes,
     ): String = WebGuildAccess.requireMemberForPage(
@@ -146,6 +167,10 @@ class PvpController(
         model.addAttribute("currentUserId", discordId.toString())
         model.addAttribute("currentUserName", me?.name ?: memberLookup.fallbackName(discordId))
         model.addAttribute("currentUserAvatarUrl", me?.avatarUrl)
+        // `?tab=` (post-redirect canonical) wins over `?game=` (navbar shape)
+        // when both arrive together. Either way, pvp.js reads
+        // `data-initial-tab` and flips to the matching tab on load.
+        model.addAttribute("initialTab", sanitizeTabSlug(tab) ?: sanitizeTabSlug(game) ?: "")
         model.addAttribute("username", user.displayName())
         "pvp"
     }

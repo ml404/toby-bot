@@ -209,6 +209,16 @@
         t.addEventListener('click', function () { activateTab(t.dataset.pvpTab); });
     });
 
+    // Deep-link from the navbar: PvpController.page surfaces `?tab=` /
+    // `?game=` via `data-initial-tab` on <main>. If it matches a real
+    // tab, flip to it before SSE / fetches kick off. Whitelist matches
+    // the controller-side sanitize set; an unknown / empty slug is a
+    // no-op and the default Duel tab stays active.
+    const initialTab = main.dataset.initialTab;
+    if (initialTab && ['duel', 'rps', 'tictactoe', 'connect4'].indexOf(initialTab) !== -1) {
+        activateTab(initialTab);
+    }
+
     const balanceEl = document.getElementById('duel-balance');
     const challengeForm = document.getElementById('duel-challenge');
     const pendingList = document.getElementById('duel-pending-list');
