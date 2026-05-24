@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "GameCommand interface + surface PvP in home counter",
+    "summary": "Introduces a `GameCommand` marker interface (sibling to `EconomyCommand`) so the type system can finally tell games apart from real economy commands. Migrates **19 commands** off `EconomyCommand` and into a new `commands/game/` package: the 12 casino minigames, Poker, Blackjack, Lottery, the 3 PvP games (RPS, TicTacToe, Connect 4), and Duel. The 5 remaining economy commands (Tip, TobyCoin, Title, PriceAlert) stay put. Threads the new bucket through `CommandManager` / `Defa…",
+    "emoji": "🎟️",
+    "prNumber": 563
+  },
+  {
+    "date": "May 2026",
     "title": "Left-align mobile XP + client-side sort the Members tab",
     "summary": "Two follow-ups on the Members tab from screenshot review: ### 1. Mobile XP card — left-align under Credits PR #560 added the XP cell as a third row spanning all three grid columns, centred. User reported it \"still looks wonky\" and wanted XP aligned under the Credits column instead. One-rule CSS change in `base.css`: drop `text-align: center` and switch `align-items` from `center` to `flex-start`, mirroring the m1 / Credits alignment. The cell still spans the full row; only…",
     "emoji": "🔨",
