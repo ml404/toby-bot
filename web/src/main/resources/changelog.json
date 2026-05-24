@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Regroup events + lift casino engines from economy/",
+    "summary": "Follow-up to the packaging series (#586/#587/#589/#590/#591) extending the same theme to the `common` module, which the original plan deferred. Two changes: ### 1. `common/events/` regrouped (28 flat files → themed sub-packages) Every domain event sat side-by-side in one alphabetised bucket. Regroup mirrors the database-side layouts so events are discoverable from the directory tree: ``` events/casino/<game>/ — 14 per-game events (Baccarat, Blackjack, CasinoHoldem, Coinfli…",
+    "emoji": "🎰",
+    "prNumber": 592
+  },
+  {
+    "date": "May 2026",
     "title": "Regroup 43 entity DTOs into themed sub-packages",
     "summary": "Deferred follow-up to the packaging series (#586/#587/#589/#590). The flat `database/dto/` directory held **43 JPA entity DTOs** mixed together — opening it showed an alphabetised list of every entity type in the system. Re-package into themed sub-packages mirroring the service-side (#586) and persistence-side (#587) layouts so DTOs sit in parallel paths with the services and persistences that touch them.",
     "emoji": "🎰",
