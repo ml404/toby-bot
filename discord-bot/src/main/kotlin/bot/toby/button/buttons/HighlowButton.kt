@@ -1,6 +1,6 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.economy.HighlowEmbeds
+import bot.toby.command.commands.game.HighlowEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto

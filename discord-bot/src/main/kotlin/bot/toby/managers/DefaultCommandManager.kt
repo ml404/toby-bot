@@ -4,6 +4,7 @@ import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.dnd.DnDCommand
 import bot.toby.command.commands.economy.EconomyCommand
 import bot.toby.command.commands.fetch.FetchCommand
+import bot.toby.command.commands.game.GameCommand
 import bot.toby.command.commands.misc.MiscCommand
 import bot.toby.command.commands.moderation.ModerationCommand
 import bot.toby.command.commands.music.MusicCommand
@@ -66,6 +67,7 @@ class DefaultCommandManager @Autowired constructor(
     override val miscCommands: List<Command> get() = commands.filterIsInstance<MiscCommand>()
     override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>()
     override val economyCommands: List<Command> get() = commands.filterIsInstance<EconomyCommand>()
+    override val gameCommands: List<Command> get() = commands.filterIsInstance<GameCommand>()
 
     /**
      * Drop the cached last-command entry for [guildId]. Called from

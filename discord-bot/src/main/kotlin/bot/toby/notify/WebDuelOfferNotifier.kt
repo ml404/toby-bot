@@ -1,6 +1,6 @@
 package bot.toby.notify
 
-import bot.toby.command.commands.economy.DuelEmbeds
+import bot.toby.command.commands.game.DuelEmbeds
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind

@@ -5,7 +5,7 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
-import bot.toby.command.commands.economy.RpsEmbeds
+import bot.toby.command.commands.game.RpsEmbeds
 import database.dto.UserDto
 import common.rps.RpsEngine
 import database.rps.RpsSessionRegistry

@@ -17,6 +17,7 @@ interface CommandManager : NamedRegistry<Command> {
     val miscCommands: List<Command>
     val fetchCommands: List<Command>
     val economyCommands: List<Command>
+    val gameCommands: List<Command>
 
     val lastCommands: Map<Guild, Pair<Command, CommandContext>>
 

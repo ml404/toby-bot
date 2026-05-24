@@ -4,7 +4,7 @@ import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.DefaultButtonContext
-import bot.toby.command.commands.economy.BlackjackEmbeds
+import bot.toby.command.commands.game.BlackjackEmbeds
 import common.blackjack.Blackjack
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
