@@ -1,5 +1,7 @@
 package web.profile
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import org.springframework.stereotype.Component
 import java.awt.AlphaComposite
 import java.awt.Color
@@ -13,6 +15,7 @@ import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URI
+import java.util.concurrent.TimeUnit
 import javax.imageio.ImageIO
 
 /**
@@ -37,8 +40,25 @@ class ProfileCardRenderer {
     private val regularFont: Font = loadFont("/fonts/Inter-Regular.ttf")
     private val boldFont: Font = loadFont("/fonts/Inter-Bold.ttf")
 
+    // Discord OG-preview crawlers can re-hit /card.png repeatedly within seconds,
+    // and a busy guild's leaderboard page can render dozens of avatars from a
+    // small pool of recurring URLs. Caching the decoded BufferedImage avoids
+    // both the HTTP fetch and the transient avatar buffer per render. Cap
+    // matches expected unique-author working sets on a small instance; TTL is
+    // long enough to absorb embed-preview bursts, short enough that an updated
+    // Discord avatar refreshes within minutes.
+    private val avatarCache: Cache<String, BufferedImage> = Caffeine.newBuilder()
+        .maximumSize(AVATAR_CACHE_MAX)
+        .expireAfterWrite(AVATAR_CACHE_TTL_MIN, TimeUnit.MINUTES)
+        .build()
+
     fun renderPng(data: ProfileCardData): ByteArray {
-        val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_ARGB)
+        // TYPE_INT_RGB drops the alpha channel — saves 25% per-render heap vs
+        // TYPE_INT_ARGB on a 224 MB cap. drawBackground compensates by filling
+        // the canvas with BG_BOTTOM before the rounded gradient so the four
+        // corners outside the round-rect blend with Discord's dark theme
+        // instead of defaulting to opaque black.
+        val image = BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB)
         val g = image.createGraphics()
         try {
             enableQualityHints(g)
@@ -60,6 +80,10 @@ class ProfileCardRenderer {
     // ---- layout helpers ----
 
     private fun drawBackground(g: Graphics2D) {
+        // Backdrop fill — pairs with TYPE_INT_RGB so the four corners outside
+        // the rounded rect aren't harsh black.
+        g.color = BG_BOTTOM
+        g.fillRect(0, 0, WIDTH, HEIGHT)
         g.paint = GradientPaint(0f, 0f, BG_TOP, 0f, HEIGHT.toFloat(), BG_BOTTOM)
         g.fill(RoundRectangle2D.Float(0f, 0f, WIDTH.toFloat(), HEIGHT.toFloat(), 32f, 32f))
         // Subtle inner accent at the top edge for some depth.
@@ -211,13 +235,18 @@ class ProfileCardRenderer {
         g.composite = AlphaComposite.SrcOver
     }
 
-    private fun loadAvatar(url: String): BufferedImage? = runCatching {
-        val conn = URI(url).toURL().openConnection() as HttpURLConnection
-        conn.connectTimeout = AVATAR_TIMEOUT_MS
-        conn.readTimeout = AVATAR_TIMEOUT_MS
-        conn.setRequestProperty("User-Agent", "TobyBot-ProfileCard")
-        conn.inputStream.use { ImageIO.read(it) }
-    }.getOrNull()
+    private fun loadAvatar(url: String): BufferedImage? {
+        avatarCache.getIfPresent(url)?.let { return it }
+        val fetched = runCatching {
+            val conn = URI(url).toURL().openConnection() as HttpURLConnection
+            conn.connectTimeout = AVATAR_TIMEOUT_MS
+            conn.readTimeout = AVATAR_TIMEOUT_MS
+            conn.setRequestProperty("User-Agent", "TobyBot-ProfileCard")
+            conn.inputStream.use { ImageIO.read(it) }
+        }.getOrNull() ?: return null
+        avatarCache.put(url, fetched)
+        return fetched
+    }
 
     private fun loadFont(resource: String): Font {
         val stream = javaClass.getResourceAsStream(resource)
@@ -286,6 +315,12 @@ class ProfileCardRenderer {
         private const val ACHIEVEMENTS_Y = 260
 
         private const val AVATAR_TIMEOUT_MS = 2_000
+
+        // Avatar BufferedImage cache. 256 distinct URLs at typical 128×128 ARGB
+        // (~64 KB each) gives a ~16 MB worst-case ceiling, but realistic working
+        // sets are dozens of recurring URLs (well under 2 MB resident).
+        private const val AVATAR_CACHE_MAX = 256L
+        private const val AVATAR_CACHE_TTL_MIN = 5L
 
         private val BG_TOP = Color(0x2B, 0x2D, 0x31)
         private val BG_BOTTOM = Color(0x1E, 0x1F, 0x22)
