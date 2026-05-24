@@ -454,50 +454,18 @@ class PvpController(
         @PathVariable guildId: Long,
         @RequestBody request: ChallengeRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = WebGuildAccess.requireMemberForJson(
-        user, guildId, economyWebService,
-        errorBuilder = { status ->
-            ResponseEntity.status(status).body(
-                PvpActionResponse(
-                    false,
-                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
-                )
-            )
-        }
-    ) { discordId ->
-        val opponentDiscordId = request.opponentDiscordId.toLongOrNull()
-            ?: return@requireMemberForJson ResponseEntity.badRequest()
-                .body(PvpActionResponse(false, error = "Pick an opponent."))
-        if (opponentDiscordId == discordId) {
-            return@requireMemberForJson ResponseEntity.badRequest()
-                .body(PvpActionResponse(false, error = "You can't challenge yourself."))
-        }
-        if (!economyWebService.isMember(opponentDiscordId, guildId)) {
-            return@requireMemberForJson ResponseEntity.badRequest()
-                .body(PvpActionResponse(false, error = "Pick someone from this server."))
-        }
-        pvpWebService.ensureOpponent(opponentDiscordId, guildId)
-        val start = rpsService.startMatch(discordId, opponentDiscordId, guildId, request.stake)
-        if (start !is PvpWagerService.StartOutcome.Ok) {
-            return@requireMemberForJson ResponseEntity.badRequest()
-                .body(PvpActionResponse(false, error = pvpStartErrorMessage(start, "rock-paper-scissors")))
-        }
-        val session = rpsSessionRegistry.register(
-            guildId = guildId,
-            initiatorDiscordId = discordId,
-            opponentDiscordId = opponentDiscordId,
-            stake = request.stake,
-        )
-        // Surface the offer to the opponent's PvP page in real-time —
-        // their inbox view of the RPS tab repaints from this event
-        // without polling. Initiator-side ack comes back on the POST
-        // response, no separate SSE fan-out needed.
-        pvpSseService.fanOutToUser(
-            guildId, opponentDiscordId, "rps.offered",
-            pvpWebService.rpsSessionView(session.id, opponentDiscordId) ?: emptyMap<String, Any>(),
-        )
-        ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = session.id, stake = request.stake))
-    }
+    ): ResponseEntity<PvpActionResponse> = pvpChallenge(
+        guildId, request, user, gameLabel = "rock-paper-scissors",
+        start = { initId -> rpsService.startMatch(initId, request.opponentDiscordId.toLong(), guildId, request.stake) },
+        register = { initId, oppId, stake -> rpsSessionRegistry.register(guildId, initId, oppId, stake) },
+        sseEventName = "rps.offered",
+        // RPS sends the full session-view payload so the opponent's
+        // inbox can render without a second fetch — board games send
+        // just the session id and the JS refetches.
+        ssePayload = { session ->
+            pvpWebService.rpsSessionView(session.id, session.opponentDiscordId) ?: emptyMap<String, Any>()
+        },
+    )
 
     @PostMapping("/{guildId}/rps/{sessionId}/accept")
     @ResponseBody
@@ -505,40 +473,15 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
-        val session = rpsSessionRegistry.get(sessionId)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
-        if (session.guildId != guildId) {
-            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this offer."))
-        }
-        if (session.opponentDiscordId != discordId) {
-            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "This isn't your offer."))
-        }
-        // Flip PENDING → LIVE atomically. If we lose the race (Discord-side accept, timeout) the registry
-        // returns null and the user sees a 410.
-        rpsSessionRegistry.accept(sessionId, onPickTimeout = ::resolveRpsOnPickTimeout)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
-        val debit = rpsService.acceptMatch(session.initiatorDiscordId, session.opponentDiscordId, guildId, session.stake)
-        if (debit !is PvpWagerService.AcceptOutcome.Ok) {
-            // Stakes weren't debitable post-accept (e.g. balance dropped between offer and accept).
-            // Drain the session so neither side stays in LIVE with un-debited stakes.
-            rpsSessionRegistry.forfeit(sessionId)
-            pvpSseService.fanOutToBoth(
-                guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.removed",
-                mapOf("sessionId" to sessionId, "reason" to "balance_changed"),
-            )
-            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = acceptErrorMessage(debit)))
-        }
-        // Both sides see the LIVE state — initiator's pick UI activates, opponent's
-        // already-open accept ack flips into pick UI.
-        pvpSseService.fanOutToBoth(
-            guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.accepted",
-            mapOf("sessionId" to sessionId, "state" to "LIVE", "stake" to session.stake),
-        )
-        return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId, stake = session.stake))
-    }
+    ): ResponseEntity<PvpActionResponse> = pvpAccept(
+        guildId, sessionId, user,
+        get = { rpsSessionRegistry.get(it) },
+        accept = { rpsSessionRegistry.accept(it, onPickTimeout = ::resolveRpsOnPickTimeout) },
+        debit = { initId, oppId, stake -> rpsService.acceptMatch(initId, oppId, guildId, stake) },
+        forfeitOnDebitFail = { rpsSessionRegistry.forfeit(it) },
+        sseAcceptedEvent = "rps.accepted",
+        sseRemovedEvent = "rps.removed",
+    )
 
     @PostMapping("/{guildId}/rps/{sessionId}/decline")
     @ResponseBody
@@ -546,8 +489,11 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = rpsCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = false, friendlyName = "decline",
+        get = { rpsSessionRegistry.get(it) },
+        decline = { rpsSessionRegistry.decline(it) },
+        sseEventName = "rps.removed",
     )
 
     @PostMapping("/{guildId}/rps/{sessionId}/cancel")
@@ -556,8 +502,11 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = rpsCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = true, friendlyName = "cancel",
+        get = { rpsSessionRegistry.get(it) },
+        decline = { rpsSessionRegistry.decline(it) },
+        sseEventName = "rps.removed",
     )
 
     @PostMapping("/{guildId}/rps/{sessionId}/pick")
@@ -620,73 +569,29 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
-        val session = rpsSessionRegistry.get(sessionId)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
-        if (session.guildId != guildId) {
-            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this match."))
-        }
-        if (discordId != session.initiatorDiscordId && discordId != session.opponentDiscordId) {
-            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "You aren't in this match."))
-        }
-        if (session.state != database.pvp.PvpSessionRegistry.Session.State.LIVE) {
-            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Match isn't live."))
-        }
-        val consumed = rpsSessionRegistry.forfeit(sessionId)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
-        // Forfeiter's pick is dropped; opponent's pick (if any) survives. resolveMatch handles the
-        // "exactly one picked" branch and pays the picker.
-        val survivingPicks = consumed.picks.filterKeys { it != discordId }
-        val outcome = rpsService.resolveMatch(
-            initiatorDiscordId = consumed.initiatorDiscordId,
-            opponentDiscordId = consumed.opponentDiscordId,
-            guildId = guildId,
-            stake = consumed.stake,
-            initiatorChoice = survivingPicks[consumed.initiatorDiscordId],
-            opponentChoice = survivingPicks[consumed.opponentDiscordId],
-        )
-        val resolution = translateRpsOutcome(outcome, consumed.initiatorDiscordId)
-        pvpSseService.fanOutToBoth(
-            guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "rps.resolved",
-            mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
-        )
-        return ResponseEntity.ok(
-            PvpActionResponse(ok = true, sessionId = sessionId, outcome = resolution),
-        )
-    }
-
-    /** Shared body for `/decline` (opponent) and `/cancel` (initiator) on a PENDING RPS offer. */
-    private fun rpsCloseOffer(
-        guildId: Long,
-        sessionId: Long,
-        user: OAuth2User,
-        isInitiator: Boolean,
-        friendlyName: String,
-    ): ResponseEntity<PvpActionResponse> {
-        val discordId = user.discordIdOrNull()
-            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
-        val session = rpsSessionRegistry.get(sessionId)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
-        if (session.guildId != guildId) {
-            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this offer."))
-        }
-        val expectedActor = if (isInitiator) session.initiatorDiscordId else session.opponentDiscordId
-        if (discordId != expectedActor) {
-            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "This isn't your offer to $friendlyName."))
-        }
-        rpsSessionRegistry.decline(sessionId)
-            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
-        // Notify the OTHER side that the offer is gone — their inbox or outbox
-        // entry should disappear in real-time.
-        val otherDiscordId = if (isInitiator) session.opponentDiscordId else session.initiatorDiscordId
-        pvpSseService.fanOutToUser(
-            guildId, otherDiscordId, "rps.removed",
-            mapOf("sessionId" to sessionId, "reason" to friendlyName),
-        )
-        return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId))
-    }
+    ): ResponseEntity<PvpActionResponse> = pvpForfeit(
+        guildId, sessionId, user,
+        get = { rpsSessionRegistry.get(it) },
+        forfeit = { rpsSessionRegistry.forfeit(it) },
+        // Forfeiter's pick is dropped; opponent's pick (if any) survives.
+        // resolveMatch handles the "exactly one picked" branch and pays
+        // the picker.
+        resolveAfterForfeit = { consumed, forfeiter ->
+            val survivingPicks = consumed.picks.filterKeys { it != forfeiter }
+            translateRpsOutcome(
+                rpsService.resolveMatch(
+                    initiatorDiscordId = consumed.initiatorDiscordId,
+                    opponentDiscordId = consumed.opponentDiscordId,
+                    guildId = guildId,
+                    stake = consumed.stake,
+                    initiatorChoice = survivingPicks[consumed.initiatorDiscordId],
+                    opponentChoice = survivingPicks[consumed.opponentDiscordId],
+                ),
+                consumed.initiatorDiscordId,
+            )
+        },
+        sseEventName = "rps.resolved",
+    )
 
     /**
      * Pick-phase timeout callback. The registry hands us the drained
@@ -783,7 +688,7 @@ class PvpController(
         @PathVariable guildId: Long,
         @RequestBody request: ChallengeRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardChallenge(
+    ): ResponseEntity<PvpActionResponse> = pvpChallenge(
         guildId, request, user, gameLabel = "tic-tac-toe",
         start = { initId -> ticTacToeService.startMatch(initId, request.opponentDiscordId.toLong(), guildId, request.stake) },
         register = { initId, oppId, stake -> ticTacToeSessionRegistry.register(guildId, initId, oppId, stake) },
@@ -796,7 +701,7 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardAccept(
+    ): ResponseEntity<PvpActionResponse> = pvpAccept(
         guildId, sessionId, user,
         get = { ticTacToeSessionRegistry.get(it) },
         accept = { ticTacToeSessionRegistry.accept(it) { s -> resolveTttOnMoveTimeout(s) } },
@@ -810,7 +715,7 @@ class PvpController(
     @ResponseBody
     fun tttDecline(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = false, friendlyName = "decline",
         get = { ticTacToeSessionRegistry.get(it) },
         decline = { ticTacToeSessionRegistry.decline(it) },
@@ -821,7 +726,7 @@ class PvpController(
     @ResponseBody
     fun tttCancel(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = true, friendlyName = "cancel",
         get = { ticTacToeSessionRegistry.get(it) },
         decline = { ticTacToeSessionRegistry.decline(it) },
@@ -860,12 +765,15 @@ class PvpController(
     @ResponseBody
     fun tttForfeit(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardForfeit(
+    ): ResponseEntity<PvpActionResponse> = pvpForfeit(
         guildId, sessionId, user,
         get = { ticTacToeSessionRegistry.get(it) },
         forfeit = { ticTacToeSessionRegistry.forfeit(it) },
-        resolveWithWinner = { init, opp, stake, winner ->
-            ticTacToeService.resolveMatch(init, opp, guildId, stake, winner)
+        resolveAfterForfeit = { consumed, forfeiter ->
+            val winner = if (forfeiter == consumed.initiatorDiscordId) consumed.opponentDiscordId else consumed.initiatorDiscordId
+            translateBoardOutcome(
+                ticTacToeService.resolveMatch(consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winner)
+            )
         },
         sseEventName = "tictactoe.resolved",
     )
@@ -989,7 +897,7 @@ class PvpController(
         @PathVariable guildId: Long,
         @RequestBody request: ChallengeRequest,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardChallenge(
+    ): ResponseEntity<PvpActionResponse> = pvpChallenge(
         guildId, request, user, gameLabel = "connect 4",
         start = { initId -> connect4Service.startMatch(initId, request.opponentDiscordId.toLong(), guildId, request.stake) },
         register = { initId, oppId, stake -> connect4SessionRegistry.register(guildId, initId, oppId, stake) },
@@ -1002,7 +910,7 @@ class PvpController(
         @PathVariable guildId: Long,
         @PathVariable sessionId: Long,
         @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardAccept(
+    ): ResponseEntity<PvpActionResponse> = pvpAccept(
         guildId, sessionId, user,
         get = { connect4SessionRegistry.get(it) },
         accept = { connect4SessionRegistry.accept(it) { s -> resolveC4OnMoveTimeout(s) } },
@@ -1016,7 +924,7 @@ class PvpController(
     @ResponseBody
     fun c4Decline(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = false, friendlyName = "decline",
         get = { connect4SessionRegistry.get(it) },
         decline = { connect4SessionRegistry.decline(it) },
@@ -1027,7 +935,7 @@ class PvpController(
     @ResponseBody
     fun c4Cancel(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardCloseOffer(
+    ): ResponseEntity<PvpActionResponse> = pvpCloseOffer(
         guildId, sessionId, user, isInitiator = true, friendlyName = "cancel",
         get = { connect4SessionRegistry.get(it) },
         decline = { connect4SessionRegistry.decline(it) },
@@ -1066,12 +974,15 @@ class PvpController(
     @ResponseBody
     fun c4Forfeit(
         @PathVariable guildId: Long, @PathVariable sessionId: Long, @AuthenticationPrincipal user: OAuth2User,
-    ): ResponseEntity<PvpActionResponse> = boardForfeit(
+    ): ResponseEntity<PvpActionResponse> = pvpForfeit(
         guildId, sessionId, user,
         get = { connect4SessionRegistry.get(it) },
         forfeit = { connect4SessionRegistry.forfeit(it) },
-        resolveWithWinner = { init, opp, stake, winner ->
-            connect4Service.resolveMatch(init, opp, guildId, stake, winner)
+        resolveAfterForfeit = { consumed, forfeiter ->
+            val winner = if (forfeiter == consumed.initiatorDiscordId) consumed.opponentDiscordId else consumed.initiatorDiscordId
+            translateBoardOutcome(
+                connect4Service.resolveMatch(consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winner)
+            )
         },
         sseEventName = "connect4.resolved",
     )
@@ -1147,14 +1058,19 @@ class PvpController(
 
     // ─── Shared board-game helpers ────────────────────────────────────
     //
-    // TTT and C4 share the same Challenge / Accept / Decline / Cancel /
-    // Forfeit shapes — only the registry and service types differ. The
-    // helpers below collapse the 5x duplication those endpoints would
-    // otherwise carry, parameterised on per-game lambdas. The /move
-    // endpoint stays per-game because the parameter shape (cell vs
-    // column) and the engine MoveResult sealed types diverge.
+    // TTT, C4, and RPS share the same Challenge / Accept / Decline /
+    // Cancel / Forfeit shapes — only the registry and service types
+    // differ. The helpers below collapse the duplication those endpoints
+    // would otherwise carry, parameterised on per-game lambdas. The
+    // /move (board) and /pick (RPS) endpoints stay per-game because the
+    // parameter shape and the engine MoveResult / ResolveOutcome
+    // sealed types diverge.
+    //
+    // Generic bound is the game-agnostic `PvpSessionRegistry.Session` so
+    // the same helpers serve simultaneous-pick (RPS) and turn-based
+    // (TTT, C4) callers — the bodies only read base-level fields.
 
-    private inline fun <S : database.boardgame.TurnBasedBoardSessionRegistry.Session> boardChallenge(
+    private inline fun <S : database.pvp.PvpSessionRegistry.Session> pvpChallenge(
         guildId: Long,
         request: ChallengeRequest,
         user: OAuth2User,
@@ -1162,6 +1078,7 @@ class PvpController(
         start: (Long) -> PvpWagerService.StartOutcome,
         register: (Long, Long, Long) -> S,
         sseEventName: String,
+        ssePayload: (S) -> Any = { mapOf("sessionId" to it.id) },
     ): ResponseEntity<PvpActionResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService,
         errorBuilder = { status ->
@@ -1186,12 +1103,12 @@ class PvpController(
         val session = register(discordId, opponentDiscordId, request.stake)
         pvpSseService.fanOutToUser(
             guildId, opponentDiscordId, sseEventName,
-            mapOf("sessionId" to session.id),
+            ssePayload(session),
         )
         ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = session.id, stake = request.stake))
     }
 
-    private inline fun <S : database.boardgame.TurnBasedBoardSessionRegistry.Session> boardAccept(
+    private inline fun <S : database.pvp.PvpSessionRegistry.Session> pvpAccept(
         guildId: Long,
         sessionId: Long,
         user: OAuth2User,
@@ -1230,7 +1147,7 @@ class PvpController(
         return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId, stake = session.stake))
     }
 
-    private inline fun <S : database.boardgame.TurnBasedBoardSessionRegistry.Session> boardCloseOffer(
+    private inline fun <S : database.pvp.PvpSessionRegistry.Session> pvpCloseOffer(
         guildId: Long,
         sessionId: Long,
         user: OAuth2User,
@@ -1261,13 +1178,21 @@ class PvpController(
         return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId))
     }
 
-    private inline fun <S : database.boardgame.TurnBasedBoardSessionRegistry.Session> boardForfeit(
+    /**
+     * Generic forfeit endpoint shape. The caller supplies the resolution
+     * lambda — turn-based games convert the forfeit into a winner-takes-
+     * all match resolution; RPS interprets surviving picks (since the
+     * forfeiter's pick is dropped while the other player's may have
+     * already landed). Either way the [PvpWebService.PvpResolutionOutcome]
+     * is the user-visible result shape.
+     */
+    private inline fun <S : database.pvp.PvpSessionRegistry.Session> pvpForfeit(
         guildId: Long,
         sessionId: Long,
         user: OAuth2User,
         get: (Long) -> S?,
         forfeit: (Long) -> S?,
-        resolveWithWinner: (Long, Long, Long, Long?) -> TurnBasedBoardWagerService.ResolveOutcome,
+        resolveAfterForfeit: (S, forfeiterDiscordId: Long) -> PvpWebService.PvpResolutionOutcome?,
         sseEventName: String,
     ): ResponseEntity<PvpActionResponse> {
         val discordId = user.discordIdOrNull()
@@ -1285,10 +1210,7 @@ class PvpController(
         }
         val consumed = forfeit(sessionId)
             ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
-        val winnerDiscordId = if (discordId == consumed.initiatorDiscordId)
-            consumed.opponentDiscordId else consumed.initiatorDiscordId
-        val outcome = resolveWithWinner(consumed.initiatorDiscordId, consumed.opponentDiscordId, consumed.stake, winnerDiscordId)
-        val resolution = translateBoardOutcome(outcome)
+        val resolution = resolveAfterForfeit(consumed, discordId)
         pvpSseService.fanOutToBoth(
             guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, sseEventName,
             mapOf("sessionId" to sessionId, "reason" to "forfeit", "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
