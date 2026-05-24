@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Side-rail nav, stakes table, bulk apply",
+    "summary": "Phase 3 of the moderation dashboard refresh — the Settings tab. Replaces the ~986-line wall of stacked `<details>` accordions with a navigable layout, a real stake-limits table, and a bulk \"set every game at once\" widget that lets admins update many keys in one shot. **Sticky left-rail navigation** lists every section grouped by pillar (Server / Economy / Casino). Clicking a rail link opens the matching `<details>` and smooth-scrolls to it; an `IntersectionObserver` mirror…",
+    "emoji": "🛡️",
+    "prNumber": 571
+  },
+  {
+    "date": "May 2026",
     "title": "RPS frontend — SSE-driven panel with challenge, accept, pick",
     "summary": "Activates the **RPS tab on `/pvp/{guildId}` end-to-end**. The backend that merged in #568 is now reachable from the browser — challenge, accept/decline, pick, forfeit all work without leaving the page. ### What's in the panel **Challenge card**: opponent picker + stake input (RPS-specific per-guild min/max via new `StakeBounds.rps`) + submit button. **Pending offers** (incoming) with Accept / Decline buttons. **Outgoing offers** with Cancel button. **Live-match board** wit…",
     "emoji": "✨",
