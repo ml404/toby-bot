@@ -42,11 +42,14 @@ import bot.toby.button.buttons.casino.blackjack.BlackjackButton
 import bot.toby.button.buttons.casino.casinoholdem.CasinoHoldemButton
 import bot.toby.button.buttons.pvp.connect4.Connect4Button
 import bot.toby.button.buttons.pvp.duel.DuelButton
+import bot.toby.button.buttons.misc.EightBallButton
 import bot.toby.button.buttons.misc.ExcuseListPageButton
 import bot.toby.button.buttons.casino.highlow.HighlowButton
 import bot.toby.button.buttons.lottery.LotteryBuyButton
+import bot.toby.button.buttons.misc.MemeButton
 import bot.toby.button.buttons.music.PausePlayButton
 import bot.toby.button.buttons.casino.poker.PokerActionButton
+import bot.toby.button.buttons.misc.RandomButton
 import bot.toby.button.buttons.misc.ResendLastRequestButton
 import bot.toby.button.buttons.misc.RollButton
 import bot.toby.button.buttons.pvp.rps.RpsButton
@@ -100,11 +103,14 @@ class ButtonManagerTest {
             BlackjackButton::class.java,
             CasinoHoldemButton::class.java,
             DuelButton::class.java,
+            EightBallButton::class.java,
             ExcuseListPageButton::class.java,
             HighlowButton::class.java,
             LotteryBuyButton::class.java,
+            MemeButton::class.java,
             PausePlayButton::class.java,
             PokerActionButton::class.java,
+            RandomButton::class.java,
             ResendLastRequestButton::class.java,
             RollButton::class.java,
             RpsButton::class.java,
