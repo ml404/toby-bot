@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "TicTacToe + Connect 4 frontends + home counter bump",
+    "summary": "**Stacked on top of #573 (TTT + C4 backends)** — this branch includes both PRs' commits. When #573 merges, GitHub will auto-strip those commits from this diff. Activates the last two PvP tabs end-to-end **and** bumps the home page counter to honestly advertise all four PvP games now that every tab is playable in the browser. After both #573 and this land, the original ask — \"should the home page counter advertise PvP games — maybe if they have a web UI?\" — is closed. ### F…",
+    "emoji": "✨",
+    "prNumber": 576
+  },
+  {
+    "date": "May 2026",
     "title": "Cache profile avatars + drop alpha from card buffer",
     "summary": "Container-memory audit of the ~30 PRs since #536 (`perf(memory): trim Hikari pool + gate non-core Lavaplayer sources`). Heap budget is tight: `-Xmx224m -XX:MaxDirectMemorySize=48m -XX:+UseSerialGC`. **Audit verdict — most recent additions are well-bounded:** Game/duel registries (RPS, TicTacToe, Connect4, PendingDuel, RecentDuelResolutions) all use Caffeine with `maximumSize(10_000)` + explicit TTL. Safe. SSE fan-out (`KeyedSseRegistry` backing PvP / Notifications / Music)…",
     "emoji": "⚡",
