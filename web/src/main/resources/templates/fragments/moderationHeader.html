@@ -42,7 +42,7 @@
         guildInitial=${overview.guildName != null and !overview.guildName.isEmpty() ? overview.guildName.substring(0, 1).toUpperCase() : 'G'}">
 
     <header class="mod-page-header">
-        <a class="back-link mod-page-header__back" th:href="@{/moderation/guilds(pick=true)}">&larr; All servers</a>
+        <a class="back-link" th:href="@{/moderation/guilds(pick=true)}">&larr; All servers</a>
         <div class="mod-page-header__row">
             <div class="mod-page-header__identity">
                 <img th:if="${overview.guildIconUrl != null}"

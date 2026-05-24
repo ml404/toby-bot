@@ -108,7 +108,11 @@ details.config-section.is-hidden { display: none; }
     gap: var(--space-3);
     margin-bottom: var(--space-4);
 }
-.mod-page-header__back { margin-bottom: 0; }
+/* base.css gives `.back-link` an 8px bottom margin so it doesn't sit
+   flush against the H1 on simpler pages. Inside this flex column the
+   parent's `gap` already provides the spacing, so the extra margin
+   double-counts. Zero it out for the moderation header. */
+.mod-page-header > .back-link { margin-bottom: 0; }
 .mod-page-header__row {
     display: flex;
     align-items: flex-start;
