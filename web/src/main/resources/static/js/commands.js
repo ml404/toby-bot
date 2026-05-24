@@ -1,7 +1,7 @@
 /* commands.js — search, category filter, copy-to-clipboard, and URL hash
-   sync for the commands page. No framework. The CSS handles the category
-   show/hide via [data-active-cat]; this script only filters cards by
-   search text and toggles per-section visibility when a category empties. */
+   sync for the commands page. No framework. JS sets `section.hidden` on
+   each .cat-section based on the active chip + search query; CSS does
+   the hide via the existing `.cat-section[hidden]` rule. */
 (function () {
     'use strict';
 
@@ -47,7 +47,6 @@
     }
 
     function applyFilters() {
-        page.dataset.activeCat = activeCat;
         const needle = query.trim().toLowerCase();
         let visibleTotal = 0;
 
@@ -64,10 +63,12 @@
                 if (show) visibleInSection += 1;
             });
 
-            // Even though CSS already handles category-only hiding, we hide
-            // sections that are empty *because of a search query* (so an
-            // "All" view with a needle doesn't render empty category headers).
-            section.hidden = catMatches && visibleInSection === 0 && needle.length > 0;
+            // Hide a section when the active chip doesn't match it, or
+            // when a search query has emptied it out. Driving visibility
+            // from `section.hidden` (rather than a CSS allowlist keyed on
+            // each category slug) means a new CATEGORY_META entry needs
+            // no CSS edits.
+            section.hidden = !catMatches || (visibleInSection === 0 && needle.length > 0);
             visibleTotal += visibleInSection;
         });
 

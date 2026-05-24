@@ -162,18 +162,10 @@ input.commands-search-input:focus {
 }
 .cat-section { scroll-margin-top: 80px; }
 
-/* Category visibility driven by the [data-active-cat] attribute on the
-   page root — JS only flips that one attribute, the CSS does the rest. */
-.commands-page[data-active-cat="all"] .cat-section,
-.commands-page[data-active-cat="music"] .cat-section[data-cat="music"],
-.commands-page[data-active-cat="dnd"] .cat-section[data-cat="dnd"],
-.commands-page[data-active-cat="moderation"] .cat-section[data-cat="moderation"],
-.commands-page[data-active-cat="economy"] .cat-section[data-cat="economy"],
-.commands-page[data-active-cat="misc"] .cat-section[data-cat="misc"],
-.commands-page[data-active-cat="fetch"] .cat-section[data-cat="fetch"] {
-    display: block;
-}
-.commands-page:not([data-active-cat="all"]) .cat-section { display: none; }
+/* Category visibility is driven by `[hidden]` on each .cat-section,
+   set in commands.js based on the active filter chip and search query.
+   The `.cat-section[hidden]` rule lower in this file does the actual
+   hide. */
 
 .cat-header {
     display: flex;
