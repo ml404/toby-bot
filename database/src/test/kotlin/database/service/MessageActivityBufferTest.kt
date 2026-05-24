@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.MessageDailyCountDto
-import database.persistence.MessageDailyCountPersistence
+import database.persistence.activity.MessageDailyCountPersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach

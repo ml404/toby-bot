@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.TipDailyDto
-import database.persistence.TipDailyPersistence
+import database.persistence.social.TipDailyPersistence
 import database.service.social.impl.DefaultTipDailyService
 import io.mockk.every
 import io.mockk.mockk

@@ -1,7 +1,7 @@
 package database.service.user.impl
 
 import database.dto.UserDto
-import database.persistence.UserPersistence
+import database.persistence.user.UserPersistence
 import database.service.user.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict

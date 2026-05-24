@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
 import database.dto.AutoRoleDto
-import database.persistence.AutoRolePersistence
+import database.persistence.guild.AutoRolePersistence
 import database.service.guild.AutoRoleService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

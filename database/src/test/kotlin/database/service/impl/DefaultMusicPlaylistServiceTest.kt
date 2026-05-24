@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.MusicPlaylistDto
-import database.persistence.MusicPlaylistPersistence
+import database.persistence.music.MusicPlaylistPersistence
 import database.service.music.MusicPlaylistService.PlaylistItemInput
 import database.service.music.MusicPlaylistService.PlaylistNameTakenException
 import io.mockk.Runs

@@ -2,7 +2,7 @@ package database.service.activity.impl
 
 import common.events.VoiceSessionLoggedEvent
 import database.dto.VoiceSessionDto
-import database.persistence.VoiceSessionPersistence
+import database.persistence.activity.VoiceSessionPersistence
 import database.service.activity.VoiceSessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher

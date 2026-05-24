@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.UserDto
-import database.persistence.UserPersistence
+import database.persistence.user.UserPersistence
 import database.service.user.UserService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach

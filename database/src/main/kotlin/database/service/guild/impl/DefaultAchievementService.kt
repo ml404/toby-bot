@@ -4,7 +4,7 @@ import common.events.AchievementUnlockedEvent
 import database.dto.AchievementDto
 import database.dto.AchievementProgressDto
 import database.dto.UserAchievementDto
-import database.persistence.AchievementPersistence
+import database.persistence.guild.AchievementPersistence
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import database.service.guild.AchievementService.ProgressResult

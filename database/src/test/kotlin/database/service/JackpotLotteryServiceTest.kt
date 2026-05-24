@@ -4,7 +4,7 @@ import database.dto.ConfigDto
 import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
 import database.dto.UserDto
-import database.persistence.JackpotLotteryPersistence
+import database.persistence.lottery.JackpotLotteryPersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

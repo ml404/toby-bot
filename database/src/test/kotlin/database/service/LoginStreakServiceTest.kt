@@ -6,7 +6,7 @@ import database.dto.LoginStreakDto
 import database.dto.UserDto
 import database.dto.VoiceCreditDailyDto
 import database.dto.XpDailyDto
-import database.persistence.LoginStreakPersistence
+import database.persistence.social.LoginStreakPersistence
 import database.service.social.impl.DefaultLoginStreakService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

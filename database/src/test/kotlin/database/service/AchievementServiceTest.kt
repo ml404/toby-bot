@@ -8,7 +8,7 @@ import database.dto.UserAchievementDto
 import database.dto.UserDto
 import database.dto.VoiceCreditDailyDto
 import database.dto.XpDailyDto
-import database.persistence.AchievementPersistence
+import database.persistence.guild.AchievementPersistence
 import database.service.guild.impl.DefaultAchievementService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -321,14 +321,14 @@ class AchievementServiceTest {
         override fun progressByCodesForGuild(
             guildId: Long,
             codes: Collection<String>,
-        ): List<database.persistence.ProgressByCodeRow> {
+        ): List<database.persistence.guild.ProgressByCodeRow> {
             val codesSet = codes.toSet()
             return progress.values.asSequence()
                 .filter { it.guildId == guildId }
                 .mapNotNull { p ->
                     val code = catalogue[p.achievementId]?.code ?: return@mapNotNull null
                     if (code !in codesSet || p.progress <= 0L) return@mapNotNull null
-                    database.persistence.ProgressByCodeRow(p.discordId, code, p.progress)
+                    database.persistence.guild.ProgressByCodeRow(p.discordId, code, p.progress)
                 }
                 .toList()
         }

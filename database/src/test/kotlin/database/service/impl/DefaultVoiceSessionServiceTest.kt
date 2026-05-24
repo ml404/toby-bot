@@ -2,7 +2,7 @@ package database.service.impl
 
 import common.events.VoiceSessionLoggedEvent
 import database.dto.VoiceSessionDto
-import database.persistence.VoiceSessionPersistence
+import database.persistence.activity.VoiceSessionPersistence
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

@@ -5,7 +5,7 @@ import database.dto.ConfigDto
 import database.dto.DuelLogDto
 import database.duel.RecentDuelResolutions
 import common.economy.Coinflip
-import database.persistence.DuelLogPersistence
+import database.persistence.pvp.duel.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

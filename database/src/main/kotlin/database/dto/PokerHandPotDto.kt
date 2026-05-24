@@ -12,7 +12,7 @@ import java.io.Serializable
 /**
  * One side-pot tier from a settled hand. See `V23__poker_hand_pot.sql`
  * for column semantics. Stored unjoined (no FK relation in JPA) — we
- * write rows directly via [database.persistence.PokerHandPotPersistence]
+ * write rows directly via [database.persistence.casino.poker.PokerHandPotPersistence]
  * and only read them back in the hand-history projection.
  */
 @Entity

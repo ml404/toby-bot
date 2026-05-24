@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
 import database.dto.TeamPresetDto
-import database.persistence.TeamPresetPersistence
+import database.persistence.guild.TeamPresetPersistence
 import database.service.guild.TeamPresetService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict

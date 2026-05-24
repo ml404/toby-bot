@@ -1,7 +1,7 @@
 package database.service.user.impl
 
 import database.dto.PushSubscriptionDto
-import database.persistence.PushSubscriptionPersistence
+import database.persistence.user.PushSubscriptionPersistence
 import database.service.user.PushSubscriptionService
 import org.springframework.stereotype.Service
 import java.time.Instant

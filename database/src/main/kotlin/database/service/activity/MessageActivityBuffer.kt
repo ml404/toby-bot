@@ -1,7 +1,7 @@
 package database.service.activity
 
 import database.configuration.RegistryScheduler
-import database.persistence.MessageDailyCountPersistence
+import database.persistence.activity.MessageDailyCountPersistence
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Component

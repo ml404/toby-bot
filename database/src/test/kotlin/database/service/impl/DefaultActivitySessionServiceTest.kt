@@ -1,7 +1,7 @@
 package database.service.impl
 
 import database.dto.ActivitySessionDto
-import database.persistence.ActivitySessionPersistence
+import database.persistence.activity.ActivitySessionPersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

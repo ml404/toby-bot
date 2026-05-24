@@ -1,7 +1,7 @@
 package database.service.social.impl
 
 import database.dto.TipDailyDto
-import database.persistence.TipDailyPersistence
+import database.persistence.social.TipDailyPersistence
 import database.service.social.TipDailyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

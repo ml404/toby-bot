@@ -1,7 +1,7 @@
 package database.service.activity.impl
 
 import database.dto.UbiDailyDto
-import database.persistence.UbiDailyPersistence
+import database.persistence.activity.UbiDailyPersistence
 import database.service.activity.UbiDailyService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service

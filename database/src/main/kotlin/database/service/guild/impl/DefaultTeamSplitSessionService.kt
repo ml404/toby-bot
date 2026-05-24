@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
 import database.dto.TeamSplitSessionDto
-import database.persistence.TeamSplitSessionPersistence
+import database.persistence.guild.TeamSplitSessionPersistence
 import database.service.guild.TeamSplitSessionService
 import database.service.guild.encodeAssignments
 import database.service.guild.encodeTeamNames

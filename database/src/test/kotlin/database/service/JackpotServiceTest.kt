@@ -3,9 +3,9 @@ package database.service
 import database.dto.ConfigDto
 import database.dto.TobyCoinJackpotDto
 import database.dto.TobyCoinJackpotWinnerDto
-import database.persistence.TobyCoinJackpotPersistence
-import database.persistence.TobyCoinJackpotWinnerPersistence
-import database.persistence.VoiceCreditDailyPersistence
+import database.persistence.economy.TobyCoinJackpotPersistence
+import database.persistence.economy.TobyCoinJackpotWinnerPersistence
+import database.persistence.activity.VoiceCreditDailyPersistence
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

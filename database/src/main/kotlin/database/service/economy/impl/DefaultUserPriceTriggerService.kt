@@ -1,7 +1,7 @@
 package database.service.economy.impl
 
 import database.dto.UserPriceTriggerDto
-import database.persistence.UserPriceTriggerPersistence
+import database.persistence.economy.UserPriceTriggerPersistence
 import database.service.economy.UserPriceTriggerService
 import org.springframework.stereotype.Service
 import java.time.Instant

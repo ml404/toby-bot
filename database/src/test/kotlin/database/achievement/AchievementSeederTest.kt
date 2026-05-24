@@ -3,7 +3,7 @@ package database.achievement
 import database.dto.AchievementDto
 import database.dto.AchievementProgressDto
 import database.dto.UserAchievementDto
-import database.persistence.AchievementPersistence
+import database.persistence.guild.AchievementPersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
@@ -120,6 +120,6 @@ class AchievementSeederTest {
         override fun progressByCodesForGuild(
             guildId: Long,
             codes: Collection<String>,
-        ): List<database.persistence.ProgressByCodeRow> = emptyList()
+        ): List<database.persistence.guild.ProgressByCodeRow> = emptyList()
     }
 }
