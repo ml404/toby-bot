@@ -1,12 +1,16 @@
 package web.controller
 
+import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.rps.RpsSessionRegistry
+import database.service.Connect4Service
 import database.service.DuelService
 import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
 import database.service.RpsService
+import database.service.TicTacToeService
 import database.service.UserService
+import database.tictactoe.TicTacToeSessionRegistry
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -34,6 +38,10 @@ class PvpControllerTest {
     private lateinit var duelService: DuelService
     private lateinit var rpsService: RpsService
     private lateinit var rpsSessionRegistry: RpsSessionRegistry
+    private lateinit var ticTacToeService: TicTacToeService
+    private lateinit var ticTacToeSessionRegistry: TicTacToeSessionRegistry
+    private lateinit var connect4Service: Connect4Service
+    private lateinit var connect4SessionRegistry: Connect4SessionRegistry
     private lateinit var pvpWebService: PvpWebService
     private lateinit var pvpSseService: PvpSseService
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
@@ -51,6 +59,10 @@ class PvpControllerTest {
         duelService = mockk(relaxed = true)
         rpsService = mockk(relaxed = true)
         rpsSessionRegistry = mockk(relaxed = true)
+        ticTacToeService = mockk(relaxed = true)
+        ticTacToeSessionRegistry = mockk(relaxed = true)
+        connect4Service = mockk(relaxed = true)
+        connect4SessionRegistry = mockk(relaxed = true)
         pvpWebService = mockk(relaxed = true)
         pvpSseService = mockk(relaxed = true)
         pendingDuelRegistry = mockk(relaxed = true)
@@ -67,7 +79,10 @@ class PvpControllerTest {
         every { economyWebService.isMember(discordId, guildId) } returns true
         every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = PvpController(
-            duelService, rpsService, rpsSessionRegistry, pvpWebService, pvpSseService, pendingDuelRegistry,
+            duelService, rpsService, rpsSessionRegistry,
+            ticTacToeService, ticTacToeSessionRegistry,
+            connect4Service, connect4SessionRegistry,
+            pvpWebService, pvpSseService, pendingDuelRegistry,
             economyWebService, userService, jda, eventPublisher, stakeBounds,
             memberLookup
         )
@@ -382,5 +397,35 @@ class PvpControllerTest {
         assertEquals(true, response.body?.waitingForOpponent)
         verify { pvpSseService.fanOutToUser(guildId, opponentId, "rps.picked", any()) }
         verify(exactly = 0) { rpsSessionRegistry.consumeForResolution(any()) }
+    }
+
+    // ─── TTT + C4 self-challenge rejection ────────────────────────────
+    //
+    // The challenge / accept / decline / cancel / forfeit shapes are
+    // shared via the `boardChallenge` / `boardAccept` / `boardCloseOffer`
+    // / `boardForfeit` private helpers — exercised by the RPS tests
+    // above. These two tests just confirm the per-game wiring picks up
+    // the rejection before calling the service.
+
+    @Test
+    fun `tttChallenge rejects self-challenge before touching the service`() {
+        val response = controller.tttChallenge(
+            guildId,
+            ChallengeRequest(opponentDiscordId = discordId.toString(), stake = 10L),
+            user,
+        )
+        assertEquals(400, response.statusCode.value())
+        verify(exactly = 0) { ticTacToeService.startMatch(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `c4Challenge rejects self-challenge before touching the service`() {
+        val response = controller.c4Challenge(
+            guildId,
+            ChallengeRequest(opponentDiscordId = discordId.toString(), stake = 10L),
+            user,
+        )
+        assertEquals(400, response.statusCode.value())
+        verify(exactly = 0) { connect4Service.startMatch(any(), any(), any(), any()) }
     }
 }
