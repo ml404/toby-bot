@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.pvp.tictactoe
 
 import bot.toby.helpers.UserDtoHelper
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.interactions.commands.OptionType

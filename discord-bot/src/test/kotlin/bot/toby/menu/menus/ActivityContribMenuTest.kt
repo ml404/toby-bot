@@ -1,8 +1,8 @@
 package bot.toby.menu.menus
 
 import bot.toby.menu.DefaultMenuContext
-import database.dto.ActivityMonthlyRollupDto
-import database.dto.UserDto
+import database.dto.activity.ActivityMonthlyRollupDto
+import database.dto.user.UserDto
 import database.service.activity.ActivityMonthlyRollupService
 import database.service.user.UserService
 import io.mockk.every

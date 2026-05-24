@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Baccarat
 import database.service.casino.baccarat.BaccaratService
 import io.mockk.clearAllMocks

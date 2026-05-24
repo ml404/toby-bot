@@ -1,6 +1,6 @@
 package database.service.economy
 
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import java.time.LocalDate
 
 interface MonthlyCreditSnapshotService {

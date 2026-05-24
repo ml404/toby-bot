@@ -1,8 +1,8 @@
 package web.service
 
-import database.dto.TitleDto
-import database.dto.TobyCoinMarketDto
-import database.dto.UserDto
+import database.dto.guild.TitleDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome

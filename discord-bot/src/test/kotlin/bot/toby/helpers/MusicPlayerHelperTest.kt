@@ -5,8 +5,8 @@ import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
 import net.dv8tion.jda.api.entities.Guild

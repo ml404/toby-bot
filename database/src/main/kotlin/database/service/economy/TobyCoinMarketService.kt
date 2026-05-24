@@ -1,8 +1,8 @@
 package database.service.economy
 
-import database.dto.TobyCoinMarketDto
-import database.dto.TobyCoinPricePointDto
-import database.dto.TobyCoinTradeDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.TobyCoinPricePointDto
+import database.dto.economy.TobyCoinTradeDto
 import java.time.Instant
 
 interface TobyCoinMarketService {

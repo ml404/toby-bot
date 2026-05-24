@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -40,7 +40,7 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf()
 
         // Mock the requesting user's DTO
-        val userDto = database.dto.UserDto(
+        val userDto = database.dto.user.UserDto(
             1, 1,
             superUser = true,
             musicPermission = true,
@@ -71,7 +71,7 @@ class UserInfoCommandTest : CommandTest {
     @Test
     fun testHandleCommandWithMentionedUserAndValidRequestingPermissions() {
         // Mock the requesting user's DTO
-        val userDto = database.dto.UserDto(
+        val userDto = database.dto.user.UserDto(
             1, 1,
             superUser = true,
             musicPermission = true,
@@ -85,11 +85,11 @@ class UserInfoCommandTest : CommandTest {
         every { event.options } returns listOf(mockk<OptionMapping>())
 
         // Mock a mentioned user's DTO
-        val mentionedUserDto = database.dto.UserDto(6L, 1L)
+        val mentionedUserDto = database.dto.user.UserDto(6L, 1L)
         every { userDtoHelper.calculateUserDto(any(), any()) } returns userDto
         every { requestingUserDto.musicDtos } returns listOf(
             MusicDto(
-                database.dto.UserDto(1, 1),
+                database.dto.user.UserDto(1, 1),
                 1,
                 "filename",
                 10,

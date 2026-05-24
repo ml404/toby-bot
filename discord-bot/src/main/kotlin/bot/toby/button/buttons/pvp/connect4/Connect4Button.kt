@@ -7,7 +7,7 @@ import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.connect4.Connect4Service
 import database.service.pvp.PvpWagerService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent

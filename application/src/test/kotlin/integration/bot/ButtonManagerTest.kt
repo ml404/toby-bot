@@ -20,7 +20,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import common.configuration.TestCachingConfig
 import core.button.Button
 import database.configuration.TestDatabaseConfig
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild

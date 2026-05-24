@@ -1,6 +1,6 @@
 package database.persistence.social.impl
 
-import database.dto.BrotherDto
+import database.dto.social.BrotherDto
 import database.persistence.social.BrotherPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

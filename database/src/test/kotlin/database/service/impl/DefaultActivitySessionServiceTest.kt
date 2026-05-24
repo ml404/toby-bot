@@ -1,6 +1,6 @@
 package database.service.impl
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import database.persistence.activity.ActivitySessionPersistence
 import io.mockk.every
 import io.mockk.mockk

@@ -3,8 +3,8 @@ package web.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import database.service.music.MusicFileService
 import database.service.user.UserService
 import net.dv8tion.jda.api.JDA

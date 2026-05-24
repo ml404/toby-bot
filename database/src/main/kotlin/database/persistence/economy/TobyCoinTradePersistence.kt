@@ -1,6 +1,6 @@
 package database.persistence.economy
 
-import database.dto.TobyCoinTradeDto
+import database.dto.economy.TobyCoinTradeDto
 import java.time.Instant
 
 interface TobyCoinTradePersistence {

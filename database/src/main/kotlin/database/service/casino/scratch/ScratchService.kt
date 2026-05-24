@@ -2,7 +2,7 @@ package database.service.casino.scratch
 
 import common.casino.CasinoCommonFailure
 import common.events.ScratchJackpotEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.ScratchCard
 import common.economy.SlotMachine
 import org.springframework.context.ApplicationEventPublisher

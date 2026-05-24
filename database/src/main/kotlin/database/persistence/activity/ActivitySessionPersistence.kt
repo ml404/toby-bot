@@ -1,6 +1,6 @@
 package database.persistence.activity
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import java.time.Instant
 
 interface ActivitySessionPersistence {

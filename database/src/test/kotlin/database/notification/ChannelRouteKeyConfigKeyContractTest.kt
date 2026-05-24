@@ -1,7 +1,7 @@
 package database.notification
 
 import common.notification.ChannelRouteKey
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 

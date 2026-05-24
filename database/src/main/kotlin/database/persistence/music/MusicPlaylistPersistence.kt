@@ -1,6 +1,6 @@
 package database.persistence.music
 
-import database.dto.MusicPlaylistDto
+import database.dto.music.MusicPlaylistDto
 
 interface MusicPlaylistPersistence {
     fun listByGuild(guildId: Long): List<MusicPlaylistDto>

@@ -2,7 +2,7 @@ package database.service.user.impl
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserNotificationPrefDto
 import database.persistence.user.UserNotificationPrefPersistence
 import database.service.user.UserNotificationPrefService
 import org.springframework.stereotype.Service

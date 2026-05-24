@@ -1,6 +1,6 @@
 package database.persistence.casino.poker.impl
 
-import database.dto.PokerHandLogDto
+import database.dto.casino.poker.PokerHandLogDto
 import database.persistence.casino.poker.PokerHandLogPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

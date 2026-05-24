@@ -1,6 +1,6 @@
 package database.service.activity.impl
 
-import database.dto.VoiceCreditDailyDto
+import database.dto.activity.VoiceCreditDailyDto
 import database.persistence.activity.VoiceCreditDailyPersistence
 import database.service.activity.VoiceCreditDailyService
 import org.springframework.beans.factory.annotation.Autowired

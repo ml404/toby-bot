@@ -1,6 +1,6 @@
 package bot.toby.install
 
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

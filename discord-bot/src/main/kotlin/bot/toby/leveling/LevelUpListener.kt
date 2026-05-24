@@ -8,7 +8,7 @@ import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.dto.TitleDto
+import database.dto.guild.TitleDto
 import database.service.leveling.LevelRoleRewardService
 import database.service.guild.TitleService
 import net.dv8tion.jda.api.EmbedBuilder

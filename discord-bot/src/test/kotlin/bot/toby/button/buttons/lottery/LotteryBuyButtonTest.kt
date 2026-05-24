@@ -3,7 +3,7 @@ package bot.toby.button.buttons.lottery
 import bot.toby.button.ButtonTest
 import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.DefaultButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

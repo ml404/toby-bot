@@ -1,6 +1,6 @@
 package bot.toby.install
 
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 
 /**
  * Single source of truth for the feature toggles surfaced in the install

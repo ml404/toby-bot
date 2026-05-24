@@ -2,9 +2,9 @@ package database.service
 
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
-import database.dto.ConfigDto
-import database.dto.UserDto
-import database.dto.XpDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
+import database.dto.leveling.XpDailyDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

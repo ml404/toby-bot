@@ -1,6 +1,6 @@
 package database.service
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test

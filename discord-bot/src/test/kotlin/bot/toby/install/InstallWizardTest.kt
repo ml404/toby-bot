@@ -1,7 +1,7 @@
 package bot.toby.install
 
 import bot.toby.command.commands.moderation.SetConfigCommand
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import org.junit.jupiter.api.Assertions.assertEquals

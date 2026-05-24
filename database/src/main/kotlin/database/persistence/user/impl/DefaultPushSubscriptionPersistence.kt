@@ -1,6 +1,6 @@
 package database.persistence.user.impl
 
-import database.dto.PushSubscriptionDto
+import database.dto.user.PushSubscriptionDto
 import database.persistence.user.PushSubscriptionPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

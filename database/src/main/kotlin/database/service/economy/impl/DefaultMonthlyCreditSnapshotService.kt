@@ -1,6 +1,6 @@
 package database.service.economy.impl
 
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import database.persistence.economy.MonthlyCreditSnapshotPersistence
 import database.service.economy.MonthlyCreditSnapshotService
 import org.springframework.beans.factory.annotation.Autowired

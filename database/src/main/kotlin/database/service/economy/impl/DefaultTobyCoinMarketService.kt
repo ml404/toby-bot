@@ -1,8 +1,8 @@
 package database.service.economy.impl
 
-import database.dto.TobyCoinMarketDto
-import database.dto.TobyCoinPricePointDto
-import database.dto.TobyCoinTradeDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.TobyCoinPricePointDto
+import database.dto.economy.TobyCoinTradeDto
 import database.persistence.economy.TobyCoinMarketPersistence
 import database.persistence.economy.TobyCoinPriceHistoryPersistence
 import database.persistence.economy.TobyCoinTradePersistence

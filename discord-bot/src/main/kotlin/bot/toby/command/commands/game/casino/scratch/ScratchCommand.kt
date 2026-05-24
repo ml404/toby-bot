@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.scratch
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.ScratchCard
 import common.economy.SlotMachine
 import database.service.casino.scratch.ScratchService

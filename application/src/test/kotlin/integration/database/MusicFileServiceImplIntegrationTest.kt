@@ -1,4 +1,4 @@
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.service.user.UserService
 import io.mockk.*
 import org.junit.jupiter.api.*
@@ -14,7 +14,7 @@ class MusicFileServiceImplTest {
     private lateinit var musicFileService: database.service.music.MusicFileService
     private lateinit var userService: UserService
 
-    private val validUserDto = database.dto.UserDto(1, 1)
+    private val validUserDto = database.dto.user.UserDto(1, 1)
 
     @BeforeEach
     fun setUp() {
@@ -134,7 +134,7 @@ class MusicFileServiceImplTest {
             id = "1_1_1"
             fileName = "filename"
             musicBlob = "someBlob".toByteArray()
-            userDto = database.dto.UserDto(1234L, 5678L)
+            userDto = database.dto.user.UserDto(1234L, 5678L)
         }
 
         every { musicFileService.isFileAlreadyUploaded(musicDto) } returns musicDto

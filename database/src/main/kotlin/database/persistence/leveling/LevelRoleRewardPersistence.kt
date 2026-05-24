@@ -1,6 +1,6 @@
 package database.persistence.leveling
 
-import database.dto.LevelRoleRewardDto
+import database.dto.leveling.LevelRoleRewardDto
 
 interface LevelRoleRewardPersistence {
     fun listForGuild(guildId: Long): List<LevelRoleRewardDto>

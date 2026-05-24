@@ -2,8 +2,8 @@ package bot.toby.modal.modals.setconfig
 
 import bot.toby.activity.ActivityTrackingNotifier
 import core.modal.ModalContext
-import database.dto.ConfigDto
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import io.mockk.Runs
 import io.mockk.every

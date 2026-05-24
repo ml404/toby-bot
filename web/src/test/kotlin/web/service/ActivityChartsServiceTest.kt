@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.MessageDailyCountDto
-import database.dto.VoiceSessionDto
+import database.dto.activity.MessageDailyCountDto
+import database.dto.activity.VoiceSessionDto
 import database.persistence.activity.MessageDailyCountPersistence
 import database.service.activity.VoiceSessionService
 import io.mockk.every

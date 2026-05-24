@@ -2,7 +2,7 @@ package database.service
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserNotificationPrefDto
 import database.persistence.user.UserNotificationPrefPersistence
 import database.service.user.impl.DefaultUserNotificationPrefService
 import org.junit.jupiter.api.Assertions.assertEquals

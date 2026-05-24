@@ -12,8 +12,8 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach

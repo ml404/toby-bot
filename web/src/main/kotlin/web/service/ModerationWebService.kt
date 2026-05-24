@@ -3,9 +3,9 @@ package web.service
 import common.discord.AutoRoleValidator
 import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
-import database.dto.UserDto
-import database.dto.LevelRoleRewardDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
+import database.dto.leveling.LevelRoleRewardDto
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import database.service.leveling.LevelRoleRewardService
@@ -250,9 +250,9 @@ class ModerationWebService(
         // and this first visit are baked into the baseline.
         users.forEach { dto ->
             if (!existingBaselines.containsKey(dto.discordId)) {
-                safely("lazy baseline for ${dto.discordId}", null as database.dto.MonthlyCreditSnapshotDto?) {
+                safely("lazy baseline for ${dto.discordId}", null as database.dto.economy.MonthlyCreditSnapshotDto?) {
                     snapshotService.upsertIfMissing(
-                        database.dto.MonthlyCreditSnapshotDto(
+                        database.dto.economy.MonthlyCreditSnapshotDto(
                             discordId = dto.discordId,
                             guildId = guildId,
                             snapshotDate = thisMonthStart,

@@ -1,6 +1,6 @@
 package database.persistence.activity.impl
 
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.persistence.activity.VoiceSessionPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

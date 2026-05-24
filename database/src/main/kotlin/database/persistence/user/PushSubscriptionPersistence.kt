@@ -1,6 +1,6 @@
 package database.persistence.user
 
-import database.dto.PushSubscriptionDto
+import database.dto.user.PushSubscriptionDto
 
 interface PushSubscriptionPersistence {
     fun get(endpoint: String): PushSubscriptionDto?

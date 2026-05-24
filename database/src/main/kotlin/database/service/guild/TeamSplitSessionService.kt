@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.TeamSplitSessionDto
+import database.dto.guild.TeamSplitSessionDto
 import java.time.Duration
 import java.util.UUID
 

@@ -5,8 +5,8 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import bot.toby.economy.TobyCoinChartRenderer
-import database.dto.TobyCoinMarketDto
-import database.dto.UserDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome

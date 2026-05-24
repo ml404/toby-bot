@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import bot.toby.modal.modals.ExcuseSubmitModal
-import database.dto.ExcuseDto
+import database.dto.social.ExcuseDto
 import database.service.social.ExcuseService
 import database.service.social.PagedExcuses
 import io.mockk.*

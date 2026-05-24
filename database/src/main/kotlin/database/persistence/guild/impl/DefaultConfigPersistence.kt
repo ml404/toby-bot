@@ -1,6 +1,6 @@
 package database.persistence.guild.impl
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.persistence.guild.ConfigPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

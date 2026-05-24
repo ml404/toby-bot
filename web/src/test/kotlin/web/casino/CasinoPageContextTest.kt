@@ -1,6 +1,6 @@
 package web.casino
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.economy.JackpotGame
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService

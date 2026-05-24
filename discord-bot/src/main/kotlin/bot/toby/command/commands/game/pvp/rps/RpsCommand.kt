@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.pvp.rps
 
 import bot.toby.helpers.UserDtoHelper
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.rps.RpsSessionRegistry
 import database.service.pvp.rps.RpsService
 import net.dv8tion.jda.api.interactions.commands.OptionType

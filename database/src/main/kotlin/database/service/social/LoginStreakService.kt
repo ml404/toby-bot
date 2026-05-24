@@ -1,6 +1,6 @@
 package database.service.social
 
-import database.dto.LoginStreakDto
+import database.dto.social.LoginStreakDto
 import java.time.Instant
 
 interface LoginStreakService {

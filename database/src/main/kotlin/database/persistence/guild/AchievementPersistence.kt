@@ -1,8 +1,8 @@
 package database.persistence.guild
 
-import database.dto.AchievementDto
-import database.dto.AchievementProgressDto
-import database.dto.UserAchievementDto
+import database.dto.guild.AchievementDto
+import database.dto.guild.AchievementProgressDto
+import database.dto.guild.UserAchievementDto
 
 interface AchievementPersistence {
     fun listAll(): List<AchievementDto>

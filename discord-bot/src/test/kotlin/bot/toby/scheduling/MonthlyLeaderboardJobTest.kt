@@ -1,8 +1,8 @@
 package bot.toby.scheduling
 
-import database.dto.ConfigDto
-import database.dto.MonthlyCreditSnapshotDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.economy.MonthlyCreditSnapshotDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.activity.UbiDailyService

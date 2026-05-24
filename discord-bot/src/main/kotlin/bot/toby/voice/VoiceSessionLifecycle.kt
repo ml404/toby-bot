@@ -1,7 +1,7 @@
 package bot.toby.voice
 
 import common.logging.DiscordLogger
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.service.activity.VoiceSessionService
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import org.springframework.stereotype.Service

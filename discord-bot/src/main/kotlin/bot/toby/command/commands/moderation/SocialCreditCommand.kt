@@ -2,7 +2,7 @@ package bot.toby.command.commands.moderation
 
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.TitleService
 import database.service.user.UserService
 import database.service.activity.VoiceSessionService

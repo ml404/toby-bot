@@ -1,9 +1,9 @@
 package web.service
 
-import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
-import database.dto.TitleDto
-import database.dto.UserDto
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryTicketDto
+import database.dto.guild.TitleDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.guild.TitleService

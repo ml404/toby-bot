@@ -1,6 +1,6 @@
 package bot.toby.activity
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import database.service.activity.ActivitySessionService
 import io.mockk.every
 import io.mockk.mockk

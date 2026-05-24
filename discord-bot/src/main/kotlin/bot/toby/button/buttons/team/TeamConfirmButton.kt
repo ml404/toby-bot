@@ -4,8 +4,8 @@ import bot.toby.command.commands.misc.TeamCommand
 import bot.toby.modal.modals.TeamSplitModal
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.TeamSplitSessionDto
-import database.dto.UserDto
+import database.dto.guild.TeamSplitSessionDto
+import database.dto.user.UserDto
 import database.service.guild.TeamSplitSessionService
 import database.service.guild.decodeAssignments
 import database.service.guild.decodeTeamNames

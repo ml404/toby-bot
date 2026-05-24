@@ -1,6 +1,6 @@
 package bot.toby.voice
 
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.service.activity.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk

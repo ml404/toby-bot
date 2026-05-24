@@ -1,6 +1,6 @@
 package database.persistence.social.impl
 
-import database.dto.LoginStreakDto
+import database.dto.social.LoginStreakDto
 import database.persistence.social.LoginStreakPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,9 +1,9 @@
 package database.service
 
 import common.events.DuelResolvedEvent
-import database.dto.ConfigDto
-import database.dto.DuelLogDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.pvp.duel.DuelLogDto
+import database.dto.user.UserDto
 import database.duel.RecentDuelResolutions
 import database.persistence.pvp.duel.DuelLogPersistence
 import io.mockk.every

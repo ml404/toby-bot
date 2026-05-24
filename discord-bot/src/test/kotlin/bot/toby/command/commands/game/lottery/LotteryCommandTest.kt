@@ -5,10 +5,10 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
-import database.dto.ConfigDto
-import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryTicketDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import io.mockk.every

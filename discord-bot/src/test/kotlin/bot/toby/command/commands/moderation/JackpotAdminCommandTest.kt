@@ -8,8 +8,8 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.scheduling.LotteryAnnouncer
-import database.dto.JackpotLotteryDto
-import database.dto.UserDto
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.user.UserDto
 import database.service.casino.CasinoAdminService
 import database.service.lottery.JackpotLotteryService
 import database.service.economy.JackpotService

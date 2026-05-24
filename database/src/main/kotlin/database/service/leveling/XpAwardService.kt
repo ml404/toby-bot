@@ -2,8 +2,8 @@ package database.service.leveling
 
 import common.events.LevelUpEvent
 import common.leveling.LevelCurve
-import database.dto.ConfigDto
-import database.dto.XpDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.leveling.XpDailyDto
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

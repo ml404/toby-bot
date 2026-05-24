@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.TeamPresetDto
-import database.dto.TeamSplitSessionDto
+import database.dto.guild.TeamPresetDto
+import database.dto.guild.TeamSplitSessionDto
 import database.service.guild.TeamPresetService
 import database.service.guild.TeamSplitSessionService
 import database.service.guild.decodeAssignments

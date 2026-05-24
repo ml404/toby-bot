@@ -1,7 +1,7 @@
 package database.service.guild
 
-import database.dto.TitleDto
-import database.dto.UserOwnedTitleDto
+import database.dto.guild.TitleDto
+import database.dto.guild.UserOwnedTitleDto
 
 interface TitleService {
     fun listAll(): List<TitleDto>

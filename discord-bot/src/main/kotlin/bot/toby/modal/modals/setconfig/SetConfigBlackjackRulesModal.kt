@@ -1,7 +1,7 @@
 package bot.toby.modal.modals.setconfig
 
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
 

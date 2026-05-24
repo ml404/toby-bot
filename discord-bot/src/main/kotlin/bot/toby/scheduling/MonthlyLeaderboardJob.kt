@@ -1,8 +1,8 @@
 package bot.toby.scheduling
 
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.guild.ConfigDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import database.service.guild.ConfigService
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.activity.UbiDailyService
@@ -147,7 +147,7 @@ class MonthlyLeaderboardJob @Autowired constructor(
             .build()
     }
 
-    private fun writeCurrentMonthSnapshot(guildId: Long, users: List<database.dto.UserDto>, snapshotDate: LocalDate) {
+    private fun writeCurrentMonthSnapshot(guildId: Long, users: List<database.dto.user.UserDto>, snapshotDate: LocalDate) {
         users.forEach { dto ->
             snapshotService.upsert(
                 MonthlyCreditSnapshotDto(

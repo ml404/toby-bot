@@ -1,6 +1,6 @@
 package bot.toby.economy
 
-import database.dto.TobyCoinPricePointDto
+import database.dto.economy.TobyCoinPricePointDto
 import org.jfree.chart.ChartFactory
 import org.jfree.chart.ChartUtils
 import org.jfree.chart.JFreeChart

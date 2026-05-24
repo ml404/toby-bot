@@ -6,7 +6,7 @@ import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.pvp.rps.RpsEmbeds
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.rps.RpsEngine
 import database.rps.RpsSessionRegistry
 import database.service.pvp.PvpWagerService

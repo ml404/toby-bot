@@ -115,7 +115,7 @@ internal class SocialCreditCommandTest : CommandTest {
         val userOptionMapping = mockk<OptionMapping>()
         val scOptionMapping = mockk<OptionMapping>()
         val leaderboardOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
+        val targetUserDto = mockk<database.dto.user.UserDto>(relaxed = true)
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
@@ -149,7 +149,7 @@ internal class SocialCreditCommandTest : CommandTest {
         val commandContext = DefaultCommandContext(event)
         val userOptionMapping = mockk<OptionMapping>(relaxed = true)
         val leaderboardOptionMapping = mockk<OptionMapping>()
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false
@@ -179,7 +179,7 @@ internal class SocialCreditCommandTest : CommandTest {
     fun test_leaderboard_printsLeaderboard() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val task: Task<List<Member>> = mockk()
         val memberList = listOf(member, targetMember)
         every { guild.isLoaded } returns false

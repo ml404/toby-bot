@@ -1,6 +1,6 @@
 package database.service.social.impl
 
-import database.dto.TipDailyDto
+import database.dto.social.TipDailyDto
 import database.persistence.social.TipDailyPersistence
 import database.service.social.TipDailyService
 import org.springframework.beans.factory.annotation.Autowired

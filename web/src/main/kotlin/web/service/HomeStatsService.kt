@@ -3,7 +3,7 @@ package web.service
 import common.notification.NotificationChannelKind
 import core.managers.CommandManager
 import database.achievement.AchievementCatalog
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.catalog.GameCatalog

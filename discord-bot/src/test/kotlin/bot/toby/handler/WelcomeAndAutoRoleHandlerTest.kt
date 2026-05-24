@@ -1,8 +1,8 @@
 package bot.toby.handler
 
-import database.dto.AutoRoleDto
-import database.dto.ConfigDto
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.AutoRoleDto
+import database.dto.guild.ConfigDto
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import io.mockk.every

@@ -1,7 +1,7 @@
 package database.service.guild.impl
 
-import database.dto.TitleDto
-import database.dto.UserOwnedTitleDto
+import database.dto.guild.TitleDto
+import database.dto.guild.UserOwnedTitleDto
 import database.persistence.guild.TitlePersistence
 import database.service.guild.TitleService
 import org.springframework.beans.factory.annotation.Autowired

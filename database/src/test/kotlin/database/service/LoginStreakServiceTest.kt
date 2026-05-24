@@ -1,11 +1,11 @@
 package database.service
 
 import common.events.StreakClaimedEvent
-import database.dto.ConfigDto
-import database.dto.LoginStreakDto
-import database.dto.UserDto
-import database.dto.VoiceCreditDailyDto
-import database.dto.XpDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.social.LoginStreakDto
+import database.dto.user.UserDto
+import database.dto.activity.VoiceCreditDailyDto
+import database.dto.leveling.XpDailyDto
 import database.persistence.social.LoginStreakPersistence
 import database.service.social.impl.DefaultLoginStreakService
 import org.junit.jupiter.api.Assertions.assertEquals

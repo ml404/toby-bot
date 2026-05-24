@@ -1,6 +1,6 @@
 package web.casino
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.Baccarat
 import common.economy.Coinflip
 import common.economy.Dice

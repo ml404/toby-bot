@@ -2,7 +2,7 @@ package bot.toby.command.commands.moderation
 
 import bot.toby.modal.modals.PollModal
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.components.textinput.TextInputStyle

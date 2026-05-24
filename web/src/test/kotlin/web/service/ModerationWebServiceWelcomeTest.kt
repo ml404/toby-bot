@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.AutoRoleDto
-import database.dto.ConfigDto
+import database.dto.guild.AutoRoleDto
+import database.dto.guild.ConfigDto
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import database.service.leveling.LevelRoleRewardService

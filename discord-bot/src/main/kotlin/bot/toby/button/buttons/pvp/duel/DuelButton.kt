@@ -4,7 +4,7 @@ import bot.toby.command.commands.game.pvp.duel.DuelEmbeds
 import database.duel.PendingDuelRegistry
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.duel.DuelService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import org.springframework.beans.factory.annotation.Autowired

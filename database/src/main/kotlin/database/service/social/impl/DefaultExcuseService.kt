@@ -1,6 +1,6 @@
 package database.service.social.impl
 
-import database.dto.ExcuseDto
+import database.dto.social.ExcuseDto
 import database.service.social.ExcuseService
 import database.service.social.PagedExcuses
 import org.springframework.beans.factory.annotation.Autowired

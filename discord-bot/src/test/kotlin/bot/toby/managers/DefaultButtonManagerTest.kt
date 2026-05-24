@@ -3,7 +3,7 @@ package bot.toby.managers
 import bot.toby.helpers.UserDtoHelper
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

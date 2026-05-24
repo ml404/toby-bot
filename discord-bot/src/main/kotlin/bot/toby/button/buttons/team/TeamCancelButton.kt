@@ -3,7 +3,7 @@ package bot.toby.button.buttons.team
 import bot.toby.command.commands.misc.TeamCommand
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.TeamSplitSessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component

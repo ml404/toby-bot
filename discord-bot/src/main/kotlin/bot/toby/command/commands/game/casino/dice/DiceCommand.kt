@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.dice
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Dice
 import database.service.casino.dice.DiceService
 import database.service.casino.dice.DiceService.RollOutcome

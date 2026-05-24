@@ -1,8 +1,8 @@
 package bot.toby.activity
 
 import common.logging.DiscordLogger
-import database.dto.ActivitySessionDto
-import database.dto.ConfigDto.Configurations.ACTIVITY_TRACKING
+import database.dto.activity.ActivitySessionDto
+import database.dto.guild.ConfigDto.Configurations.ACTIVITY_TRACKING
 import database.service.activity.ActivityMonthlyRollupService
 import database.service.activity.ActivitySessionService
 import database.service.guild.ConfigService

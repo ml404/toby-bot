@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
-import database.dto.UserDto
+import database.dto.user.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

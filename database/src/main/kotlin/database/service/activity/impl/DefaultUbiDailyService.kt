@@ -1,6 +1,6 @@
 package database.service.activity.impl
 
-import database.dto.UbiDailyDto
+import database.dto.activity.UbiDailyDto
 import database.persistence.activity.UbiDailyPersistence
 import database.service.activity.UbiDailyService
 import org.springframework.beans.factory.annotation.Autowired

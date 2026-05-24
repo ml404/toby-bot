@@ -1,7 +1,7 @@
 package web.service
 
 import common.leveling.LevelCurve
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.social.LoginStreakService
 import database.service.guild.TitleService

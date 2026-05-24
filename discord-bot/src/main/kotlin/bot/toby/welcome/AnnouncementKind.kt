@@ -1,6 +1,6 @@
 package bot.toby.welcome
 
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 
 /**
  * Bundles the three [Configurations] keys + default template + embed

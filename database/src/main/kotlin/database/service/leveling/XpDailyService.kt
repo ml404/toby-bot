@@ -1,6 +1,6 @@
 package database.service.leveling
 
-import database.dto.XpDailyDto
+import database.dto.leveling.XpDailyDto
 import java.time.LocalDate
 
 interface XpDailyService {

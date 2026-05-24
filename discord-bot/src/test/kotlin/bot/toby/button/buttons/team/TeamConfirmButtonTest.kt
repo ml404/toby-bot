@@ -2,8 +2,8 @@ package bot.toby.button.buttons.team
 
 import bot.toby.command.commands.misc.TeamCommand
 import core.button.ButtonContext
-import database.dto.TeamSplitSessionDto
-import database.dto.UserDto
+import database.dto.guild.TeamSplitSessionDto
+import database.dto.user.UserDto
 import database.service.guild.TeamSplitSessionService
 import database.service.guild.encodeAssignments
 import database.service.guild.encodeTeamNames

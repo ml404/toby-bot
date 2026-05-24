@@ -1,6 +1,6 @@
 package database.service.user.impl
 
-import database.dto.PushSubscriptionDto
+import database.dto.user.PushSubscriptionDto
 import database.persistence.user.PushSubscriptionPersistence
 import database.service.user.PushSubscriptionService
 import org.springframework.stereotype.Service

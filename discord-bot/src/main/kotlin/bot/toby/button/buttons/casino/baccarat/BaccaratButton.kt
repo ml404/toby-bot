@@ -3,7 +3,7 @@ package bot.toby.button.buttons.casino.baccarat
 import bot.toby.command.commands.game.casino.baccarat.BaccaratEmbeds
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.casino.baccarat.BaccaratService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import org.springframework.beans.factory.annotation.Autowired

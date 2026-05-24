@@ -2,7 +2,7 @@ package web.service
 
 import common.leveling.LevelCurve
 import common.logging.DiscordLogger
-import database.dto.TitleDto
+import database.dto.guild.TitleDto
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.guild.TitlePurchasePolicy

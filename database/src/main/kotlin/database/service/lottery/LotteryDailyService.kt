@@ -1,6 +1,6 @@
 package database.service.lottery
 
-import database.dto.LotteryDailyDto
+import database.dto.lottery.LotteryDailyDto
 import database.persistence.lottery.LotteryDailyPersistence
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

@@ -3,7 +3,7 @@ package bot.toby.install.button
 import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
 

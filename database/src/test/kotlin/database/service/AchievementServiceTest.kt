@@ -1,13 +1,13 @@
 package database.service
 
 import common.events.AchievementUnlockedEvent
-import database.dto.AchievementDto
-import database.dto.AchievementProgressDto
-import database.dto.ConfigDto
-import database.dto.UserAchievementDto
-import database.dto.UserDto
-import database.dto.VoiceCreditDailyDto
-import database.dto.XpDailyDto
+import database.dto.guild.AchievementDto
+import database.dto.guild.AchievementProgressDto
+import database.dto.guild.ConfigDto
+import database.dto.guild.UserAchievementDto
+import database.dto.user.UserDto
+import database.dto.activity.VoiceCreditDailyDto
+import database.dto.leveling.XpDailyDto
 import database.persistence.guild.AchievementPersistence
 import database.service.guild.impl.DefaultAchievementService
 import org.junit.jupiter.api.Assertions.assertEquals

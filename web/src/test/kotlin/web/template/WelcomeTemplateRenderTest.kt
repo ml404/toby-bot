@@ -1,6 +1,6 @@
 package web.template
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

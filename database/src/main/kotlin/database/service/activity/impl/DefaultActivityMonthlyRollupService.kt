@@ -1,6 +1,6 @@
 package database.service.activity.impl
 
-import database.dto.ActivityMonthlyRollupDto
+import database.dto.activity.ActivityMonthlyRollupDto
 import database.persistence.activity.ActivityMonthlyRollupPersistence
 import database.service.activity.ActivityMonthlyRollupService
 import org.springframework.beans.factory.annotation.Autowired

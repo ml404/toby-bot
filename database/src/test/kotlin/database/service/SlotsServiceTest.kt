@@ -1,7 +1,7 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import common.economy.SlotMachine
 import io.mockk.every
 import io.mockk.mockk

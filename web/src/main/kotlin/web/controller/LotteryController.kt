@@ -1,6 +1,6 @@
 package web.controller
 
-import database.dto.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.lottery.JackpotLotteryService.BuyMatchOutcome
 import database.service.lottery.JackpotLotteryService.BuyOutcome
 import database.service.lottery.LotteryHelper

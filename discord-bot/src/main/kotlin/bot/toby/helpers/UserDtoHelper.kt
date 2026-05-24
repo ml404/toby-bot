@@ -1,7 +1,7 @@
 package bot.toby.helpers
 
 import common.logging.DiscordLogger
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.user.UserService
 import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service

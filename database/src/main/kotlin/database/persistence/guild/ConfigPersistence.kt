@@ -1,6 +1,6 @@
 package database.persistence.guild
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 
 interface ConfigPersistence {
     fun listAllConfig(): List<ConfigDto?>

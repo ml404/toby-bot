@@ -1,6 +1,6 @@
 package database.persistence.social
 
-import database.dto.TipDailyDto
+import database.dto.social.TipDailyDto
 import java.time.LocalDate
 
 interface TipDailyPersistence {

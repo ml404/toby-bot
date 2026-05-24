@@ -1,7 +1,7 @@
 package database.persistence.guild.impl
 
-import database.dto.TitleDto
-import database.dto.UserOwnedTitleDto
+import database.dto.guild.TitleDto
+import database.dto.guild.UserOwnedTitleDto
 import database.persistence.guild.TitlePersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,7 +1,7 @@
 package database.service.music.impl
 
-import database.dto.MusicPlaylistDto
-import database.dto.MusicPlaylistItemDto
+import database.dto.music.MusicPlaylistDto
+import database.dto.music.MusicPlaylistItemDto
 import database.persistence.music.MusicPlaylistPersistence
 import database.service.music.MusicPlaylistService
 import database.service.music.MusicPlaylistService.PlaylistItemInput

@@ -1,6 +1,6 @@
 package database.persistence.guild.impl
 
-import database.dto.TeamSplitSessionDto
+import database.dto.guild.TeamSplitSessionDto
 import database.persistence.guild.TeamSplitSessionPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.NoResultException

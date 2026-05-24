@@ -8,7 +8,7 @@ import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.service.music.MusicFileService
 import database.service.user.UserNotificationPrefService
 import bot.toby.helpers.UserDtoHelper

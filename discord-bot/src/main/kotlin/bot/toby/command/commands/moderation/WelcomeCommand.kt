@@ -3,8 +3,8 @@ package bot.toby.command.commands.moderation
 import bot.toby.welcome.AnnouncementKind
 import common.discord.AutoRoleValidator
 import core.command.CommandContext
-import database.dto.ConfigDto.Configurations
-import database.dto.UserDto
+import database.dto.guild.ConfigDto.Configurations
+import database.dto.user.UserDto
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder

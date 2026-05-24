@@ -4,8 +4,8 @@ import core.music.MusicControlGateway
 import core.music.MusicControlGateway.GuildPlayerState
 import core.music.MusicControlGateway.LoadResult
 import core.music.MusicControlGateway.TrackInfo
-import database.dto.MusicPlaylistDto
-import database.dto.MusicPlaylistItemDto
+import database.dto.music.MusicPlaylistDto
+import database.dto.music.MusicPlaylistItemDto
 import database.service.music.MusicPlaylistService
 import database.service.music.MusicPlaylistService.PlaylistItemInput
 import io.mockk.every
@@ -208,7 +208,7 @@ class MusicWebServiceTest {
     @Test
     fun `canControlMusic respects user musicPermission flag`() {
         every { membership.isMember(discordId, guildId) } returns true
-        val userRow = mockk<database.dto.UserDto>()
+        val userRow = mockk<database.dto.user.UserDto>()
         every { userRow.musicPermission } returns true
         every { userService.getUserById(discordId, guildId) } returns userRow
         assertTrue(service.canControlMusic(discordId, guildId))

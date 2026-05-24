@@ -2,7 +2,7 @@ package database.service.pvp.rps
 
 import common.events.RpsResolvedEvent
 import common.rps.RpsEngine
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

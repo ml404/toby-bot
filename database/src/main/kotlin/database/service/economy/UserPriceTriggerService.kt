@@ -1,6 +1,6 @@
 package database.service.economy
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 import java.time.Instant
 
 interface UserPriceTriggerService {

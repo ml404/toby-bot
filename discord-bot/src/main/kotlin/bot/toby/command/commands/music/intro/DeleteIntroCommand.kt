@@ -5,7 +5,7 @@ import bot.toby.helpers.MenuHelper.DELETE_INTRO
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component

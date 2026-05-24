@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.AutoRoleDto
+import database.dto.guild.AutoRoleDto
 
 interface AutoRoleService {
     fun listForGuild(guildId: Long): List<AutoRoleDto>

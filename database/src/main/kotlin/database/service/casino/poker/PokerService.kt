@@ -2,10 +2,10 @@ package database.service.casino.poker
 
 import common.events.PokerRoyalFlushEvent
 import common.card.Rank
-import database.dto.ConfigDto
-import database.dto.PokerHandLogDto
-import database.dto.PokerHandPotDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.casino.poker.PokerHandLogDto
+import database.dto.casino.poker.PokerHandPotDto
+import database.dto.user.UserDto
 import database.persistence.casino.poker.PokerHandLogPersistence
 import database.persistence.casino.poker.PokerHandPotPersistence
 import common.poker.HandEvaluator

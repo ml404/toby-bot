@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.coinflip
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Coinflip
 import database.service.casino.coinflip.CoinflipService
 import database.service.casino.coinflip.CoinflipService.FlipOutcome

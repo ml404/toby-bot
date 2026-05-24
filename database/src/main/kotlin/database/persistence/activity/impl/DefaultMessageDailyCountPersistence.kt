@@ -1,6 +1,6 @@
 package database.persistence.activity.impl
 
-import database.dto.MessageDailyCountDto
+import database.dto.activity.MessageDailyCountDto
 import database.persistence.activity.MessageDailyCountPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

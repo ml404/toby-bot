@@ -4,7 +4,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.commands.music.MusicCommandTest
 import core.command.CommandContext
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

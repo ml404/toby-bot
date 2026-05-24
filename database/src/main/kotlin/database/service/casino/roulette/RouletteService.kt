@@ -2,7 +2,7 @@ package database.service.casino.roulette
 
 import common.casino.CasinoCommonFailure
 import common.events.RouletteStraightWinEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.Roulette
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

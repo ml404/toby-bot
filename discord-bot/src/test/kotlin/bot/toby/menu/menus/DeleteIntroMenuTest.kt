@@ -5,8 +5,8 @@ import bot.toby.helpers.IntroHelper
 import bot.toby.menu.DefaultMenuContext
 import bot.toby.menu.MenuTest
 import bot.toby.menu.MenuTest.Companion.menuEvent
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

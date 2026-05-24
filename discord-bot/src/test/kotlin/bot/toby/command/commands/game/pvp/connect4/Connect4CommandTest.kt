@@ -8,7 +8,7 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.connect4.Connect4SessionRegistry
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.connect4.Connect4Service
 import database.service.pvp.PvpWagerService
 import io.mockk.every

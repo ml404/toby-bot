@@ -1,8 +1,8 @@
 package database.service.social
 
 import common.leveling.LevelCurve
-import database.dto.ConfigDto
-import database.dto.VoiceCreditDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.activity.VoiceCreditDailyDto
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant

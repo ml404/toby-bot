@@ -2,7 +2,7 @@ package bot.toby.install
 
 import bot.toby.command.commands.moderation.ModerationCommand
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import org.springframework.stereotype.Component
 
 /**

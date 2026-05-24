@@ -1,7 +1,7 @@
 package database.persistence.guild.impl
 
-import database.dto.GuildTitleRoleDto
-import database.dto.GuildTitleRoleId
+import database.dto.guild.GuildTitleRoleDto
+import database.dto.guild.GuildTitleRoleId
 import database.persistence.guild.GuildTitleRolePersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

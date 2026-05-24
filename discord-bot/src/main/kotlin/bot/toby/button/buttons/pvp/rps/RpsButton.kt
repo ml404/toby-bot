@@ -4,7 +4,7 @@ import bot.toby.command.commands.game.pvp.PvpEmbeds
 import bot.toby.command.commands.game.pvp.rps.RpsEmbeds
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.rps.RpsSessionRegistry
 import database.service.pvp.PvpWagerService
 import database.service.pvp.rps.RpsService

@@ -1,7 +1,7 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -10,8 +10,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import database.persistence.casino.poker.PokerHandLogPersistence
 import database.persistence.casino.poker.PokerHandPotPersistence
-import database.dto.PokerHandLogDto
-import database.dto.PokerHandPotDto
+import database.dto.casino.poker.PokerHandLogDto
+import database.dto.casino.poker.PokerHandPotDto
 import database.poker.PokerTableRegistry
 import java.time.Duration
 import kotlin.random.Random

@@ -7,7 +7,7 @@ package common.notification
  * (or clearing) a single config row — not by editing code.
  *
  * Config-key names are stored as plain strings here so this enum stays
- * in `common` and doesn't pull `database.dto.ConfigDto` into the
+ * in `common` and doesn't pull `database.dto.guild.ConfigDto` into the
  * downstream dependency graph. The
  * `ChannelRouteKeyConfigKeyContractTest` (in `:database`) asserts every
  * string resolves to a real `ConfigDto.Configurations` value at compile

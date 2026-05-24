@@ -1,6 +1,6 @@
 package database.boardgame
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.pvp.PvpWagerService
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.transaction.annotation.Transactional

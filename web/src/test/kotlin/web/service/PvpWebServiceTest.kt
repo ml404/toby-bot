@@ -2,7 +2,7 @@ package web.service
 
 import database.duel.PendingDuelRegistry
 import database.duel.RecentDuelResolutions
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.rps.RpsSessionRegistry
 import database.service.user.UserService
 import io.mockk.every

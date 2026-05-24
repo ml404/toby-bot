@@ -1,6 +1,6 @@
 package database.persistence.economy
 
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import java.time.LocalDate
 
 interface MonthlyCreditSnapshotPersistence {

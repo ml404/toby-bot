@@ -4,7 +4,7 @@ import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.HorseRacing
 import database.service.casino.horseracing.HorseRacingService
 import io.mockk.clearAllMocks

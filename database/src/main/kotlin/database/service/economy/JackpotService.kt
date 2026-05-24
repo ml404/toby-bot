@@ -1,7 +1,7 @@
 package database.service.economy
 
-import database.dto.TobyCoinJackpotDto
-import database.dto.TobyCoinJackpotWinnerDto
+import database.dto.economy.TobyCoinJackpotDto
+import database.dto.economy.TobyCoinJackpotWinnerDto
 import database.persistence.economy.TobyCoinJackpotPersistence
 import database.persistence.economy.TobyCoinJackpotWinnerPersistence
 import database.persistence.activity.VoiceCreditDailyPersistence

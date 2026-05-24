@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.GuildTitleRoleDto
-import database.dto.TitleDto
+import database.dto.guild.GuildTitleRoleDto
+import database.dto.guild.TitleDto
 import database.service.guild.GuildTitleRoleService
 import io.mockk.every
 import io.mockk.mockk

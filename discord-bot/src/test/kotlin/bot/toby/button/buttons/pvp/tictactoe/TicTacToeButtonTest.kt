@@ -8,7 +8,7 @@ import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.pvp.tictactoe.TicTacToeEmbeds
 import common.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardWagerService
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.PvpWagerService
 import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry

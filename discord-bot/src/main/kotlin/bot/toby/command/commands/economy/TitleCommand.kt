@@ -5,7 +5,7 @@ import web.service.TitleRoleService
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.TitlePurchasePolicy
 import database.service.guild.TitleService
 import database.service.user.UserService
@@ -33,7 +33,7 @@ class TitleCommand @Autowired constructor(
         private const val OPT_TITLE = "title"
 
         /** Renders the title-shop body text. Pure function for unit testing. */
-        internal fun buildShopBody(titles: List<database.dto.TitleDto>): String =
+        internal fun buildShopBody(titles: List<database.dto.guild.TitleDto>): String =
             if (titles.isEmpty()) {
                 "No titles are available right now."
             } else {

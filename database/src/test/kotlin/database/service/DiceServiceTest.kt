@@ -1,7 +1,7 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import common.economy.Dice
 import io.mockk.every
 import io.mockk.mockk
@@ -150,10 +150,10 @@ class DiceServiceTest {
         val user = userWithBalance(10_000_000L)
         every {
             configService.getConfigByName(
-                database.dto.ConfigDto.Configurations.DICE_MAX_STAKE.configValue,
+                database.dto.guild.ConfigDto.Configurations.DICE_MAX_STAKE.configValue,
                 guildId.toString()
             )
-        } returns database.dto.ConfigDto(name = "x", value = "0", guildId = guildId.toString())
+        } returns database.dto.guild.ConfigDto(name = "x", value = "0", guildId = guildId.toString())
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { dice.roll(4, any()) } returns Dice.Roll(landed = 4, predicted = 4, multiplier = 2L)
         every { userService.updateUser(any()) } returns user

@@ -1,7 +1,7 @@
 package database.service
 
 import common.leveling.LevelCurve
-import database.dto.TitleDto
+import database.dto.guild.TitleDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertSame

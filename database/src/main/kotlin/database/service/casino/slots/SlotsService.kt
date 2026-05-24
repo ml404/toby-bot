@@ -2,7 +2,7 @@ package database.service.casino.slots
 
 import common.casino.CasinoCommonFailure
 import common.events.SlotsJackpotEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.SlotMachine
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

@@ -1,6 +1,6 @@
 package database.service.activity
 
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import java.time.Instant
 
 interface VoiceSessionService {

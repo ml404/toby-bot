@@ -7,7 +7,7 @@ import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.pvp.duel.DuelEmbeds
 import database.duel.PendingDuelRegistry
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.duel.DuelService
 import io.mockk.Runs
 import io.mockk.every

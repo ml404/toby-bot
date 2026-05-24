@@ -1,6 +1,6 @@
 package database.persistence.economy.impl
 
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import database.persistence.economy.MonthlyCreditSnapshotPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

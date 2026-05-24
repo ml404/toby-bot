@@ -8,9 +8,9 @@ import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
-import database.dto.ConfigDto
-import database.dto.MusicDto
-import database.dto.MusicDto.Companion.computeHash
+import database.dto.guild.ConfigDto
+import database.dto.music.MusicDto
+import database.dto.music.MusicDto.Companion.computeHash
 import database.service.guild.ConfigService
 import database.service.music.MusicFileService
 import database.service.user.UserNotificationPrefService
@@ -67,7 +67,7 @@ class IntroHelper(
 
     fun handleMedia(
         event: IReplyCallback,
-        requestingUserDto: database.dto.UserDto,
+        requestingUserDto: database.dto.user.UserDto,
         deleteDelay: Int,
         input: InputData?,
         introVolume: Int,
@@ -107,7 +107,7 @@ class IntroHelper(
 
     fun handleAttachment(
         event: IReplyCallback,
-        requestingUserDto: database.dto.UserDto,
+        requestingUserDto: database.dto.user.UserDto,
         userName: String,
         deleteDelay: Int,
         attachment: Attachment,
@@ -141,7 +141,7 @@ class IntroHelper(
 
     fun handleUrl(
         event: IReplyCallback,
-        requestingUserDto: database.dto.UserDto,
+        requestingUserDto: database.dto.user.UserDto,
         userName: String,
         deleteDelay: Int,
         uri: URI?,
@@ -170,7 +170,7 @@ class IntroHelper(
     @VisibleForTesting
     fun persistMusicFile(
         event: IReplyCallback,
-        targetDto: database.dto.UserDto,
+        targetDto: database.dto.user.UserDto,
         userName: String = event.user.effectiveName,
         deleteDelay: Int,
         filename: String,
@@ -208,7 +208,7 @@ class IntroHelper(
 
     fun persistMusicUrl(
         event: IReplyCallback,
-        targetDto: database.dto.UserDto,
+        targetDto: database.dto.user.UserDto,
         deleteDelay: Int,
         filename: String,
         url: String,

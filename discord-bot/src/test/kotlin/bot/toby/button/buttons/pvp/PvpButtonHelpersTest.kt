@@ -1,6 +1,6 @@
 package bot.toby.button.buttons.pvp
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.pvp.PvpSessionRegistry
 import database.service.pvp.PvpWagerService
 import io.mockk.Runs

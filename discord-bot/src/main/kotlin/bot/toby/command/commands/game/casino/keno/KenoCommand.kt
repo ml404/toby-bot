@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.keno
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Keno
 import database.service.casino.keno.KenoService
 import net.dv8tion.jda.api.interactions.commands.OptionType

@@ -10,7 +10,7 @@ import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -54,7 +54,7 @@ class StopButtonTest : ButtonTest {
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
         every { userService.getUserById(any(), any()) } returns mockk(relaxed = true)
 
-        StopButton().handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 0)
+        StopButton().handle(DefaultButtonContext(event), database.dto.user.UserDto(6L, 1L), 0)
 
         verify { MusicPlayerHelper.stopSong(any(), any(), any(), any()) }
     }

@@ -2,7 +2,7 @@ package database.service
 
 import common.events.TicTacToeResolvedEvent
 import database.boardgame.TurnBasedBoardWagerService
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

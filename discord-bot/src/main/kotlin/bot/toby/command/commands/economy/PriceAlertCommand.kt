@@ -5,8 +5,8 @@ import common.notification.Surface
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
-import database.dto.UserPriceTriggerDto
+import database.dto.user.UserDto
+import database.dto.economy.UserPriceTriggerDto
 import database.service.economy.EconomyTradeService
 import database.service.user.UserNotificationPrefService
 import database.service.economy.UserPriceTriggerService

@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.AchievementDto
+import database.dto.guild.AchievementDto
 
 interface AchievementService {
     fun listAll(): List<AchievementDto>

@@ -4,7 +4,7 @@ import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
-import database.dto.BrotherDto
+import database.dto.social.BrotherDto
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk

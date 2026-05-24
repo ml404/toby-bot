@@ -2,7 +2,7 @@ package database.service.pvp.connect4
 
 import common.events.Connect4ResolvedEvent
 import database.boardgame.TurnBasedBoardWagerService
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

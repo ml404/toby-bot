@@ -6,7 +6,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonParser
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent

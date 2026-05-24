@@ -1,6 +1,6 @@
 package database.service.social
 
-import database.dto.ExcuseDto
+import database.dto.social.ExcuseDto
 
 interface ExcuseService {
     fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?>

@@ -2,7 +2,7 @@ package database.service.casino.wheeloffortune
 
 import common.casino.CasinoCommonFailure
 import common.events.WheelJackpotEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.WheelOfFortune
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

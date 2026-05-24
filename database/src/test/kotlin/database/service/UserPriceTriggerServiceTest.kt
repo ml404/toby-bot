@@ -1,6 +1,6 @@
 package database.service
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 import database.persistence.economy.UserPriceTriggerPersistence
 import database.service.economy.impl.DefaultUserPriceTriggerService
 import io.mockk.every

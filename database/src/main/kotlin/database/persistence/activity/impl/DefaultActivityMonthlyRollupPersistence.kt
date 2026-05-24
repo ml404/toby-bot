@@ -1,7 +1,7 @@
 package database.persistence.activity.impl
 
-import database.dto.ActivityMonthlyRollupDto
-import database.dto.ActivityMonthlyRollupId
+import database.dto.activity.ActivityMonthlyRollupDto
+import database.dto.activity.ActivityMonthlyRollupId
 import database.persistence.activity.ActivityMonthlyRollupPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

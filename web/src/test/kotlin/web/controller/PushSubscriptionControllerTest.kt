@@ -2,7 +2,7 @@ package web.controller
 
 import common.notification.PushAdapter
 import common.notification.PushPayload
-import database.dto.PushSubscriptionDto
+import database.dto.user.PushSubscriptionDto
 import database.service.user.PushSubscriptionService
 import io.mockk.every
 import io.mockk.mockk

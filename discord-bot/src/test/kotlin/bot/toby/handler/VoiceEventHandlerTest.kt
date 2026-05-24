@@ -5,8 +5,8 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
 import bot.toby.voice.VoiceSessionLifecycle
-import database.dto.ConfigDto
-import database.dto.MusicDto
+import database.dto.guild.ConfigDto
+import database.dto.music.MusicDto
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
 import database.service.leveling.XpAwardService

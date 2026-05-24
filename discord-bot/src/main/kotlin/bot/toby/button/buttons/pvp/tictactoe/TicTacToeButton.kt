@@ -6,7 +6,7 @@ import common.tictactoe.TicTacToeEngine
 import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.PvpWagerService
 import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry

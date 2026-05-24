@@ -1,6 +1,6 @@
 package bot.toby.modal.modals.setconfig
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import net.dv8tion.jda.api.entities.Guild
 
 /**

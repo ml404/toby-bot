@@ -1,6 +1,6 @@
 package web.controller
 
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.service.music.MusicFileService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpSession
