@@ -37,6 +37,24 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import java.util.concurrent.LinkedBlockingQueue
 import database.service.guild.ConfigService
+import bot.toby.button.buttons.casino.baccarat.BaccaratButton
+import bot.toby.button.buttons.casino.blackjack.BlackjackButton
+import bot.toby.button.buttons.casino.casinoholdem.CasinoHoldemButton
+import bot.toby.button.buttons.pvp.connect4.Connect4Button
+import bot.toby.button.buttons.pvp.duel.DuelButton
+import bot.toby.button.buttons.misc.ExcuseListPageButton
+import bot.toby.button.buttons.casino.highlow.HighlowButton
+import bot.toby.button.buttons.lottery.LotteryBuyButton
+import bot.toby.button.buttons.music.PausePlayButton
+import bot.toby.button.buttons.casino.poker.PokerActionButton
+import bot.toby.button.buttons.misc.ResendLastRequestButton
+import bot.toby.button.buttons.misc.RollButton
+import bot.toby.button.buttons.pvp.rps.RpsButton
+import bot.toby.button.buttons.music.StopButton
+import bot.toby.button.buttons.team.TeamCancelButton
+import bot.toby.button.buttons.team.TeamConfirmButton
+import bot.toby.button.buttons.team.TeamRerollButton
+import bot.toby.button.buttons.pvp.tictactoe.TicTacToeButton
 
 @SpringBootTest(
     classes = [

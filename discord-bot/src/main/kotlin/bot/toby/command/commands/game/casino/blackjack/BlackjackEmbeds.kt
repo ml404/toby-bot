@@ -19,7 +19,7 @@ import bot.toby.command.commands.game.WagerCommandEmbeds
  *
  * Component IDs encode the action and table id:
  *   `blackjack:HIT:<tableId>`
- * The [bot.toby.button.buttons.BlackjackButton] handler parses this back
+ * The [bot.toby.button.buttons.casino.blackjack.BlackjackButton] handler parses this back
  * out and routes to either [database.service.casino.blackjack.BlackjackService.applySoloAction]
  * or [database.service.casino.blackjack.BlackjackService.applyMultiAction] depending on
  * the table's [BlackjackTable.Mode].

@@ -22,7 +22,7 @@ import bot.toby.command.commands.game.pvp.rps.RpsEmbeds
  * small XP grant via [database.service.leveling.XpAwardService].
  *
  * The opponent's accept/decline + both players' pick clicks are
- * handled by [bot.toby.button.buttons.RpsButton], which routes through
+ * handled by [bot.toby.button.buttons.pvp.rps.RpsButton], which routes through
  * [RpsSessionRegistry] (in-memory session state) and [RpsService]
  * (wager arithmetic).
  *

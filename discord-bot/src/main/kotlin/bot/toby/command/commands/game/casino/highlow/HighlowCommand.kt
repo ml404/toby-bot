@@ -22,7 +22,7 @@ import bot.toby.command.commands.game.WagerCommandEmbeds
  * player picks a direction. Mirrors the web `/casino/{guildId}/highlow`
  * flow so the player isn't forced to commit blind.
  *
- * The button click is handled by [bot.toby.button.buttons.HighlowButton],
+ * The button click is handled by [bot.toby.button.buttons.casino.highlow.HighlowButton],
  * which decodes the anchor + stake from the component ID and resolves
  * via [HighlowService.play] (anchored entry point).
  */

@@ -13,7 +13,7 @@ import bot.toby.command.commands.game.WagerCommandFailure
 /**
  * Shared embed/component plumbing for the Discord `/baccarat` flow.
  * The slash command uses [promptEmbed] + [sideButtonId] to post the bet
- * prompt; [bot.toby.button.buttons.BaccaratButton] uses [outcomeEmbed]
+ * prompt; [bot.toby.button.buttons.casino.baccarat.BaccaratButton] uses [outcomeEmbed]
  * to render the resolution. Mirrors [HighlowEmbeds] one-for-one — the
  * button-id encoding (`baccarat:<SIDE>:<stake>:<userId>`) and the
  * win/lose colour palette are deliberately the same shape so the two

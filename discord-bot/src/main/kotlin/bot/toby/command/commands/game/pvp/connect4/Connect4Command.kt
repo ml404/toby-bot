@@ -24,7 +24,7 @@ import bot.toby.command.commands.game.pvp.PvpChallengeCeremony
  * Initiator plays 🔴 (drops first); opponent plays 🟡.
  *
  * Accept/decline + per-column drop + forfeit clicks are handled by
- * [bot.toby.button.buttons.Connect4Button], which routes through
+ * [bot.toby.button.buttons.pvp.connect4.Connect4Button], which routes through
  * [Connect4SessionRegistry] (in-memory board + turn state) and
  * [Connect4Service] (wager arithmetic).
  *
