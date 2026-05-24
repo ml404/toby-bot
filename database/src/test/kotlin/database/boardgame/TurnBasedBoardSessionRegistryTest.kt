@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import database.pvp.PvpSessionRegistry
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.time.Instant
@@ -89,7 +90,7 @@ class TurnBasedBoardSessionRegistryTest {
         val session = registry.register(guildId, initiatorId, opponentId, stake = 10L)
         val first = registry.accept(session.id)
         assertNotNull(first)
-        assertEquals(TurnBasedBoardSessionRegistry.Session.State.LIVE, first!!.state)
+        assertEquals(PvpSessionRegistry.Session.State.LIVE, first!!.state)
         assertNull(registry.accept(session.id))
     }
 

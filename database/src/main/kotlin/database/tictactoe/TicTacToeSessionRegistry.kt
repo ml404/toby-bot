@@ -3,6 +3,7 @@ package database.tictactoe
 import common.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardSessionRegistry
 import database.configuration.RegistryScheduler
+import database.pvp.PvpSessionRegistry
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
@@ -86,7 +87,7 @@ class TicTacToeSessionRegistry(
     ): TicTacToeEngine.MoveResult? {
         val session = get(id) ?: return null
         return synchronized(session) {
-            if (session.state != TurnBasedBoardSessionRegistry.Session.State.LIVE) return@synchronized null
+            if (session.state != PvpSessionRegistry.Session.State.LIVE) return@synchronized null
             val mark = session.markFor(discordId) ?: return@synchronized null
             if (mark != session.currentTurn) return@synchronized null
             val result = TicTacToeEngine.applyMove(session.board, cell, mark)

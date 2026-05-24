@@ -1,6 +1,7 @@
 package database.rps
 
 import common.rps.RpsEngine
+import database.pvp.PvpSessionRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -51,7 +52,7 @@ class RpsSessionRegistryTest {
 
         val first = registry.accept(session.id)
         assertNotNull(first)
-        assertEquals(RpsSessionRegistry.Session.State.LIVE, first!!.state)
+        assertEquals(PvpSessionRegistry.Session.State.LIVE, first!!.state)
         // Second accept must observe the LIVE state and refuse.
         assertNull(registry.accept(session.id))
     }

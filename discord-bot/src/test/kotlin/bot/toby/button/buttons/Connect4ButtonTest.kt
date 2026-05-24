@@ -77,7 +77,7 @@ class Connect4ButtonTest : ButtonTest {
     )
 
     private fun liveSession() = pendingSession().also {
-        it.state = database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE
+        it.state = database.pvp.PvpSessionRegistry.Session.State.LIVE
     }
 
     // ---- DECLINE ----

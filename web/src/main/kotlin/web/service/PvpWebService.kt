@@ -7,6 +7,7 @@ import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.duel.RecentDuelResolutions
 import database.dto.UserDto
+import database.pvp.PvpSessionRegistry
 import database.rps.RpsSessionRegistry
 import database.service.UserService
 import database.tictactoe.TicTacToeSessionRegistry
@@ -238,7 +239,7 @@ class PvpWebService(
         val opponentDiscordId = if (viewerDiscordId == session.initiatorDiscordId)
             session.opponentDiscordId else session.initiatorDiscordId
         val pickTtlSeconds = rpsSessionRegistry.pickTtl.seconds
-        val expiresAt = if (session.state == RpsSessionRegistry.Session.State.LIVE)
+        val expiresAt = if (session.state == PvpSessionRegistry.Session.State.LIVE)
             session.createdAt.epochSecond + pickTtlSeconds else null
         return RpsSessionView(
             sessionId = session.id,
@@ -409,7 +410,7 @@ class PvpWebService(
         viewerDiscordId: Long,
     ): TicTacToeSessionView {
         val moveTtlSeconds = ticTacToeSessionRegistry.moveTtl.seconds
-        val moveExpires = if (session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE) {
+        val moveExpires = if (session.state == PvpSessionRegistry.Session.State.LIVE) {
             session.createdAt.epochSecond + (moveTtlSeconds * (session.moveNumber + 1))
         } else null
         val myMark = session.markFor(viewerDiscordId)
@@ -424,10 +425,10 @@ class PvpWebService(
             ),
             state = session.state.name,
             cells = session.board.cells.map { it?.name },
-            currentActorDiscordId = if (session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE)
+            currentActorDiscordId = if (session.state == PvpSessionRegistry.Session.State.LIVE)
                 session.currentActorDiscordId().toString() else null,
             myMark = myMark?.name,
-            myTurn = session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE &&
+            myTurn = session.state == PvpSessionRegistry.Session.State.LIVE &&
                 myMark != null && myMark == session.currentTurn,
             winningLine = session.winningLine,
             winner = session.winner?.name,
@@ -492,7 +493,7 @@ class PvpWebService(
         viewerDiscordId: Long,
     ): Connect4SessionView {
         val moveTtlSeconds = connect4SessionRegistry.moveTtl.seconds
-        val moveExpires = if (session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE) {
+        val moveExpires = if (session.state == PvpSessionRegistry.Session.State.LIVE) {
             session.createdAt.epochSecond + (moveTtlSeconds * (session.moveNumber + 1))
         } else null
         val myMark = session.markFor(viewerDiscordId)
@@ -507,10 +508,10 @@ class PvpWebService(
             ),
             state = session.state.name,
             cells = session.board.cells.map { it?.name },
-            currentActorDiscordId = if (session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE)
+            currentActorDiscordId = if (session.state == PvpSessionRegistry.Session.State.LIVE)
                 session.currentActorDiscordId().toString() else null,
             myMark = myMark?.name,
-            myTurn = session.state == database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE &&
+            myTurn = session.state == PvpSessionRegistry.Session.State.LIVE &&
                 myMark != null && myMark == session.currentTurn,
             winningLine = session.winningLine,
             winner = session.winner?.name,
