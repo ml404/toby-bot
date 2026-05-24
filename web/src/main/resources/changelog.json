@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Regroup 19 button files into themed sub-packages",
+    "summary": "Eleventh wave — and **PR 4 of 4 in the packaging-only re-organisation series** (continuing from #586, #587, #589). With this PR the packaging plan is complete. The flat `discord-bot/.../button/buttons/` directory mixed casino-game buttons, PvP-game buttons, team-split buttons, music buttons, the lottery buy button, the DnD roll button, and two misc buttons — **19 files alphabetised together**.",
+    "emoji": "🎟️",
+    "prNumber": 590
+  },
+  {
+    "date": "May 2026",
     "title": "Regroup 34 command/embeds files into per-game subdirs",
     "summary": "Tenth wave of the refactor pass — and PR 3 of 4 in the packaging-only re-organisation series (continuing from #586, #587). The flat `discord-bot/.../command/commands/game/` directory mixed **all 14 casino games** (Baccarat, Blackjack, CasinoHoldem, Coinflip, Dice, Highlow, HorseRacing, Keno, Plinko, Poker, Roulette, Scratch, Slots, WheelOfFortune), **all 4 PvP games** (RPS, TicTacToe, Connect4, Duel), **5 shared helpers** (GameCommand, PvpButtonIdCodec, PvpChallengeCeremon…",
     "emoji": "🎟️",
