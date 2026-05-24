@@ -171,6 +171,7 @@
         <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='month')}"
            role="tab"
            class="lb-sort-option"
+           data-sort="month"
            th:classappend="${view.sort.name() == 'THIS_MONTH' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'THIS_MONTH'}">
             💰 Credits this month
@@ -178,6 +179,7 @@
         <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='lifetime')}"
            role="tab"
            class="lb-sort-option"
+           data-sort="lifetime"
            th:classappend="${view.sort.name() == 'LIFETIME' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'LIFETIME'}">
             💰 Lifetime credits
@@ -185,6 +187,7 @@
         <a th:href="@{/leaderboard/{id}(id=${guildId}, sort='xp')}"
            role="tab"
            class="lb-sort-option"
+           data-sort="xp"
            th:classappend="${view.sort.name() == 'XP' ? 'active' : ''}"
            th:aria-selected="${view.sort.name() == 'XP'}">
             ✨ XP
@@ -224,7 +227,10 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="row : ${view.standings}">
+                    <tr th:each="row : ${view.standings}"
+                        th:attr="data-credits-month=${row.creditsEarnedThisMonth},
+                                 data-credits-total=${row.socialCredit},
+                                 data-xp=${row.xp}">
                         <td data-label="#">
                             <span class="lb-rank"
                                   th:classappend="${row.rank == 1 ? 'lb-rank-1' : (row.rank == 2 ? 'lb-rank-2' : (row.rank == 3 ? 'lb-rank-3' : ''))}"

@@ -1214,11 +1214,11 @@ td { font-size: 0.95rem; }
     }
     /* XP gets its own full-width row below the other metrics so the
        Credits/Month/Voice strip stays the visual hero of the card.
-       Centered to balance the 3-cell row above. */
+       Left-aligned under the Credits column to anchor the eye to a
+       single vertical reading line rather than floating in the centre. */
     .lb-standings-table.mod-table td[data-label="XP"] {
         grid-area: m4;
-        align-items: center;
-        text-align: center;
+        align-items: flex-start;
     }
     .lb-standings-table.mod-table td[data-label="Credits"]::before,
     .lb-standings-table.mod-table td[data-label="TOBY"]::before,

@@ -130,4 +130,73 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeTooltip(openTooltip);
     });
+
+    // ===================================================================
+    // Client-side sort for the Members tab.
+    //
+    // The sort chips stay as <a href> for the no-JS case (full page reload
+    // re-runs the server-side sort on table + podium). When JS is on we
+    // hijack the click and re-order the standings <tbody> in place. The
+    // URL stays untouched and the podium (rendered for the URL's sort
+    // initially) is not re-sorted — treat chip-click as "re-order the
+    // table I'm looking at", not "navigate to a different view".
+    // Refreshing the page restores the canonical URL-driven sort.
+    // ===================================================================
+    const sortNav = document.querySelector('.lb-sort');
+    const tbody = document.querySelector('.lb-standings-table tbody');
+    if (sortNav && tbody) {
+        const valueAttr = {
+            month: 'data-credits-month',
+            lifetime: 'data-credits-total',
+            xp: 'data-xp',
+        };
+        const rankClass = (rank) =>
+            rank === 1 ? 'lb-rank-1'
+                : rank === 2 ? 'lb-rank-2'
+                    : rank === 3 ? 'lb-rank-3'
+                        : '';
+
+        function applySort(sortKey) {
+            const attr = valueAttr[sortKey];
+            if (!attr) return;
+
+            // Stable numeric-desc sort. Detach, sort, re-append.
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            rows.sort((a, b) => {
+                const av = Number(a.getAttribute(attr)) || 0;
+                const bv = Number(b.getAttribute(attr)) || 0;
+                return bv - av;
+            });
+            const frag = document.createDocumentFragment();
+            rows.forEach((tr, i) => {
+                const newRank = i + 1;
+                const rankEl = tr.querySelector('.lb-rank');
+                if (rankEl) {
+                    rankEl.textContent = String(newRank);
+                    rankEl.classList.remove('lb-rank-1', 'lb-rank-2', 'lb-rank-3');
+                    const cls = rankClass(newRank);
+                    if (cls) rankEl.classList.add(cls);
+                }
+                frag.appendChild(tr);
+            });
+            tbody.appendChild(frag);
+
+            // Toggle the active state on the chips so the visible
+            // selection follows the user's click.
+            sortNav.querySelectorAll('.lb-sort-option').forEach((c) => {
+                const isActive = c.dataset.sort === sortKey;
+                c.classList.toggle('active', isActive);
+                c.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        }
+
+        sortNav.querySelectorAll('.lb-sort-option').forEach((chip) => {
+            chip.addEventListener('click', (e) => {
+                const sortKey = chip.dataset.sort;
+                if (!sortKey || !valueAttr[sortKey]) return; // fall through to href
+                e.preventDefault();
+                applySort(sortKey);
+            });
+        });
+    }
 })();
