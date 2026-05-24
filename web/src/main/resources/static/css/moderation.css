@@ -1021,17 +1021,14 @@ details.config-section.is-hidden { display: none; }
     margin-left: auto;
 }
 
-/* Moderation Actions tab: stacked forms for ban / timeout / purge etc.
-   Each form is a block laid out with a column of labels + a submit row. */
+/* Moderation Actions tab: each action lives inside a .mod-card, so the
+   form itself just handles the column layout for its labels and submit
+   button — the surrounding card provides background, border, padding,
+   and the elevation shadow. */
 .mod-action-form {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-3);
-    margin-bottom: var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
 }
 .mod-action-form label {
     display: flex;
@@ -1072,11 +1069,25 @@ details.config-section.is-hidden { display: none; }
     display: flex;
     gap: var(--space-2);
 }
-.action-explainer {
-    margin: calc(var(--space-2) * -1) 0 var(--space-3);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    max-width: 70ch;
+
+/* Section group on the Actions tab — wraps a .mod-card-grid with a
+   sibling <h2 class="mod-section-title">. Adds breathing room between
+   the two action groups (Member actions / Channel actions) so they
+   read as distinct modules. */
+.mod-section + .mod-section { margin-top: var(--space-6); }
+
+/* The shared .mod-card h3 rule renders the title as a small uppercase
+   eyebrow — that's right for KPI cards (e.g. casino's "JACKPOT POOL"
+   above a big-number) but reads as a label, not a title, on the
+   Actions tab where the h3 is the card's own heading. Promote it to
+   a real heading scoped to this tab only so the rest of the
+   dashboard's KPI cards stay on the eyebrow style. */
+[data-panel="actions"] .mod-card h3 {
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+    font-weight: 600;
 }
 
 /* ==============================================================
