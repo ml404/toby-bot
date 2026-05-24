@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Left-align mobile XP + client-side sort the Members tab",
+    "summary": "Two follow-ups on the Members tab from screenshot review: ### 1. Mobile XP card — left-align under Credits PR #560 added the XP cell as a third row spanning all three grid columns, centred. User reported it \"still looks wonky\" and wanted XP aligned under the Credits column instead. One-rule CSS change in `base.css`: drop `text-align: center` and switch `align-items` from `center` to `flex-start`, mirroring the m1 / Credits alignment. The cell still spans the full row; only…",
+    "emoji": "🔨",
+    "prNumber": 562
+  },
+  {
+    "date": "May 2026",
     "title": "Broken activity page — pre-compute chart view in controller",
     "summary": "The Activity sub-page at `/moderation/{guildId}/activity` (added in PR #558) is rendering the bot's generic \"Something went wrong / Error 200 — OK\" error block mid-page and cutting off the second chart. User reproduced on a deployed guild — screenshot showed the page intro and \"MESSAGES PER DAY\" heading render correctly, then \"Total over window:\" with no value, then the error block + footer. ### Root cause The template called `T(web.service.ActivityChartsService).totalValu…",
     "emoji": "🛡️",
