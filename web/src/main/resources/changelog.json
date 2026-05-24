@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Unify PvpController RPS endpoints onto the board helpers",
+    "summary": "Third wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579 and #580). `PvpController` already extracted shared challenge / accept / close-offer / forfeit helpers for the two turn-based games (TTT, C4), but the RPS section reinvented the same five endpoints inline — same access checks, same SSE fan-out shapes, same registry-call sequence, just with RPS-specific service/registry/event-name strings. ~340 lines of near-duplicate code. After the `PvpSession…",
+    "emoji": "🧹",
+    "prNumber": 581
+  },
+  {
+    "date": "May 2026",
     "title": "Extract PvpSessionRegistry base + split ModerationController",
     "summary": "Second wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579). Two logically independent commits: 1. **`refactor(pvp): extract PvpSessionRegistry base + re-parent TurnBased and Rps`** — The two session registries had ~120 lines of identical plumbing (Caffeine cache, atomic PENDING→LIVE, indexers, primitives). Lifted the shared surface into `database.pvp.PvpSessionRegistry<TSession>`; `TurnBasedBoardSessionRegistry` and `RpsSessionRegistry` are now thin…",
     "emoji": "🧹",
