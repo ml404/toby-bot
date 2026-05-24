@@ -349,6 +349,35 @@ class PvpWebService(
                     lossTribute = null,
                     initiatorChoice = null, opponentChoice = null,
                 )
+
+            /**
+             * Translate an RPS resolve-outcome sealed type into the
+             * shared wire-DTO. Returns null for `Unknown` so callers
+             * can pass the result straight into the SSE payload (null
+             * is JSON-serialised as `null`).
+             */
+            fun fromRps(
+                outcome: database.service.RpsService.ResolveOutcome,
+                initiatorDiscordId: Long,
+            ): PvpResolutionOutcome? = when (outcome) {
+                is database.service.RpsService.ResolveOutcome.Win -> rpsWin(outcome, initiatorDiscordId)
+                is database.service.RpsService.ResolveOutcome.Draw -> rpsDraw(outcome)
+                is database.service.RpsService.ResolveOutcome.DoubleRefund -> rpsDoubleRefund(outcome)
+                database.service.RpsService.ResolveOutcome.Unknown -> null
+            }
+
+            /**
+             * Translate a turn-based-board resolve-outcome sealed type
+             * (TTT, C4) into the shared wire-DTO. Same null-on-Unknown
+             * contract as [fromRps].
+             */
+            fun fromBoard(
+                outcome: database.boardgame.TurnBasedBoardWagerService.ResolveOutcome,
+            ): PvpResolutionOutcome? = when (outcome) {
+                is database.boardgame.TurnBasedBoardWagerService.ResolveOutcome.Win -> boardWin(outcome)
+                is database.boardgame.TurnBasedBoardWagerService.ResolveOutcome.Draw -> boardDraw(outcome)
+                database.boardgame.TurnBasedBoardWagerService.ResolveOutcome.Unknown -> null
+            }
         }
     }
 
