@@ -131,12 +131,51 @@
         </section>
     </section>
 
-    <section id="pvp-panel-rps" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-rps" hidden>
-        <div class="pvp-coming-soon">
-            <h2>✊ Rock-Paper-Scissors</h2>
-            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
-                <code>/rps @opponent stake:&lt;credits&gt;</code> and play the round through the embed buttons.</p>
-        </div>
+    <section id="pvp-panel-rps" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-rps"
+             th:attr="data-min-stake=${rpsMinStake}, data-max-stake=${rpsMaxStake}" hidden>
+        <section class="pvp-card">
+            <h2>✊ Challenge someone</h2>
+            <form id="rps-challenge" autocomplete="off">
+                <label for="rps-opponent">Opponent</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='opponentDiscordId',
+                        id='rps-opponent',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='Pick an opponent…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+
+                <label for="rps-stake">Stake (credits)</label>
+                <input id="rps-stake" name="stake" type="number"
+                       th:attr="min=${rpsMinStake}, max=${rpsMaxStake}" th:value="${rpsMinStake}" step="1" required>
+
+                <div class="pvp-form-actions">
+                    <button type="submit" id="rps-send" class="btn-primary">Send challenge</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="pvp-active" id="rps-active-section" hidden>
+            <h2>Live match</h2>
+            <div id="rps-active" class="pvp-board" data-game="rps"></div>
+        </section>
+
+        <section class="pvp-inbox">
+            <h2>Pending offers for you</h2>
+            <div id="rps-pending-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No pending RPS offers right now.</p>
+            </div>
+        </section>
+
+        <section class="pvp-outbox">
+            <h2>Your outgoing offers</h2>
+            <div id="rps-outgoing-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No outgoing RPS challenges right now.</p>
+            </div>
+        </section>
     </section>
 
     <section id="pvp-panel-tictactoe" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-tictactoe" hidden>

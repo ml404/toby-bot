@@ -509,4 +509,306 @@
     tickExpiries();
     setInterval(tickExpiries, 1000);
     setInterval(refreshAll, 5000);
+
+    // ─── RPS panel (SSE-driven, no polling) ───────────────────────────
+    //
+    // One EventSource feeds every PvP event for the signed-in viewer in
+    // this guild. We open it once on page load. Initial state is GET-
+    // fetched once on tab show; subsequent updates come from SSE events.
+    initRpsPanel(document, guildId);
+
+    function initRpsPanel(doc, guildId) {
+        const panel = doc.getElementById('pvp-panel-rps');
+        if (!panel) return;
+        const form = doc.getElementById('rps-challenge');
+        const pendingList = doc.getElementById('rps-pending-list');
+        const outgoingList = doc.getElementById('rps-outgoing-list');
+        const activeSection = doc.getElementById('rps-active-section');
+        const activeBoard = doc.getElementById('rps-active');
+        if (!form || !pendingList || !outgoingList || !activeBoard) return;
+
+        // Track the session the user is currently looking at (the live
+        // match). If the SSE delivers an event for a different session,
+        // it goes to the inbox / outbox instead.
+        let activeSessionId = null;
+        let activeSnapshot = null;
+        let initialFetched = false;
+
+        // ── Initial state on first tab show ──
+        function fetchInitialState() {
+            if (initialFetched) return;
+            initialFetched = true;
+            Promise.all([
+                fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/rps/outgoing', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/rps/active', { credentials: 'same-origin' }).then(safeJson),
+            ]).then(function (results) {
+                renderPendingList(pendingList, results[0] || [], 'incoming');
+                renderPendingList(outgoingList, results[1] || [], 'outgoing');
+                const active = (results[2] || []);
+                if (active.length > 0) openActiveSession(active[0]);
+            }).catch(function () { /* network blip — SSE will catch us up */ });
+        }
+        // Tab show hook — fetch when the panel becomes visible. Tabs.js
+        // doesn't expose an event, so we observe the `hidden` attribute.
+        const observer = new MutationObserver(function () {
+            if (!panel.hidden) fetchInitialState();
+        });
+        observer.observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+        if (!panel.hidden) fetchInitialState();
+
+        // ── SSE channel — shared across all PvP games ──
+        // Opened lazily so we don't burn a connection on guests who
+        // never click any PvP tab. Once open, it stays open for the
+        // lifetime of the page.
+        let eventSource = null;
+        function ensureStream() {
+            if (eventSource) return;
+            try {
+                eventSource = new EventSource('/pvp/' + guildId + '/stream');
+            } catch (e) {
+                return; // no SSE support — RPS still works via GET initial-fetch on tab show
+            }
+            eventSource.addEventListener('rps.offered', function (e) { onOffered(parseEvent(e)); });
+            eventSource.addEventListener('rps.accepted', function (e) { onAccepted(parseEvent(e)); });
+            eventSource.addEventListener('rps.picked', function (e) { onOpponentPicked(parseEvent(e)); });
+            eventSource.addEventListener('rps.resolved', function (e) { onResolved(parseEvent(e)); });
+            eventSource.addEventListener('rps.removed', function (e) { onRemoved(parseEvent(e)); });
+        }
+        // Open immediately — other PvP tabs will share this connection.
+        ensureStream();
+
+        // ── Event handlers ──
+        function onOffered(payload) {
+            // Refetch pending list (the payload may be partial; safer to GET).
+            fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' })
+                .then(safeJson).then(function (rows) {
+                    renderPendingList(pendingList, rows || [], 'incoming');
+                });
+        }
+        function onAccepted(payload) {
+            // Either I or my opponent accepted an offer; an active session exists now.
+            // Pull the session view for the right id.
+            if (!payload || !payload.sessionId) return;
+            fetch('/pvp/' + guildId + '/rps/' + payload.sessionId, { credentials: 'same-origin' })
+                .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
+            // Pending and outgoing lists need refreshing too — the offer is no longer pending.
+            refreshLists();
+        }
+        function onOpponentPicked(payload) {
+            if (!payload || !payload.sessionId) return;
+            if (activeSessionId !== payload.sessionId) return;
+            if (activeSnapshot) {
+                activeSnapshot.opponentPicked = true;
+                renderRpsBoard(activeBoard, activeSnapshot);
+            }
+        }
+        function onResolved(payload) {
+            if (!payload || !payload.sessionId) return;
+            if (activeSessionId === payload.sessionId && payload.outcome) {
+                renderResolution(activeBoard, payload.outcome);
+                setTimeout(closeActiveSession, 6000);
+            }
+            refreshLists();
+        }
+        function onRemoved(payload) {
+            if (!payload || !payload.sessionId) return;
+            // If the removed one was the active match, drop it.
+            if (activeSessionId === payload.sessionId) closeActiveSession();
+            refreshLists();
+        }
+
+        function refreshLists() {
+            fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' })
+                .then(safeJson).then(function (rows) { renderPendingList(pendingList, rows || [], 'incoming'); });
+            fetch('/pvp/' + guildId + '/rps/outgoing', { credentials: 'same-origin' })
+                .then(safeJson).then(function (rows) { renderPendingList(outgoingList, rows || [], 'outgoing'); });
+        }
+
+        // ── Pending/outgoing list rendering ──
+        function renderPendingList(container, rows, kind) {
+            container.querySelectorAll('.pvp-pending-row').forEach(function (r) { r.remove(); });
+            const empty = container.querySelector('[data-empty]');
+            if (rows.length === 0) {
+                if (empty) empty.hidden = false;
+                return;
+            }
+            if (empty) empty.hidden = true;
+            rows.forEach(function (row) {
+                container.appendChild(buildPendingRow(row, kind));
+            });
+        }
+        function buildPendingRow(row, kind) {
+            const sessionId = row.sessionId;
+            const participants = row.participants || {};
+            const incoming = kind === 'incoming';
+            const otherSide = incoming ? participants.initiator : participants.opponent;
+            const div = document.createElement('div');
+            div.className = 'pvp-pending-row';
+            div.dataset.sessionId = String(sessionId);
+            div.innerHTML =
+                '<div class="pvp-pending-info">' +
+                  '<div class="pvp-pending-who"><span class="muted">' + (incoming ? 'From' : 'To') + '</span> ' +
+                    '<strong></strong></div>' +
+                  '<div class="pvp-pending-meta"><span>for <strong></strong> credits</span></div>' +
+                '</div>' +
+                '<div class="pvp-pending-actions"></div>';
+            div.querySelector('.pvp-pending-who strong').textContent = (otherSide && otherSide.name) || 'Unknown';
+            div.querySelectorAll('strong')[1].textContent = String(participants.stake || 0);
+            const actions = div.querySelector('.pvp-pending-actions');
+            if (incoming) {
+                actions.appendChild(makeButton('Accept', 'btn-primary', function () { acceptOffer(sessionId); }));
+                actions.appendChild(makeButton('Decline', 'btn-secondary', function () { declineOffer(sessionId); }));
+            } else {
+                actions.appendChild(makeButton('Cancel', 'btn-secondary', function () { cancelOffer(sessionId); }));
+            }
+            return div;
+        }
+
+        // ── Active session ──
+        function openActiveSession(view) {
+            activeSessionId = view.sessionId;
+            activeSnapshot = view;
+            activeSection.hidden = false;
+            renderRpsBoard(activeBoard, view);
+        }
+        function closeActiveSession() {
+            activeSessionId = null;
+            activeSnapshot = null;
+            activeSection.hidden = true;
+            activeBoard.innerHTML = '';
+        }
+
+        function renderRpsBoard(boardEl, view) {
+            const opponent = view.participants && view.participants.opponent;
+            const stake = (view.participants && view.participants.stake) || 0;
+            boardEl.innerHTML = '';
+            const header = document.createElement('p');
+            header.className = 'pvp-board-header';
+            header.textContent = 'vs ' + ((opponent && opponent.name) || 'opponent') + ' — stake ' + stake + ' credits';
+            boardEl.appendChild(header);
+
+            if (view.iPicked) {
+                const msg = document.createElement('p');
+                msg.className = 'muted';
+                msg.textContent = view.opponentPicked
+                    ? 'Both picked — resolving…'
+                    : 'You picked. Waiting for opponent…';
+                boardEl.appendChild(msg);
+            } else {
+                const choices = document.createElement('div');
+                choices.className = 'pvp-rps-choices';
+                [{ label: '✊ Rock', value: 'ROCK' }, { label: '✋ Paper', value: 'PAPER' }, { label: '✌️ Scissors', value: 'SCISSORS' }]
+                    .forEach(function (c) {
+                        const btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'pvp-rps-choice';
+                        btn.textContent = c.label;
+                        btn.addEventListener('click', function () { submitPick(view.sessionId, c.value); });
+                        choices.appendChild(btn);
+                    });
+                boardEl.appendChild(choices);
+                if (view.opponentPicked) {
+                    const note = document.createElement('p');
+                    note.className = 'muted';
+                    note.textContent = 'Opponent has already picked — your move.';
+                    boardEl.appendChild(note);
+                }
+            }
+
+            const forfeit = makeButton('Forfeit', 'btn-secondary', function () { submitForfeit(view.sessionId); });
+            forfeit.classList.add('pvp-board-forfeit');
+            boardEl.appendChild(forfeit);
+        }
+
+        function renderResolution(boardEl, outcome) {
+            boardEl.innerHTML = '';
+            const verdict = document.createElement('h3');
+            verdict.className = 'pvp-board-verdict';
+            const winnerName = outcome.winnerDiscordId === activeSnapshot.participants.initiator.discordId
+                ? activeSnapshot.participants.initiator.name
+                : (activeSnapshot.participants.opponent && activeSnapshot.participants.opponent.name) || 'Opponent';
+            if (outcome.verdict === 'WIN') {
+                verdict.textContent = winnerName + ' wins — pot ' + outcome.pot;
+            } else if (outcome.verdict === 'DRAW') {
+                verdict.textContent = 'Draw — both picked ' + (outcome.initiatorChoice || '?').toLowerCase();
+            } else {
+                verdict.textContent = 'Refund — neither picked';
+            }
+            boardEl.appendChild(verdict);
+        }
+
+        // ── Mutations ──
+        function acceptOffer(sessionId) {
+            postJson('/pvp/' + guildId + '/rps/' + sessionId + '/accept', {});
+        }
+        function declineOffer(sessionId) {
+            postJson('/pvp/' + guildId + '/rps/' + sessionId + '/decline', {});
+        }
+        function cancelOffer(sessionId) {
+            postJson('/pvp/' + guildId + '/rps/' + sessionId + '/cancel', {});
+        }
+        function submitPick(sessionId, choice) {
+            postJson('/pvp/' + guildId + '/rps/' + sessionId + '/pick', { choice: choice })
+                .then(function (resp) {
+                    if (!resp || !resp.ok) return;
+                    // If this pick triggered resolution, render outcome now;
+                    // otherwise reflect "waiting for opponent" locally.
+                    if (resp.outcome) {
+                        renderResolution(activeBoard, resp.outcome);
+                        setTimeout(closeActiveSession, 6000);
+                    } else if (activeSnapshot) {
+                        activeSnapshot.iPicked = true;
+                        renderRpsBoard(activeBoard, activeSnapshot);
+                    }
+                });
+        }
+        function submitForfeit(sessionId) {
+            postJson('/pvp/' + guildId + '/rps/' + sessionId + '/forfeit', {});
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const opponent = document.getElementById('rps-opponent').value;
+            const stakeRaw = parseInt(document.getElementById('rps-stake').value, 10);
+            if (!opponent) {
+                if (window.toast) window.toast('Pick an opponent.', 'error');
+                return;
+            }
+            postJson('/pvp/' + guildId + '/rps/challenge', {
+                opponentDiscordId: opponent, stake: isFinite(stakeRaw) ? stakeRaw : 0,
+            }).then(function (resp) {
+                if (!resp) return;
+                if (!resp.ok) {
+                    if (window.toast) window.toast(resp.error || 'Challenge failed.', 'error');
+                    return;
+                }
+                if (window.toast) window.toast('Challenge sent.', 'success');
+                refreshLists();
+            });
+        });
+
+        // ── Helpers ──
+        function makeButton(label, cls, onClick) {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = cls;
+            b.textContent = label;
+            b.addEventListener('click', onClick);
+            return b;
+        }
+        function parseEvent(e) {
+            try { return JSON.parse(e.data); } catch (_) { return null; }
+        }
+        function safeJson(r) { return r.ok ? r.json() : null; }
+        function postJson(url, body) {
+            return window.TobyApi
+                ? window.TobyApi.postJson(url, body).catch(function () { return null; })
+                : fetch(url, {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+        }
+    }
 })(typeof window !== 'undefined' ? window : null);
