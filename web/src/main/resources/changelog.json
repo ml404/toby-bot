@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Polish /utils page with animated 8-ball, dice, and reel",
+    "summary": "The `/utils` page used to be plain forms with a `<pre>` printing the answer in monospace text. Every utility now mirrors the thing it does: **Magic 8-ball** — a real ball that shakes for ~700 ms, then fades the answer into the triangular window. **Dice roller** — classic pip-faced d6s (six static SVGs) for 6-sided rolls; rounded numbered die for everything else. Dice tumble in, staggered, and settle. >24 dice collapse to \"+N more\" while the text output still lists every ro…",
+    "emoji": "✨",
+    "prNumber": 588
+  },
+  {
+    "date": "May 2026",
     "title": "Regroup 77 files into themed sub-packages",
     "summary": "Ninth wave of the refactor pass — and PR 2 of 4 in the packaging-only re-organisation series (continuing from #586). The flat `database/persistence/` (38) + `persistence/impl/` (38 + 1 helper) directory had the same **77-file-bucket** discoverability problem the service side did — casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild entity persistence types all sat alongside each other. Mirrors the service-side regroup landed in #586. Theme buc…",
     "emoji": "🎰",
