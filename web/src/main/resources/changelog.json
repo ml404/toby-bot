@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Split Casino + PvP, deep-link PvP games, promote Commands",
+    "summary": "PvP was nested under \"Economy\" in the navbar — bad fit, PvP has no market mechanics. The home page's numbers strip already treats Casino + PvP as peer categories (\"15 Casino games\" / \"4 PvP games\"); the navbar now mirrors that. Plus the broader correctness pass the user asked for. ### Navbar changes **New top-level \"PvP\" section** between Casino and Economy with a dropdown listing all four PvP games — Duel, Rock-Paper-Scissors, Tic-Tac-Toe, Connect 4 — each with the same e…",
+    "emoji": "✨",
+    "prNumber": 578
+  },
+  {
+    "date": "May 2026",
     "title": "Bound suspicion-tracker map + cache 12-month rollup query",
     "summary": "Follow-up to the audit after #574 landed — that PR trimmed `ProfileCardRenderer`, which is a rarely-exercised path. The real memory pressure comes from surfaces the bot exercises all day. This PR addresses two of them: **C) Bound `CasinoBotSuspicionService`** — the per-(user, guild, game) state map was an unbounded `ConcurrentHashMap`. `evictGuild` only fires on bot-leave and the idle-reset clears the deque but leaves the map entry, so a one-and-done casino player left a p…",
     "emoji": "⚡",
