@@ -51,12 +51,15 @@ details.config-section.is-hidden { display: none; }
 .mod-subnav {
     display: flex;
     flex-wrap: nowrap;
-    gap: 4px;
+    gap: var(--space-1);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
-    border-bottom: 1px solid var(--border);
+    padding: var(--space-1);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     margin-bottom: var(--space-5);
 }
 .mod-subnav::-webkit-scrollbar { height: 4px; }
@@ -77,14 +80,17 @@ details.config-section.is-hidden { display: none; }
     padding: var(--space-2) var(--space-4);
     text-decoration: none;
     font-size: inherit;
-    border-bottom: 2px solid transparent;
-    margin-bottom: -1px;
-    transition: color 0.15s, border-color 0.15s;
+    border-radius: var(--radius-sm);
+    transition: color 0.15s, background-color 0.15s;
 }
-.mod-subnav-link:hover { color: var(--text); }
+.mod-subnav-link:hover {
+    color: var(--text);
+    background: var(--accent-soft);
+}
 .mod-subnav-link.active {
     color: var(--accent);
-    border-bottom-color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
 }
 
 .mod-panel { display: block; }
@@ -1064,4 +1070,217 @@ details.config-section.is-hidden { display: none; }
     .welcome-autorole-add label {
         flex: 1 1 100%;
     }
+}
+
+/* ==============================================================
+   Activity tab — stat tiles + polished area charts with axes,
+   gridlines, markers, and hover tooltips. Layered as:
+     .activity-block (one per metric)
+       └─ .activity-stats  → grid of .activity-stat tiles
+       └─ .activity-chart-card → chart container with axes + svg
+   The chart card hosts the SVG plus absolutely-positioned axis
+   labels and the floating .activity-tooltip; the tooltip is driven
+   by /js/moderation/activity.js.
+   ============================================================== */
+
+:root {
+    --activity-msg: #5b8def;
+    --activity-voice: #57f287;
+}
+
+.activity-panel { display: flex; flex-direction: column; gap: var(--space-6); }
+
+.activity-intro {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+.activity-intro p { margin: 0; max-width: 60ch; }
+.activity-date-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 4px var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.activity-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.activity-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--space-3);
+}
+.activity-stat {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--activity-color, var(--accent));
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.activity-stat-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+.activity-stat-value {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+}
+.activity-stat-sub {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+}
+
+.activity-chart-card {
+    /* Position context for the floating .activity-tooltip. */
+    position: relative;
+    gap: var(--space-3);
+}
+.activity-chart-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+}
+.activity-chart-head h3 {
+    /* Larger than the default .mod-card h3 — this is the chart's primary label. */
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+    font-weight: 600;
+}
+
+.activity-chart-body {
+    position: relative;
+    padding-left: 44px;   /* leave room for the Y-axis labels */
+    padding-bottom: 22px; /* and the X-axis labels */
+}
+.activity-chart {
+    display: block;
+    width: 100%;
+    height: 220px;
+    overflow: visible;
+}
+.activity-grid-line {
+    stroke: var(--border);
+    stroke-width: 1;
+    stroke-dasharray: 2 4;
+    opacity: 0.6;
+}
+.activity-area {
+    pointer-events: none;
+}
+.activity-line {
+    stroke: var(--activity-color, var(--accent));
+    pointer-events: none;
+}
+.activity-marker {
+    fill: var(--activity-color, var(--accent));
+    opacity: 0;
+    transition: opacity 0.12s, r 0.12s;
+    pointer-events: none;
+}
+.activity-marker.is-active {
+    opacity: 1;
+    r: 4.5;
+}
+
+.activity-axis-y,
+.activity-axis-x {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+.activity-axis-y {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 220px;
+}
+.activity-axis-y li {
+    position: absolute;
+    right: 6px;
+    transform: translateY(-50%);
+}
+.activity-axis-x {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    padding: 0 4px;
+}
+
+.activity-tooltip {
+    position: absolute;
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 12px));
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 6px var(--space-2);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    color: var(--text);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    white-space: nowrap;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.activity-tooltip[hidden] { display: none; }
+.activity-tooltip-value {
+    font-weight: 600;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+.activity-tooltip-date {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.activity-empty {
+    margin: 0;
+    padding: var(--space-6) var(--space-4);
+    text-align: center;
+    color: var(--text-muted);
+    background: var(--bg);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+}
+
+@media (max-width: 600px) {
+    .activity-chart { height: 180px; }
+    .activity-axis-y { height: 180px; }
+    .activity-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .activity-stat-value { font-size: 1.35rem; }
+}
+@media (max-width: 380px) {
+    .activity-stats { grid-template-columns: minmax(0, 1fr); }
 }
