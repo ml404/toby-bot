@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Unified dashboard header + .mod-page-intro shell",
+    "summary": "Phase 2 of the moderation dashboard refresh — unifies the shared chrome across all 10 tabs so each page reads as part of one designed dashboard instead of 10 stitched-together tabs. **New `.mod-page-header`** in `fragments/moderationHeader.html`: guild avatar (fed from a new `GuildOverview.guildIconUrl`, with a coloured-initial fallback when the guild has no icon) + \"Server name\" eyebrow + H1 with the active tab's label + a per-tab one-line description, plus a right-pinned…",
+    "emoji": "🛡️",
+    "prNumber": 569
+  },
+  {
+    "date": "May 2026",
     "title": "RPS web backend — endpoints, SSE fan-out, view DTOs",
     "summary": "First slice of PR 1b. Wires the **backend half of Rock-Paper-Scissors web play** onto the existing `/pvp` surface; the page still shows the \"coming soon\" RPS panel until the next slice adds JS/HTML/CSS. Established the SSE infrastructure that TicTacToe and Connect 4 will reuse. ### Backend endpoints `POST /pvp/{guildId}/rps/{challenge,accept,decline,cancel,pick,forfeit}` — all six mutations call into the existing `RpsService` + `RpsSessionRegistry`, so achievements / XP /…",
     "emoji": "✨",
