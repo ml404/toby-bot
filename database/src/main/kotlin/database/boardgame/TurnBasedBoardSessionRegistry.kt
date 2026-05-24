@@ -1,8 +1,7 @@
 package database.boardgame
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import database.configuration.RegistryScheduler
+import database.pvp.BoundedSessionCache
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -96,16 +95,12 @@ abstract class TurnBasedBoardSessionRegistry<TSession : TurnBasedBoardSessionReg
     ): TSession
 
     /**
-     * Caffeine cache + `asMap()` view. Every read/write below uses
-     * [sessions] (the ConcurrentMap view) for atomic primitives;
-     * [cache] is kept only so the `expireAfterWrite` / `maximumSize`
-     * configuration stays in scope and the GC root chain is explicit.
+     * Bounded + TTL'd `ConcurrentMap` view over a Caffeine cache. See
+     * [BoundedSessionCache] for the rationale; this registry uses the
+     * atomic-primitive surface (`put` / `remove` / `values`) directly.
      */
-    private val cache: Cache<Long, TSession> = Caffeine.newBuilder()
-        .expireAfterWrite(maxLifetime)
-        .maximumSize(maximumSessions)
-        .build()
-    private val sessions: ConcurrentMap<Long, TSession> = cache.asMap()
+    private val sessions: ConcurrentMap<Long, TSession> =
+        BoundedSessionCache.build(maxLifetime, maximumSessions)
     private val seq = AtomicLong()
 
     /** Per-session pending shot-clock task. Keyed by sessionId. */

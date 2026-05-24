@@ -1,9 +1,8 @@
 package database.rps
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
 import common.rps.RpsEngine
 import database.configuration.RegistryScheduler
+import database.pvp.BoundedSessionCache
 import org.springframework.stereotype.Component
 import java.time.Duration
 import java.time.Instant
@@ -66,16 +65,12 @@ class RpsSessionRegistry(
     }
 
     /**
-     * Caffeine cache + `asMap()` view. Every read/write below uses
-     * [sessions] (the ConcurrentMap view) for atomic primitives;
-     * [cache] is kept only so the `expireAfterWrite` / `maximumSize`
-     * configuration stays in scope and the GC root chain is explicit.
+     * Bounded + TTL'd `ConcurrentMap` view over a Caffeine cache. See
+     * [BoundedSessionCache] for the rationale; this registry uses the
+     * atomic-primitive surface (`put` / `remove` / `values`) directly.
      */
-    private val cache: Cache<Long, Session> = Caffeine.newBuilder()
-        .expireAfterWrite(maxLifetime)
-        .maximumSize(maximumSessions)
-        .build()
-    private val sessions: ConcurrentMap<Long, Session> = cache.asMap()
+    private val sessions: ConcurrentMap<Long, Session> =
+        BoundedSessionCache.build(maxLifetime, maximumSessions)
     private val seq = AtomicLong()
 
     /**
