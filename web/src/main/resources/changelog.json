@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Migrate /duel web surface to /pvp with 4-tab unified page",
+    "summary": "First slice of the `/pvp` web surface plan. Migrates the existing Duel web UI out of `/duel/*` into a new unified `/pvp/{guildId}` page with a four-tab strip — **Duel** (fully wired, same DuelService + PendingDuelRegistry as before) plus three \"coming soon\" placeholders for **Rock-Paper-Scissors**, **Tic-Tac-Toe**, **Connect 4**. The placeholders point visitors at the existing Discord slash commands (`/rps`, `/tictactoe`, `/connect4`) while the web play surfaces for those…",
+    "emoji": "💰",
+    "prNumber": 566
+  },
+  {
+    "date": "May 2026",
     "title": "Drive category visibility from section.hidden, not a hardcoded allowlist",
     "summary": "Fixes the empty **Games** filter on `/commands/wiki` (regression from #563): the previous CSS enumerated every valid `data-active-cat` slug, the new `games` slug wasn't on the list, so clicking the chip hit the `:not(...)` fallback and hid every section. Refactors the visibility model so the bug class can't recur: `applyFilters()` already iterates every section and knows whether each matches the active chip, so it now sets `section.hidden` for the category miss too. The `.…",
     "emoji": "🔨",
