@@ -2,7 +2,6 @@ package web.controller
 
 import common.connect4.Connect4Engine
 import common.tictactoe.TicTacToeEngine
-import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.rps.RpsSessionRegistry
@@ -551,7 +550,7 @@ class PvpController(
             initiatorChoice = consumed.picks[consumed.initiatorDiscordId],
             opponentChoice = consumed.picks[consumed.opponentDiscordId],
         )
-        val resolution = translateRpsOutcome(outcome, consumed.initiatorDiscordId)
+        val resolution = PvpWebService.PvpResolutionOutcome.fromRps(outcome, consumed.initiatorDiscordId)
         // Both sides see the result. The picker who triggered resolution gets it in
         // their POST response; the other learns of it via this SSE event.
         pvpSseService.fanOutToBoth(
@@ -578,7 +577,7 @@ class PvpController(
         // the picker.
         resolveAfterForfeit = { consumed, forfeiter ->
             val survivingPicks = consumed.picks.filterKeys { it != forfeiter }
-            translateRpsOutcome(
+            PvpWebService.PvpResolutionOutcome.fromRps(
                 rpsService.resolveMatch(
                     initiatorDiscordId = consumed.initiatorDiscordId,
                     opponentDiscordId = consumed.opponentDiscordId,
@@ -610,7 +609,7 @@ class PvpController(
             initiatorChoice = session.picks[session.initiatorDiscordId],
             opponentChoice = session.picks[session.opponentDiscordId],
         )
-        val resolution = translateRpsOutcome(outcome, session.initiatorDiscordId)
+        val resolution = PvpWebService.PvpResolutionOutcome.fromRps(outcome, session.initiatorDiscordId)
         pvpSseService.fanOutToBoth(
             session.guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.resolved",
             mapOf(
@@ -619,24 +618,6 @@ class PvpController(
                 "outcome" to (resolution as Any? ?: emptyMap<String, Any>()),
             ),
         )
-    }
-
-    private fun translateRpsOutcome(
-        outcome: RpsService.ResolveOutcome,
-        initiatorDiscordId: Long,
-    ): PvpWebService.PvpResolutionOutcome? = when (outcome) {
-        is RpsService.ResolveOutcome.Win -> PvpWebService.PvpResolutionOutcome.rpsWin(outcome, initiatorDiscordId)
-        is RpsService.ResolveOutcome.Draw -> PvpWebService.PvpResolutionOutcome.rpsDraw(outcome)
-        is RpsService.ResolveOutcome.DoubleRefund -> PvpWebService.PvpResolutionOutcome.rpsDoubleRefund(outcome)
-        RpsService.ResolveOutcome.Unknown -> null
-    }
-
-    private fun translateBoardOutcome(
-        outcome: TurnBasedBoardWagerService.ResolveOutcome,
-    ): PvpWebService.PvpResolutionOutcome? = when (outcome) {
-        is TurnBasedBoardWagerService.ResolveOutcome.Win -> PvpWebService.PvpResolutionOutcome.boardWin(outcome)
-        is TurnBasedBoardWagerService.ResolveOutcome.Draw -> PvpWebService.PvpResolutionOutcome.boardDraw(outcome)
-        TurnBasedBoardWagerService.ResolveOutcome.Unknown -> null
     }
 
     // ─── TicTacToe ────────────────────────────────────────────────────
@@ -771,7 +752,7 @@ class PvpController(
         forfeit = { ticTacToeSessionRegistry.forfeit(it) },
         resolveAfterForfeit = { consumed, forfeiter ->
             val winner = if (forfeiter == consumed.initiatorDiscordId) consumed.opponentDiscordId else consumed.initiatorDiscordId
-            translateBoardOutcome(
+            PvpWebService.PvpResolutionOutcome.fromBoard(
                 ticTacToeService.resolveMatch(consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winner)
             )
         },
@@ -802,7 +783,7 @@ class PvpController(
                 val outcome = ticTacToeService.resolveMatch(
                     consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winnerDiscordId,
                 )
-                val resolution = translateBoardOutcome(outcome)
+                val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
                 pvpSseService.fanOutToBoth(
                     guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "tictactoe.resolved",
                     mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
@@ -814,7 +795,7 @@ class PvpController(
                 val outcome = ticTacToeService.resolveMatch(
                     consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, null,
                 )
-                val resolution = translateBoardOutcome(outcome)
+                val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
                 pvpSseService.fanOutToBoth(
                     guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "tictactoe.resolved",
                     mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
@@ -841,7 +822,7 @@ class PvpController(
         val outcome = ticTacToeService.resolveMatch(
             session.initiatorDiscordId, session.opponentDiscordId, session.guildId, session.stake, opponentDiscordId,
         )
-        val resolution = translateBoardOutcome(outcome)
+        val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
         pvpSseService.fanOutToBoth(
             session.guildId, session.initiatorDiscordId, session.opponentDiscordId, "tictactoe.resolved",
             mapOf(
@@ -980,7 +961,7 @@ class PvpController(
         forfeit = { connect4SessionRegistry.forfeit(it) },
         resolveAfterForfeit = { consumed, forfeiter ->
             val winner = if (forfeiter == consumed.initiatorDiscordId) consumed.opponentDiscordId else consumed.initiatorDiscordId
-            translateBoardOutcome(
+            PvpWebService.PvpResolutionOutcome.fromBoard(
                 connect4Service.resolveMatch(consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winner)
             )
         },
@@ -1008,7 +989,7 @@ class PvpController(
                 val outcome = connect4Service.resolveMatch(
                     consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, winnerDiscordId,
                 )
-                val resolution = translateBoardOutcome(outcome)
+                val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
                 pvpSseService.fanOutToBoth(
                     guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "connect4.resolved",
                     mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
@@ -1020,7 +1001,7 @@ class PvpController(
                 val outcome = connect4Service.resolveMatch(
                     consumed.initiatorDiscordId, consumed.opponentDiscordId, guildId, consumed.stake, null,
                 )
-                val resolution = translateBoardOutcome(outcome)
+                val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
                 pvpSseService.fanOutToBoth(
                     guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "connect4.resolved",
                     mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
@@ -1046,7 +1027,7 @@ class PvpController(
         val outcome = connect4Service.resolveMatch(
             session.initiatorDiscordId, session.opponentDiscordId, session.guildId, session.stake, opponentDiscordId,
         )
-        val resolution = translateBoardOutcome(outcome)
+        val resolution = PvpWebService.PvpResolutionOutcome.fromBoard(outcome)
         pvpSseService.fanOutToBoth(
             session.guildId, session.initiatorDiscordId, session.opponentDiscordId, "connect4.resolved",
             mapOf(
