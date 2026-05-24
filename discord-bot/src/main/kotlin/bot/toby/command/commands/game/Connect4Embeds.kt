@@ -64,16 +64,12 @@ object Connect4Embeds {
     fun forfeitButtonId(sessionId: Long): String = encode(Action.FORFEIT, sessionId, 0L)
 
     private fun encode(action: Action, sessionId: Long, payload: Long): String =
-        listOf(BUTTON_NAME, action.name, sessionId.toString(), payload.toString())
-            .joinToString(":")
+        PvpButtonIdCodec.encode(BUTTON_NAME, action.name, sessionId, payload)
 
     fun parseButtonId(componentId: String): ParsedButtonId? {
-        val parts = componentId.split(':')
-        if (parts.size != 4 || !parts[0].equals(BUTTON_NAME, ignoreCase = true)) return null
-        val action = runCatching { Action.valueOf(parts[1]) }.getOrNull() ?: return null
-        val sessionId = parts[2].toLongOrNull() ?: return null
-        val payload = parts[3].toLongOrNull() ?: return null
-        return ParsedButtonId(action, sessionId, payload)
+        val raw = PvpButtonIdCodec.parse(componentId, BUTTON_NAME) ?: return null
+        val action = runCatching { Action.valueOf(raw.actionName) }.getOrNull() ?: return null
+        return ParsedButtonId(action, raw.sessionId, raw.payload)
     }
 
     /** Maps DROP_<n> → column index `n`; returns null for non-DROP actions. */

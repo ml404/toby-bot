@@ -65,16 +65,12 @@ object RpsEmbeds {
     fun forfeitButtonId(sessionId: Long): String = encode(Action.FORFEIT, sessionId, 0L)
 
     private fun encode(action: Action, sessionId: Long, scopedDiscordId: Long): String =
-        listOf(BUTTON_NAME, action.name, sessionId.toString(), scopedDiscordId.toString())
-            .joinToString(":")
+        PvpButtonIdCodec.encode(BUTTON_NAME, action.name, sessionId, scopedDiscordId)
 
     fun parseButtonId(componentId: String): ParsedButtonId? {
-        val parts = componentId.split(':')
-        if (parts.size != 4 || !parts[0].equals(BUTTON_NAME, ignoreCase = true)) return null
-        val action = runCatching { Action.valueOf(parts[1]) }.getOrNull() ?: return null
-        val sessionId = parts[2].toLongOrNull() ?: return null
-        val scopedDiscordId = parts[3].toLongOrNull() ?: return null
-        return ParsedButtonId(action, sessionId, scopedDiscordId)
+        val raw = PvpButtonIdCodec.parse(componentId, BUTTON_NAME) ?: return null
+        val action = runCatching { Action.valueOf(raw.actionName) }.getOrNull() ?: return null
+        return ParsedButtonId(action, raw.sessionId, raw.payload)
     }
 
     /**
