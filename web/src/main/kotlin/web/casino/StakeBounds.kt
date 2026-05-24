@@ -15,6 +15,7 @@ import common.economy.WheelOfFortune
 import common.blackjack.Blackjack
 import common.poker.CasinoHoldem
 import database.service.ConfigService
+import database.boardgame.TurnBasedBoardWagerService
 import database.service.DuelService
 import database.service.RpsService
 import database.service.cfgLong
@@ -152,6 +153,22 @@ class StakeBounds(
         ConfigDto.Configurations.RPS_MAX_STAKE,
         RpsService.MIN_STAKE,
         RpsService.MAX_STAKE,
+    )
+
+    fun ticTacToe(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.TICTACTOE_MIN_STAKE,
+        ConfigDto.Configurations.TICTACTOE_MAX_STAKE,
+        TurnBasedBoardWagerService.DEFAULT_MIN_STAKE,
+        TurnBasedBoardWagerService.DEFAULT_MAX_STAKE,
+    )
+
+    fun connect4(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.CONNECT4_MIN_STAKE,
+        ConfigDto.Configurations.CONNECT4_MAX_STAKE,
+        TurnBasedBoardWagerService.DEFAULT_MIN_STAKE,
+        TurnBasedBoardWagerService.DEFAULT_MAX_STAKE,
     )
 
     private fun read(

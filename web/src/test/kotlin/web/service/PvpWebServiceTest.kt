@@ -22,6 +22,8 @@ class PvpWebServiceTest {
 
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
     private lateinit var rpsSessionRegistry: RpsSessionRegistry
+    private lateinit var ticTacToeSessionRegistry: database.tictactoe.TicTacToeSessionRegistry
+    private lateinit var connect4SessionRegistry: database.connect4.Connect4SessionRegistry
     private lateinit var userService: UserService
     private lateinit var memberLookup: MemberLookupHelper
     private lateinit var recentDuelResolutions: RecentDuelResolutions
@@ -31,6 +33,8 @@ class PvpWebServiceTest {
     fun setup() {
         pendingDuelRegistry = mockk(relaxed = true)
         rpsSessionRegistry = mockk(relaxed = true)
+        ticTacToeSessionRegistry = mockk(relaxed = true)
+        connect4SessionRegistry = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         memberLookup = mockk {
             every { resolveAll(any(), any()) } returns emptyMap()
@@ -39,7 +43,7 @@ class PvpWebServiceTest {
         recentDuelResolutions = mockk {
             every { consumeForInitiator(any(), any()) } returns emptyList()
         }
-        service = PvpWebService(pendingDuelRegistry, rpsSessionRegistry, userService, memberLookup, recentDuelResolutions)
+        service = PvpWebService(pendingDuelRegistry, rpsSessionRegistry, ticTacToeSessionRegistry, connect4SessionRegistry, userService, memberLookup, recentDuelResolutions)
     }
 
     @Test

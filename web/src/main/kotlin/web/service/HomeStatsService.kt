@@ -32,9 +32,15 @@ class HomeStatsService(
     data class HomeStats(
         val serverCount: Int,
         val commandCount: Int,
+        /** Grand total — casino + pvp. The numbers strip and hero stats
+         *  strip "Games" tiles read this. */
         val gameCount: Int,
         val minigameCount: Int,
         val minigameNames: String,
+        /** Casino-only count (minigames + tables + draws). The hero
+         *  prose ("X-game casino") and the casino feature card tag
+         *  read this so they stay accurate when PvP grows. */
+        val casinoGameCount: Int,
         val pvpGameCount: Int,
         val pvpGameNames: String,
         val configKeyCount: Int,
@@ -69,6 +75,7 @@ class HomeStatsService(
         gameCount = GameCatalog.total,
         minigameCount = GameCatalog.minigameCount,
         minigameNames = GameCatalog.minigameNames,
+        casinoGameCount = GameCatalog.casinoCount,
         pvpGameCount = GameCatalog.pvpCount,
         pvpGameNames = GameCatalog.pvpNames,
         configKeyCount = ConfigDto.Configurations.values().size,

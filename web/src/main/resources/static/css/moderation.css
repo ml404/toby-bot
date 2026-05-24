@@ -1021,17 +1021,14 @@ details.config-section.is-hidden { display: none; }
     margin-left: auto;
 }
 
-/* Moderation Actions tab: stacked forms for ban / timeout / purge etc.
-   Each form is a block laid out with a column of labels + a submit row. */
+/* Moderation Actions tab: each action lives inside a .mod-card, so the
+   form itself just handles the column layout for its labels and submit
+   button — the surrounding card provides background, border, padding,
+   and the elevation shadow. */
 .mod-action-form {
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    padding: var(--space-3);
-    margin-bottom: var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
 }
 .mod-action-form label {
     display: flex;
@@ -1072,11 +1069,25 @@ details.config-section.is-hidden { display: none; }
     display: flex;
     gap: var(--space-2);
 }
-.action-explainer {
-    margin: calc(var(--space-2) * -1) 0 var(--space-3);
-    font-size: 0.9rem;
-    line-height: 1.5;
-    max-width: 70ch;
+
+/* Section group on the Actions tab — wraps a .mod-card-grid with a
+   sibling <h2 class="mod-section-title">. Adds breathing room between
+   the two action groups (Member actions / Channel actions) so they
+   read as distinct modules. */
+.mod-section + .mod-section { margin-top: var(--space-6); }
+
+/* The shared .mod-card h3 rule renders the title as a small uppercase
+   eyebrow — that's right for KPI cards (e.g. casino's "JACKPOT POOL"
+   above a big-number) but reads as a label, not a title, on the
+   Actions tab where the h3 is the card's own heading. Promote it to
+   a real heading scoped to this tab only so the rest of the
+   dashboard's KPI cards stay on the eyebrow style. */
+[data-panel="actions"] .mod-card h3 {
+    font-size: 1rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text);
+    font-weight: 600;
 }
 
 /* ==============================================================
@@ -1420,7 +1431,12 @@ details.config-section.is-hidden { display: none; }
     .activity-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .activity-stat-value { font-size: 1.35rem; }
 }
-@media (max-width: 380px) {
+/* On typical phone widths (≤480px including iPhone SE/14/15 portrait)
+   the 2-up tile grid leaves ~150px per tile, which crowds a 1.35rem
+   big-number like "999,999". Drop to a single column here instead of
+   waiting for the 380px breakpoint — the tiles read better as a
+   simple vertical list. */
+@media (max-width: 480px) {
     .activity-stats { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -1460,12 +1476,29 @@ details.config-section.is-hidden { display: none; }
     overflow-y: auto;
 }
 @media (max-width: 768px) {
+    /* Mobile: rail becomes a horizontal scroll strip, same pattern as
+       .mod-subnav. Group <p> headings are hidden and the eight link
+       chips sit flat as siblings so the user gets a one-line "jump to"
+       bar instead of a 300px-tall wrap-row that pushes the actual
+       settings content below the fold. `display: contents` on the
+       group divs flattens them so the flex layout treats their
+       children as direct siblings. */
     .settings-nav {
         position: static;
         max-height: none;
         flex-direction: row;
-        flex-wrap: wrap;
-        gap: var(--space-2);
+        flex-wrap: nowrap;
+        gap: var(--space-1);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--space-2);
+    }
+    .settings-nav::-webkit-scrollbar { height: 4px; }
+    .settings-nav::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 2px;
     }
 }
 
@@ -1475,7 +1508,9 @@ details.config-section.is-hidden { display: none; }
     gap: 2px;
 }
 @media (max-width: 768px) {
-    .settings-nav-group { flex: 1 1 auto; min-width: 140px; }
+    .settings-nav-group { display: contents; }
+    .settings-nav-heading { display: none; }
+    .settings-nav-link { flex: 0 0 auto; white-space: nowrap; }
 }
 
 .settings-nav-heading {
@@ -1567,6 +1602,62 @@ details.config-section.is-hidden { display: none; }
 .settings-stakes-table tbody tr.is-hidden { display: none; }
 .settings-stakes-table tbody tr:hover { background: var(--bg); }
 
+/* Mobile: the table's 480px min-width forces a horizontal scroll the
+   user has to swipe through every row. Collapse to per-row cards
+   instead, reusing the same `data-label` / ::before pattern that
+   `.mod-table` uses below the same breakpoint. */
+@media (max-width: 600px) {
+    .settings-stakes-wrap {
+        margin: 0 0 var(--space-4);
+        overflow-x: visible;
+        border-top: 0;
+    }
+    .settings-stakes-table { min-width: 0; }
+    .settings-stakes-table thead { display: none; }
+    .settings-stakes-table tbody,
+    .settings-stakes-table tbody tr,
+    .settings-stakes-table tbody td { display: block; width: 100%; }
+    .settings-stakes-table tbody tr {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: var(--space-3);
+        margin-bottom: var(--space-2);
+    }
+    .settings-stakes-table tbody th {
+        display: block;
+        width: 100%;
+        padding: 0 0 var(--space-2);
+        margin-bottom: var(--space-2);
+        font-size: 0.95rem;
+        border-bottom: 1px solid var(--border);
+    }
+    .settings-stakes-table tbody td {
+        padding: var(--space-2) 0;
+        border: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--space-2);
+    }
+    .settings-stakes-table tbody td::before {
+        content: attr(data-label);
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+        font-weight: 600;
+        flex: 0 0 auto;
+    }
+    /* Stake cell already uses flex; on mobile let its input grow to
+       fill the available space inside the table cell. */
+    .config-row.settings-stake-cell {
+        flex: 1 1 auto;
+        justify-content: flex-end;
+    }
+    .config-row.settings-stake-cell input { max-width: none; }
+}
+
 /* Stake cells override .config-row's desktop grid (which was sized
    for the wide label-on-left layout) — inside a table cell we just
    want input + Save sitting flush together. */
@@ -1606,6 +1697,12 @@ details.config-section.is-hidden { display: none; }
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
+}
+/* On mobile the bulk widget sits inside the stakes section's mobile
+   card layout — drop its own horizontal padding to align with the
+   surrounding section. */
+@media (max-width: 600px) {
+    .settings-stakes-bulk { margin: 0 0 var(--space-4); }
 }
 .settings-stakes-bulk-text strong {
     display: block;
@@ -1651,4 +1748,18 @@ details.config-section.is-hidden { display: none; }
 @media (max-width: 768px) {
     .settings-stakes-bulk { grid-template-columns: minmax(0, 1fr); }
     .settings-stakes-bulk-fields { justify-content: flex-start; }
+}
+
+/* On phones, drop the side-by-side fields layout for a vertical stack
+   so each input gets full width and the submit button reads as a
+   page-width primary action instead of getting lost on the right. */
+@media (max-width: 600px) {
+    .settings-stakes-bulk-fields {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-3);
+    }
+    .settings-stakes-bulk-field { width: 100%; }
+    .settings-stakes-bulk-field input { width: 100%; }
+    .settings-stakes-bulk-fields > button[type="submit"] { width: 100%; }
 }

@@ -178,20 +178,98 @@
         </section>
     </section>
 
-    <section id="pvp-panel-tictactoe" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-tictactoe" hidden>
-        <div class="pvp-coming-soon">
-            <h2>⭕ Tic-Tac-Toe</h2>
-            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
-                <code>/tictactoe @opponent stake:&lt;credits&gt;</code> and play moves through the embed buttons.</p>
-        </div>
+    <section id="pvp-panel-tictactoe" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-tictactoe"
+             th:attr="data-min-stake=${tttMinStake}, data-max-stake=${tttMaxStake}" hidden>
+        <section class="pvp-card">
+            <h2>⭕ Challenge someone</h2>
+            <form id="tictactoe-challenge" autocomplete="off">
+                <label for="tictactoe-opponent">Opponent</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='opponentDiscordId',
+                        id='tictactoe-opponent',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='Pick an opponent…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+
+                <label for="tictactoe-stake">Stake (credits)</label>
+                <input id="tictactoe-stake" name="stake" type="number"
+                       th:attr="min=${tttMinStake}, max=${tttMaxStake}" th:value="${tttMinStake}" step="1" required>
+
+                <div class="pvp-form-actions">
+                    <button type="submit" id="tictactoe-send" class="btn-primary">Send challenge</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="pvp-active" id="tictactoe-active-section" hidden>
+            <h2>Live match</h2>
+            <div id="tictactoe-active" class="pvp-board" data-game="tictactoe"></div>
+        </section>
+
+        <section class="pvp-inbox">
+            <h2>Pending offers for you</h2>
+            <div id="tictactoe-pending-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No pending Tic-Tac-Toe offers right now.</p>
+            </div>
+        </section>
+
+        <section class="pvp-outbox">
+            <h2>Your outgoing offers</h2>
+            <div id="tictactoe-outgoing-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No outgoing Tic-Tac-Toe challenges right now.</p>
+            </div>
+        </section>
     </section>
 
-    <section id="pvp-panel-connect4" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-connect4" hidden>
-        <div class="pvp-coming-soon">
-            <h2>🔴 Connect 4</h2>
-            <p class="muted">Web play is coming. For now, challenge anyone in this server from Discord with
-                <code>/connect4 @opponent stake:&lt;credits&gt;</code> and play moves through the embed buttons.</p>
-        </div>
+    <section id="pvp-panel-connect4" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-connect4"
+             th:attr="data-min-stake=${c4MinStake}, data-max-stake=${c4MaxStake}" hidden>
+        <section class="pvp-card">
+            <h2>🔴 Challenge someone</h2>
+            <form id="connect4-challenge" autocomplete="off">
+                <label for="connect4-opponent">Opponent</label>
+                <div th:replace="~{fragments/userPicker :: userPicker(
+                        name='opponentDiscordId',
+                        id='connect4-opponent',
+                        members=${members},
+                        selectedId=null,
+                        placeholder='Pick an opponent…',
+                        emptyLabel=null,
+                        required=true,
+                        multiple=false,
+                        showSocialCredit=false)}"></div>
+
+                <label for="connect4-stake">Stake (credits)</label>
+                <input id="connect4-stake" name="stake" type="number"
+                       th:attr="min=${c4MinStake}, max=${c4MaxStake}" th:value="${c4MinStake}" step="1" required>
+
+                <div class="pvp-form-actions">
+                    <button type="submit" id="connect4-send" class="btn-primary">Send challenge</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="pvp-active" id="connect4-active-section" hidden>
+            <h2>Live match</h2>
+            <div id="connect4-active" class="pvp-board" data-game="connect4"></div>
+        </section>
+
+        <section class="pvp-inbox">
+            <h2>Pending offers for you</h2>
+            <div id="connect4-pending-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No pending Connect 4 offers right now.</p>
+            </div>
+        </section>
+
+        <section class="pvp-outbox">
+            <h2>Your outgoing offers</h2>
+            <div id="connect4-outgoing-list" class="pvp-pending-list">
+                <p class="muted" data-empty>No outgoing Connect 4 challenges right now.</p>
+            </div>
+        </section>
     </section>
 </main>
 
