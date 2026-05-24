@@ -1,9 +1,12 @@
 package web.controller
 
 import database.duel.PendingDuelRegistry
+import database.rps.RpsSessionRegistry
 import database.service.DuelService
 import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
+import database.service.RpsService
+import database.service.PvpWagerService
 import database.service.UserService
 import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
@@ -18,8 +21,10 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.StakeBounds
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import web.event.WebDuelOfferedEvent
 import web.service.EconomyWebService
+import web.service.PvpSseService
 import web.service.PvpWebService
 import web.service.MemberLookupHelper
 import web.controller.support.GuildPickerSupport
@@ -33,9 +38,10 @@ import web.util.displayName
  * wired game is `/pvp/{guildId}/duel/...` — same [DuelService] the
  * Discord command uses and the same in-memory [PendingDuelRegistry]
  * so a duel offered in Discord can be accepted via the web inbox and
- * vice versa. Rock-paper-scissors, tic-tac-toe, and connect 4 tabs
- * render in the unified page but are placeholders until their
- * controller endpoints land in a follow-up PR.
+ * vice versa. Rock-paper-scissors plays end-to-end on the web via
+ * `/pvp/{guildId}/rps/...`; tic-tac-toe and connect 4 tabs render in
+ * the unified page but are placeholders until their controller
+ * endpoints land in a follow-up PR.
  *
  * Old `/duel/...` URLs are kept alive via [DuelRedirectController]
  * which 301/308s every former route into the new `/pvp/...` space.
@@ -44,7 +50,10 @@ import web.util.displayName
 @RequestMapping("/pvp")
 class PvpController(
     private val duelService: DuelService,
+    private val rpsService: RpsService,
+    private val rpsSessionRegistry: RpsSessionRegistry,
     private val pvpWebService: PvpWebService,
+    private val pvpSseService: PvpSseService,
     private val pendingDuelRegistry: PendingDuelRegistry,
     private val economyWebService: EconomyWebService,
     private val userService: UserService,
@@ -323,6 +332,376 @@ class PvpController(
         StartOutcome.UnknownOpponent -> "Opponent has no user record in this guild yet."
         is StartOutcome.Ok -> "OK"
     }
+
+    // ─── RPS ──────────────────────────────────────────────────────────
+
+    /**
+     * SSE stream of every PvP event relevant to the signed-in viewer
+     * in this guild — new offers, accepts, declines, picks,
+     * resolutions. Client opens one EventSource per page; updates
+     * appear sub-100ms after the originating mutation. Replaces what
+     * a polling timer would do.
+     */
+    @GetMapping("/{guildId}/stream", produces = ["text/event-stream"])
+    @ResponseBody
+    fun pvpStream(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): SseEmitter {
+        val discordId = user.discordIdOrNull()
+            ?: return SseEmitter(0).also { it.completeWithError(IllegalStateException("Not signed in.")) }
+        if (!economyWebService.isMember(discordId, guildId)) {
+            return SseEmitter(0).also { it.completeWithError(IllegalStateException("Not a member of this server.")) }
+        }
+        return pvpSseService.register(guildId, discordId)
+    }
+
+    @GetMapping("/{guildId}/rps/pending")
+    @ResponseBody
+    fun rpsPendingForMe(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<List<PvpWebService.RpsPendingView>> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        ResponseEntity.ok(pvpWebService.rpsPendingForOpponent(discordId, guildId))
+    }
+
+    @GetMapping("/{guildId}/rps/outgoing")
+    @ResponseBody
+    fun rpsOutgoingForMe(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<List<PvpWebService.RpsPendingView>> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        ResponseEntity.ok(pvpWebService.rpsPendingForInitiator(discordId, guildId))
+    }
+
+    @GetMapping("/{guildId}/rps/active")
+    @ResponseBody
+    fun rpsActiveForMe(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<List<PvpWebService.RpsSessionView>> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        ResponseEntity.ok(pvpWebService.rpsActiveFor(discordId, guildId))
+    }
+
+    @GetMapping("/{guildId}/rps/{sessionId}")
+    @ResponseBody
+    fun rpsSession(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpWebService.RpsSessionView> = WebGuildAccess.requireMemberForJsonNoBody(
+        user, guildId, economyWebService
+    ) { discordId ->
+        val view = pvpWebService.rpsSessionView(sessionId, discordId)
+            ?: return@requireMemberForJsonNoBody ResponseEntity.status(404).build()
+        ResponseEntity.ok(view)
+    }
+
+    @PostMapping("/{guildId}/rps/challenge")
+    @ResponseBody
+    fun rpsChallenge(
+        @PathVariable guildId: Long,
+        @RequestBody request: ChallengeRequest,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> = WebGuildAccess.requireMemberForJson(
+        user, guildId, economyWebService,
+        errorBuilder = { status ->
+            ResponseEntity.status(status).body(
+                PvpActionResponse(
+                    false,
+                    error = if (status == 401) "Not signed in." else "You are not a member of that server."
+                )
+            )
+        }
+    ) { discordId ->
+        val opponentDiscordId = request.opponentDiscordId.toLongOrNull()
+            ?: return@requireMemberForJson ResponseEntity.badRequest()
+                .body(PvpActionResponse(false, error = "Pick an opponent."))
+        if (opponentDiscordId == discordId) {
+            return@requireMemberForJson ResponseEntity.badRequest()
+                .body(PvpActionResponse(false, error = "You can't challenge yourself."))
+        }
+        if (!economyWebService.isMember(opponentDiscordId, guildId)) {
+            return@requireMemberForJson ResponseEntity.badRequest()
+                .body(PvpActionResponse(false, error = "Pick someone from this server."))
+        }
+        pvpWebService.ensureOpponent(opponentDiscordId, guildId)
+        val start = rpsService.startMatch(discordId, opponentDiscordId, guildId, request.stake)
+        if (start !is PvpWagerService.StartOutcome.Ok) {
+            return@requireMemberForJson ResponseEntity.badRequest()
+                .body(PvpActionResponse(false, error = pvpStartErrorMessage(start, "rock-paper-scissors")))
+        }
+        val session = rpsSessionRegistry.register(
+            guildId = guildId,
+            initiatorDiscordId = discordId,
+            opponentDiscordId = opponentDiscordId,
+            stake = request.stake,
+        )
+        // Surface the offer to the opponent's PvP page in real-time —
+        // their inbox view of the RPS tab repaints from this event
+        // without polling. Initiator-side ack comes back on the POST
+        // response, no separate SSE fan-out needed.
+        pvpSseService.fanOutToUser(
+            guildId, opponentDiscordId, "rps.offered",
+            pvpWebService.rpsSessionView(session.id, opponentDiscordId) ?: emptyMap<String, Any>(),
+        )
+        ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = session.id, stake = request.stake))
+    }
+
+    @PostMapping("/{guildId}/rps/{sessionId}/accept")
+    @ResponseBody
+    fun rpsAccept(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
+        val session = rpsSessionRegistry.get(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
+        if (session.guildId != guildId) {
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this offer."))
+        }
+        if (session.opponentDiscordId != discordId) {
+            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "This isn't your offer."))
+        }
+        // Flip PENDING → LIVE atomically. If we lose the race (Discord-side accept, timeout) the registry
+        // returns null and the user sees a 410.
+        rpsSessionRegistry.accept(sessionId, onPickTimeout = ::resolveRpsOnPickTimeout)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
+        val debit = rpsService.acceptMatch(session.initiatorDiscordId, session.opponentDiscordId, guildId, session.stake)
+        if (debit !is PvpWagerService.AcceptOutcome.Ok) {
+            // Stakes weren't debitable post-accept (e.g. balance dropped between offer and accept).
+            // Drain the session so neither side stays in LIVE with un-debited stakes.
+            rpsSessionRegistry.forfeit(sessionId)
+            pvpSseService.fanOutToBoth(
+                guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.removed",
+                mapOf("sessionId" to sessionId, "reason" to "balance_changed"),
+            )
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = acceptErrorMessage(debit)))
+        }
+        // Both sides see the LIVE state — initiator's pick UI activates, opponent's
+        // already-open accept ack flips into pick UI.
+        pvpSseService.fanOutToBoth(
+            guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.accepted",
+            mapOf("sessionId" to sessionId, "state" to "LIVE", "stake" to session.stake),
+        )
+        return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId, stake = session.stake))
+    }
+
+    @PostMapping("/{guildId}/rps/{sessionId}/decline")
+    @ResponseBody
+    fun rpsDecline(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> = rpsCloseOffer(
+        guildId, sessionId, user, isInitiator = false, friendlyName = "decline",
+    )
+
+    @PostMapping("/{guildId}/rps/{sessionId}/cancel")
+    @ResponseBody
+    fun rpsCancel(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> = rpsCloseOffer(
+        guildId, sessionId, user, isInitiator = true, friendlyName = "cancel",
+    )
+
+    @PostMapping("/{guildId}/rps/{sessionId}/pick")
+    @ResponseBody
+    fun rpsPick(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @RequestBody request: RpsPickRequest,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
+        val session = rpsSessionRegistry.get(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
+        if (session.guildId != guildId) {
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this match."))
+        }
+        if (discordId != session.initiatorDiscordId && discordId != session.opponentDiscordId) {
+            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "You aren't in this match."))
+        }
+        val choice = pvpWebService.parseRpsChoice(request.choice)
+            ?: return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Pick rock, paper, or scissors."))
+        val after = rpsSessionRegistry.recordPick(sessionId, discordId, choice)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match isn't live."))
+        if (!after.bothPicked) {
+            // Tell the other side that you've submitted (no choice revealed).
+            val otherDiscordId =
+                if (discordId == after.initiatorDiscordId) after.opponentDiscordId else after.initiatorDiscordId
+            pvpSseService.fanOutToUser(
+                guildId, otherDiscordId, "rps.picked",
+                mapOf("sessionId" to sessionId, "opponentPicked" to true),
+            )
+            return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId, waitingForOpponent = true))
+        }
+        val consumed = rpsSessionRegistry.consumeForResolution(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
+        val outcome = rpsService.resolveMatch(
+            initiatorDiscordId = consumed.initiatorDiscordId,
+            opponentDiscordId = consumed.opponentDiscordId,
+            guildId = guildId,
+            stake = consumed.stake,
+            initiatorChoice = consumed.picks[consumed.initiatorDiscordId],
+            opponentChoice = consumed.picks[consumed.opponentDiscordId],
+        )
+        val resolution = translateRpsOutcome(outcome, consumed.initiatorDiscordId)
+        // Both sides see the result. The picker who triggered resolution gets it in
+        // their POST response; the other learns of it via this SSE event.
+        pvpSseService.fanOutToBoth(
+            guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "rps.resolved",
+            mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
+        )
+        return ResponseEntity.ok(
+            PvpActionResponse(ok = true, sessionId = sessionId, outcome = resolution),
+        )
+    }
+
+    @PostMapping("/{guildId}/rps/{sessionId}/forfeit")
+    @ResponseBody
+    fun rpsForfeit(
+        @PathVariable guildId: Long,
+        @PathVariable sessionId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+    ): ResponseEntity<PvpActionResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
+        val session = rpsSessionRegistry.get(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
+        if (session.guildId != guildId) {
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this match."))
+        }
+        if (discordId != session.initiatorDiscordId && discordId != session.opponentDiscordId) {
+            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "You aren't in this match."))
+        }
+        if (session.state != database.rps.RpsSessionRegistry.Session.State.LIVE) {
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Match isn't live."))
+        }
+        val consumed = rpsSessionRegistry.forfeit(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "Match already ended."))
+        // Forfeiter's pick is dropped; opponent's pick (if any) survives. resolveMatch handles the
+        // "exactly one picked" branch and pays the picker.
+        val survivingPicks = consumed.picks.filterKeys { it != discordId }
+        val outcome = rpsService.resolveMatch(
+            initiatorDiscordId = consumed.initiatorDiscordId,
+            opponentDiscordId = consumed.opponentDiscordId,
+            guildId = guildId,
+            stake = consumed.stake,
+            initiatorChoice = survivingPicks[consumed.initiatorDiscordId],
+            opponentChoice = survivingPicks[consumed.opponentDiscordId],
+        )
+        val resolution = translateRpsOutcome(outcome, consumed.initiatorDiscordId)
+        pvpSseService.fanOutToBoth(
+            guildId, consumed.initiatorDiscordId, consumed.opponentDiscordId, "rps.resolved",
+            mapOf("sessionId" to sessionId, "outcome" to (resolution as Any? ?: emptyMap<String, Any>())),
+        )
+        return ResponseEntity.ok(
+            PvpActionResponse(ok = true, sessionId = sessionId, outcome = resolution),
+        )
+    }
+
+    /** Shared body for `/decline` (opponent) and `/cancel` (initiator) on a PENDING RPS offer. */
+    private fun rpsCloseOffer(
+        guildId: Long,
+        sessionId: Long,
+        user: OAuth2User,
+        isInitiator: Boolean,
+        friendlyName: String,
+    ): ResponseEntity<PvpActionResponse> {
+        val discordId = user.discordIdOrNull()
+            ?: return ResponseEntity.status(401).body(PvpActionResponse(false, error = "Not signed in."))
+        val session = rpsSessionRegistry.get(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
+        if (session.guildId != guildId) {
+            return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Wrong guild for this offer."))
+        }
+        val expectedActor = if (isInitiator) session.initiatorDiscordId else session.opponentDiscordId
+        if (discordId != expectedActor) {
+            return ResponseEntity.status(403).body(PvpActionResponse(false, error = "This isn't your offer to $friendlyName."))
+        }
+        rpsSessionRegistry.decline(sessionId)
+            ?: return ResponseEntity.status(410).body(PvpActionResponse(false, error = "This offer already resolved or expired."))
+        // Notify the OTHER side that the offer is gone — their inbox or outbox
+        // entry should disappear in real-time.
+        val otherDiscordId = if (isInitiator) session.opponentDiscordId else session.initiatorDiscordId
+        pvpSseService.fanOutToUser(
+            guildId, otherDiscordId, "rps.removed",
+            mapOf("sessionId" to sessionId, "reason" to friendlyName),
+        )
+        return ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = sessionId))
+    }
+
+    /**
+     * Pick-phase timeout callback. The registry hands us the drained
+     * session; we resolve it with whatever picks were submitted so the
+     * debited stakes don't get stranded, then SSE-broadcast the result
+     * to both participants so their open pages reflect the timeout.
+     * The Discord embed (if any) doesn't get updated by this path —
+     * that's a known web-accept gap documented in the PR.
+     */
+    private fun resolveRpsOnPickTimeout(session: RpsSessionRegistry.Session) {
+        val outcome = rpsService.resolveMatch(
+            initiatorDiscordId = session.initiatorDiscordId,
+            opponentDiscordId = session.opponentDiscordId,
+            guildId = session.guildId,
+            stake = session.stake,
+            initiatorChoice = session.picks[session.initiatorDiscordId],
+            opponentChoice = session.picks[session.opponentDiscordId],
+        )
+        val resolution = translateRpsOutcome(outcome, session.initiatorDiscordId)
+        pvpSseService.fanOutToBoth(
+            session.guildId, session.initiatorDiscordId, session.opponentDiscordId, "rps.resolved",
+            mapOf(
+                "sessionId" to session.id,
+                "reason" to "pick_timeout",
+                "outcome" to (resolution as Any? ?: emptyMap<String, Any>()),
+            ),
+        )
+    }
+
+    private fun translateRpsOutcome(
+        outcome: RpsService.ResolveOutcome,
+        initiatorDiscordId: Long,
+    ): PvpWebService.PvpResolutionOutcome? = when (outcome) {
+        is RpsService.ResolveOutcome.Win -> PvpWebService.PvpResolutionOutcome.rpsWin(outcome, initiatorDiscordId)
+        is RpsService.ResolveOutcome.Draw -> PvpWebService.PvpResolutionOutcome.rpsDraw(outcome)
+        is RpsService.ResolveOutcome.DoubleRefund -> PvpWebService.PvpResolutionOutcome.rpsDoubleRefund(outcome)
+        RpsService.ResolveOutcome.Unknown -> null
+    }
+
+    private fun pvpStartErrorMessage(outcome: PvpWagerService.StartOutcome, gameLabel: String): String = when (outcome) {
+        is PvpWagerService.StartOutcome.InvalidStake -> "Stake must be between ${outcome.min} and ${outcome.max} credits."
+        is PvpWagerService.StartOutcome.InvalidOpponent -> "You can't challenge yourself at $gameLabel."
+        is PvpWagerService.StartOutcome.InitiatorInsufficient ->
+            "You need ${outcome.needed} credits but only have ${outcome.have}."
+        is PvpWagerService.StartOutcome.OpponentInsufficient ->
+            "Opponent only has ${outcome.have} credits — they can't cover a ${outcome.needed} stake."
+        PvpWagerService.StartOutcome.UnknownInitiator -> "No user record yet. Try another TobyBot command first."
+        PvpWagerService.StartOutcome.UnknownOpponent -> "Opponent has no user record in this guild yet."
+        is PvpWagerService.StartOutcome.Ok -> "OK"
+    }
+
+    private fun acceptErrorMessage(outcome: PvpWagerService.AcceptOutcome): String = when (outcome) {
+        is PvpWagerService.AcceptOutcome.InitiatorInsufficient ->
+            "Challenger no longer has enough credits."
+        is PvpWagerService.AcceptOutcome.OpponentInsufficient ->
+            "You no longer have enough credits."
+        PvpWagerService.AcceptOutcome.UnknownInitiator -> "Challenger's user record vanished."
+        PvpWagerService.AcceptOutcome.UnknownOpponent -> "Your user record vanished."
+        is PvpWagerService.AcceptOutcome.Ok -> "OK"
+    }
 }
 
 data class ChallengeRequest(val opponentDiscordId: String = "", val stake: Long = 0)
@@ -333,6 +712,24 @@ data class ChallengeResponse(
     val duelId: Long? = null,
     val stake: Long? = null
 )
+
+/** Body returned from any RPS / TTT / C4 action endpoint. Reused
+ *  across challenge / accept / decline / cancel / pick / forfeit so the
+ *  client has one shape to parse regardless of which step the user just
+ *  took. `outcome` is populated only on terminal resolutions. */
+data class PvpActionResponse(
+    val ok: Boolean,
+    val error: String? = null,
+    val sessionId: Long? = null,
+    val stake: Long? = null,
+    val waitingForOpponent: Boolean = false,
+    val outcome: PvpWebService.PvpResolutionOutcome? = null,
+)
+
+/** RPS pick body. The choice string is parsed in
+ *  [PvpWebService.parseRpsChoice] — case-insensitive, fails the
+ *  request on an unknown value. */
+data class RpsPickRequest(val choice: String = "")
 
 data class DuelActionResponse(
     val ok: Boolean,

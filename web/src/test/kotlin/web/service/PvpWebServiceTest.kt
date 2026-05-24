@@ -3,6 +3,7 @@ package web.service
 import database.duel.PendingDuelRegistry
 import database.duel.RecentDuelResolutions
 import database.dto.UserDto
+import database.rps.RpsSessionRegistry
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -20,6 +21,7 @@ class PvpWebServiceTest {
     private val guildId = 42L
 
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
+    private lateinit var rpsSessionRegistry: RpsSessionRegistry
     private lateinit var userService: UserService
     private lateinit var memberLookup: MemberLookupHelper
     private lateinit var recentDuelResolutions: RecentDuelResolutions
@@ -28,6 +30,7 @@ class PvpWebServiceTest {
     @BeforeEach
     fun setup() {
         pendingDuelRegistry = mockk(relaxed = true)
+        rpsSessionRegistry = mockk(relaxed = true)
         userService = mockk(relaxed = true)
         memberLookup = mockk {
             every { resolveAll(any(), any()) } returns emptyMap()
@@ -36,7 +39,7 @@ class PvpWebServiceTest {
         recentDuelResolutions = mockk {
             every { consumeForInitiator(any(), any()) } returns emptyList()
         }
-        service = PvpWebService(pendingDuelRegistry, userService, memberLookup, recentDuelResolutions)
+        service = PvpWebService(pendingDuelRegistry, rpsSessionRegistry, userService, memberLookup, recentDuelResolutions)
     }
 
     @Test

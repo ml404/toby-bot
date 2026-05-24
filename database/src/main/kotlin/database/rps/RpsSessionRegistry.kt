@@ -177,6 +177,41 @@ class RpsSessionRegistry(
 
     fun get(id: Long): Session? = sessions[id]
 
+    /**
+     * List PENDING offers where [discordId] is the opponent — the web
+     * inbox feed. Scans the Caffeine map (O(n), capped at
+     * [MAX_SESSIONS]); fine because n is bounded and the alternative
+     * (a parallel index keyed on opponent id) would have to be kept in
+     * sync through every state transition. Same approach as
+     * [PendingDuelRegistry.pendingForOpponent].
+     */
+    fun pendingForOpponent(discordId: Long, guildId: Long): List<Session> =
+        sessions.values.filter {
+            it.state == Session.State.PENDING &&
+                it.guildId == guildId &&
+                it.opponentDiscordId == discordId
+        }
+
+    /** Mirror of [pendingForOpponent] for outgoing offers (web outbox). */
+    fun pendingForInitiator(discordId: Long, guildId: Long): List<Session> =
+        sessions.values.filter {
+            it.state == Session.State.PENDING &&
+                it.guildId == guildId &&
+                it.initiatorDiscordId == discordId
+        }
+
+    /**
+     * List LIVE sessions where [discordId] is one of the two participants
+     * — the web active-game feed. Used by the polling endpoint that
+     * keeps the board in sync between Discord and web surfaces.
+     */
+    fun liveFor(discordId: Long, guildId: Long): List<Session> =
+        sessions.values.filter {
+            it.state == Session.State.LIVE &&
+                it.guildId == guildId &&
+                (it.initiatorDiscordId == discordId || it.opponentDiscordId == discordId)
+        }
+
     companion object {
         val DEFAULT_PENDING_TTL: Duration = Duration.ofMinutes(3)
         val DEFAULT_PICK_TTL: Duration = Duration.ofMinutes(2)
