@@ -2046,6 +2046,59 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `getGuildOverview keeps configured channels in the picker list even when bot lacks MESSAGE_SEND`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.ownerIdLong } returns ownerId
+        every { guild.members } returns emptyList()
+        every { guild.voiceChannels } returns emptyList()
+        every { guild.categories } returns emptyList()
+        every { userService.listGuildUsers(guildId) } returns emptyList()
+
+        // Three channels: one the bot can post in, one it can't but is
+        // saved as LOTTERY_CHANNEL (the regression case), and one it
+        // can't post in and isn't referenced anywhere (still filtered).
+        // IDs are real-shaped Discord snowflakes (17-20 digits) — the
+        // production guard distinguishes channel-id config values from
+        // numeric non-id configs (like credit amounts) by snowflake
+        // length.
+        val sendableId = "111111111111111111"
+        val savedLotteryId = "222222222222222222"
+        val strayId = "333333333333333333"
+        val sendable = mockk<TextChannel>(relaxed = true).also {
+            every { it.id } returns sendableId
+            every { it.name } returns "general"
+        }
+        val savedLottery = mockk<TextChannel>(relaxed = true).also {
+            every { it.id } returns savedLotteryId
+            every { it.name } returns "lottery"
+        }
+        val stray = mockk<TextChannel>(relaxed = true).also {
+            every { it.id } returns strayId
+            every { it.name } returns "staff-only"
+        }
+        every { guild.textChannels } returns listOf(sendable, savedLottery, stray)
+
+        val bot = mockk<SelfMember>(relaxed = true)
+        every { guild.selfMember } returns bot
+        every { bot.hasPermission(sendable, Permission.MESSAGE_SEND) } returns true
+        every { bot.hasPermission(savedLottery, Permission.MESSAGE_SEND) } returns false
+        every { bot.hasPermission(stray, Permission.MESSAGE_SEND) } returns false
+
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_CHANNEL.configValue, guildId.toString()
+            )
+        } returns ConfigDto("LOTTERY_CHANNEL", savedLotteryId, guildId.toString())
+
+        val overview = service.getGuildOverview(guildId)
+        assertNotNull(overview)
+        val ids = overview!!.textChannels.map { it.id }.toSet()
+        assertTrue(sendableId in ids, "sendable channel must appear")
+        assertTrue(savedLotteryId in ids, "configured channel must appear even without MESSAGE_SEND")
+        assertFalse(strayId in ids, "unconfigured non-sendable channel stays filtered")
+    }
+
+    @Test
     fun `getLevelingOverview surfaces missing-role flag for dangling rewards`() {
         every { levelRoleRewardService.listForGuild(guildId) } returns listOf(
             database.dto.LevelRoleRewardDto(guildId = guildId, level = 5, roleId = 555L),
