@@ -5,7 +5,7 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
-import bot.toby.command.commands.game.Connect4Embeds
+import bot.toby.command.commands.game.pvp.connect4.Connect4Embeds
 import common.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry

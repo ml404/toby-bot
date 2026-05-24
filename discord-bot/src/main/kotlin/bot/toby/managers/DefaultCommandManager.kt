@@ -4,7 +4,7 @@ import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.dnd.DnDCommand
 import bot.toby.command.commands.economy.EconomyCommand
 import bot.toby.command.commands.fetch.FetchCommand
-import bot.toby.command.commands.game.GameCommand
+import bot.toby.command.commands.game.pvp.GameCommand
 import bot.toby.command.commands.misc.MiscCommand
 import bot.toby.command.commands.moderation.ModerationCommand
 import bot.toby.command.commands.music.MusicCommand
