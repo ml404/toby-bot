@@ -18,9 +18,7 @@ class HomeControllerTest {
 
     private val clientId = "test-client-id"
     // Pinning the *shape* of the invite URL — the bitmask itself is
-    // computed from web.util.DiscordInvite.permissionsBitmask so a
-    // future bot feature that needs a new permission only has to
-    // update REQUIRED_PERMISSIONS in one place. Asserting the exact
+    // owned by web.util.DiscordInvite. Asserting the exact
     // `permissions=N` string would couple this test to that constant
     // unnecessarily; instead we delegate the bitmask via the helper.
     private val expectedInviteUrl = web.util.DiscordInvite.urlFor(clientId)
