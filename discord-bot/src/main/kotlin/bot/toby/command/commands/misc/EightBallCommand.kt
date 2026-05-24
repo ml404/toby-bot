@@ -1,64 +1,88 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
 import database.service.user.UserService
+import net.dv8tion.jda.api.interactions.InteractionHook
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.util.*
+import java.util.Random
+import java.util.concurrent.TimeUnit
 
 @Component
 class EightBallCommand @Autowired constructor(private val userService: UserService) : MiscCommand {
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferReply().queue()
-        val r = Random()
-        val choice = 1 + r.nextInt(20)
-        val response = when (choice) {
-            1 -> "It is certain"
-            2 -> "It is decidedly so"
-            3 -> "Without a doubt"
-            4 -> "Yes - definitely"
-            5 -> "You may rely on it"
-            6 -> "As I see it, yes"
-            7 -> "Most likely"
-            8 -> "Outlook good"
-            9 -> "Signs point to yes"
-            10 -> "Yes"
-            11 -> "Reply hazy, try again"
-            12 -> "Ask again later"
-            13 -> "Better not tell you now"
-            14 -> "Cannot predict now"
-            15 -> "Concentrate and ask again"
-            16 -> "Don't count on it"
-            17 -> "My reply is no"
-            18 -> "My sources say no"
-            19 -> "Outlook not so good"
-            20 -> "Very doubtful"
-            else -> "I fucked up, please try again"
-        }
-        if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
-            event.hook.replyAndDelete("MAGIC 8-BALL SAYS: Don't fucking talk to me.", deleteDelay)
-            val socialCredit = requestingUserDto.socialCredit
-            val deductedSocialCredit = -5 * choice
-            requestingUserDto.socialCredit = socialCredit?.plus(deductedSocialCredit)
-            event.hook.replyAndDelete("Deducted: $deductedSocialCredit social credit.", deleteDelay)
-            userService.updateUser(requestingUserDto)
-            return
-        }
-        event.hook.replyAndDelete("MAGIC 8-BALL SAYS: $response.", deleteDelay)
+        ask(event.hook, requestingUserDto, event.user.effectiveName, deleteDelay)
     }
 
-    override val name: String
-        get() = "8ball"
-    override val description: String
-        get() = "Think of a question and let me divine to you an answer!"
+    /**
+     * Shared entry point so the `EightBallButton` re-ask flow renders the
+     * same two-stage shake→reveal as a fresh `/8ball` invocation. Caller
+     * is responsible for acknowledging the interaction first
+     * (`deferReply()` for slash, `deferEdit()` for the button) so the
+     * hook is ready to edit the original message.
+     */
+    fun ask(hook: InteractionHook, requestingUserDto: UserDto, askedBy: String, deleteDelay: Int) {
+        val choice = 1 + Random().nextInt(20)
+        val response = RESPONSES[choice - 1]
+
+        if (requestingUserDto.discordId == TOMS_DISCORD_ID) {
+            val deducted = -5 * choice
+            requestingUserDto.socialCredit = (requestingUserDto.socialCredit ?: 0L) + deducted
+            userService.updateUser(requestingUserDto)
+            hook.editOriginalEmbeds(listOf(EightBallEmbeds.tomEmbed(deducted))).queue {
+                if (deleteDelay > 0) it.delete().queueAfter(deleteDelay.toLong(), TimeUnit.SECONDS)
+            }
+            return
+        }
+
+        // Collection overload of editOriginalEmbeds rather than the
+        // varargs one — mockk's vararg matchers don't play nicely with
+        // the JDA default-method dispatch, and this is exactly one
+        // embed each call anyway.
+        hook.editOriginalEmbeds(listOf(EightBallEmbeds.shakeEmbed())).queue()
+        hook.editOriginalEmbeds(listOf(EightBallEmbeds.answerEmbed(response, askedBy)))
+            .setComponents(EightBallEmbeds.askAgainRow())
+            .queueAfter(REVEAL_DELAY_MS, TimeUnit.MILLISECONDS) {
+                if (deleteDelay > 0) it.delete().queueAfter(deleteDelay.toLong(), TimeUnit.SECONDS)
+            }
+    }
+
+    override val name: String get() = "8ball"
+    override val description: String get() = "Think of a question and let me divine to you an answer!"
 
     companion object {
         // A Discord snowflake, not a credential. The shape trips Qodana's
         // "discord-client-id" hardcoded-password heuristic.
         @Suppress("HardcodedPasswords")
         const val TOMS_DISCORD_ID = 312691905030782977L
+
+        const val REVEAL_DELAY_MS = 1200L
+
+        val RESPONSES = listOf(
+            "It is certain",
+            "It is decidedly so",
+            "Without a doubt",
+            "Yes - definitely",
+            "You may rely on it",
+            "As I see it, yes",
+            "Most likely",
+            "Outlook good",
+            "Signs point to yes",
+            "Yes",
+            "Reply hazy, try again",
+            "Ask again later",
+            "Better not tell you now",
+            "Cannot predict now",
+            "Concentrate and ask again",
+            "Don't count on it",
+            "My reply is no",
+            "My sources say no",
+            "Outlook not so good",
+            "Very doubtful",
+        )
     }
 }
