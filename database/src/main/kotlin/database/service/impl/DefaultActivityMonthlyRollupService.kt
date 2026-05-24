@@ -4,6 +4,7 @@ import database.dto.ActivityMonthlyRollupDto
 import database.persistence.ActivityMonthlyRollupPersistence
 import database.service.ActivityMonthlyRollupService
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 
@@ -33,6 +34,7 @@ class DefaultActivityMonthlyRollupService @Autowired constructor(
         monthStart: LocalDate
     ): List<ActivityMonthlyRollupDto> = persistence.forUserMonth(guildId, discordId, monthStart)
 
+    @Cacheable(value = ["activity-rollups"], key = "#guildId + '-' + #since")
     override fun forGuildSince(guildId: Long, since: LocalDate): List<ActivityMonthlyRollupDto> =
         persistence.forGuildSince(guildId, since)
 

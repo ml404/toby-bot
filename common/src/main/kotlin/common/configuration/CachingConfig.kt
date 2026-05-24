@@ -18,6 +18,7 @@ class CachingConfig {
     fun cacheManager(): CacheManager {
         val manager = CaffeineCacheManager(
             "configs", "brothers", "users", "music", "excuses", "team-presets", "tobyCoinMarkets",
+            "activity-rollups",
         )
         manager.setCaffeine(
             Caffeine.newBuilder()

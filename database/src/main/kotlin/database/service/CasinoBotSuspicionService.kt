@@ -1,10 +1,12 @@
 package database.service
 
+import com.github.benmanes.caffeine.cache.Cache
+import com.github.benmanes.caffeine.cache.Caffeine
 import common.events.AntiAutoclickEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Clock
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 
 /**
  * Per-(user, guild, gameKey) tracker of bet-click signatures used to
@@ -32,10 +34,13 @@ import java.util.concurrent.ConcurrentHashMap
  * the window clears. A user who comes back from a break starts on a
  * fresh slate; old bot-shaped signals don't haunt them.
  *
- * State is held in an in-memory [ConcurrentHashMap]. Restart-resets are
- * acceptable: a real bot rebuilds its window in [WINDOW_SIZE] bets, and
- * persisting suspicion data through a deploy is more complexity than
- * the heuristic warrants.
+ * State is held in an in-memory Caffeine cache (bounded
+ * [STATES_MAX_SIZE] / idle TTL [STATES_TTL_MIN] minutes). Restart-resets
+ * are acceptable: a real bot rebuilds its window in [WINDOW_SIZE] bets,
+ * and persisting suspicion data through a deploy is more complexity than
+ * the heuristic warrants. The cap + TTL backstop a pre-existing growth
+ * path — `evictGuild` only fires on bot-leave, so without an idle TTL a
+ * user who plays once leaves a permanent entry.
  */
 @Service
 class CasinoBotSuspicionService(
@@ -62,7 +67,10 @@ class CasinoBotSuspicionService(
         var currentlyOpen: Boolean,
     )
 
-    private val states: ConcurrentHashMap<Triple<Long, Long, String>, State> = ConcurrentHashMap()
+    private val states: Cache<Triple<Long, Long, String>, State> = Caffeine.newBuilder()
+        .maximumSize(STATES_MAX_SIZE)
+        .expireAfterAccess(STATES_TTL_MIN, TimeUnit.MINUTES)
+        .build()
 
     /**
      * Record a bet's click signature and return the current bot-suspicion
@@ -92,7 +100,7 @@ class CasinoBotSuspicionService(
         // slate when they switch input modality, and close the session
         // if it was open.
         if (clickX == null || clickY == null || mouseMoved == null) {
-            val priorEntry = states.remove(key)
+            val priorEntry = states.getIfPresent(key)?.also { states.invalidate(key) }
             if (priorEntry?.currentlyOpen == true) {
                 eventPublisher.publishEvent(
                     AntiAutoclickEvent.SessionClosed(guildId, discordId, gameKey)
@@ -102,7 +110,7 @@ class CasinoBotSuspicionService(
         }
 
         val now = clock.millis()
-        val prior = states[key]
+        val prior = states.getIfPresent(key)
 
         // Idle reset — a long gap between bets clears the window. Real
         // autoclickers fire continuously; humans take breaks.
@@ -140,12 +148,15 @@ class CasinoBotSuspicionService(
             else -> wasOpen
         }
 
-        states[key] = State(
-            lastX = clickX,
-            lastY = clickY,
-            window = window,
-            lastClickTimeMs = now,
-            currentlyOpen = nowOpen,
+        states.put(
+            key,
+            State(
+                lastX = clickX,
+                lastY = clickY,
+                window = window,
+                lastClickTimeMs = now,
+                currentlyOpen = nowOpen,
+            ),
         )
 
         if (!wasOpen && nowOpen) {
@@ -172,10 +183,23 @@ class CasinoBotSuspicionService(
      * casino pages can no longer post bets for that guild.
      */
     fun evictGuild(guildId: Long) {
-        states.keys.removeIf { it.second == guildId }
+        val keysForGuild = states.asMap().keys.filter { it.second == guildId }
+        if (keysForGuild.isNotEmpty()) states.invalidateAll(keysForGuild)
     }
 
     companion object {
+        /** Hard ceiling on tracked (user, guild, game) triples. Sized for
+         *  thousands of concurrent casino players across all guilds — at
+         *  ~440 B per State, 10k entries is ~4 MB worst-case resident. */
+        const val STATES_MAX_SIZE: Long = 10_000L
+
+        /** Idle TTL for a triple's State. A user who walks away from the
+         *  casino has their suspicion window dropped after this window —
+         *  no permanent map entries from one-and-done players. Long enough
+         *  that a real grinder's session keeps its window across snack
+         *  breaks. */
+        const val STATES_TTL_MIN: Long = 30L
+
         const val EPSILON_PX: Int = 2
 
         /** Number of recent bets the window keeps. Sized large enough
