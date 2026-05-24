@@ -41,8 +41,9 @@
     display: none;
 }
 
-/* "Coming soon" panel body for the three turn-based tabs while their
-   controller endpoints are still being built. */
+/* "Coming soon" panel body — used by the TicTacToe + Connect 4 tabs
+   until their controller endpoints land. RPS uses the real panel
+   markup below. */
 .pvp-coming-soon {
     background: var(--surface, #1f2128);
     border-radius: 0.75rem;
@@ -59,6 +60,111 @@
     padding: 0.1rem 0.35rem;
     border-radius: 0.25rem;
     font-size: 0.92em;
+}
+
+/* Shared chrome for the per-game panels (challenge card + inbox +
+   outbox + active board). Mirrors the .duel-card visual language so
+   the four PvP tabs feel like one family. */
+.pvp-card,
+.pvp-inbox,
+.pvp-outbox,
+.pvp-active {
+    background: var(--surface, #1f2128);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    max-width: 36rem;
+    margin-bottom: 1.5rem;
+}
+
+.pvp-card h2,
+.pvp-inbox h2,
+.pvp-outbox h2,
+.pvp-active h2 {
+    margin-top: 0;
+}
+
+.pvp-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.pvp-pending-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.pvp-pending-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.5rem;
+}
+
+.pvp-pending-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pvp-pending-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Live-match board chrome. The actual interactive pieces (RPS choice
+   buttons, future TTT / C4 grids) get their own classes below. */
+.pvp-board {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.pvp-board-header {
+    margin: 0;
+    font-weight: 500;
+}
+
+.pvp-board-verdict {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.pvp-board-forfeit {
+    align-self: flex-start;
+}
+
+/* RPS choice buttons — three big pictograms the player picks one of. */
+.pvp-rps-choices {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+}
+
+.pvp-rps-choice {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border, #2c2f3a);
+    border-radius: 0.5rem;
+    padding: 1.25rem 0.5rem;
+    font-size: 1.1rem;
+    color: var(--text, #e3e4ea);
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.pvp-rps-choice:hover,
+.pvp-rps-choice:focus-visible {
+    background: var(--accent-soft, rgba(114, 128, 255, 0.18));
+    border-color: var(--accent, #7280ff);
+    transform: translateY(-1px);
+}
+
+.pvp-rps-choice:active {
+    transform: translateY(0);
 }
 
 .duel-card,

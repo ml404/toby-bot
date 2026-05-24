@@ -16,6 +16,7 @@ import common.blackjack.Blackjack
 import common.poker.CasinoHoldem
 import database.service.ConfigService
 import database.service.DuelService
+import database.service.RpsService
 import database.service.cfgLong
 import database.service.cfgLongMax
 import org.springframework.stereotype.Component
@@ -143,6 +144,14 @@ class StakeBounds(
         ConfigDto.Configurations.DUEL_MAX_STAKE,
         DuelService.MIN_STAKE,
         DuelService.MAX_STAKE,
+    )
+
+    fun rps(guildId: Long): Pair<Long, Long> = read(
+        guildId,
+        ConfigDto.Configurations.RPS_MIN_STAKE,
+        ConfigDto.Configurations.RPS_MAX_STAKE,
+        RpsService.MIN_STAKE,
+        RpsService.MAX_STAKE,
     )
 
     private fun read(
