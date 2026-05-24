@@ -60,32 +60,21 @@ class Connect4Button @Autowired constructor(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
         parsed: Connect4Embeds.ParsedButtonId,
-    ) {
-        if (requestingUserDto.discordId != parsed.payload) {
-            event.hook.sendMessage(
-                "This isn't your challenge to decline — wait for <@${parsed.payload}> to respond."
-            ).setEphemeral(true).queue()
-            return
-        }
-        val session = connect4SessionRegistry.decline(parsed.sessionId) ?: run {
-            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
-        }
-        event.message.editMessageEmbeds(
-            Connect4Embeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
-        ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
-    }
+    ) = PvpButtonHelpers.handleDecline(
+        event = event,
+        requestingUserDto = requestingUserDto,
+        scopedDiscordId = parsed.payload,
+        sessionId = parsed.sessionId,
+        decline = connect4SessionRegistry::decline,
+        pendingDeclineEmbed = Connect4Embeds::pendingDeclineEmbed,
+    )
 
     private fun handleAccept(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
         parsed: Connect4Embeds.ParsedButtonId,
     ) {
-        if (requestingUserDto.discordId != parsed.payload) {
-            event.hook.sendMessage(
-                "This isn't your challenge to accept — wait for <@${parsed.payload}> to respond."
-            ).setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireScopedActor(event, requestingUserDto, parsed.payload, "accept")) return
         val session = connect4SessionRegistry.accept(parsed.sessionId) { expired ->
             // Move-clock timeout: current actor never dropped. Treat
             // as forfeit by them — opponent wins by walkover.
@@ -120,14 +109,11 @@ class Connect4Button @Autowired constructor(
         val live = connect4SessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
-        if (requestingUserDto.discordId != live.initiatorDiscordId &&
-            requestingUserDto.discordId != live.opponentDiscordId
-        ) {
-            event.hook.sendMessage(
-                "This isn't your match — only <@${live.initiatorDiscordId}> and <@${live.opponentDiscordId}> can play."
-            ).setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireMatchParticipant(
+                event, requestingUserDto, live.initiatorDiscordId, live.opponentDiscordId,
+                notParticipantMessage = "This isn't your match — only <@${live.initiatorDiscordId}> and <@${live.opponentDiscordId}> can play.",
+            )
+        ) return
         val result = connect4SessionRegistry.applyMove(parsed.sessionId, requestingUserDto.discordId, column) { expired ->
             resolveTimeout(event, expired)
         }
@@ -162,12 +148,11 @@ class Connect4Button @Autowired constructor(
         val live = connect4SessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
-        if (requestingUserDto.discordId != live.initiatorDiscordId &&
-            requestingUserDto.discordId != live.opponentDiscordId
-        ) {
-            event.hook.sendMessage("This isn't your match to forfeit.").setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireMatchParticipant(
+                event, requestingUserDto, live.initiatorDiscordId, live.opponentDiscordId,
+                notParticipantMessage = "This isn't your match to forfeit.",
+            )
+        ) return
         val consumed = connect4SessionRegistry.forfeit(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }

@@ -54,32 +54,21 @@ class RpsButton @Autowired constructor(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
         parsed: RpsEmbeds.ParsedButtonId,
-    ) {
-        if (requestingUserDto.discordId != parsed.scopedDiscordId) {
-            event.hook.sendMessage(
-                "This isn't your challenge to decline — wait for <@${parsed.scopedDiscordId}> to respond."
-            ).setEphemeral(true).queue()
-            return
-        }
-        val session = rpsSessionRegistry.decline(parsed.sessionId) ?: run {
-            PvpButtonHelpers.ephemeralAlreadyResolved(event); return
-        }
-        event.message.editMessageEmbeds(
-            RpsEmbeds.pendingDeclineEmbed(session.initiatorDiscordId, session.opponentDiscordId)
-        ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
-    }
+    ) = PvpButtonHelpers.handleDecline(
+        event = event,
+        requestingUserDto = requestingUserDto,
+        scopedDiscordId = parsed.scopedDiscordId,
+        sessionId = parsed.sessionId,
+        decline = rpsSessionRegistry::decline,
+        pendingDeclineEmbed = RpsEmbeds::pendingDeclineEmbed,
+    )
 
     private fun handleAccept(
         event: ButtonInteractionEvent,
         requestingUserDto: UserDto,
         parsed: RpsEmbeds.ParsedButtonId,
     ) {
-        if (requestingUserDto.discordId != parsed.scopedDiscordId) {
-            event.hook.sendMessage(
-                "This isn't your challenge to accept — wait for <@${parsed.scopedDiscordId}> to respond."
-            ).setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireScopedActor(event, requestingUserDto, parsed.scopedDiscordId, "accept")) return
         // Transition PENDING → LIVE and schedule the pick-phase timeout
         // before we touch the user table. If accept() returns null the
         // session expired or was declined between the click and now.
@@ -129,14 +118,11 @@ class RpsButton @Autowired constructor(
         val live = rpsSessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
-        if (requestingUserDto.discordId != live.initiatorDiscordId &&
-            requestingUserDto.discordId != live.opponentDiscordId
-        ) {
-            event.hook.sendMessage(
-                "This isn't your match — only <@${live.initiatorDiscordId}> and <@${live.opponentDiscordId}> can pick."
-            ).setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireMatchParticipant(
+                event, requestingUserDto, live.initiatorDiscordId, live.opponentDiscordId,
+                notParticipantMessage = "This isn't your match — only <@${live.initiatorDiscordId}> and <@${live.opponentDiscordId}> can pick.",
+            )
+        ) return
         val updated = rpsSessionRegistry.recordPick(parsed.sessionId, requestingUserDto.discordId, choice) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
@@ -172,14 +158,11 @@ class RpsButton @Autowired constructor(
         val live = rpsSessionRegistry.get(parsed.sessionId) ?: run {
             PvpButtonHelpers.ephemeralAlreadyResolved(event); return
         }
-        if (requestingUserDto.discordId != live.initiatorDiscordId &&
-            requestingUserDto.discordId != live.opponentDiscordId
-        ) {
-            event.hook.sendMessage(
-                "This isn't your match to forfeit."
-            ).setEphemeral(true).queue()
-            return
-        }
+        if (!PvpButtonHelpers.requireMatchParticipant(
+                event, requestingUserDto, live.initiatorDiscordId, live.opponentDiscordId,
+                notParticipantMessage = "This isn't your match to forfeit.",
+            )
+        ) return
         // Forfeit = the other player wins by walkover. Atomically remove
         // the session so the pick-timeout can't double-resolve.
         val consumed = rpsSessionRegistry.forfeit(parsed.sessionId) ?: run {
