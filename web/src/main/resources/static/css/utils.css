@@ -9,6 +9,8 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
     padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
 }
 
 .util-card h2 {
@@ -61,15 +63,270 @@
     min-height: 20px;
 }
 
+/* ---- Dice tray ---- */
+.dice-tray {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 76px;
+    padding: var(--space-3);
+    margin-bottom: var(--space-3);
+    background: radial-gradient(120% 80% at 50% 0%, rgba(88, 101, 242, 0.08) 0%, transparent 70%), var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+.dice-tray:empty::before {
+    content: 'Roll to summon dice';
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+.dice-tray .die {
+    width: 56px;
+    height: 56px;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+    transform-origin: center;
+    will-change: transform;
+    display: block;
+}
+.dice-tray .die.die-num {
+    position: relative;
+    display: inline-block;
+}
+.die-num-face {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.die-num-value {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-weight: 700;
+    font-size: 1.9rem;
+    color: #1a1a2e;
+    line-height: 1;
+    pointer-events: none;
+}
+.die-num-value-md { font-size: 1.5rem; }
+.die-num-value-sm { font-size: 1.1rem; }
+.die-num-value-xs { font-size: 0.85rem; }
+.dice-tray .die-more {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent-light);
+    font-size: 0.8rem;
+    font-weight: 600;
+    align-self: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .dice-tray .die.rolling {
+        animation: die-tumble 0.55s cubic-bezier(0.3, 0.6, 0.2, 1);
+    }
+    .dice-tray .die.settled {
+        animation: die-settle 0.25s var(--ease-out);
+    }
+}
+@keyframes die-tumble {
+    0%   { transform: translateY(-12px) rotate(-180deg) scale(0.85); opacity: 0.6; }
+    35%  { transform: translateY(4px)   rotate(-40deg)  scale(1.08); opacity: 1;   }
+    65%  { transform: translateY(-2px)  rotate(20deg)   scale(0.98); }
+    100% { transform: translateY(0)     rotate(0)       scale(1);    }
+}
+@keyframes die-settle {
+    0%   { transform: scale(1.06); }
+    100% { transform: scale(1);    }
+}
+
+/* ---- Random chooser reel ----
+   The window is 132px tall (three 44px rows). The strip translates
+   upward; positioning math in utils.js targets the center row. */
+.reel {
+    position: relative;
+    margin-bottom: var(--space-3);
+    background: radial-gradient(120% 80% at 50% 0%, rgba(88, 101, 242, 0.08) 0%, transparent 70%), var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.reel-window {
+    position: relative;
+    height: 132px;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22%, #000 78%, transparent 100%);
+}
+.reel-strip {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    will-change: transform;
+    transform: translateY(0);
+}
+.reel-strip:empty::before {
+    content: 'Add options and pick one';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 132px;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-style: italic;
+}
+.reel-strip li {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0 var(--space-3);
+    transition: color var(--dur-base) var(--ease-out);
+}
+.reel-strip li.is-winner {
+    color: var(--heading);
+    text-shadow: 0 0 12px rgba(88, 101, 242, 0.6);
+}
+.reel-marker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 44px;
+    height: 44px;
+    pointer-events: none;
+    border-top: 1px solid var(--accent);
+    border-bottom: 1px solid var(--accent);
+    box-shadow: inset 0 0 24px rgba(88, 101, 242, 0.2);
+}
+
+/* ---- Magic 8-ball ---- */
+.ball-stage {
+    position: relative;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto var(--space-3);
+    transform-origin: center;
+    will-change: transform;
+}
+.ball-img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+}
+.ball-window {
+    position: absolute;
+    left: 50%;
+    top: 64%;
+    transform: translate(-50%, -50%);
+    width: 96px;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 6px;
+    color: #c8d4ff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.15;
+    text-shadow: 0 0 6px rgba(120, 160, 255, 0.55);
+    pointer-events: none;
+    transition: opacity var(--dur-base) var(--ease-out);
+}
+.ball-window-text {
+    opacity: 0.9;
+}
+.ball-stage.is-shaking .ball-window { opacity: 0.25; }
+.ball-stage.is-revealed .ball-window-text {
+    animation: ball-reveal var(--dur-slow) var(--ease-out) both;
+}
+.ball-btn {
+    display: block;
+    margin: 0 auto;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .ball-stage.is-shaking {
+        animation: ball-shake 0.18s ease-in-out 4;
+    }
+}
+@keyframes ball-shake {
+    0%, 100% { transform: translate(0, 0) rotate(0); }
+    25%      { transform: translate(-4px, -2px) rotate(-5deg); }
+    50%      { transform: translate(3px, 2px)  rotate(4deg);  }
+    75%      { transform: translate(-3px, 3px) rotate(-3deg); }
+}
+@keyframes ball-reveal {
+    0%   { opacity: 0; transform: translateY(6px) scale(0.94); }
+    100% { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* ---- Meme frame ---- */
+.meme-frame {
+    position: relative;
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    min-height: 200px;
+    overflow: hidden;
+}
+.meme-skeleton {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.06) 50%, transparent 100%),
+        var(--border);
+    background-size: 200% 100%, 100% 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+}
+.meme-frame.is-loading .meme-skeleton {
+    opacity: 1;
+}
+@media (prefers-reduced-motion: no-preference) {
+    .meme-frame.is-loading .meme-skeleton {
+        animation: meme-shimmer 1.2s linear infinite;
+    }
+}
+@keyframes meme-shimmer {
+    0%   { background-position: -100% 0, 0 0; }
+    100% { background-position: 100% 0, 0 0; }
+}
+
 .meme-output {
     display: grid;
     gap: 6px;
+    padding: var(--space-3);
+    background: transparent;
+    border: none;
+    min-height: 200px;
 }
+.meme-frame.is-loading .meme-output { opacity: 0.3; }
 
+.meme-empty {
+    align-self: center;
+    justify-self: center;
+    margin: auto;
+    font-size: 0.9rem;
+    font-style: italic;
+}
 .meme-title a {
     font-weight: 600;
     color: var(--accent);
 }
+.meme-title a:hover { color: var(--accent-light); }
 
 .meme-image {
     max-width: 100%;
@@ -77,4 +334,31 @@
     object-fit: contain;
     border-radius: var(--radius-sm);
     background: var(--border);
+    opacity: 0;
+}
+.meme-image.is-loaded {
+    animation: meme-fadein var(--dur-base) var(--ease-out) forwards;
+}
+@keyframes meme-fadein {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}
+
+.meme-reroll {
+    align-self: flex-start;
+}
+.meme-reroll[hidden] { display: none; }
+
+/* ---- Responsive ---- */
+@media (max-width: 480px) {
+    .ball-stage { width: 150px; height: 150px; }
+    .ball-window { width: 80px; height: 46px; font-size: 0.66rem; }
+    .dice-tray .die { width: 48px; height: 48px; }
+    .reel-window { height: 120px; }
+}
+
+@media (max-width: 380px) {
+    .ball-stage { width: 132px; height: 132px; }
+    .ball-window { width: 70px; height: 40px; font-size: 0.6rem; }
+    .dice-tray .die { width: 44px; height: 44px; }
 }

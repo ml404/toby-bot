@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Magic 8-ball">
+  <defs>
+    <radialGradient id="ball-body" cx="35%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#3a3a4e"/>
+      <stop offset="55%" stop-color="#15151c"/>
+      <stop offset="100%" stop-color="#050507"/>
+    </radialGradient>
+    <radialGradient id="ball-shine" cx="32%" cy="26%" r="22%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.55)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <radialGradient id="window-bg" cx="50%" cy="55%" r="65%">
+      <stop offset="0%" stop-color="#1f3a8a"/>
+      <stop offset="100%" stop-color="#0a1233"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="100" r="96" fill="url(#ball-body)"/>
+  <circle cx="100" cy="100" r="96" fill="url(#ball-shine)"/>
+  <circle cx="100" cy="58" r="26" fill="#ffffff"/>
+  <text x="100" y="58" text-anchor="middle" dominant-baseline="central"
+        font-family="Georgia, 'Times New Roman', serif" font-weight="700"
+        font-size="32" fill="#111">8</text>
+  <polygon points="100,86 158,150 42,150" fill="url(#window-bg)" opacity="0.92"/>
+  <polygon points="100,86 158,150 42,150" fill="none"
+           stroke="rgba(255,255,255,0.18)" stroke-width="1.5"/>
+</svg>
