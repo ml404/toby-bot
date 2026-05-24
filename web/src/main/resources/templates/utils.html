@@ -29,6 +29,7 @@
                 </label>
                 <button type="submit" class="btn">Roll</button>
             </form>
+            <div class="dice-tray" data-stage="dice" aria-hidden="true"></div>
             <pre class="util-output" data-output="dice" aria-live="polite"></pre>
         </section>
 
@@ -41,14 +42,25 @@
                 </label>
                 <button type="submit" class="btn">Pick one</button>
             </form>
+            <div class="reel" data-stage="random" aria-hidden="true">
+                <div class="reel-window">
+                    <ul class="reel-strip"></ul>
+                </div>
+                <div class="reel-marker" aria-hidden="true"></div>
+            </div>
             <pre class="util-output" data-output="random" aria-live="polite"></pre>
         </section>
 
         <section class="util-card" data-util="eightball">
             <h2>Magic 8-ball</h2>
             <p class="muted">Equivalent to <code>/8ball</code>.</p>
-            <button type="button" class="btn" data-action="eightball">Ask the ball</button>
-            <pre class="util-output" data-output="eightball" aria-live="polite"></pre>
+            <div class="ball-stage" data-stage="eightball">
+                <img class="ball-img" src="/images/utils/8ball.svg" alt="" aria-hidden="true">
+                <div class="ball-window" data-output="eightball" aria-live="polite">
+                    <span class="ball-window-text">Ask a question…</span>
+                </div>
+            </div>
+            <button type="button" class="btn ball-btn" data-action="eightball">Shake the ball</button>
         </section>
 
         <section class="util-card" data-util="meme">
@@ -71,7 +83,13 @@
                 </label>
                 <button type="submit" class="btn">Fetch meme</button>
             </form>
-            <div class="util-output meme-output" data-output="meme" aria-live="polite"></div>
+            <div class="meme-frame" data-stage="meme">
+                <div class="meme-skeleton" aria-hidden="true"></div>
+                <div class="util-output meme-output" data-output="meme" aria-live="polite">
+                    <p class="meme-empty muted">No meme yet — pick a subreddit and hit fetch.</p>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary meme-reroll" data-action="meme-reroll" hidden>Re-roll</button>
         </section>
     </div>
 </main>
