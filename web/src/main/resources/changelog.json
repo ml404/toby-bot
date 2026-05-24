@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Redesign Activity tab + pill-style sub-nav",
+    "summary": "The Moderation → Activity tab was previously two bare SVG polylines with a one-line \"total · peak\" caption — accurate but flat. This PR turns it into a small dashboard and gives the shared moderation sub-nav a chrome refresh that lifts every tab. ### Activity tab **Stat-tile row per metric**: Total · Average/day · Peak day · Active days, for both messages and voice hours. **Polished area charts**: gradient fill under the line, dashed Y-axis gridlines, Y/X axis labels, per-…",
+    "emoji": "🛡️",
+    "prNumber": 567
+  },
+  {
+    "date": "May 2026",
     "title": "Migrate /duel web surface to /pvp with 4-tab unified page",
     "summary": "First slice of the `/pvp` web surface plan. Migrates the existing Duel web UI out of `/duel/*` into a new unified `/pvp/{guildId}` page with a four-tab strip — **Duel** (fully wired, same DuelService + PendingDuelRegistry as before) plus three \"coming soon\" placeholders for **Rock-Paper-Scissors**, **Tic-Tac-Toe**, **Connect 4**. The placeholders point visitors at the existing Discord slash commands (`/rps`, `/tictactoe`, `/connect4`) while the web play surfaces for those…",
     "emoji": "💰",
