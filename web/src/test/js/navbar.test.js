@@ -132,11 +132,11 @@ describe('navbar fragment', () => {
         );
     });
 
-    test('groups links into labelled sections (Main / Games / Economy / Social / Tools / Moderation)', () => {
+    test('groups links into labelled sections (Main / Casino / PvP / Economy / Social / Tools / Moderation)', () => {
         // Each .nav-section block carries a .nav-section-eyebrow with the
         // section name; on desktop those eyebrows are display:none, on
         // mobile they group the items inside the drawer.
-        const expected = ['Main', 'Games', 'Economy', 'Social', 'Tools', 'Moderation'];
+        const expected = ['Main', 'Casino', 'PvP', 'Economy', 'Social', 'Tools', 'Moderation'];
         for (const label of expected) {
             const re = new RegExp(
                 `<div[^>]*class="[^"]*\\bnav-section-eyebrow\\b[^"]*"[^>]*>\\s*${label}\\s*</div>`
