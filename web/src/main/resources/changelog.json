@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Group forms into Member / Channel card grids",
+    "summary": "Phase 4 of the moderation dashboard refresh — Actions tab. The audit of the eight tabs that didn't get a deeper pass in earlier phases turned up just one outlier worth touching: **actions.html**. The other seven (users, voice, poll, casino, lottery, leveling, welcome) already compose cleanly under the new chrome. Actions was the last moderation tab still rendered as a flat scroll of forms. This pass groups it the same way the rest of the dashboard reads, without changing a…",
+    "emoji": "🛡️",
+    "prNumber": 572
+  },
+  {
+    "date": "May 2026",
     "title": "Side-rail nav, stakes table, bulk apply",
     "summary": "Phase 3 of the moderation dashboard refresh — the Settings tab. Replaces the ~986-line wall of stacked `<details>` accordions with a navigable layout, a real stake-limits table, and a bulk \"set every game at once\" widget that lets admins update many keys in one shot. **Sticky left-rail navigation** lists every section grouped by pillar (Server / Economy / Casino). Clicking a rail link opens the matching `<details>` and smooth-scrolls to it; an `IntersectionObserver` mirror…",
     "emoji": "🛡️",
