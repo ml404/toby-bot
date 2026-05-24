@@ -1,9 +1,11 @@
 package web.controller
 
 import database.duel.PendingDuelRegistry
+import database.rps.RpsSessionRegistry
 import database.service.DuelService
 import database.service.DuelService.AcceptOutcome
 import database.service.DuelService.StartOutcome
+import database.service.RpsService
 import database.service.UserService
 import io.mockk.every
 import io.mockk.mockk
@@ -16,6 +18,7 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.security.oauth2.core.user.OAuth2User
 import web.casino.StakeBounds
 import web.event.WebDuelOfferedEvent
+import web.service.PvpSseService
 import web.service.PvpWebService
 import web.service.EconomyWebService
 import web.service.MemberLookupHelper
@@ -29,7 +32,10 @@ class PvpControllerTest {
     private val duelId = 99L
 
     private lateinit var duelService: DuelService
+    private lateinit var rpsService: RpsService
+    private lateinit var rpsSessionRegistry: RpsSessionRegistry
     private lateinit var pvpWebService: PvpWebService
+    private lateinit var pvpSseService: PvpSseService
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
     private lateinit var economyWebService: EconomyWebService
     private lateinit var userService: UserService
@@ -43,7 +49,10 @@ class PvpControllerTest {
     @BeforeEach
     fun setup() {
         duelService = mockk(relaxed = true)
+        rpsService = mockk(relaxed = true)
+        rpsSessionRegistry = mockk(relaxed = true)
         pvpWebService = mockk(relaxed = true)
+        pvpSseService = mockk(relaxed = true)
         pendingDuelRegistry = mockk(relaxed = true)
         economyWebService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
@@ -58,7 +67,7 @@ class PvpControllerTest {
         every { economyWebService.isMember(discordId, guildId) } returns true
         every { economyWebService.isMember(opponentId, guildId) } returns true
         controller = PvpController(
-            duelService, pvpWebService, pendingDuelRegistry,
+            duelService, rpsService, rpsSessionRegistry, pvpWebService, pvpSseService, pendingDuelRegistry,
             economyWebService, userService, jda, eventPublisher, stakeBounds,
             memberLookup
         )
@@ -290,5 +299,88 @@ class PvpControllerTest {
 
         assertEquals(200, response.statusCode.value())
         assertEquals(payload, response.body)
+    }
+
+    // ─── RPS happy paths ──────────────────────────────────────────────
+
+    private fun rpsSession(state: RpsSessionRegistry.Session.State = RpsSessionRegistry.Session.State.PENDING) =
+        RpsSessionRegistry.Session(
+            id = 1L, guildId = guildId,
+            initiatorDiscordId = discordId, opponentDiscordId = opponentId,
+            stake = 50L, createdAt = Instant.now(),
+        ).also { it.state = state }
+
+    @Test
+    fun `rpsChallenge happy path registers session and SSE fans out to opponent`() {
+        every {
+            rpsService.startMatch(discordId, opponentId, guildId, 50L)
+        } returns database.service.PvpWagerService.StartOutcome.Ok(initiatorBalance = 1000L)
+        val registered = rpsSession()
+        every {
+            rpsSessionRegistry.register(guildId, discordId, opponentId, 50L)
+        } returns registered
+        every { pvpWebService.rpsSessionView(1L, opponentId) } returns null
+
+        val response = controller.rpsChallenge(
+            guildId,
+            ChallengeRequest(opponentDiscordId = opponentId.toString(), stake = 50L),
+            user,
+        )
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(true, response.body?.ok)
+        verify { pvpSseService.fanOutToUser(guildId, opponentId, "rps.offered", any()) }
+    }
+
+    @Test
+    fun `rpsChallenge rejects self-challenge before touching the service`() {
+        val response = controller.rpsChallenge(
+            guildId,
+            ChallengeRequest(opponentDiscordId = discordId.toString(), stake = 10L),
+            user,
+        )
+
+        assertEquals(400, response.statusCode.value())
+        verify(exactly = 0) { rpsService.startMatch(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `rpsAccept happy path debits both and SSE fans accepted to both`() {
+        val session = rpsSession()
+        // Opponent is the one accepting.
+        val opponentUser = mockk<OAuth2User> {
+            every { getAttribute<String>("id") } returns opponentId.toString()
+            every { getAttribute<String>("username") } returns "opp"
+        }
+        every { rpsSessionRegistry.get(1L) } returns session
+        every { rpsSessionRegistry.accept(1L, any()) } returns session
+        every {
+            rpsService.acceptMatch(discordId, opponentId, guildId, 50L)
+        } returns database.service.PvpWagerService.AcceptOutcome.Ok(
+            initiatorNewBalance = 950L, opponentNewBalance = 950L,
+        )
+
+        val response = controller.rpsAccept(guildId, 1L, opponentUser)
+
+        assertEquals(200, response.statusCode.value())
+        verify { pvpSseService.fanOutToBoth(guildId, discordId, opponentId, "rps.accepted", any()) }
+    }
+
+    @Test
+    fun `rpsPick by one side fans pick to other but does not resolve`() {
+        val session = rpsSession(RpsSessionRegistry.Session.State.LIVE)
+        every { rpsSessionRegistry.get(1L) } returns session
+        every { pvpWebService.parseRpsChoice("ROCK") } returns common.rps.RpsEngine.Choice.ROCK
+        every { rpsSessionRegistry.recordPick(1L, discordId, common.rps.RpsEngine.Choice.ROCK) } returns
+            rpsSession(RpsSessionRegistry.Session.State.LIVE).also {
+                it.picks[discordId] = common.rps.RpsEngine.Choice.ROCK
+            }
+
+        val response = controller.rpsPick(guildId, 1L, RpsPickRequest(choice = "ROCK"), user)
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(true, response.body?.waitingForOpponent)
+        verify { pvpSseService.fanOutToUser(guildId, opponentId, "rps.picked", any()) }
+        verify(exactly = 0) { rpsSessionRegistry.consumeForResolution(any()) }
     }
 }
