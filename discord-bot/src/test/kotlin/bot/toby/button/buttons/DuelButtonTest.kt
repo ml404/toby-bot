@@ -5,7 +5,7 @@ import bot.toby.button.ButtonTest.Companion.event
 import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
-import bot.toby.command.commands.economy.DuelEmbeds
+import bot.toby.command.commands.game.DuelEmbeds
 import database.duel.PendingDuelRegistry
 import database.dto.UserDto
 import database.service.DuelService

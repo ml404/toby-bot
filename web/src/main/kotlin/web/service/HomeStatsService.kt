@@ -35,6 +35,8 @@ class HomeStatsService(
         val gameCount: Int,
         val minigameCount: Int,
         val minigameNames: String,
+        val pvpGameCount: Int,
+        val pvpGameNames: String,
         val configKeyCount: Int,
         val achievementCount: Int,
         val notificationKindCount: Int,
@@ -60,12 +62,15 @@ class HomeStatsService(
                 dndCommands.size +
                 moderationCommands.size +
                 economyCommands.size +
+                gameCommands.size +
                 miscCommands.size +
                 fetchCommands.size
         },
         gameCount = GameCatalog.total,
         minigameCount = GameCatalog.minigameCount,
         minigameNames = GameCatalog.minigameNames,
+        pvpGameCount = GameCatalog.pvpCount,
+        pvpGameNames = GameCatalog.pvpNames,
         configKeyCount = ConfigDto.Configurations.values().size,
         achievementCount = AchievementCatalog.all.count { !it.hidden },
         notificationKindCount = NotificationChannelKind.entries.size,

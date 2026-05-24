@@ -30,6 +30,8 @@ class HomeControllerTest {
         gameCount = 15,
         minigameCount = 12,
         minigameNames = "slots, dice",
+        pvpGameCount = 3,
+        pvpGameNames = "rps, tictactoe, connect4",
         configKeyCount = 58,
         achievementCount = 15,
         notificationKindCount = 8,

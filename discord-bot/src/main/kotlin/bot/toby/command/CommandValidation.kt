@@ -12,7 +12,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
  * with single-line guarded extraction.
  *
  * Two reply families: [replyAndDelete] (plain text) for moderation /
- * misc commands; economy commands keep using `WagerCommandEmbeds.replyError`
+ * misc commands; game commands keep using `WagerCommandEmbeds.replyError`
  * for the consistent themed error embed.
  */
 
