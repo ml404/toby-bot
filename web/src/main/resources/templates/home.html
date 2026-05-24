@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <head th:replace="~{fragments/headSeo :: headSeo(
         'TobyBot — Your Discord Companion',
-        'A live per-server coin economy, a ' + ${homeStats.gameCount} + '-game casino with a shared jackpot pool, music, polls, monthly leaderboards, and a full web admin — all in one Discord bot.',
+        'A live per-server coin economy, a ' + ${homeStats.casinoGameCount} + '-game casino with a shared jackpot pool, ' + ${homeStats.pvpGameCount} + ' head-to-head PvP games, music, polls, monthly leaderboards, and a full web admin — all in one Discord bot.',
         'https://www.toby-bot.co.uk/images/preview.svg',
         '/css/home.css')}"></head>
 <body>
@@ -16,9 +16,9 @@
         <div class="hero-copy">
             <div class="hero-badge">Discord Bot</div>
             <h1 id="hero-title">Your server&rsquo;s <span>best companion</span></h1>
-            <p>A live per-server coin economy, a [[${homeStats.gameCount}]]-game casino with a shared jackpot pool,
-                music and intro songs, monthly leaderboards, and a full browser-based admin &mdash;
-                all in one Discord bot.</p>
+            <p>A live per-server coin economy, a [[${homeStats.casinoGameCount}]]-game casino with a shared jackpot pool,
+                [[${homeStats.pvpGameCount}]] head-to-head PvP matchups, music and intro songs, monthly leaderboards,
+                and a full browser-based admin &mdash; all in one Discord bot.</p>
             <div class="hero-actions">
                 <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
                 <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
@@ -96,7 +96,7 @@
             <div class="feature-icon">&#127920;</div>
             <h3>Casino games</h3>
             <p>[[${homeStats.minigameCount}]] quick-play minigames ([[${homeStats.minigameNames}]]) plus seated Poker and Blackjack tables.</p>
-            <span class="feature-card-tag">[[${homeStats.gameCount}]] games</span>
+            <span class="feature-card-tag">[[${homeStats.casinoGameCount}]] games</span>
         </a>
         <a class="feature-card" href="/lottery/guilds" data-reveal>
             <div class="feature-icon">&#127903;&#65039;</div>
@@ -177,12 +177,16 @@
 <section class="numbers-strip" aria-label="TobyBot by the numbers">
     <div class="numbers-strip-inner">
         <div class="numbers-cell" data-reveal>
-            <span class="numbers-value" data-count-up th:text="${homeStats.gameCount}">0</span>
+            <span class="numbers-value" data-count-up th:text="${homeStats.casinoGameCount}">0</span>
             <span class="numbers-label">Casino games</span>
         </div>
         <div class="numbers-cell" data-reveal>
             <span class="numbers-value" data-count-up th:text="${homeStats.minigameCount}">0</span>
             <span class="numbers-label">Quick-play minigames</span>
+        </div>
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${homeStats.pvpGameCount}">0</span>
+            <span class="numbers-label">PvP games</span>
         </div>
         <div class="numbers-cell" data-reveal>
             <span class="numbers-value" data-count-up th:text="${homeStats.commandCount}">0</span>
