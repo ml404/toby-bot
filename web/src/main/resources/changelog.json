@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "RPS frontend — SSE-driven panel with challenge, accept, pick",
+    "summary": "Activates the **RPS tab on `/pvp/{guildId}` end-to-end**. The backend that merged in #568 is now reachable from the browser — challenge, accept/decline, pick, forfeit all work without leaving the page. ### What's in the panel **Challenge card**: opponent picker + stake input (RPS-specific per-guild min/max via new `StakeBounds.rps`) + submit button. **Pending offers** (incoming) with Accept / Decline buttons. **Outgoing offers** with Cancel button. **Live-match board** wit…",
+    "emoji": "✨",
+    "prNumber": 570
+  },
+  {
+    "date": "May 2026",
     "title": "Unified dashboard header + .mod-page-intro shell",
     "summary": "Phase 2 of the moderation dashboard refresh — unifies the shared chrome across all 10 tabs so each page reads as part of one designed dashboard instead of 10 stitched-together tabs. **New `.mod-page-header`** in `fragments/moderationHeader.html`: guild avatar (fed from a new `GuildOverview.guildIconUrl`, with a coloured-initial fallback when the guild has no icon) + \"Server name\" eyebrow + H1 with the active tab's label + a per-tab one-line description, plus a right-pinned…",
     "emoji": "🛡️",
