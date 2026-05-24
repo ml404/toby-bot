@@ -1,14 +1,10 @@
 package bot.toby.command.commands.game
 
 import bot.toby.helpers.UserDtoHelper
-import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.PvpWagerService
 import database.service.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
-import net.dv8tion.jda.api.components.MessageTopLevelComponent
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
@@ -27,6 +23,9 @@ import org.springframework.stereotype.Component
  * [bot.toby.button.buttons.TicTacToeButton], which routes through
  * [TicTacToeSessionRegistry] (in-memory board + turn state) and
  * [TicTacToeService] (wager arithmetic).
+ *
+ * The handler body is the shared [PvpChallengeCeremony] — see that
+ * file for the per-game ceremony shape.
  */
 @Component
 class TicTacToeCommand @Autowired constructor(
@@ -39,81 +38,28 @@ class TicTacToeCommand @Autowired constructor(
     override val description: String =
         "Challenge another user to Tic-Tac-Toe. Stake is optional — leave it off for free play."
 
-    companion object {
-        private const val OPT_USER = "user"
-        private const val OPT_STAKE = "stake"
-    }
-
     override val optionData: List<OptionData> = listOf(
-        OptionData(OptionType.USER, OPT_USER, "Opponent", true),
+        OptionData(OptionType.USER, "user", "Opponent", true),
         OptionData(
             OptionType.INTEGER,
-            OPT_STAKE,
+            "stake",
             "Credits to wager each (optional; per-guild bounds; 0 = free play)",
             false,
         ).setMinValue(0L),
     )
 
-    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        val event = ctx.event
-        event.deferReply().queue()
-
-        val guild = event.guild ?: run {
-            replyError(event, "This command can only be used in a server.", deleteDelay); return
-        }
-        val targetUser = event.getOption(OPT_USER)?.asUser ?: run {
-            replyError(event, "You must specify an opponent.", deleteDelay); return
-        }
-        if (targetUser.isBot) {
-            replyError(event, "You can't challenge a bot.", deleteDelay); return
-        }
-        if (targetUser.idLong == requestingUserDto.discordId) {
-            replyError(event, "You can't challenge yourself.", deleteDelay); return
-        }
-        val stake = event.getOption(OPT_STAKE)?.asLong ?: 0L
-
-        userDtoHelper.calculateUserDto(targetUser.idLong, guild.idLong)
-
-        val start = ticTacToeService.startMatch(
-            initiatorDiscordId = requestingUserDto.discordId,
-            opponentDiscordId = targetUser.idLong,
-            guildId = guild.idLong,
-            stake = stake,
+    override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) =
+        PvpChallengeCeremony.run(
+            ctx = ctx,
+            requestingUserDto = requestingUserDto,
+            deleteDelay = deleteDelay,
+            userDtoHelper = userDtoHelper,
+            startMatch = { init, opp, gid, stake -> ticTacToeService.startMatch(init, opp, gid, stake) },
+            register = { gid, init, opp, stake, cb ->
+                ticTacToeSessionRegistry.register(gid, init, opp, stake, onPendingTimeout = cb)
+            },
+            pendingEmbed = TicTacToeEmbeds::pendingEmbed,
+            pendingButtons = TicTacToeEmbeds::pendingButtons,
+            pendingTimeoutEmbed = TicTacToeEmbeds::pendingTimeoutEmbed,
         )
-        if (start !is PvpWagerService.StartOutcome.Ok) {
-            event.hook.replyEmbedAndDelete(
-                PvpEmbeds.startErrorEmbed(PvpEmbeds.describeStartOutcome(start)),
-                deleteDelay,
-            )
-            return
-        }
-
-        val initiatorId = requestingUserDto.discordId
-        val opponentId = targetUser.idLong
-        val session = ticTacToeSessionRegistry.register(
-            guildId = guild.idLong,
-            initiatorDiscordId = initiatorId,
-            opponentDiscordId = opponentId,
-            stake = stake,
-        ) { expired ->
-            runCatching {
-                event.hook.editOriginalEmbeds(
-                    TicTacToeEmbeds.pendingTimeoutEmbed(expired.initiatorDiscordId, expired.opponentDiscordId)
-                ).setComponents(emptyList<MessageTopLevelComponent>()).queue()
-            }
-        }
-
-        event.hook.sendMessageEmbeds(TicTacToeEmbeds.pendingEmbed(initiatorId, opponentId, stake))
-            .addContent("<@$opponentId>")
-            .addComponents(TicTacToeEmbeds.pendingButtons(session.id, opponentId))
-            .queue()
-    }
-
-    private fun replyError(
-        event: SlashCommandInteractionEvent,
-        message: String,
-        deleteDelay: Int,
-    ) {
-        event.hook.replyEmbedAndDelete(PvpEmbeds.startErrorEmbed(message), deleteDelay)
-    }
 }
