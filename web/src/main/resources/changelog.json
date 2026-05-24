@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Unbreak channel picker after reinvite — keep configured channels visible + request Administrator on invite",
+    "summary": "Two related changes from the same user report: lottery announce channel \"defaulted back to general\" after a TobyBot uninstall/reinstall, and the saved channel was missing from the picker so it couldn't be re-selected.",
+    "emoji": "🛡️",
+    "prNumber": 564
+  },
+  {
+    "date": "May 2026",
     "title": "GameCommand interface + surface PvP in home counter",
     "summary": "Introduces a `GameCommand` marker interface (sibling to `EconomyCommand`) so the type system can finally tell games apart from real economy commands. Migrates **19 commands** off `EconomyCommand` and into a new `commands/game/` package: the 12 casino minigames, Poker, Blackjack, Lottery, the 3 PvP games (RPS, TicTacToe, Connect 4), and Duel. The 5 remaining economy commands (Tip, TobyCoin, Title, PriceAlert) stay put. Threads the new bucket through `CommandManager` / `Defa…",
     "emoji": "🎟️",
