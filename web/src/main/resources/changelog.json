@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Drive category visibility from section.hidden, not a hardcoded allowlist",
+    "summary": "Fixes the empty **Games** filter on `/commands/wiki` (regression from #563): the previous CSS enumerated every valid `data-active-cat` slug, the new `games` slug wasn't on the list, so clicking the chip hit the `:not(...)` fallback and hid every section. Refactors the visibility model so the bug class can't recur: `applyFilters()` already iterates every section and knows whether each matches the active chip, so it now sets `section.hidden` for the category miss too. The `.…",
+    "emoji": "🔨",
+    "prNumber": 565
+  },
+  {
+    "date": "May 2026",
     "title": "Unbreak channel picker after reinvite — keep configured channels visible + request Administrator on invite",
     "summary": "Two related changes from the same user report: lottery announce channel \"defaulted back to general\" after a TobyBot uninstall/reinstall, and the saved channel was missing from the picker so it couldn't be re-selected.",
     "emoji": "🛡️",
