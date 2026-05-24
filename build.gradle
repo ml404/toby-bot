@@ -28,6 +28,11 @@ buildscript {
 plugins {
     id 'io.spring.dependency-management' version "$springDependencyManagementVersion"
     id 'com.autonomousapps.dependency-analysis' version '3.6.1'
+    // Kotlin-native line/branch coverage. Aggregates across every
+    // subproject (see the kover { } block + dependencies at the
+    // bottom of this file). Non-blocking — CI prints the % but does
+    // not gate merges. Run `./gradlew koverHtmlReport` locally.
+    id 'org.jetbrains.kotlinx.kover' version '0.9.1'
 }
 
 apply plugin: 'kotlin'
@@ -65,6 +70,9 @@ allprojects {
 
 subprojects {
     apply plugin: 'io.spring.dependency-management'
+    // Every module is Kotlin — applying Kover here gives per-module
+    // raw coverage data that the root aggregates into one report.
+    apply plugin: 'org.jetbrains.kotlinx.kover'
 
     configurations {
         configureEach {
@@ -116,4 +124,17 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+}
+
+// Aggregate coverage across every Kotlin subproject into one report.
+// `./gradlew koverHtmlReport` produces build/reports/kover/html/index.html;
+// `./gradlew koverXmlReport` produces build/reports/kover/report.xml that
+// CI greps for the line-coverage %.
+dependencies {
+    kover project(':common')
+    kover project(':core-api')
+    kover project(':database')
+    kover project(':discord-bot')
+    kover project(':web')
+    kover project(':application')
 }
