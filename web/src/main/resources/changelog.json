@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Extract shared button-handler helpers (decline + access checks)",
+    "summary": "Sixth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581, #582, #583). Symmetric follow-up to #583 (which extracted the slash-command challenge ceremony). The three PvP `*Button` handlers — `RpsButton`, `TicTacToeButton`, `Connect4Button` — carried verbatim copies of: The full `handleDecline` body (scoped-actor check → registry decline → message-edit with `pendingDeclineEmbed` + cleared components → ephemeral \"already-resolved\" reply on n…",
+    "emoji": "🧹",
+    "prNumber": 584
+  },
+  {
+    "date": "May 2026",
     "title": "Lift shared challenge ceremony out of the three slash commands",
     "summary": "Fifth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581, #582). `RpsCommand`, `TicTacToeCommand`, and `Connect4Command` each carried a verbatim copy of a ~60-line `handle()` body — guild / target / bot / self / stake validation, opponent lazy-create, service.startMatch pre-flight + error embed, registry.register with a pending-timeout embed-edit callback, and the final pending-embed send. The only per-game bits were the service / registr…",
     "emoji": "🧹",
