@@ -2,6 +2,7 @@ package web.controller
 
 import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
+import database.pvp.PvpSessionRegistry
 import database.rps.RpsSessionRegistry
 import database.service.Connect4Service
 import database.service.DuelService
@@ -318,7 +319,7 @@ class PvpControllerTest {
 
     // ─── RPS happy paths ──────────────────────────────────────────────
 
-    private fun rpsSession(state: RpsSessionRegistry.Session.State = RpsSessionRegistry.Session.State.PENDING) =
+    private fun rpsSession(state: PvpSessionRegistry.Session.State = PvpSessionRegistry.Session.State.PENDING) =
         RpsSessionRegistry.Session(
             id = 1L, guildId = guildId,
             initiatorDiscordId = discordId, opponentDiscordId = opponentId,
@@ -332,7 +333,7 @@ class PvpControllerTest {
         } returns database.service.PvpWagerService.StartOutcome.Ok(initiatorBalance = 1000L)
         val registered = rpsSession()
         every {
-            rpsSessionRegistry.register(guildId, discordId, opponentId, 50L)
+            rpsSessionRegistry.register(guildId, discordId, opponentId, 50L, any(), any())
         } returns registered
         every { pvpWebService.rpsSessionView(1L, opponentId) } returns null
 
@@ -383,11 +384,11 @@ class PvpControllerTest {
 
     @Test
     fun `rpsPick by one side fans pick to other but does not resolve`() {
-        val session = rpsSession(RpsSessionRegistry.Session.State.LIVE)
+        val session = rpsSession(PvpSessionRegistry.Session.State.LIVE)
         every { rpsSessionRegistry.get(1L) } returns session
         every { pvpWebService.parseRpsChoice("ROCK") } returns common.rps.RpsEngine.Choice.ROCK
         every { rpsSessionRegistry.recordPick(1L, discordId, common.rps.RpsEngine.Choice.ROCK) } returns
-            rpsSession(RpsSessionRegistry.Session.State.LIVE).also {
+            rpsSession(PvpSessionRegistry.Session.State.LIVE).also {
                 it.picks[discordId] = common.rps.RpsEngine.Choice.ROCK
             }
 

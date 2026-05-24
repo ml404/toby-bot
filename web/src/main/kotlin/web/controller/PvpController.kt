@@ -631,7 +631,7 @@ class PvpController(
         if (discordId != session.initiatorDiscordId && discordId != session.opponentDiscordId) {
             return ResponseEntity.status(403).body(PvpActionResponse(false, error = "You aren't in this match."))
         }
-        if (session.state != database.rps.RpsSessionRegistry.Session.State.LIVE) {
+        if (session.state != database.pvp.PvpSessionRegistry.Session.State.LIVE) {
             return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Match isn't live."))
         }
         val consumed = rpsSessionRegistry.forfeit(sessionId)
@@ -1280,7 +1280,7 @@ class PvpController(
         if (discordId != session.initiatorDiscordId && discordId != session.opponentDiscordId) {
             return ResponseEntity.status(403).body(PvpActionResponse(false, error = "You aren't in this match."))
         }
-        if (session.state != database.boardgame.TurnBasedBoardSessionRegistry.Session.State.LIVE) {
+        if (session.state != database.pvp.PvpSessionRegistry.Session.State.LIVE) {
             return ResponseEntity.badRequest().body(PvpActionResponse(false, error = "Match isn't live."))
         }
         val consumed = forfeit(sessionId)

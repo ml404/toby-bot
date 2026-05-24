@@ -77,7 +77,7 @@ class RpsButtonTest : ButtonTest {
         stake = stake, createdAt = Instant.now(),
     )
 
-    private fun liveSession() = pendingSession().also { it.state = RpsSessionRegistry.Session.State.LIVE }
+    private fun liveSession() = pendingSession().also { it.state = database.pvp.PvpSessionRegistry.Session.State.LIVE }
 
     // ---- DECLINE ----
 
