@@ -155,6 +155,60 @@ class ActivityChartsServiceTest {
     }
 
     @Test
+    fun `ChartView pre-computes markers, area polygon, gridlines, axis dates, and average`() {
+        val messages = mockk<MessageDailyCountPersistence> {
+            every { findByGuildSince(any(), any()) } returns listOf(
+                MessageDailyCountDto(guildId = 1L, dayStart = today, count = 10L),
+                MessageDailyCountDto(guildId = 1L, dayStart = today.minusDays(2), count = 6L),
+            )
+        }
+        val service = ActivityChartsService(messages, mockk(relaxed = true), clock)
+
+        val chart = service.buildMessagesChart(guildId = 1L, days = 5)
+
+        // One marker per data point, in series order.
+        assertEquals(chart.points.size, chart.markers.size)
+        assertEquals(today.minusDays(4), chart.markers.first().date)
+        assertEquals(today, chart.markers.last().date)
+        // Marker on the peak day sits higher (smaller Y) than the zero days.
+        val peakMarker = chart.markers.first { it.date == today }
+        val zeroMarker = chart.markers.first { it.value == 0.0 }
+        assertTrue(peakMarker.y < zeroMarker.y, "peak marker should sit above zero marker")
+
+        // Area polygon = polyline points + two closing corners along the baseline.
+        val polylineCount = chart.polyline.split(" ").size
+        val areaCount = chart.areaPolygon.split(" ").size
+        assertEquals(polylineCount + 2, areaCount, "area polygon should close back to the baseline")
+
+        // Three gridlines (top/mid/baseline), ordered top→bottom in SVG units (ascending Y).
+        assertEquals(3, chart.gridLines.size)
+        val ys = chart.gridLines.map { it.y }
+        assertEquals(ys.sorted(), ys, "gridlines should be ordered top → baseline")
+        assertEquals(0.0, chart.gridLines.last().value)
+        assertEquals(chart.max, chart.gridLines.first().value)
+
+        // Axis dates: first / middle / last.
+        assertEquals(listOf(today.minusDays(4), today.minusDays(2), today), chart.axisDates)
+
+        // Averages and active-day count match the series.
+        assertEquals(16.0 / 5.0, chart.dailyAverage, 0.0001)
+        assertEquals(2, chart.nonZeroDays)
+    }
+
+    @Test
+    fun `ChartView treats an all-zero series as empty for layout purposes`() {
+        val messages = mockk<MessageDailyCountPersistence> {
+            every { findByGuildSince(any(), any()) } returns emptyList()
+        }
+        val service = ActivityChartsService(messages, mockk(relaxed = true), clock)
+
+        val chart = service.buildMessagesChart(guildId = 1L, days = 5)
+        assertTrue(chart.isEmpty, "zero-only series should render the empty-state card")
+        assertEquals(0, chart.nonZeroDays)
+        assertEquals(0.0, chart.dailyAverage)
+    }
+
+    @Test
     fun `buildVoiceHoursChart returns a fully-populated ChartView bundle`() {
         val sessionStart = today.atStartOfDay(ZoneOffset.UTC).plusHours(10).toInstant()
         val sessionEnd = sessionStart.plusSeconds(3600) // 1 hour exactly

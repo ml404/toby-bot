@@ -26,10 +26,10 @@ import kotlin.math.round
  * to worry about gaps in the X axis.
  *
  * The page renders via [ChartView] — a render-ready bundle of pre-
- * computed polyline + headline numbers + date range — so the template
- * never has to call helper functions through Thymeleaf SpEL. See
- * [buildMessagesChart] and [buildVoiceHoursChart] for the controller-
- * facing entry points.
+ * computed polyline + area polygon + axis labels + headline numbers —
+ * so the template never has to call helper functions through Thymeleaf
+ * SpEL. See [buildMessagesChart] and [buildVoiceHoursChart] for the
+ * controller-facing entry points.
  */
 @Service
 class ActivityChartsService(
@@ -46,6 +46,20 @@ class ActivityChartsService(
         val valueLong: Long get() = value.toLong()
     }
 
+    /** One pre-computed `<circle>` marker for the chart. */
+    data class Marker(
+        val x: Double,
+        val y: Double,
+        val date: LocalDate,
+        val value: Double,
+    )
+
+    /** One Y-axis gridline with its rendered value + the SVG y-coordinate. */
+    data class GridLine(
+        val value: Double,
+        val y: Double,
+    )
+
     /**
      * Render-ready bundle for one chart. Everything the template needs
      * is pre-computed in the service so the Thymeleaf page only has to
@@ -57,8 +71,18 @@ class ActivityChartsService(
         val points: List<DailyPoint>,
         /** Pre-rendered SVG `points="..."` value for `<polyline>`. */
         val polyline: String,
+        /** Polyline + baseline corners — drops straight into `<polygon points="...">`. */
+        val areaPolygon: String,
+        /** Per-day markers for hover-tooltip targeting. */
+        val markers: List<Marker>,
+        /** Three Y-axis gridlines: 0, mid, max. Pre-positioned in SVG units. */
+        val gridLines: List<GridLine>,
+        /** Three X-axis tick dates: first, middle, last. */
+        val axisDates: List<LocalDate>,
         val total: Double,
         val max: Double,
+        val dailyAverage: Double,
+        val nonZeroDays: Int,
         val viewBoxWidth: Int,
         val viewBoxHeight: Int,
         val firstDate: LocalDate?,
@@ -67,7 +91,7 @@ class ActivityChartsService(
         /** Display-only int variants for headline strong-tags. */
         val totalRounded: Long get() = round(total).toLong()
         val maxRounded: Long get() = round(max).toLong()
-        val isEmpty: Boolean get() = points.isEmpty()
+        val isEmpty: Boolean get() = points.isEmpty() || points.all { it.value == 0.0 }
     }
 
     /** Build the messages-per-day chart for [guildId]. */
@@ -134,40 +158,95 @@ class ActivityChartsService(
         }
     }
 
-    private fun toChartView(series: List<DailyPoint>): ChartView = ChartView(
-        points = series,
-        polyline = polylinePoints(series),
-        total = series.sumOf { it.value },
-        max = series.maxOfOrNull { it.value } ?: 0.0,
-        viewBoxWidth = CHART_WIDTH,
-        viewBoxHeight = CHART_HEIGHT,
-        firstDate = series.firstOrNull()?.date,
-        lastDate = series.lastOrNull()?.date,
-    )
+    private fun toChartView(series: List<DailyPoint>): ChartView {
+        val coords = pointCoords(series)
+        val markers = coords.mapIndexed { i, (x, y) ->
+            Marker(x = x, y = y, date = series[i].date, value = series[i].value)
+        }
+        val polyline = coords.joinToString(" ") { (x, y) -> "%.1f,%.1f".format(x, y) }
+        val areaPolygon = if (coords.isEmpty()) {
+            ""
+        } else {
+            val baseY = (CHART_HEIGHT - CHART_PADDING).toDouble()
+            val firstX = coords.first().first
+            val lastX = coords.last().first
+            polyline +
+                " %.1f,%.1f".format(lastX, baseY) +
+                " %.1f,%.1f".format(firstX, baseY)
+        }
+        val total = series.sumOf { it.value }
+        val maxVal = series.maxOfOrNull { it.value } ?: 0.0
+        val nonZero = series.count { it.value > 0.0 }
+        val average = if (series.isEmpty()) 0.0 else total / series.size
+        return ChartView(
+            points = series,
+            polyline = polyline,
+            areaPolygon = areaPolygon,
+            markers = markers,
+            gridLines = gridLines(maxVal),
+            axisDates = axisDates(series),
+            total = total,
+            max = maxVal,
+            dailyAverage = average,
+            nonZeroDays = nonZero,
+            viewBoxWidth = CHART_WIDTH,
+            viewBoxHeight = CHART_HEIGHT,
+            firstDate = series.firstOrNull()?.date,
+            lastDate = series.lastOrNull()?.date,
+        )
+    }
+
+    /**
+     * One `(x, y)` pair per data point in [series], padded inside the
+     * chart's viewBox. Single source of truth used by the polyline,
+     * area polygon, and per-point markers.
+     *
+     * Y-axis normalises to the series max so an all-zero series sits
+     * flat on the baseline (max is clamped to 1.0 to avoid div-by-zero).
+     */
+    private fun pointCoords(series: List<DailyPoint>): List<Pair<Double, Double>> {
+        if (series.isEmpty()) return emptyList()
+        val innerW = CHART_WIDTH - 2 * CHART_PADDING
+        val innerH = CHART_HEIGHT - 2 * CHART_PADDING
+        val maxVal = series.maxOf { it.value }.coerceAtLeast(1.0)
+        val stepX = if (series.size <= 1) 0.0 else innerW.toDouble() / (series.size - 1)
+        return series.mapIndexed { i, point ->
+            val x = CHART_PADDING + i * stepX
+            val y = CHART_PADDING + innerH - (point.value / maxVal) * innerH
+            x to y
+        }
+    }
 
     /**
      * Build the `points="..."` value for an `<svg><polyline>` rendering
-     * of [series]. Y-axis normalises to the series max; an all-zero
-     * series renders along the bottom of the chart so the baseline is
-     * always visible. The chart is padded inside the SVG so the top
-     * edge doesn't clip the highest point.
-     *
-     * Internal — the controller never calls this directly; templates
-     * read [ChartView.polyline] from the bundle [buildMessagesChart]
-     * returns.
+     * of [series]. Kept as an internal helper so the existing test
+     * suite (and any future template that wants the raw polyline) still
+     * has a thin entry point, but the implementation delegates to
+     * [pointCoords] so geometry stays in one place.
      */
-    internal fun polylinePoints(series: List<DailyPoint>): String {
-        if (series.isEmpty()) return ""
-        val padding = 8.0
-        val innerW = CHART_WIDTH - 2 * padding
-        val innerH = CHART_HEIGHT - 2 * padding
-        val maxVal = series.maxOf { it.value }.coerceAtLeast(1.0)
-        val stepX = if (series.size <= 1) 0.0 else innerW / (series.size - 1)
-        return series.mapIndexed { i, point ->
-            val x = padding + i * stepX
-            val y = padding + innerH - (point.value / maxVal) * innerH
-            "%.1f,%.1f".format(x, y)
-        }.joinToString(" ")
+    internal fun polylinePoints(series: List<DailyPoint>): String =
+        pointCoords(series).joinToString(" ") { (x, y) -> "%.1f,%.1f".format(x, y) }
+
+    /** Three Y-axis ticks — 0, mid, max — pre-positioned in SVG coords. */
+    private fun gridLines(maxVal: Double): List<GridLine> {
+        if (maxVal <= 0.0) return emptyList()
+        val innerH = CHART_HEIGHT - 2 * CHART_PADDING
+        val baseY = CHART_PADDING + innerH
+        val topY = CHART_PADDING.toDouble()
+        val midY = (baseY + topY) / 2.0
+        return listOf(
+            GridLine(value = maxVal, y = topY),
+            GridLine(value = maxVal / 2.0, y = midY),
+            GridLine(value = 0.0, y = baseY.toDouble()),
+        )
+    }
+
+    /** First, middle, and last dates in the series — used for X-axis labels. */
+    private fun axisDates(series: List<DailyPoint>): List<LocalDate> = when {
+        series.isEmpty() -> emptyList()
+        series.size == 1 -> listOf(series[0].date)
+        series.size == 2 -> listOf(series[0].date, series[1].date)
+        else -> listOf(series.first().date, series[series.size / 2].date, series.last().date)
     }
 
     private fun fillRange(since: LocalDate, today: LocalDate): List<LocalDate> {
@@ -185,5 +264,8 @@ class ActivityChartsService(
         /** Width / height for the per-chart SVG. Picked to match the moderation panel grid. */
         const val CHART_WIDTH: Int = 600
         const val CHART_HEIGHT: Int = 180
+
+        /** Inner padding so the polyline and markers never touch the chart edge. */
+        private const val CHART_PADDING: Int = 12
     }
 }

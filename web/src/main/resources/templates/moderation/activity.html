@@ -13,80 +13,194 @@
     <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'activity')}"></div>
 
     <!--
-        Server-wide activity charts. 30-day rolling window, UTC-bucketed.
-        Two metrics:
-          - Messages/day: from `message_daily_count`, populated by
-            `MessageActivityBuffer` (in-memory accumulator flushed once
-            a minute off the JDA dispatch thread).
-          - Voice hours/day: aggregated at query time over closed
-            voice sessions, splitting each session across the calendar
-            days it touched.
-        Both series are pre-padded with zero-days so the SVG always has
-        one point per calendar day in the window.
-
-        Render values are pre-computed in ActivityChartsService and
-        passed as `messagesChart` / `voiceHoursChart` ChartView bundles —
-        the template only reads simple `${chart.field}` properties, no
-        SpEL static-type calls.
+        Server-wide activity dashboard. 30-day rolling window, UTC-bucketed.
+        Two metrics — messages/day and voice-hours/day — each rendered as
+        a stat-tile row + a polished SVG area chart with gridlines, axis
+        labels, and hover tooltips (see /js/moderation/activity.js).
+        Render values come pre-computed off ActivityChartsService.ChartView;
+        the template only reads simple `${chart.field}` properties.
     -->
-    <section class="mod-panel" data-panel="activity">
-        <p class="muted mb-4">
-            30-day rolling activity for this server. Messages start being
-            counted once the bot is rolled out with this feature — historical
-            messages from before deployment are not backfilled.
-        </p>
-
-        <div class="mod-card mod-card-wide">
-            <h3>💬 Messages per day</h3>
+    <section class="mod-panel activity-panel" data-panel="activity">
+        <div class="activity-intro">
             <p class="muted">
-                Total over window:
-                <strong th:text="${messagesChart.totalRounded}">0</strong>
-                · Peak day:
-                <strong th:text="${messagesChart.maxRounded}">0</strong>
+                30-day rolling activity for this server. Messages start being
+                counted once the bot is rolled out with this feature —
+                historical messages from before deployment are not backfilled.
             </p>
-            <svg th:unless="${messagesChart.empty}"
-                 class="activity-chart"
-                 role="img"
-                 aria-label="Messages per day, 30-day rolling"
-                 th:attr="viewBox=|0 0 ${messagesChart.viewBoxWidth} ${messagesChart.viewBoxHeight}|"
-                 preserveAspectRatio="none">
-                <polyline fill="none"
-                          stroke="#5b8def"
-                          stroke-width="2"
-                          th:attr="points=${messagesChart.polyline}"/>
-            </svg>
-            <p class="muted small" th:unless="${messagesChart.empty}">
+            <span class="activity-date-pill"
+                  th:if="${messagesChart.firstDate != null}">
                 <span th:text="${messagesChart.firstDate}">2026-04-23</span>
-                →
+                <span aria-hidden="true">→</span>
                 <span th:text="${messagesChart.lastDate}">2026-05-23</span>
-            </p>
+            </span>
         </div>
 
-        <div class="mod-card mod-card-wide">
-            <h3>🎤 Voice hours per day</h3>
-            <p class="muted">
-                Total over window:
-                <strong th:text="${#numbers.formatDecimal(voiceHoursChart.total, 1, 1)}">0</strong>
-                hours · Peak day:
-                <strong th:text="${#numbers.formatDecimal(voiceHoursChart.max, 1, 1)}">0</strong>
-                hours
-            </p>
-            <svg th:unless="${voiceHoursChart.empty}"
-                 class="activity-chart"
-                 role="img"
-                 aria-label="Voice hours per day, 30-day rolling"
-                 th:attr="viewBox=|0 0 ${voiceHoursChart.viewBoxWidth} ${voiceHoursChart.viewBoxHeight}|"
-                 preserveAspectRatio="none">
-                <polyline fill="none"
-                          stroke="#57f287"
-                          stroke-width="2"
-                          th:attr="points=${voiceHoursChart.polyline}"/>
-            </svg>
-            <p class="muted small" th:unless="${voiceHoursChart.empty}">
-                <span th:text="${voiceHoursChart.firstDate}">2026-04-23</span>
-                →
-                <span th:text="${voiceHoursChart.lastDate}">2026-05-23</span>
-            </p>
+        <!-- Messages -->
+        <div class="activity-block" data-metric="messages"
+             style="--activity-color: var(--activity-msg);">
+            <div class="activity-stats">
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Total messages</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatInteger(messagesChart.totalRounded, 1, 'COMMA')}">0</span>
+                    <span class="activity-stat-sub">past 30 days</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Average / day</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatDecimal(messagesChart.dailyAverage, 1, 1)}">0</span>
+                    <span class="activity-stat-sub">messages</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Peak day</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatInteger(messagesChart.maxRounded, 1, 'COMMA')}">0</span>
+                    <span class="activity-stat-sub">messages</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Active days</span>
+                    <span class="activity-stat-value"
+                          th:text="${messagesChart.nonZeroDays}">0</span>
+                    <span class="activity-stat-sub">of <span th:text="${#lists.size(messagesChart.points)}">30</span></span>
+                </div>
+            </div>
+
+            <div class="activity-chart-card mod-card mod-card-wide">
+                <div class="activity-chart-head">
+                    <h3>💬 Messages per day</h3>
+                </div>
+                <div class="activity-chart-body" th:unless="${messagesChart.empty}">
+                    <svg class="activity-chart"
+                         role="img"
+                         aria-label="Messages per day, 30-day rolling"
+                         th:attr="viewBox=|0 0 ${messagesChart.viewBoxWidth} ${messagesChart.viewBoxHeight}|"
+                         preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="activityGradMessages" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" style="stop-color: var(--activity-color); stop-opacity: 0.35;"/>
+                                <stop offset="100%" style="stop-color: var(--activity-color); stop-opacity: 0;"/>
+                            </linearGradient>
+                        </defs>
+                        <g class="activity-grid">
+                            <line th:each="g : ${messagesChart.gridLines}"
+                                  class="activity-grid-line"
+                                  x1="0" x2="600"
+                                  th:attr="y1=${g.y},y2=${g.y}"/>
+                        </g>
+                        <polygon class="activity-area"
+                                 th:attr="points=${messagesChart.areaPolygon}"
+                                 fill="url(#activityGradMessages)"/>
+                        <polyline class="activity-line"
+                                  fill="none"
+                                  stroke-width="2"
+                                  stroke-linejoin="round"
+                                  stroke-linecap="round"
+                                  th:attr="points=${messagesChart.polyline}"/>
+                        <g class="activity-markers">
+                            <circle th:each="m : ${messagesChart.markers}"
+                                    class="activity-marker"
+                                    r="3"
+                                    th:attr="cx=${m.x},cy=${m.y},data-date=${m.date},data-value=${#numbers.formatDecimal(m.value, 1, 0)},data-unit='messages'"/>
+                        </g>
+                    </svg>
+                    <ul class="activity-axis-y" aria-hidden="true">
+                        <li th:each="g : ${messagesChart.gridLines}"
+                            th:style="|top: ${(g.y / messagesChart.viewBoxHeight) * 100}%;|"
+                            th:text="${#numbers.formatDecimal(g.value, 1, 0)}">0</li>
+                    </ul>
+                    <ul class="activity-axis-x" aria-hidden="true">
+                        <li th:each="d : ${messagesChart.axisDates}" th:text="${d}">2026-04-23</li>
+                    </ul>
+                    <div class="activity-tooltip" hidden></div>
+                </div>
+                <p class="activity-empty" th:if="${messagesChart.empty}">
+                    No messages recorded in the last 30 days.
+                </p>
+            </div>
+        </div>
+
+        <!-- Voice -->
+        <div class="activity-block" data-metric="voice"
+             style="--activity-color: var(--activity-voice);">
+            <div class="activity-stats">
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Total voice hours</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatDecimal(voiceHoursChart.total, 1, 1)}">0</span>
+                    <span class="activity-stat-sub">past 30 days</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Average / day</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatDecimal(voiceHoursChart.dailyAverage, 1, 1)}">0</span>
+                    <span class="activity-stat-sub">hours</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Peak day</span>
+                    <span class="activity-stat-value"
+                          th:text="${#numbers.formatDecimal(voiceHoursChart.max, 1, 1)}">0</span>
+                    <span class="activity-stat-sub">hours</span>
+                </div>
+                <div class="activity-stat">
+                    <span class="activity-stat-label">Active days</span>
+                    <span class="activity-stat-value"
+                          th:text="${voiceHoursChart.nonZeroDays}">0</span>
+                    <span class="activity-stat-sub">of <span th:text="${#lists.size(voiceHoursChart.points)}">30</span></span>
+                </div>
+            </div>
+
+            <div class="activity-chart-card mod-card mod-card-wide">
+                <div class="activity-chart-head">
+                    <h3>🎤 Voice hours per day</h3>
+                </div>
+                <div class="activity-chart-body" th:unless="${voiceHoursChart.empty}">
+                    <svg class="activity-chart"
+                         role="img"
+                         aria-label="Voice hours per day, 30-day rolling"
+                         th:attr="viewBox=|0 0 ${voiceHoursChart.viewBoxWidth} ${voiceHoursChart.viewBoxHeight}|"
+                         preserveAspectRatio="none">
+                        <defs>
+                            <linearGradient id="activityGradVoice" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" style="stop-color: var(--activity-color); stop-opacity: 0.35;"/>
+                                <stop offset="100%" style="stop-color: var(--activity-color); stop-opacity: 0;"/>
+                            </linearGradient>
+                        </defs>
+                        <g class="activity-grid">
+                            <line th:each="g : ${voiceHoursChart.gridLines}"
+                                  class="activity-grid-line"
+                                  x1="0" x2="600"
+                                  th:attr="y1=${g.y},y2=${g.y}"/>
+                        </g>
+                        <polygon class="activity-area"
+                                 th:attr="points=${voiceHoursChart.areaPolygon}"
+                                 fill="url(#activityGradVoice)"/>
+                        <polyline class="activity-line"
+                                  fill="none"
+                                  stroke-width="2"
+                                  stroke-linejoin="round"
+                                  stroke-linecap="round"
+                                  th:attr="points=${voiceHoursChart.polyline}"/>
+                        <g class="activity-markers">
+                            <circle th:each="m : ${voiceHoursChart.markers}"
+                                    class="activity-marker"
+                                    r="3"
+                                    th:attr="cx=${m.x},cy=${m.y},data-date=${m.date},data-value=${#numbers.formatDecimal(m.value, 1, 1)},data-unit='hours'"/>
+                        </g>
+                    </svg>
+                    <ul class="activity-axis-y" aria-hidden="true">
+                        <li th:each="g : ${voiceHoursChart.gridLines}"
+                            th:style="|top: ${(g.y / voiceHoursChart.viewBoxHeight) * 100}%;|"
+                            th:text="${#numbers.formatDecimal(g.value, 1, 1)}">0</li>
+                    </ul>
+                    <ul class="activity-axis-x" aria-hidden="true">
+                        <li th:each="d : ${voiceHoursChart.axisDates}" th:text="${d}">2026-04-23</li>
+                    </ul>
+                    <div class="activity-tooltip" hidden></div>
+                </div>
+                <p class="activity-empty" th:if="${voiceHoursChart.empty}">
+                    No voice activity recorded in the last 30 days.
+                </p>
+            </div>
         </div>
     </section>
 </main>
@@ -94,5 +208,7 @@
 <script th:src="@{/js/api.js}"></script>
 <script th:src="@{/js/toasts.js}"></script>
 <script th:src="@{/js/moderationCommon.js}"></script>
+<script th:src="@{/js/moderation/activity.js}"></script>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
 </body>
 </html>
