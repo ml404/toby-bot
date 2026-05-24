@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game.casino.highlow
 
-import common.economy.Highlow
+import common.casino.highlow.Highlow
 import database.service.casino.highlow.HighlowService.PlayOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

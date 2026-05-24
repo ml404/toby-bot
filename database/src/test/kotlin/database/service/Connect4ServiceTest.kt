@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.Connect4ResolvedEvent
+import common.events.pvp.connect4.Connect4ResolvedEvent
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.guild.ConfigDto
 import io.mockk.every

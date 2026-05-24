@@ -4,7 +4,7 @@ import common.card.Card
 import common.card.Rank
 import common.card.Suit
 import database.dto.user.UserDto
-import common.economy.Baccarat
+import common.casino.baccarat.Baccarat
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -21,6 +21,7 @@ import database.service.economy.EconomyTradeService
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.baccarat.BaccaratWonEvent
 
 class BaccaratServiceTest {
 

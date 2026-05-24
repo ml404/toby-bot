@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.TicTacToeResolvedEvent
+import common.events.pvp.tictactoe.TicTacToeResolvedEvent
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.guild.ConfigDto
 import io.mockk.every

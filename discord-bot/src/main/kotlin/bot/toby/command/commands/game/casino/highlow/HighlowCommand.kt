@@ -3,7 +3,7 @@ package bot.toby.command.commands.game.casino.highlow
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.Highlow
+import common.casino.highlow.Highlow
 import database.service.casino.highlow.HighlowService
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button

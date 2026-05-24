@@ -8,6 +8,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.casino.dice.Dice
+import common.casino.roulette.Roulette
 
 /**
  * Tests for the [InstallWizard] component factories. Catches accidental

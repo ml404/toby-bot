@@ -1,6 +1,6 @@
 package database.service.impl
 
-import common.events.VoiceSessionLoggedEvent
+import common.events.activity.VoiceSessionLoggedEvent
 import database.dto.activity.VoiceSessionDto
 import database.persistence.activity.VoiceSessionPersistence
 import io.mockk.every

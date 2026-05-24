@@ -1,6 +1,6 @@
 package web.controller
 
-import common.economy.Keno
+import common.casino.keno.Keno
 import database.service.economy.JackpotGame
 import database.service.casino.keno.KenoService
 import database.service.casino.keno.KenoService.PlayOutcome

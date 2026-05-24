@@ -1,7 +1,7 @@
 package web.service
 
 import common.discord.AutoRoleValidator
-import common.events.ActivityTrackingEnabled
+import common.events.activity.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
@@ -1023,7 +1023,7 @@ class ModerationWebService(
                 if (trimmed.isEmpty()) {
                     ""
                 } else {
-                    common.economy.JackpotWheel.validateConfigString(trimmed)?.let { return it }
+                    common.casino.JackpotWheel.validateConfigString(trimmed)?.let { return it }
                     trimmed
                 }
             }

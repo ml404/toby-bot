@@ -1,7 +1,7 @@
 package database.service.casino.casinoholdem
 
 import common.casino.CasinoCommonFailure
-import common.events.CasinoHoldemWonEvent
+import common.events.casino.casinoholdem.CasinoHoldemWonEvent
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
 import common.poker.CasinoHoldem

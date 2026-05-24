@@ -1,8 +1,8 @@
 package database.service
 
 import database.dto.user.UserDto
-import common.economy.ScratchCard
-import common.economy.SlotMachine
+import common.casino.scratch.ScratchCard
+import common.casino.slots.SlotMachine
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -19,6 +19,7 @@ import database.service.economy.JackpotService
 import database.service.casino.scratch.ScratchService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.scratch.ScratchJackpotEvent
 
 class ScratchServiceTest {
 

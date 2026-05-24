@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.dto.user.UserDto
-import common.economy.Roulette
+import common.casino.roulette.Roulette
 import database.service.casino.roulette.RouletteService
 import io.mockk.clearAllMocks
 import io.mockk.every

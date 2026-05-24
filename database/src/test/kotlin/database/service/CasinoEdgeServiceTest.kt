@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.AntiAutoclickEvent
+import common.events.moderation.AntiAutoclickEvent
 import database.dto.guild.ConfigDto
 import io.mockk.every
 import io.mockk.mockk

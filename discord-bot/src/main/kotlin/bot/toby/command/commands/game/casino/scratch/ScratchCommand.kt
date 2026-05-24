@@ -2,8 +2,8 @@ package bot.toby.command.commands.game.casino.scratch
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.ScratchCard
-import common.economy.SlotMachine
+import common.casino.scratch.ScratchCard
+import common.casino.slots.SlotMachine
 import database.service.casino.scratch.ScratchService
 import database.service.casino.scratch.ScratchService.ScratchOutcome
 import net.dv8tion.jda.api.EmbedBuilder

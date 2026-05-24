@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.user.UserDto
-import common.economy.Keno
+import common.casino.keno.Keno
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -18,6 +18,7 @@ import database.service.economy.JackpotService
 import database.service.casino.keno.KenoService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.keno.KenoPerfectEvent
 
 class KenoServiceTest {
 

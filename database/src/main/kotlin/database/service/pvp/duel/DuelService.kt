@@ -1,10 +1,10 @@
 package database.service.pvp.duel
 
-import common.events.DuelResolvedEvent
+import common.events.pvp.duel.DuelResolvedEvent
 import database.dto.guild.ConfigDto
 import database.dto.pvp.duel.DuelLogDto
 import database.duel.RecentDuelResolutions
-import common.economy.Coinflip
+import common.casino.coinflip.Coinflip
 import database.persistence.pvp.duel.DuelLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher

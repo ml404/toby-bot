@@ -14,7 +14,7 @@ interface AchievementService {
      *
      * Returns the resulting progress state. A non-null `unlocked` means
      * this call triggered the unlock — listeners (DM, public shoutout)
-     * receive the published [common.events.AchievementUnlockedEvent].
+     * receive the published [common.events.user.AchievementUnlockedEvent].
      */
     fun progress(
         discordId: Long,

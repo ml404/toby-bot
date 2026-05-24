@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
-import common.economy.SlotMachine
+import common.casino.slots.SlotMachine
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -20,6 +20,7 @@ import database.service.economy.JackpotService
 import database.service.casino.slots.SlotsService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.slots.SlotsJackpotEvent
 
 class SlotsServiceTest {
 

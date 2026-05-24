@@ -4,6 +4,12 @@ import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
 import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
+import common.casino.baccarat.Baccarat
+import common.casino.coinflip.Coinflip
+import common.casino.dice.Dice
+import common.casino.highlow.Highlow
+import common.casino.keno.Keno
+import common.casino.roulette.Roulette
 
 /**
  * `/setconfig stakes game:<choice>` — per-game stake bounds. The

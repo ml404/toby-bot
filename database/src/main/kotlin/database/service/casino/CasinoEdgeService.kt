@@ -1,6 +1,6 @@
 package database.service.casino
 
-import common.events.AntiAutoclickEvent
+import common.events.moderation.AntiAutoclickEvent
 import database.dto.guild.ConfigDto
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -11,8 +11,8 @@ import database.service.guild.cfgLong
 
 /**
  * Casino-side anti-autoclicker bias applicator. Pure-logic minigame
- * classes ([common.economy.Coinflip], [common.economy.Dice],
- * [common.economy.SlotMachine], …) stay fair: they return a fair
+ * classes ([common.casino.coinflip.Coinflip], [common.casino.dice.Dice],
+ * [common.casino.slots.SlotMachine], …) stay fair: they return a fair
  * outcome based on RNG, oblivious to the bot gate. This service then
  * substitutes that outcome with a caller-supplied "loss" outcome with
  * probability equal to the player's current bot-suspicion-driven

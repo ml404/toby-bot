@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.coinflip
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.Coinflip
+import common.casino.coinflip.Coinflip
 import database.service.casino.coinflip.CoinflipService
 import database.service.casino.coinflip.CoinflipService.FlipOutcome
 import net.dv8tion.jda.api.EmbedBuilder

@@ -1,9 +1,9 @@
 package database.service.casino.coinflip
 
 import common.casino.CasinoCommonFailure
-import common.events.CoinflipWonEvent
+import common.events.casino.coinflip.CoinflipWonEvent
 import database.dto.guild.ConfigDto
-import common.economy.Coinflip
+import common.casino.coinflip.Coinflip
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

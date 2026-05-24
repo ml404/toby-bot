@@ -6,6 +6,7 @@ import java.awt.Color
 import bot.toby.command.commands.game.WagerCommandColors
 import bot.toby.command.commands.game.WagerCommandEmbeds
 import bot.toby.command.commands.game.WagerCommandFailure
+import common.casino.keno.Keno
 
 /**
  * Shared embed plumbing for the Discord `/keno` flow. Mirrors

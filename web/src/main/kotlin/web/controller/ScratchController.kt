@@ -1,8 +1,8 @@
 package web.controller
 
 import common.casino.CasinoCommonFailure
-import common.economy.ScratchCard
-import common.economy.SlotMachine
+import common.casino.scratch.ScratchCard
+import common.casino.slots.SlotMachine
 import database.service.economy.JackpotGame
 import database.service.casino.scratch.ScratchService
 import database.service.casino.scratch.ScratchService.ScratchOutcome

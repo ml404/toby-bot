@@ -1,6 +1,6 @@
 package web.controller
 
-import common.economy.Roulette
+import common.casino.roulette.Roulette
 import database.service.casino.roulette.RouletteService
 import database.service.casino.roulette.RouletteService.SpinOutcome
 import io.mockk.every

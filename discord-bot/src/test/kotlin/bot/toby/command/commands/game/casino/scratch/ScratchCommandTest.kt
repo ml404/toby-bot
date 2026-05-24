@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.dto.user.UserDto
-import common.economy.SlotMachine
+import common.casino.slots.SlotMachine
 import database.service.casino.scratch.ScratchService
 import io.mockk.clearAllMocks
 import io.mockk.every

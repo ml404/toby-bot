@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.wheeloffortune
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.WheelOfFortune
+import common.casino.wheeloffortune.WheelOfFortune
 import database.service.casino.wheeloffortune.WheelOfFortuneService
 import database.service.casino.wheeloffortune.WheelOfFortuneService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder

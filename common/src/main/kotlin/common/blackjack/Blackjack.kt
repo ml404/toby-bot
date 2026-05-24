@@ -8,7 +8,7 @@ import kotlin.random.Random
  * Pure-logic blackjack primitives. No Spring, no DB, no JDA — just the
  * card maths and the dealer's mechanical S17 play-out.
  *
- * Unlike [common.economy.Highlow], a single hand spans multiple
+ * Unlike [common.casino.highlow.Highlow], a single hand spans multiple
  * decisions (HIT until you stand or bust). Rather than thread an
  * immutable HandState through every call, this engine exposes small
  * primitives that mutate the supplied [Deck] / hand list. The owning
@@ -114,7 +114,7 @@ class Blackjack(private val random: Random = Random.Default) {
 
     /**
      * Payout multiplier on the player's (possibly doubled) stake for
-     * the given [result]. Same shape as [common.economy.Highlow] —
+     * the given [result]. Same shape as [common.casino.highlow.Highlow] —
      * fed straight to [database.service.pvp.WagerHelper.applyMultiplier]
      * for solo settlement. [blackjackPayoutMult] overrides the natural
      * blackjack multiplier (default 2.5 i.e. 3:2; set to 2.2 for 6:5).

@@ -1,6 +1,6 @@
 package database.service.social
 
-import common.events.TipSentEvent
+import common.events.social.TipSentEvent
 import database.dto.social.TipDailyDto
 import database.dto.social.TipLogDto
 import database.persistence.social.TipLogPersistence

@@ -1,6 +1,6 @@
 package database.service.impl
 
-import common.events.IntroSetEvent
+import common.events.user.IntroSetEvent
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import database.persistence.music.MusicFilePersistence

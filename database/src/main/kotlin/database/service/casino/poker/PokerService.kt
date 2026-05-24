@@ -1,6 +1,6 @@
 package database.service.casino.poker
 
-import common.events.PokerRoyalFlushEvent
+import common.events.casino.poker.PokerRoyalFlushEvent
 import common.card.Rank
 import database.dto.guild.ConfigDto
 import database.dto.casino.poker.PokerHandLogDto

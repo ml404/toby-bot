@@ -1,6 +1,6 @@
 package bot.toby.notify
 
-import common.events.AntiAutoclickEvent
+import common.events.moderation.AntiAutoclickEvent
 import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import io.mockk.every

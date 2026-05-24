@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.casino.coinflip.Coinflip
+import common.casino.dice.Dice
 
 /**
  * Presence regression for the per-game config rows on the moderation

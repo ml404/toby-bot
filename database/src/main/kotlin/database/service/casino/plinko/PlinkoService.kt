@@ -1,9 +1,9 @@
 package database.service.casino.plinko
 
 import common.casino.CasinoCommonFailure
-import common.events.PlinkoJackpotEvent
+import common.events.casino.plinko.PlinkoJackpotEvent
 import database.dto.guild.ConfigDto
-import common.economy.Plinko
+import common.casino.plinko.Plinko
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

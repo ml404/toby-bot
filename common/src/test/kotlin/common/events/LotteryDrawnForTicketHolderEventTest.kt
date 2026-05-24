@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.events.lottery.LotteryDrawnForTicketHolderEvent
 
 class LotteryDrawnForTicketHolderEventTest {
 

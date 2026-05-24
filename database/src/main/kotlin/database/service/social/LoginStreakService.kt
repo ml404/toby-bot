@@ -10,7 +10,7 @@ interface LoginStreakService {
      * the new streak count and any XP/credits granted) or
      * [ClaimResult.AlreadyClaimed] when the user already claimed today.
      *
-     * Publishes a [common.events.StreakClaimedEvent] only on
+     * Publishes a [common.events.social.StreakClaimedEvent] only on
      * [ClaimResult.Granted]. Same-day re-claims are silent.
      */
     fun claim(
