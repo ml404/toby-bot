@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Extract PvpSessionRegistry base + split ModerationController",
+    "summary": "Second wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579). Two logically independent commits: 1. **`refactor(pvp): extract PvpSessionRegistry base + re-parent TurnBased and Rps`** — The two session registries had ~120 lines of identical plumbing (Caffeine cache, atomic PENDING→LIVE, indexers, primitives). Lifted the shared surface into `database.pvp.PvpSessionRegistry<TSession>`; `TurnBasedBoardSessionRegistry` and `RpsSessionRegistry` are now thin…",
+    "emoji": "🧹",
+    "prNumber": 580
+  },
+  {
+    "date": "May 2026",
     "title": "Refactor+test+build: BoundedSessionCache, Kover wiring, activity-tracking coverage",
     "summary": "First wave of the test-coverage + DRY/SOLID refactor pass scoped out [in the planning session](https://claude.ai/code/session_017zsUNUN5DRMTWA5ZZgJ2mM). Three logically independent commits chosen as the safest, highest-leverage foundation before the bigger PvP consolidation work: 1. **`refactor(pvp): extract BoundedSessionCache shared factory`** — Lifts the duplicated Caffeine `expireAfterWrite().maximumSize().build().asMap()` block out of `TurnBasedBoardSessionRegistry` a…",
     "emoji": "✨",
