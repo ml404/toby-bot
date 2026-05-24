@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Cache profile avatars + drop alpha from card buffer",
+    "summary": "Container-memory audit of the ~30 PRs since #536 (`perf(memory): trim Hikari pool + gate non-core Lavaplayer sources`). Heap budget is tight: `-Xmx224m -XX:MaxDirectMemorySize=48m -XX:+UseSerialGC`. **Audit verdict — most recent additions are well-bounded:** Game/duel registries (RPS, TicTacToe, Connect4, PendingDuel, RecentDuelResolutions) all use Caffeine with `maximumSize(10_000)` + explicit TTL. Safe. SSE fan-out (`KeyedSseRegistry` backing PvP / Notifications / Music)…",
+    "emoji": "⚡",
+    "prNumber": 574
+  },
+  {
+    "date": "May 2026",
     "title": "TicTacToe + Connect 4 web backends",
     "summary": "Mirrors PR #568's RPS backend shape for the two turn-based PvP games (TicTacToe + Connect 4). Both tabs still show \"coming soon\" on the page — frontend (HTML / JS / CSS) lands in the follow-up alongside the home counter bump. ### Backend endpoints `POST /pvp/{guildId}/{tictactoe|connect4}/{challenge,accept,decline,cancel,move,forfeit}` — call into the existing `TicTacToeService` / `Connect4Service` + their session registries, so achievements / XP / `*ResolvedEvent` emissio…",
     "emoji": "✨",
