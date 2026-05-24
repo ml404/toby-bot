@@ -1,6 +1,6 @@
 package database.persistence.lottery
 
-import database.dto.LotteryDailyDto
+import database.dto.lottery.LotteryDailyDto
 import java.time.LocalDate
 
 interface LotteryDailyPersistence {

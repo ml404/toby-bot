@@ -1,7 +1,7 @@
 package bot.toby.voice
 
 import common.logging.DiscordLogger
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.service.social.SocialCreditAwardService
 import database.service.activity.VoiceSessionService
 import database.service.leveling.XpAwardService

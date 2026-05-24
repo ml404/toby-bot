@@ -12,8 +12,8 @@ import common.discord.embed
 import common.logging.DiscordLogger
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Guild

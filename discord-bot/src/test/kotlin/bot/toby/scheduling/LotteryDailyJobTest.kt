@@ -1,7 +1,7 @@
 package bot.toby.scheduling
 
-import database.dto.ConfigDto
-import database.dto.JackpotLotteryDto
+import database.dto.guild.ConfigDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.lottery.LotteryDailyService

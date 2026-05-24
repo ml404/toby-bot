@@ -4,7 +4,7 @@ import bot.toby.welcome.AnnouncementKind
 import bot.toby.welcome.WelcomeMessageRenderer
 import common.discord.AutoRoleValidator
 import common.logging.DiscordLogger
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder

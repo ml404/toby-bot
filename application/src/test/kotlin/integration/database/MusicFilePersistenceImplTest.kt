@@ -6,8 +6,8 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.MusicDto
-import database.dto.MusicDto.Companion.computeHash
+import database.dto.music.MusicDto
+import database.dto.music.MusicDto.Companion.computeHash
 import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -39,7 +39,7 @@ class MusicRepositoryTest {
     @Rollback
     fun `should return true when file is already uploaded`() {
         // Arrange: Set up the test data
-        val userDto = database.dto.UserDto(discordId = 123456789L, guildId = 987654321L)
+        val userDto = database.dto.user.UserDto(discordId = 123456789L, guildId = 987654321L)
         val musicDto = MusicDto(userDto, 1, "filename", 10, "SomeBlob".toByteArray())
 
         // Persist the userDto and musicDto in the in-memory H2 database
@@ -58,7 +58,7 @@ class MusicRepositoryTest {
     @Rollback
     fun `should return false when file is not uploaded`() {
         // Arrange: Set up the test data with a new userDto and musicBlob
-        val userDto = database.dto.UserDto(discordId = 123456789L, guildId = 987654321L)
+        val userDto = database.dto.user.UserDto(discordId = 123456789L, guildId = 987654321L)
         val musicDto = MusicDto(musicBlob = "nonExistingBlob".toByteArray(), userDto = userDto)
 
         // Act: Call the method to test

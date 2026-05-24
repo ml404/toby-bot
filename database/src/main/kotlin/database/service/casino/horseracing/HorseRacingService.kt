@@ -2,7 +2,7 @@ package database.service.casino.horseracing
 
 import common.casino.CasinoCommonFailure
 import common.events.HorseRacingWonEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.HorseRacing
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

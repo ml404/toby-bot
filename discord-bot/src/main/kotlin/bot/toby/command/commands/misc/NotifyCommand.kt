@@ -5,7 +5,7 @@ import common.notification.Surface
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.user.UserNotificationPrefService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.Command.Choice

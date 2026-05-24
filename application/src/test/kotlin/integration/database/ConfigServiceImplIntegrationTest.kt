@@ -6,7 +6,7 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions

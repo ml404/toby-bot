@@ -3,7 +3,7 @@ package bot.toby.modal.modals.setconfig
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldResult
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.ValidationOutcome
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.entities.Guild

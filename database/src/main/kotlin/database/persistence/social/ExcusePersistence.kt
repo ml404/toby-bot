@@ -1,6 +1,6 @@
 package database.persistence.social
 
-import database.dto.ExcuseDto
+import database.dto.social.ExcuseDto
 
 interface ExcusePersistence {
     fun listAllGuildExcuses(guildId: Long?): List<ExcuseDto?>

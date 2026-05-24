@@ -1,6 +1,6 @@
 package database.service.activity.impl
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import database.persistence.activity.ActivitySessionPersistence
 import database.service.activity.ActivitySessionService
 import org.springframework.beans.factory.annotation.Autowired

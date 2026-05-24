@@ -1,7 +1,7 @@
 package bot.toby.util
 
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import java.util.concurrent.TimeUnit
 
 private const val SECOND_MULTIPLIER = 1000

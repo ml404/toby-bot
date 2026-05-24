@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.slots
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.SlotMachine
 import database.service.casino.slots.SlotsService
 import database.service.casino.slots.SlotsService.SpinOutcome

@@ -1,8 +1,8 @@
 package database.achievement
 
-import database.dto.AchievementDto
-import database.dto.AchievementProgressDto
-import database.dto.UserAchievementDto
+import database.dto.guild.AchievementDto
+import database.dto.guild.AchievementProgressDto
+import database.dto.guild.UserAchievementDto
 import database.persistence.guild.AchievementPersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

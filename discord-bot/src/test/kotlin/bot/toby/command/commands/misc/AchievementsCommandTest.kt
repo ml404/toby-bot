@@ -1,8 +1,8 @@
 package bot.toby.command.commands.misc
 
 import bot.toby.command.DefaultCommandContext
-import database.dto.AchievementDto
-import database.dto.UserDto
+import database.dto.guild.AchievementDto
+import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import io.mockk.clearAllMocks

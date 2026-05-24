@@ -1,6 +1,6 @@
 package database.persistence.activity.impl
 
-import database.dto.UbiDailyDto
+import database.dto.activity.UbiDailyDto
 import database.persistence.activity.UbiDailyPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,8 +1,8 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.TobyCoinJackpotDto
-import database.dto.TobyCoinJackpotWinnerDto
+import database.dto.guild.ConfigDto
+import database.dto.economy.TobyCoinJackpotDto
+import database.dto.economy.TobyCoinJackpotWinnerDto
 import database.persistence.economy.TobyCoinJackpotPersistence
 import database.persistence.economy.TobyCoinJackpotWinnerPersistence
 import database.persistence.activity.VoiceCreditDailyPersistence

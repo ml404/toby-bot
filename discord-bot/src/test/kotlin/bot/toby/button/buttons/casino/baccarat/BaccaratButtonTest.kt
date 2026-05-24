@@ -7,7 +7,7 @@ import bot.toby.button.DefaultButtonContext
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Baccarat
 import database.service.casino.baccarat.BaccaratService
 import io.mockk.Runs

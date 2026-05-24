@@ -40,7 +40,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withCorrectPermissions_updatesTargetUser() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>(relaxed = true)
+        val targetUserDto = mockk<database.dto.user.UserDto>(relaxed = true)
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
@@ -51,7 +51,7 @@ internal class AdjustUserCommandTest : CommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("name") } returns permissionOptionMapping
         every { userOptionMapping.mentions } returns mentions
-        every { permissionOptionMapping.asString } returns database.dto.UserDto.Permissions.MUSIC.name
+        every { permissionOptionMapping.asString } returns database.dto.user.UserDto.Permissions.MUSIC.name
         every { mentions.members } returns listOf(targetMember)
 
         // Act
@@ -69,7 +69,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withCorrectPermissions_createsTargetUser() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val permissionOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
@@ -78,7 +78,7 @@ internal class AdjustUserCommandTest : CommandTest {
         every { event.getOption("users") } returns userOptionMapping
         every { event.getOption("name") } returns permissionOptionMapping
         every { userOptionMapping.mentions } returns mentions
-        every { permissionOptionMapping.asString } returns database.dto.UserDto.Permissions.MUSIC.name
+        every { permissionOptionMapping.asString } returns database.dto.user.UserDto.Permissions.MUSIC.name
         every { mentions.members } returns listOf(targetMember)
         every { userService.getUserById(any(), any()) } returns null
         every { userService.createNewUser(any()) } returns targetUserDto
@@ -101,7 +101,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withNoMentionedPermissions_Errors() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
         val mentions = mockk<Mentions>()
 
@@ -126,7 +126,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_withNoMentionedUser_Errors() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 
         every { userService.getUserById(any(), any()) } returns targetUserDto
@@ -147,7 +147,7 @@ internal class AdjustUserCommandTest : CommandTest {
     fun testAdjustUser_whenUserIsntOwner_Errors() {
         // Arrange
         val commandContext = DefaultCommandContext(event)
-        val targetUserDto = mockk<database.dto.UserDto>()
+        val targetUserDto = mockk<database.dto.user.UserDto>()
         val userOptionMapping = mockk<OptionMapping>()
 
         every { userService.getUserById(any(), any()) } returns targetUserDto

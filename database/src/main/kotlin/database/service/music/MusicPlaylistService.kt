@@ -1,6 +1,6 @@
 package database.service.music
 
-import database.dto.MusicPlaylistDto
+import database.dto.music.MusicPlaylistDto
 
 interface MusicPlaylistService {
 

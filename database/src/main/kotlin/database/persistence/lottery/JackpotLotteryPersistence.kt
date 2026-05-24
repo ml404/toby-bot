@@ -1,7 +1,7 @@
 package database.persistence.lottery
 
-import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryTicketDto
 
 interface JackpotLotteryPersistence {
     /**

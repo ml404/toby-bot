@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.modal.modals.TipMessageModal
-import database.dto.UserDto
+import database.dto.user.UserDto
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just

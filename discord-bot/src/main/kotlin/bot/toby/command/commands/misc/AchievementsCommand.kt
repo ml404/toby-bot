@@ -3,7 +3,7 @@ package bot.toby.command.commands.misc
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import net.dv8tion.jda.api.EmbedBuilder

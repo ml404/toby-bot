@@ -1,6 +1,6 @@
 package database.persistence.user.impl
 
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserNotificationPrefDto
 import database.persistence.user.UserNotificationPrefPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

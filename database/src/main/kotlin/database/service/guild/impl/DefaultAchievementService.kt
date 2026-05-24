@@ -1,9 +1,9 @@
 package database.service.guild.impl
 
 import common.events.AchievementUnlockedEvent
-import database.dto.AchievementDto
-import database.dto.AchievementProgressDto
-import database.dto.UserAchievementDto
+import database.dto.guild.AchievementDto
+import database.dto.guild.AchievementProgressDto
+import database.dto.guild.UserAchievementDto
 import database.persistence.guild.AchievementPersistence
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView

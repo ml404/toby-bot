@@ -8,7 +8,7 @@ import bot.toby.command.DefaultCommandContext
 import common.blackjack.Blackjack
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.casino.blackjack.BlackjackService
 import io.mockk.clearAllMocks
 import io.mockk.every

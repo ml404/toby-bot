@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.wheeloffortune
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.WheelOfFortune
 import database.service.casino.wheeloffortune.WheelOfFortuneService
 import database.service.casino.wheeloffortune.WheelOfFortuneService.SpinOutcome

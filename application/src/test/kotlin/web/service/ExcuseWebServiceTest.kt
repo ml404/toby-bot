@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.ExcuseDto
-import database.dto.UserDto
+import database.dto.social.ExcuseDto
+import database.dto.user.UserDto
 import database.service.social.ExcuseService
 import database.service.social.PagedExcuses
 import database.service.user.UserService

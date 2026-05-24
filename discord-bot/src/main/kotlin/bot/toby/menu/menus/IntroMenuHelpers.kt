@@ -4,7 +4,7 @@ import bot.toby.helpers.IntroHelper
 import core.command.Command.Companion.deleteAfter
 import core.menu.Menu
 import core.menu.MenuContext
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 
 /**
  * Shared preamble for the select-menu handlers that operate on a single

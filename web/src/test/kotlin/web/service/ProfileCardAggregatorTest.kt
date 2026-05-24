@@ -1,8 +1,8 @@
 package web.service
 
-import database.dto.AchievementDto
-import database.dto.TitleDto
-import database.dto.UserDto
+import database.dto.guild.AchievementDto
+import database.dto.guild.TitleDto
+import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.guild.TitleService
 import database.service.user.UserService

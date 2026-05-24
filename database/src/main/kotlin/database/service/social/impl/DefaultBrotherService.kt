@@ -1,6 +1,6 @@
 package database.service.social.impl
 
-import database.dto.BrotherDto
+import database.dto.social.BrotherDto
 import database.persistence.social.BrotherPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict

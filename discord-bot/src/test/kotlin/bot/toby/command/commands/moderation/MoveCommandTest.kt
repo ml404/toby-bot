@@ -8,7 +8,7 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
 import bot.toby.command.DefaultPermissionValidator
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission

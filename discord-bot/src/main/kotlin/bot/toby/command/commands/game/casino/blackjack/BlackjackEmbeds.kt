@@ -5,7 +5,7 @@ import common.blackjack.BlackjackTable
 import common.blackjack.bestTotal
 import common.blackjack.isSoft
 import common.card.Card
-import database.dto.BlackjackHandLogDto
+import database.dto.casino.blackjack.BlackjackHandLogDto
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

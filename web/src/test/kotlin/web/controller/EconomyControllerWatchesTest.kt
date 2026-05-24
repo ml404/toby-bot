@@ -1,6 +1,6 @@
 package web.controller
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 import database.service.social.SocialCreditAwardService
 import io.mockk.every
 import io.mockk.mockk

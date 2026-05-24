@@ -1,6 +1,6 @@
 package database.persistence.social
 
-import database.dto.TipLogDto
+import database.dto.social.TipLogDto
 
 interface TipLogPersistence {
     fun insert(row: TipLogDto): TipLogDto

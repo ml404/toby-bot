@@ -1,7 +1,7 @@
 package bot.toby.notify
 
 import common.notification.ChannelRouteKey
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import database.service.user.UserNotificationPrefService
 import io.mockk.every

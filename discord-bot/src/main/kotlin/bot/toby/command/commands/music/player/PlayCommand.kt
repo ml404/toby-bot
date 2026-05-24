@@ -6,7 +6,7 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.SearchPrefixResolver
 import bot.toby.util.adjustTrackPlayingTimes
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.springframework.stereotype.Component

@@ -217,7 +217,7 @@ class LeaderboardWebService(
             .getOrDefault(emptyList())
             .filter { it.discordId !in optedOut }
 
-        val rowsByMonth: Map<LocalDate, List<database.dto.ActivityMonthlyRollupDto>> = all.groupBy { it.monthStart }
+        val rowsByMonth: Map<LocalDate, List<database.dto.activity.ActivityMonthlyRollupDto>> = all.groupBy { it.monthStart }
         val totalsByMonthGame: Map<LocalDate, Map<String, Long>> = rowsByMonth.mapValues { (_, rs) ->
             rs.groupBy { it.activityName }.mapValues { (_, gr) -> gr.sumOf { it.seconds } }
         }
@@ -269,7 +269,7 @@ class LeaderboardWebService(
 
     private fun buildContributors(
         guild: net.dv8tion.jda.api.entities.Guild,
-        rows: List<database.dto.ActivityMonthlyRollupDto>,
+        rows: List<database.dto.activity.ActivityMonthlyRollupDto>,
         totalSeconds: Long,
     ): List<TopGameContributor> {
         if (totalSeconds <= 0) return emptyList()
@@ -352,7 +352,7 @@ class LeaderboardWebService(
             if (!baselines.containsKey(dto.discordId)) {
                 runCatching {
                     snapshotService.upsertIfMissing(
-                        database.dto.MonthlyCreditSnapshotDto(
+                        database.dto.economy.MonthlyCreditSnapshotDto(
                             discordId = dto.discordId,
                             guildId = guildId,
                             snapshotDate = thisMonthStart,

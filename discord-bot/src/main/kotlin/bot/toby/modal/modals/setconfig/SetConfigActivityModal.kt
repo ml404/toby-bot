@@ -3,7 +3,7 @@ package bot.toby.modal.modals.setconfig
 import bot.toby.activity.ActivityTrackingNotifier
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
 import core.modal.ModalContext
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import database.service.guild.ConfigService.UpsertResult
 import org.springframework.stereotype.Component

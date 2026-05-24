@@ -3,7 +3,7 @@ package bot.toby.command.commands.dnd
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.HttpHelper
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import net.dv8tion.jda.api.interactions.commands.OptionMapping

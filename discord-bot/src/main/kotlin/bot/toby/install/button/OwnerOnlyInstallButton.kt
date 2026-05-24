@@ -3,7 +3,7 @@ package bot.toby.install.button
 import bot.toby.install.InstallAuth
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 
 /**
  * Shared base for every install-wizard button. Centralizes:

@@ -1,6 +1,6 @@
 package database.persistence.guild
 
-import database.dto.AutoRoleDto
+import database.dto.guild.AutoRoleDto
 
 interface AutoRolePersistence {
     fun listForGuild(guildId: Long): List<AutoRoleDto>

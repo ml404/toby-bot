@@ -1,6 +1,6 @@
 package database.service.music
 
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 
 interface MusicFileService {
     fun createNewMusicFile(musicDto: MusicDto): MusicDto?

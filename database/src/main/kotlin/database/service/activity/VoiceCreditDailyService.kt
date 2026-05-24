@@ -1,6 +1,6 @@
 package database.service.activity
 
-import database.dto.VoiceCreditDailyDto
+import database.dto.activity.VoiceCreditDailyDto
 import java.time.LocalDate
 
 interface VoiceCreditDailyService {

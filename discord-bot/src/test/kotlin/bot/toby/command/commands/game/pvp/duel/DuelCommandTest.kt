@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.duel.PendingDuelRegistry
 import bot.toby.helpers.UserDtoHelper
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.duel.DuelService
 import io.mockk.clearAllMocks
 import io.mockk.every

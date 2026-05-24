@@ -1,9 +1,9 @@
 package web.service
 
-import database.dto.TobyCoinMarketDto
-import database.dto.TobyCoinPricePointDto
-import database.dto.TobyCoinTradeDto
-import database.dto.UserDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.TobyCoinPricePointDto
+import database.dto.economy.TobyCoinTradeDto
+import database.dto.user.UserDto
 import database.service.economy.EconomyTradeService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserNotificationPrefService

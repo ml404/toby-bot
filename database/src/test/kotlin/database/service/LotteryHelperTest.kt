@@ -1,6 +1,6 @@
 package database.service
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

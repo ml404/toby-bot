@@ -1,7 +1,7 @@
 package database.persistence.guild
 
-import database.dto.TitleDto
-import database.dto.UserOwnedTitleDto
+import database.dto.guild.TitleDto
+import database.dto.guild.UserOwnedTitleDto
 
 interface TitlePersistence {
     fun listAll(): List<TitleDto>

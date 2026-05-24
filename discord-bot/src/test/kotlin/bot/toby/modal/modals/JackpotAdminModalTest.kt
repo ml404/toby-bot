@@ -2,7 +2,7 @@ package bot.toby.modal.modals
 
 import bot.toby.scheduling.LotteryAnnouncer
 import core.modal.ModalContext
-import database.dto.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.lottery.JackpotLotteryService
 import database.service.lottery.JackpotLotteryService.OpenOutcome
 import database.service.lottery.LotteryHelper

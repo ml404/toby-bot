@@ -1,6 +1,6 @@
 package database.service.impl
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.persistence.guild.ConfigPersistence
 import database.service.guild.ConfigService
 import io.mockk.confirmVerified

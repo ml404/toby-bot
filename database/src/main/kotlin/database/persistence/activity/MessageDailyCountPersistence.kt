@@ -1,6 +1,6 @@
 package database.persistence.activity
 
-import database.dto.MessageDailyCountDto
+import database.dto.activity.MessageDailyCountDto
 import java.time.LocalDate
 
 /**

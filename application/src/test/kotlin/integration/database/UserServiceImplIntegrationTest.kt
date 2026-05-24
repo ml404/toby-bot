@@ -6,7 +6,7 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.service.user.UserService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
@@ -53,7 +53,7 @@ class UserServiceImplIntegrationTest {
 
     @Test
     fun whenValidDiscordIdAndGuild_thenUserShouldBeFound() {
-        val userDto = database.dto.UserDto(6L, 1L)
+        val userDto = database.dto.user.UserDto(6L, 1L)
         val musicDto = MusicDto(userDto, 1, null, 0, null)
         userDto.musicDtos.add(musicDto)
         userService.createNewUser(userDto)
@@ -70,7 +70,7 @@ class UserServiceImplIntegrationTest {
 
     @Test
     fun testUpdate_thenNewUserValuesShouldBeReturned() {
-        var userDto1 = database.dto.UserDto(6L, 1L)
+        var userDto1 = database.dto.user.UserDto(6L, 1L)
         val musicDto1 = MusicDto(userDto1)
         userDto1.musicDtos+=musicDto1
         userDto1 = userService.createNewUser(userDto1)
@@ -86,7 +86,7 @@ class UserServiceImplIntegrationTest {
         assertFalse(dbUser1.superUser)
         assertNotNull(dbUser1.musicDtos)
 
-        var userDto2 = database.dto.UserDto(6L, 1L)
+        var userDto2 = database.dto.user.UserDto(6L, 1L)
         val musicDto2 = MusicDto(userDto2)
         userDto2.musicDtos += musicDto2
         userDto2.digPermission = false
@@ -110,7 +110,7 @@ class UserServiceImplIntegrationTest {
 
     @Test
     fun whenMusicFileExistsWithSameDiscordIdAndGuild_thenUserShouldBeFoundWithMusicFile() {
-        val userDto = database.dto.UserDto(6L, 1L)
+        val userDto = database.dto.user.UserDto(6L, 1L)
         val musicDto = MusicDto(userDto, 1, fileName = "test")
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)
@@ -130,7 +130,7 @@ class UserServiceImplIntegrationTest {
 
     @Test
     fun whenMusicFileExistsWithSameDiscordIdAndGuildAndUpdatedOnce_thenUserShouldBeFoundWithMusicFile() {
-        val userDto = database.dto.UserDto(6L, 1L)
+        val userDto = database.dto.user.UserDto(6L, 1L)
         val musicDto = MusicDto(userDto, 0, null)
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)
@@ -169,7 +169,7 @@ class UserServiceImplIntegrationTest {
 
     @Test
     fun whenMusicFileExistsWithSameDiscordIdAndGuildAndUserIsDeleted_thenMusicFileShouldDeleteToo() {
-        val userDto = database.dto.UserDto(6L, 1L)
+        val userDto = database.dto.user.UserDto(6L, 1L)
         val musicDto = MusicDto(userDto, 0, null)
         userDto.musicDtos += musicDto
         userService.createNewUser(userDto)

@@ -3,7 +3,7 @@ package bot.toby.helpers
 import bot.coroutines.MainCoroutineExtension
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper.Companion.MAX_FILE_SIZE_KB
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.service.guild.ConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,7 +45,7 @@ class IntroHelperTest {
     private lateinit var httpHelper: HttpHelper
     private lateinit var eventWaiter: EventWaiter
     private lateinit var event: SlashCommandInteractionEvent
-    private lateinit var userDto: database.dto.UserDto
+    private lateinit var userDto: database.dto.user.UserDto
     private lateinit var musicDto: MusicDto
     private lateinit var attachment: Attachment
     private lateinit var hook: InteractionHook

@@ -3,7 +3,7 @@ package bot.toby.command.commands.game.pvp.connect4
 import bot.toby.helpers.UserDtoHelper
 import core.command.CommandContext
 import database.connect4.Connect4SessionRegistry
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.connect4.Connect4Service
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

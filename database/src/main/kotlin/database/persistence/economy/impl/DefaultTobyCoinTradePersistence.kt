@@ -1,6 +1,6 @@
 package database.persistence.economy.impl
 
-import database.dto.TobyCoinTradeDto
+import database.dto.economy.TobyCoinTradeDto
 import database.persistence.economy.TobyCoinTradePersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

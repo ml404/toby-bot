@@ -3,7 +3,7 @@ package bot.toby.scheduling
 import bot.toby.notify.NotificationRouter
 import common.notification.PushAdapter
 import common.notification.NotificationChannelKind
-import database.dto.LoginStreakDto
+import database.dto.social.LoginStreakDto
 import database.service.guild.ConfigService
 import database.service.social.LoginStreakService
 import database.service.user.UserNotificationPrefService

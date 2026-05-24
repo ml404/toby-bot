@@ -3,7 +3,7 @@ package bot.toby.command.commands.game.lottery
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.lottery.JackpotLotteryService.BuyOutcome

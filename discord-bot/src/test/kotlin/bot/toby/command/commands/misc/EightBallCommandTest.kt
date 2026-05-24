@@ -48,7 +48,7 @@ internal class EightBallCommandTest : CommandTest {
         val ctx = DefaultCommandContext(event)
 
         // Mock requestingUserDto
-        val tomsDiscordUser = database.dto.UserDto(
+        val tomsDiscordUser = database.dto.user.UserDto(
             EightBallCommand.TOMS_DISCORD_ID,
             1L,
             superUser = true,

@@ -2,7 +2,7 @@ package database.service.user
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserNotificationPrefDto
 
 interface UserNotificationPrefService {
     /**

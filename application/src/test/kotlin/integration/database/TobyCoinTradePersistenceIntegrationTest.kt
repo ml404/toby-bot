@@ -6,7 +6,7 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.TobyCoinTradeDto
+import database.dto.economy.TobyCoinTradeDto
 import database.persistence.economy.TobyCoinTradePersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

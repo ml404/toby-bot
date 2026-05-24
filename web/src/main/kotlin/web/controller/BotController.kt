@@ -1,6 +1,6 @@
 package web.controller
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.social.BrotherService
 import database.service.guild.ConfigService
 import database.service.music.MusicFileService
@@ -22,7 +22,7 @@ class BotController(
 ) {
     @GetMapping("/brother")
     @ResponseBody
-    fun getBrother(@RequestParam("discordId") discordId: String): database.dto.BrotherDto? =
+    fun getBrother(@RequestParam("discordId") discordId: String): database.dto.social.BrotherDto? =
         brotherService.getBrotherById(discordId.toLong())
 
     @GetMapping("/config")
@@ -60,5 +60,5 @@ class BotController(
     fun getUser(
         @RequestParam("discordId") discordId: Long?,
         @RequestParam("guildId") guildId: Long?
-    ): database.dto.UserDto? = userService.getUserById(discordId, guildId)
+    ): database.dto.user.UserDto? = userService.getUserById(discordId, guildId)
 }

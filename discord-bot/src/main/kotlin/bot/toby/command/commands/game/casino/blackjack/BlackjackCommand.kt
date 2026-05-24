@@ -7,7 +7,7 @@ import common.blackjack.Blackjack
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import common.blackjack.canSplit
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.casino.blackjack.BlackjackService
 import database.service.casino.blackjack.BlackjackService.MultiCreateOutcome
 import database.service.casino.blackjack.BlackjackService.MultiJoinOutcome

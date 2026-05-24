@@ -1,6 +1,6 @@
 package database.persistence.guild.impl
 
-import database.dto.TeamPresetDto
+import database.dto.guild.TeamPresetDto
 import database.persistence.guild.TeamPresetPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.NoResultException

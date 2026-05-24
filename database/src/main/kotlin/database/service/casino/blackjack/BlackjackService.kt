@@ -8,8 +8,8 @@ import common.blackjack.bestTotal
 import common.blackjack.canSplit
 import common.blackjack.isBlackjack
 import common.blackjack.isBust
-import database.dto.BlackjackHandLogDto
-import database.dto.ConfigDto
+import database.dto.casino.blackjack.BlackjackHandLogDto
+import database.dto.guild.ConfigDto
 import database.persistence.casino.blackjack.BlackjackHandLogPersistence
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired
@@ -634,7 +634,7 @@ class BlackjackService @Autowired constructor(
             StakePreCheck.Ok(active.stake)
         }
 
-    private fun lockUserAndBalance(discordId: Long, guildId: Long): Pair<database.dto.UserDto, Long>? {
+    private fun lockUserAndBalance(discordId: Long, guildId: Long): Pair<database.dto.user.UserDto, Long>? {
         val user = userService.getUserByIdForUpdate(discordId, guildId) ?: return null
         return user to (user.socialCredit ?: 0L)
     }
@@ -924,7 +924,7 @@ class BlackjackService @Autowired constructor(
         var soldCoins = 0L
         var soldNewPrice: Double? = null
         val payerBalance: Long
-        val payerUser: database.dto.UserDto
+        val payerUser: database.dto.user.UserDto
         if (balance < ante) {
             if (!autoTopUp) return MultiJoinOutcome.InsufficientCredits(ante, balance)
             when (val r = resolveBalanceWithOptionalTopUp(user, guildId, balance, ante)) {
@@ -1687,7 +1687,7 @@ class BlackjackService @Autowired constructor(
      * `InsufficientCoinsForTopUp` variants.
      */
     private fun resolveBalanceWithOptionalTopUp(
-        user: database.dto.UserDto,
+        user: database.dto.user.UserDto,
         guildId: Long,
         currentBalance: Long,
         target: Long,
@@ -1714,7 +1714,7 @@ class BlackjackService @Autowired constructor(
 
     private sealed interface TopUpResolution {
         data class Ok(
-            val user: database.dto.UserDto,
+            val user: database.dto.user.UserDto,
             val balance: Long,
             val soldCoins: Long,
             val newPrice: Double?,

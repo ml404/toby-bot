@@ -2,7 +2,7 @@ package bot.toby.install.modal
 
 import core.modal.Modal
 import core.modal.ModalContext
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu

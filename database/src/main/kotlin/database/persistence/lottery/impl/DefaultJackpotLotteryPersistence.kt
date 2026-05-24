@@ -1,8 +1,8 @@
 package database.persistence.lottery.impl
 
-import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
-import database.dto.JackpotLotteryTicketId
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryTicketDto
+import database.dto.lottery.JackpotLotteryTicketId
 import database.persistence.lottery.JackpotLotteryPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType

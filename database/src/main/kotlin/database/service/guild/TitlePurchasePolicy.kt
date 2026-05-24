@@ -1,7 +1,7 @@
 package database.service.guild
 
 import common.leveling.LevelCurve
-import database.dto.TitleDto
+import database.dto.guild.TitleDto
 
 object TitlePurchasePolicy {
     sealed interface Result {

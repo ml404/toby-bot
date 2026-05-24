@@ -5,7 +5,7 @@ import bot.toby.helpers.IntroHelper
 import bot.toby.menu.DefaultMenuContext
 import bot.toby.menu.MenuTest
 import bot.toby.menu.MenuTest.Companion.menuEvent
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -20,7 +20,7 @@ class EditIntroMenuTest : MenuTest {
     private lateinit var eventWaiter: EventWaiter
     private lateinit var editIntroMenu: EditIntroMenu
     private lateinit var menuContext: DefaultMenuContext
-    private val userDto: database.dto.UserDto = mockk {
+    private val userDto: database.dto.user.UserDto = mockk {
         every { discordId } returns 1234L
         every { guildId } returns 4567L
     }

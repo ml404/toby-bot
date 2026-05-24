@@ -1,6 +1,6 @@
 package database.persistence.leveling.impl
 
-import database.dto.LevelRoleRewardDto
+import database.dto.leveling.LevelRoleRewardDto
 import database.persistence.leveling.LevelRoleRewardPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

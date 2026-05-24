@@ -3,7 +3,7 @@ package bot.toby.notify
 import bot.toby.command.commands.moderation.AntiAutoclickEmbeds
 import common.events.AntiAutoclickEvent
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission

@@ -4,7 +4,7 @@ import bot.toby.button.DefaultButtonContext
 import bot.toby.helpers.UserDtoHelper
 import core.button.Button
 import core.managers.ButtonManager
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired

@@ -1,6 +1,6 @@
 package database.persistence.music
 
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 
 interface MusicFilePersistence {
     fun createNewMusicFile(musicDto: MusicDto): MusicDto?

@@ -2,7 +2,7 @@ package core.command
 
 import core.log.Loggable
 import core.managers.Named
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent

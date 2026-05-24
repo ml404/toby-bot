@@ -1,7 +1,7 @@
 package bot.toby.scheduling
 
 import common.logging.DiscordLogger
-import database.dto.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.lottery.LotteryDailyService

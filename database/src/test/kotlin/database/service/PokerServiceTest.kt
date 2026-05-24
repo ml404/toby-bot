@@ -1,9 +1,9 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.PokerHandLogDto
-import database.dto.PokerHandPotDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.casino.poker.PokerHandLogDto
+import database.dto.casino.poker.PokerHandPotDto
+import database.dto.user.UserDto
 import database.persistence.casino.poker.PokerHandLogPersistence
 import database.persistence.casino.poker.PokerHandPotPersistence
 import common.poker.PokerEngine
@@ -624,7 +624,7 @@ class PokerServiceTest {
         val marketService = mockk<TobyCoinMarketService>(relaxed = true)
         // Market is online with a positive price.
         every { marketService.getMarketForUpdate(seedUser.guildId) } returns
-            database.dto.TobyCoinMarketDto(
+            database.dto.economy.TobyCoinMarketDto(
                 guildId = seedUser.guildId,
                 price = newPrice,
                 lastTickAt = java.time.Instant.now()

@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.plinko
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Plinko
 import database.service.casino.plinko.PlinkoService
 import database.service.casino.plinko.PlinkoService.DropOutcome

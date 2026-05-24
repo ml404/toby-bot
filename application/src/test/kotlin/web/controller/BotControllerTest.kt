@@ -1,9 +1,9 @@
 package web.controller
 
-import database.dto.BrotherDto
-import database.dto.ConfigDto
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.social.BrotherDto
+import database.dto.guild.ConfigDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import database.service.social.BrotherService
 import database.service.guild.ConfigService
 import database.service.music.MusicFileService

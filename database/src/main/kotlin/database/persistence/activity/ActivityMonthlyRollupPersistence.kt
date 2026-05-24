@@ -1,6 +1,6 @@
 package database.persistence.activity
 
-import database.dto.ActivityMonthlyRollupDto
+import database.dto.activity.ActivityMonthlyRollupDto
 import java.time.LocalDate
 
 interface ActivityMonthlyRollupPersistence {

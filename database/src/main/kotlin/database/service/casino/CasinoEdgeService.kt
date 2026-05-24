@@ -1,7 +1,7 @@
 package database.service.casino
 
 import common.events.AntiAutoclickEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import kotlin.random.Random

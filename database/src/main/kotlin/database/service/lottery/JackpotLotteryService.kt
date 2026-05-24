@@ -1,8 +1,8 @@
 package database.service.lottery
 
 import common.events.LotteryWonEvent
-import database.dto.JackpotLotteryDto
-import database.dto.JackpotLotteryTicketDto
+import database.dto.lottery.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryTicketDto
 import database.persistence.lottery.JackpotLotteryPersistence
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

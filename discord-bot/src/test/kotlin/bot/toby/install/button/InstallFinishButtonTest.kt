@@ -1,6 +1,6 @@
 package bot.toby.install.button
 
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.mockk

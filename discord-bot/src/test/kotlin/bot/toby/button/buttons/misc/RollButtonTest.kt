@@ -59,7 +59,7 @@ class RollButtonTest : ButtonTest {
         }
 
         // Invoke the handle method on the RollButton
-        rollButton.handle(DefaultButtonContext(event), database.dto.UserDto(6L, 1L), 5)
+        rollButton.handle(DefaultButtonContext(event), database.dto.user.UserDto(6L, 1L), 5)
 
         // Verify interactions
         verify { mockChannel.sendTyping().queue() }

@@ -19,8 +19,8 @@ import bot.toby.modal.modals.setconfig.SetConfigLotteryPoolsModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerStakesModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerTableModal
 import bot.toby.modal.modals.setconfig.SetConfigStakesModal
-import database.dto.ConfigDto
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import io.mockk.clearAllMocks
 import io.mockk.every

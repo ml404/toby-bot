@@ -1,6 +1,6 @@
 package database.service.leveling.impl
 
-import database.dto.LevelRoleRewardDto
+import database.dto.leveling.LevelRoleRewardDto
 import database.persistence.leveling.LevelRoleRewardPersistence
 import database.service.leveling.LevelRoleRewardService
 import org.springframework.beans.factory.annotation.Autowired

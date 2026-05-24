@@ -32,7 +32,7 @@ class RollCommandTest : CommandTest {
     @Test
     fun testRollCommand() {
         val ctx = DefaultCommandContext(event)
-        val userDto = mockk<database.dto.UserDto>()
+        val userDto = mockk<database.dto.user.UserDto>()
         val deleteDelay = 0
 
         val number = mockk<OptionMapping>()

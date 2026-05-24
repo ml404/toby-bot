@@ -1,6 +1,6 @@
 package web.service
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.social.TipDailyService
 import database.service.user.UserService
 import org.springframework.stereotype.Service

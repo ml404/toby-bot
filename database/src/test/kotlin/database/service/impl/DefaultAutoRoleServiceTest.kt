@@ -1,6 +1,6 @@
 package database.service.impl
 
-import database.dto.AutoRoleDto
+import database.dto.guild.AutoRoleDto
 import database.persistence.guild.AutoRolePersistence
 import io.mockk.every
 import io.mockk.mockk

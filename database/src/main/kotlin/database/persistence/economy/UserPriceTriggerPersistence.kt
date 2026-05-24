@@ -1,6 +1,6 @@
 package database.persistence.economy
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 
 interface UserPriceTriggerPersistence {
     fun save(trigger: UserPriceTriggerDto): UserPriceTriggerDto

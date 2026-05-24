@@ -2,8 +2,8 @@ package bot.toby.scheduling
 
 import common.leveling.LevelCurve
 import common.logging.DiscordLogger
-import database.dto.ConfigDto
-import database.dto.UbiDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.activity.UbiDailyDto
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
 import database.service.activity.UbiDailyService

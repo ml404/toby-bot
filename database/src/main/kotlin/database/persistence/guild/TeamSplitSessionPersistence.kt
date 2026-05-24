@@ -1,6 +1,6 @@
 package database.persistence.guild
 
-import database.dto.TeamSplitSessionDto
+import database.dto.guild.TeamSplitSessionDto
 import java.time.Instant
 import java.util.UUID
 

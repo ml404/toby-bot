@@ -1,6 +1,6 @@
 package database.service.guild.impl
 
-import database.dto.TeamPresetDto
+import database.dto.guild.TeamPresetDto
 import database.persistence.guild.TeamPresetPersistence
 import database.service.guild.TeamPresetService
 import org.springframework.beans.factory.annotation.Autowired

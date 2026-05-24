@@ -1,6 +1,6 @@
 package database.persistence.leveling.impl
 
-import database.dto.XpDailyDto
+import database.dto.leveling.XpDailyDto
 import database.persistence.leveling.XpDailyPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game.casino.poker
 
-import database.dto.PokerHandLogDto
+import database.dto.casino.poker.PokerHandLogDto
 import common.card.Card
 import common.poker.PokerTable
 import common.poker.PokerTable.Phase

@@ -1,7 +1,7 @@
 package database.service.impl
 
 import common.events.VoiceSessionLoggedEvent
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.persistence.activity.VoiceSessionPersistence
 import io.mockk.every
 import io.mockk.mockk

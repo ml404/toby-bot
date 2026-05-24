@@ -7,7 +7,7 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.PvpWagerService
 import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry

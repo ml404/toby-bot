@@ -4,7 +4,7 @@ import database.duel.PendingDuelRegistry
 import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.pvp.duel.DuelService
 import database.service.pvp.duel.DuelService.StartOutcome
 import net.dv8tion.jda.api.components.MessageTopLevelComponent

@@ -1,6 +1,6 @@
 package database.persistence.social
 
-import database.dto.LoginStreakDto
+import database.dto.social.LoginStreakDto
 import java.time.LocalDate
 
 interface LoginStreakPersistence {

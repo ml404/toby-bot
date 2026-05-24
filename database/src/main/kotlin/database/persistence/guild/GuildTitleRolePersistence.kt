@@ -1,6 +1,6 @@
 package database.persistence.guild
 
-import database.dto.GuildTitleRoleDto
+import database.dto.guild.GuildTitleRoleDto
 
 interface GuildTitleRolePersistence {
     fun get(guildId: Long, titleId: Long): GuildTitleRoleDto?

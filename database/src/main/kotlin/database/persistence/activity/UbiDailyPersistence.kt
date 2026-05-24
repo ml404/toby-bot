@@ -1,6 +1,6 @@
 package database.persistence.activity
 
-import database.dto.UbiDailyDto
+import database.dto.activity.UbiDailyDto
 import java.time.LocalDate
 
 interface UbiDailyPersistence {

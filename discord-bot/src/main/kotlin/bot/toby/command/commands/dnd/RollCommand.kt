@@ -6,7 +6,7 @@ import common.discord.embed
 import common.discord.field
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import net.dv8tion.jda.api.interactions.commands.OptionType

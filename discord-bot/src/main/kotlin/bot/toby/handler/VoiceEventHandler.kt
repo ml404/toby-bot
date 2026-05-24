@@ -10,8 +10,8 @@ import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
 import bot.toby.voice.VoiceSessionLifecycle
 import common.logging.DiscordLogger
-import database.dto.ConfigDto.Configurations.DELETE_DELAY
-import database.dto.ConfigDto.Configurations.VOLUME
+import database.dto.guild.ConfigDto.Configurations.DELETE_DELAY
+import database.dto.guild.ConfigDto.Configurations.VOLUME
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
 import database.service.leveling.XpAwardService
@@ -215,7 +215,7 @@ class VoiceEventHandler(
         event: GuildVoiceUpdateEvent,
         guild: Guild,
         deleteDelay: Int,
-        requestingUserDto: database.dto.UserDto
+        requestingUserDto: database.dto.user.UserDto
     ) {
         val member = event.member
         if (requestingUserDto.musicDtos.isNotEmpty()) {

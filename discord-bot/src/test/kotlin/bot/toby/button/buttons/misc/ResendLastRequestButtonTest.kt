@@ -51,7 +51,7 @@ class ResendLastRequestButtonTest : ButtonTest {
         every { event.deferEdit().queue() } just Runs
 
         // Mock lastCommands to return our mocked command and context
-        val userDto = database.dto.UserDto(6L, 1L)
+        val userDto = database.dto.user.UserDto(6L, 1L)
         commandContext = mockk(relaxed = true)
         every { commandManager.lastCommands[event.guild] } returns Pair(mockCommand, commandContext)
 

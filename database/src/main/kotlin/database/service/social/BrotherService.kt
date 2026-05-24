@@ -1,6 +1,6 @@
 package database.service.social
 
-import database.dto.BrotherDto
+import database.dto.social.BrotherDto
 
 interface BrotherService {
     fun listBrothers(): List<BrotherDto?>

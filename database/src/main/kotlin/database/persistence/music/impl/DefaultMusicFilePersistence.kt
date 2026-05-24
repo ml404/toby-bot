@@ -1,7 +1,7 @@
 package database.persistence.music.impl
 
 import common.logging.DiscordLogger
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import database.persistence.music.MusicFilePersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

@@ -1,8 +1,8 @@
 package web.service
 
-import database.dto.AchievementDto
-import database.dto.LoginStreakDto
-import database.dto.UserDto
+import database.dto.guild.AchievementDto
+import database.dto.social.LoginStreakDto
+import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import database.service.social.LoginStreakService

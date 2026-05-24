@@ -2,7 +2,7 @@ package database.service.casino.dice
 
 import common.casino.CasinoCommonFailure
 import common.events.DiceWonEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.Dice
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

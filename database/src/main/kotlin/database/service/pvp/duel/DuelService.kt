@@ -1,8 +1,8 @@
 package database.service.pvp.duel
 
 import common.events.DuelResolvedEvent
-import database.dto.ConfigDto
-import database.dto.DuelLogDto
+import database.dto.guild.ConfigDto
+import database.dto.pvp.duel.DuelLogDto
 import database.duel.RecentDuelResolutions
 import common.economy.Coinflip
 import database.persistence.pvp.duel.DuelLogPersistence

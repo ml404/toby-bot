@@ -4,14 +4,14 @@ import bot.toby.install.InstallAuth
 import bot.toby.install.InstallWizard
 import bot.toby.install.OptInFeatures
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
 
 /**
  * Flips one [OptInFeatures] config key between `"true"` and `"false"`.
  * One bean handles every toggle button — the colon-suffix on the
- * componentId names the [database.dto.ConfigDto.Configurations] enum
+ * componentId names the [database.dto.guild.ConfigDto.Configurations] enum
  * entry being toggled (e.g. `install_toggle:ACTIVITY_TRACKING`).
  * Unknown suffixes reject ephemerally.
  *

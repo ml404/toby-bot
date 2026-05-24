@@ -1,9 +1,9 @@
 package database.service
 
 import common.events.TipSentEvent
-import database.dto.TipDailyDto
-import database.dto.TipLogDto
-import database.dto.UserDto
+import database.dto.social.TipDailyDto
+import database.dto.social.TipLogDto
+import database.dto.user.UserDto
 import database.persistence.social.TipLogPersistence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

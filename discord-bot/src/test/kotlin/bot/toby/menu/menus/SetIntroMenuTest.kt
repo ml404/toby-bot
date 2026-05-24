@@ -7,7 +7,7 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.menu.DefaultMenuContext
 import bot.toby.menu.MenuTest
 import bot.toby.menu.MenuTest.Companion.menuEvent
-import database.dto.MusicDto
+import database.dto.music.MusicDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -45,7 +45,7 @@ internal class SetIntroMenuTest : MenuTest {
     @Test
     fun `test handle with valid selection and pending intro`() {
         // Arrange
-        val userDto = mockk<database.dto.UserDto>(relaxed = true) {
+        val userDto = mockk<database.dto.user.UserDto>(relaxed = true) {
             every { discordId } returns 1234L
             every { musicDtos } returns mutableListOf(
                 mockk<MusicDto>(relaxed = true) { every { id } returns "1" },
@@ -117,7 +117,7 @@ internal class SetIntroMenuTest : MenuTest {
     @Test
     fun `test handle with no pending intro`() {
         // Arrange
-        val userDto = mockk<database.dto.UserDto>(relaxed = true) {
+        val userDto = mockk<database.dto.user.UserDto>(relaxed = true) {
             every { discordId } returns 1234L
             every { musicDtos } returns mutableListOf(mockk(relaxed = true), mockk(relaxed = true))
         }

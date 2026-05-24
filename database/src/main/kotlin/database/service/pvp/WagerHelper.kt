@@ -1,6 +1,6 @@
 package database.service.pvp
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.service.casino.CasinoTopUpHelper
 import database.service.economy.EconomyTradeService
 import database.service.economy.TobyCoinMarketService

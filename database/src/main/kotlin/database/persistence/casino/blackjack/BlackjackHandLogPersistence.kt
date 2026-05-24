@@ -1,6 +1,6 @@
 package database.persistence.casino.blackjack
 
-import database.dto.BlackjackHandLogDto
+import database.dto.casino.blackjack.BlackjackHandLogDto
 
 interface BlackjackHandLogPersistence {
     fun insert(row: BlackjackHandLogDto): BlackjackHandLogDto

@@ -11,9 +11,9 @@ import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
-import database.dto.ConfigDto
-import database.dto.MusicDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -1,7 +1,7 @@
 package database.persistence.impl
 
-import database.dto.ActivityMonthlyRollupDto
-import database.dto.ActivityMonthlyRollupId
+import database.dto.activity.ActivityMonthlyRollupDto
+import database.dto.activity.ActivityMonthlyRollupId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

@@ -2,7 +2,7 @@ package bot.toby.activity
 
 import common.events.ActivityTrackingEnabled
 import common.logging.DiscordLogger
-import database.dto.ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED
+import database.dto.guild.ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild

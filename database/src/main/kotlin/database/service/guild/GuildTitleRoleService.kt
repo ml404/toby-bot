@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.GuildTitleRoleDto
+import database.dto.guild.GuildTitleRoleDto
 
 interface GuildTitleRoleService {
     fun get(guildId: Long, titleId: Long): GuildTitleRoleDto?

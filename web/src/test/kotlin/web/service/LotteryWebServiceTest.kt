@@ -1,7 +1,7 @@
 package web.service
 
-import database.dto.ConfigDto
-import database.dto.JackpotLotteryDto
+import database.dto.guild.ConfigDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.guild.TitleService
@@ -136,15 +136,15 @@ class LotteryWebServiceTest {
             mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
         )
         every { jackpotLotteryService.ticketsForOpenWeighted(guildId) } returns listOf(
-            database.dto.JackpotLotteryTicketDto(
+            database.dto.lottery.JackpotLotteryTicketDto(
                 lotteryId = 1L, discordId = 1L, ticketCount = 20, spent = 2_000L,
                 bonusTickets = 0L,
             ),
-            database.dto.JackpotLotteryTicketDto(
+            database.dto.lottery.JackpotLotteryTicketDto(
                 lotteryId = 1L, discordId = 2L, ticketCount = 10, spent = 1_000L,
                 bonusTickets = 15L,
             ),
-            database.dto.JackpotLotteryTicketDto(
+            database.dto.lottery.JackpotLotteryTicketDto(
                 lotteryId = 1L, discordId = 3L, ticketCount = 15, spent = 1_500L,
                 bonusTickets = 0L,
             ),
@@ -164,7 +164,7 @@ class LotteryWebServiceTest {
             mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
         )
         every { jackpotLotteryService.ticketsForOpenWeighted(guildId) } returns listOf(
-            database.dto.JackpotLotteryTicketDto(
+            database.dto.lottery.JackpotLotteryTicketDto(
                 lotteryId = 1L, discordId = 7L, ticketCount = 10, spent = 1_000L,
                 bonusTickets = 3L,
             ),

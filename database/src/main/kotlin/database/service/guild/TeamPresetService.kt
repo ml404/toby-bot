@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.TeamPresetDto
+import database.dto.guild.TeamPresetDto
 
 interface TeamPresetService {
     fun listForGuild(guildId: Long): List<TeamPresetDto>

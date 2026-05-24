@@ -1,6 +1,6 @@
 package database.service.impl
 
-import database.dto.ActivityMonthlyRollupDto
+import database.dto.activity.ActivityMonthlyRollupDto
 import database.persistence.activity.ActivityMonthlyRollupPersistence
 import io.mockk.every
 import io.mockk.mockk

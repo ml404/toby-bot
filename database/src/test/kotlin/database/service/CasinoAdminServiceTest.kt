@@ -1,6 +1,6 @@
 package database.service
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

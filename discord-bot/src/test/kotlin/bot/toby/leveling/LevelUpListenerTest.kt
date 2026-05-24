@@ -8,8 +8,8 @@ import common.leveling.LevelCurve
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.dto.LevelRoleRewardDto
-import database.dto.TitleDto
+import database.dto.leveling.LevelRoleRewardDto
+import database.dto.guild.TitleDto
 import database.service.guild.ConfigService
 import database.service.leveling.LevelRoleRewardService
 import database.service.guild.TitleService

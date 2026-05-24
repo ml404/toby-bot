@@ -6,7 +6,7 @@ import bot.toby.lavaplayer.SearchPrefixResolver
 import bot.toby.util.adjustTrackPlayingTimes
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

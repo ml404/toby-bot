@@ -1,6 +1,6 @@
 package database.persistence.user.impl
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import database.persistence.user.UserPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType
@@ -9,6 +9,7 @@ import jakarta.persistence.Query
 import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import database.dto.music.MusicDto
 
 @Repository
 @Transactional

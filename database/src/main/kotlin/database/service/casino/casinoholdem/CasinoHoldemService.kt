@@ -2,8 +2,8 @@ package database.service.casino.casinoholdem
 
 import common.casino.CasinoCommonFailure
 import common.events.CasinoHoldemWonEvent
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import common.poker.CasinoHoldem
 import common.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry

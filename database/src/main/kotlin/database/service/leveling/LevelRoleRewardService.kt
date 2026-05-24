@@ -1,6 +1,6 @@
 package database.service.leveling
 
-import database.dto.LevelRoleRewardDto
+import database.dto.leveling.LevelRoleRewardDto
 
 interface LevelRoleRewardService {
     fun listForGuild(guildId: Long): List<LevelRoleRewardDto>

@@ -1,6 +1,6 @@
 package database.persistence.economy
 
-import database.dto.TobyCoinJackpotDto
+import database.dto.economy.TobyCoinJackpotDto
 
 interface TobyCoinJackpotPersistence {
     fun getByGuild(guildId: Long): TobyCoinJackpotDto?

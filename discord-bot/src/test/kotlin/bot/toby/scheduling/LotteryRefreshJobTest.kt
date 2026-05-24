@@ -1,6 +1,6 @@
 package bot.toby.scheduling
 
-import database.dto.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.lottery.JackpotLotteryService
 import io.mockk.every
 import io.mockk.mockk

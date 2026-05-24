@@ -3,9 +3,9 @@ package bot.toby.scheduling
 import bot.toby.notify.NotificationDispatch
 import bot.toby.notify.NotificationRouter
 import common.notification.NotificationChannelKind
-import database.dto.TobyCoinMarketDto
-import database.dto.TobyCoinPricePointDto
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.TobyCoinPricePointDto
+import database.dto.economy.UserPriceTriggerDto
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.economy.TobyCoinMarketService

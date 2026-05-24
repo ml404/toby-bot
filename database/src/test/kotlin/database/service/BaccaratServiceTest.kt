@@ -3,7 +3,7 @@ package database.service
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.Baccarat
 import io.mockk.every
 import io.mockk.mockk

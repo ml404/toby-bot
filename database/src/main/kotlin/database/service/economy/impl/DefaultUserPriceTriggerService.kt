@@ -1,6 +1,6 @@
 package database.service.economy.impl
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 import database.persistence.economy.UserPriceTriggerPersistence
 import database.service.economy.UserPriceTriggerService
 import org.springframework.stereotype.Service

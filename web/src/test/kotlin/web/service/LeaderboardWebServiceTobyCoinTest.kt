@@ -1,9 +1,9 @@
 package web.service
 
-import database.dto.MonthlyCreditSnapshotDto
-import database.dto.TitleDto
-import database.dto.TobyCoinMarketDto
-import database.dto.UserDto
+import database.dto.economy.MonthlyCreditSnapshotDto
+import database.dto.guild.TitleDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.user.UserDto
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService

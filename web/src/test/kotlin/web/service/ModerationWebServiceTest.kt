@@ -1,9 +1,9 @@
 package web.service
 
-import database.dto.ConfigDto
-import database.dto.MonthlyCreditSnapshotDto
-import database.dto.TitleDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.economy.MonthlyCreditSnapshotDto
+import database.dto.guild.TitleDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.guild.TitleService
@@ -1878,7 +1878,7 @@ class ModerationWebServiceTest {
         val err = service.upsertLevelReward(ownerId, guildId, level = 5, roleId = 999L)
 
         assertNull(err)
-        val captured = slot<database.dto.LevelRoleRewardDto>()
+        val captured = slot<database.dto.leveling.LevelRoleRewardDto>()
         verify(exactly = 1) { levelRoleRewardService.upsert(capture(captured)) }
         assertEquals(guildId, captured.captured.guildId)
         assertEquals(5, captured.captured.level)
@@ -2101,8 +2101,8 @@ class ModerationWebServiceTest {
     @Test
     fun `getLevelingOverview surfaces missing-role flag for dangling rewards`() {
         every { levelRoleRewardService.listForGuild(guildId) } returns listOf(
-            database.dto.LevelRoleRewardDto(guildId = guildId, level = 5, roleId = 555L),
-            database.dto.LevelRoleRewardDto(guildId = guildId, level = 10, roleId = 666L),
+            database.dto.leveling.LevelRoleRewardDto(guildId = guildId, level = 5, roleId = 555L),
+            database.dto.leveling.LevelRoleRewardDto(guildId = guildId, level = 10, roleId = 666L),
         )
         val liveRole = mockk<net.dv8tion.jda.api.entities.Role>(relaxed = true).also {
             every { it.name } returns "Veteran"

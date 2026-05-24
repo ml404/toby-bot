@@ -1,6 +1,6 @@
 package database.service.casino
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.economy.EconomyTradeService

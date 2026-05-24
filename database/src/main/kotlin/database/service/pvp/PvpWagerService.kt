@@ -1,6 +1,6 @@
 package database.service.pvp
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

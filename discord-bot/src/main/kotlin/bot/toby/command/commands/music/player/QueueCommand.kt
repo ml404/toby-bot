@@ -5,7 +5,7 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.util.formatTime
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import org.springframework.stereotype.Component
 import kotlin.math.min
 

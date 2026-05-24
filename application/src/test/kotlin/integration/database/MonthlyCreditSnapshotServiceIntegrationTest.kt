@@ -6,7 +6,7 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.MonthlyCreditSnapshotDto
+import database.dto.economy.MonthlyCreditSnapshotDto
 import database.service.economy.MonthlyCreditSnapshotService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

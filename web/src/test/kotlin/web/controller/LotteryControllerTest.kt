@@ -1,6 +1,6 @@
 package web.controller
 
-import database.dto.JackpotLotteryDto
+import database.dto.lottery.JackpotLotteryDto
 import database.service.lottery.JackpotLotteryService.BuyMatchOutcome
 import database.service.lottery.JackpotLotteryService.BuyOutcome
 import io.mockk.every
@@ -274,7 +274,7 @@ class LotteryControllerTest {
             pickCount = 5, numberMax = 49,
             drawnNumbers = "3,7,11,21,42",
         )
-        val ticket = database.dto.JackpotLotteryTicketDto(
+        val ticket = database.dto.lottery.JackpotLotteryTicketDto(
             lotteryId = 1L, discordId = discordId, ticketCount = 1, spent = 50L,
             pickedNumbers = "3,7,11,33,49",
         )
@@ -344,7 +344,7 @@ class LotteryControllerTest {
             milestonesFired = milestonesFired,
         )
         val myTicket = if (myTickets > 0 || myBonusTickets > 0L) {
-            database.dto.JackpotLotteryTicketDto(
+            database.dto.lottery.JackpotLotteryTicketDto(
                 lotteryId = 1L, discordId = discordId,
                 ticketCount = myTickets, spent = myTickets * 100L,
                 bonusTickets = myBonusTickets,

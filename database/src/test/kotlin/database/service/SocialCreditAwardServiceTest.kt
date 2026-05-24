@@ -1,8 +1,8 @@
 package database.service
 
-import database.dto.ConfigDto
-import database.dto.UserDto
-import database.dto.VoiceCreditDailyDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
+import database.dto.activity.VoiceCreditDailyDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

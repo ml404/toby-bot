@@ -1,7 +1,7 @@
 package bot.toby.install.modal
 
 import core.modal.ModalContext
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import io.mockk.Runs
 import io.mockk.every

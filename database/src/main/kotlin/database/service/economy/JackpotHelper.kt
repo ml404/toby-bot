@@ -1,7 +1,7 @@
 package database.service.economy
 
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import common.economy.JackpotWheel
 import kotlin.random.Random
 import database.service.guild.ConfigService

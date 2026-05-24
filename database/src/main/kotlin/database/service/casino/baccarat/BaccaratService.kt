@@ -4,7 +4,7 @@ import common.casino.CasinoCommonFailure
 import common.events.BaccaratWonEvent
 import common.card.Card
 import common.card.Deck
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.Baccarat
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

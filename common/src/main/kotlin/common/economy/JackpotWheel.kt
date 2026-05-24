@@ -11,7 +11,7 @@ import kotlin.random.Random
  * compounds the longer it goes unhit.
  *
  * Configuration travels as a single CSV string in the per-guild
- * `config` table under [database.dto.ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS]:
+ * `config` table under [database.dto.guild.ConfigDto.Configurations.JACKPOT_WHEEL_SEGMENTS]:
  *
  *     "weight:payoutPct,weight:payoutPct,..."
  *

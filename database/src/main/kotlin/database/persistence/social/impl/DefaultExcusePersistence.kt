@@ -1,6 +1,6 @@
 package database.persistence.social.impl
 
-import database.dto.ExcuseDto
+import database.dto.social.ExcuseDto
 import jakarta.persistence.EntityManager
 import jakarta.persistence.NoResultException
 import jakarta.persistence.PersistenceContext

@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.horseracing
 
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.economy.HorseRacing
 import database.service.casino.horseracing.HorseRacingService
 import database.service.casino.horseracing.HorseRacingService.RaceOutcome

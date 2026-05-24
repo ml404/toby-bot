@@ -1,6 +1,6 @@
 package database.persistence.guild
 
-import database.dto.TeamPresetDto
+import database.dto.guild.TeamPresetDto
 
 interface TeamPresetPersistence {
     fun listByGuild(guildId: Long): List<TeamPresetDto>

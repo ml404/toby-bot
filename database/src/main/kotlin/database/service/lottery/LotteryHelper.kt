@@ -1,6 +1,6 @@
 package database.service.lottery
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 
 /**

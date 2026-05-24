@@ -1,6 +1,6 @@
 package database.persistence.music.impl
 
-import database.dto.MusicPlaylistDto
+import database.dto.music.MusicPlaylistDto
 import database.persistence.music.MusicPlaylistPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.NoResultException

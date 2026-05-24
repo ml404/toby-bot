@@ -1,8 +1,8 @@
 package database.service.social
 
 import common.events.TipSentEvent
-import database.dto.TipDailyDto
-import database.dto.TipLogDto
+import database.dto.social.TipDailyDto
+import database.dto.social.TipLogDto
 import database.persistence.social.TipLogPersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher
@@ -138,7 +138,7 @@ class TipService @Autowired constructor(
         )
     }
 
-    private fun lockBoth(aId: Long, bId: Long, guildId: Long): Pair<database.dto.UserDto?, database.dto.UserDto?> {
+    private fun lockBoth(aId: Long, bId: Long, guildId: Long): Pair<database.dto.user.UserDto?, database.dto.user.UserDto?> {
         return if (aId < bId) {
             val a = userService.getUserByIdForUpdate(aId, guildId)
             val b = userService.getUserByIdForUpdate(bId, guildId)

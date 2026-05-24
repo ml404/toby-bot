@@ -1,6 +1,6 @@
 package database.service.impl
 
-import database.dto.MusicPlaylistDto
+import database.dto.music.MusicPlaylistDto
 import database.persistence.music.MusicPlaylistPersistence
 import database.service.music.MusicPlaylistService.PlaylistItemInput
 import database.service.music.MusicPlaylistService.PlaylistNameTakenException

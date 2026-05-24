@@ -3,7 +3,7 @@ package bot.toby.button.buttons.casino.poker
 import bot.toby.command.commands.game.casino.poker.PokerEmbeds
 import core.button.Button
 import core.button.ButtonContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.poker.PokerEngine
 import common.poker.PokerTable
 import database.poker.PokerTableRegistry

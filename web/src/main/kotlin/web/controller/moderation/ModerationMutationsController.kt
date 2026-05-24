@@ -1,7 +1,7 @@
 package web.controller.moderation
 
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -579,7 +579,7 @@ data class ForceDrawLotteryResponse(
 )
 
 /**
- * `targetConfig` is the canonical [database.dto.ConfigDto.Configurations]
+ * `targetConfig` is the canonical [database.dto.guild.ConfigDto.Configurations]
  * enum name (e.g. "LOTTERY_CHANNEL"); the service validates it against
  * the allow-list. `name` is the human-typed channel name; the service
  * normalises it to Discord's lowercase-dashed convention.

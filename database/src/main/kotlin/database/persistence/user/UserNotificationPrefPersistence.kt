@@ -1,6 +1,6 @@
 package database.persistence.user
 
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserNotificationPrefDto
 
 interface UserNotificationPrefPersistence {
     fun get(

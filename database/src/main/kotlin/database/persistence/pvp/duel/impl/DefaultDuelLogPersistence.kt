@@ -1,6 +1,6 @@
 package database.persistence.pvp.duel.impl
 
-import database.dto.DuelLogDto
+import database.dto.pvp.duel.DuelLogDto
 import database.persistence.pvp.duel.DuelLogPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

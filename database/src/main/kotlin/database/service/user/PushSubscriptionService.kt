@@ -1,6 +1,6 @@
 package database.service.user
 
-import database.dto.PushSubscriptionDto
+import database.dto.user.PushSubscriptionDto
 import java.time.Instant
 
 interface PushSubscriptionService {

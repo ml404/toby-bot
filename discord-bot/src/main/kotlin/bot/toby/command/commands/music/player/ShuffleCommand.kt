@@ -4,7 +4,7 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.lavaplayer.PlayerManager
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import org.springframework.stereotype.Component
 import java.util.*
 import java.util.concurrent.BlockingQueue

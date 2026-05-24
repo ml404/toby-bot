@@ -1,6 +1,6 @@
 package database.persistence.economy.impl
 
-import database.dto.UserPriceTriggerDto
+import database.dto.economy.UserPriceTriggerDto
 import database.persistence.economy.UserPriceTriggerPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

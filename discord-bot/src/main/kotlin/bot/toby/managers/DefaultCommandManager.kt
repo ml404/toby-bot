@@ -13,8 +13,8 @@ import common.logging.DiscordLogger
 import core.command.Command
 import core.command.CommandContext
 import core.managers.CommandManager
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
 import net.dv8tion.jda.api.entities.Guild

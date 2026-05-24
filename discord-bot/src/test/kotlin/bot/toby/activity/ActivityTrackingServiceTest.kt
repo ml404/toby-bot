@@ -1,8 +1,8 @@
 package bot.toby.activity
 
-import database.dto.ActivitySessionDto
-import database.dto.ConfigDto
-import database.dto.UserDto
+import database.dto.activity.ActivitySessionDto
+import database.dto.guild.ConfigDto
+import database.dto.user.UserDto
 import database.service.activity.ActivityMonthlyRollupService
 import database.service.activity.ActivitySessionService
 import database.service.guild.ConfigService

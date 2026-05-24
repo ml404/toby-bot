@@ -2,9 +2,9 @@ package web.controller
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.dto.AchievementDto
-import database.dto.LoginStreakDto
-import database.dto.UserNotificationPrefDto
+import database.dto.guild.AchievementDto
+import database.dto.social.LoginStreakDto
+import database.dto.user.UserNotificationPrefDto
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import database.service.social.LoginStreakService

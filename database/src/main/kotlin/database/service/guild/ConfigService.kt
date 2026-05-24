@@ -1,6 +1,6 @@
 package database.service.guild
 
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 
 interface ConfigService {
     fun listAllConfig(): List<ConfigDto?>?

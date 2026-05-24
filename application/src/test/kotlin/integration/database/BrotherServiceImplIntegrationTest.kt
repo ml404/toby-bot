@@ -50,9 +50,9 @@ class BrotherServiceImplIntegrationTest {
 
     @Test
     fun whenValidDiscordId_thenBrotherShouldBeFound() {
-        val brotherDto = database.dto.BrotherDto(6L, "a")
+        val brotherDto = database.dto.social.BrotherDto(6L, "a")
         brotherService.createNewBrother(brotherDto)
-        val dbBrother: database.dto.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
+        val dbBrother: database.dto.social.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
         assertNotNull(dbBrother)
         Assertions.assertEquals(dbBrother?.discordId, brotherDto.discordId)
@@ -64,17 +64,17 @@ class BrotherServiceImplIntegrationTest {
     fun testUpdate_thenNewBrotherShouldBeReturned() {
         val originalBrotherSize = brotherService.listBrothers().size
 
-        val brotherDto = database.dto.BrotherDto(6L, "a")
+        val brotherDto = database.dto.social.BrotherDto(6L, "a")
         brotherService.createNewBrother(brotherDto)
-        val dbBrother1: database.dto.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
+        val dbBrother1: database.dto.social.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
-        val brotherDtoUpdated = database.dto.BrotherDto(6L, "b")
+        val brotherDtoUpdated = database.dto.social.BrotherDto(6L, "b")
         brotherService.updateBrother(brotherDtoUpdated)
         brotherService.clearCache() // Clear the cache
 
         val expectedBrotherSize = originalBrotherSize + 1
 
-        val dbBrother2: database.dto.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
+        val dbBrother2: database.dto.social.BrotherDto? = brotherService.getBrotherById(brotherDto.discordId)
 
         assertNotNull(dbBrother1)
         assertNotNull(dbBrother2)

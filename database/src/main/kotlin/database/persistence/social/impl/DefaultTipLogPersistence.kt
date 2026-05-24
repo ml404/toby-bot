@@ -1,6 +1,6 @@
 package database.persistence.social.impl
 
-import database.dto.TipLogDto
+import database.dto.social.TipLogDto
 import database.persistence.social.TipLogPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

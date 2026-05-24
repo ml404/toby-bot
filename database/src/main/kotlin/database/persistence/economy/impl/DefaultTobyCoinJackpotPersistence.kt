@@ -1,6 +1,6 @@
 package database.persistence.economy.impl
 
-import database.dto.TobyCoinJackpotDto
+import database.dto.economy.TobyCoinJackpotDto
 import database.persistence.economy.TobyCoinJackpotPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType

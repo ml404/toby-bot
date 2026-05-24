@@ -1,7 +1,7 @@
 package database.service.activity.impl
 
 import common.events.VoiceSessionLoggedEvent
-import database.dto.VoiceSessionDto
+import database.dto.activity.VoiceSessionDto
 import database.persistence.activity.VoiceSessionPersistence
 import database.service.activity.VoiceSessionService
 import org.springframework.beans.factory.annotation.Autowired

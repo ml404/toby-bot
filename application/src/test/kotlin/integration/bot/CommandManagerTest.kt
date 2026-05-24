@@ -43,7 +43,7 @@ import bot.toby.managers.DefaultCommandManager
 import common.configuration.TestCachingConfig
 import core.command.Command
 import database.configuration.TestDatabaseConfig
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.*
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Guild

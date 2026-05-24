@@ -5,8 +5,8 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
-import database.dto.TobyCoinMarketDto
-import database.dto.UserDto
+import database.dto.economy.TobyCoinMarketDto
+import database.dto.user.UserDto
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.economy.TobyCoinMarketService

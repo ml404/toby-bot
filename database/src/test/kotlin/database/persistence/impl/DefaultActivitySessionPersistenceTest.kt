@@ -1,6 +1,6 @@
 package database.persistence.impl
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

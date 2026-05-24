@@ -6,8 +6,8 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.dto.UserDto
-import database.dto.UserNotificationPrefDto
+import database.dto.user.UserDto
+import database.dto.user.UserNotificationPrefDto
 import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk

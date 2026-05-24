@@ -4,7 +4,7 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import common.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.casino.poker.PokerService

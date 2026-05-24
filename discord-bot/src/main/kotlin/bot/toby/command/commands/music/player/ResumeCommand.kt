@@ -5,7 +5,7 @@ import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.PlayerManager
 import core.command.Command.Companion.deleteAfter
 import core.command.CommandContext
-import database.dto.UserDto
+import database.dto.user.UserDto
 import org.springframework.stereotype.Component
 
 @Component

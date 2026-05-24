@@ -7,9 +7,9 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
-import database.dto.AutoRoleDto
-import database.dto.ConfigDto
-import database.dto.ConfigDto.Configurations
+import database.dto.guild.AutoRoleDto
+import database.dto.guild.ConfigDto
+import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.AutoRoleService
 import database.service.guild.ConfigService
 import io.mockk.every

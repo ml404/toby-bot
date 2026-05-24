@@ -4,7 +4,7 @@ import bot.toby.modal.DefaultModalContext
 import common.logging.DiscordLogger
 import core.managers.ModalManager
 import core.modal.Modal
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired

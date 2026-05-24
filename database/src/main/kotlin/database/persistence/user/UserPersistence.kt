@@ -1,6 +1,6 @@
 package database.persistence.user
 
-import database.dto.UserDto
+import database.dto.user.UserDto
 
 interface UserPersistence {
     fun listGuildUsers(guildId: Long?): List<UserDto?>

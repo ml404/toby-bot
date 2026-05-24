@@ -1,7 +1,7 @@
 package database.service.casino.keno
 
 import common.events.KenoPerfectEvent
-import database.dto.ConfigDto
+import database.dto.guild.ConfigDto
 import common.economy.Keno
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service

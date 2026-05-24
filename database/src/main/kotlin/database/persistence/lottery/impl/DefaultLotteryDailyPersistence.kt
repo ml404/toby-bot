@@ -1,6 +1,6 @@
 package database.persistence.lottery.impl
 
-import database.dto.LotteryDailyDto
+import database.dto.lottery.LotteryDailyDto
 import database.persistence.lottery.LotteryDailyPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

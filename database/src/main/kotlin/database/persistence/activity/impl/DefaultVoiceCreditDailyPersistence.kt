@@ -1,6 +1,6 @@
 package database.persistence.activity.impl
 
-import database.dto.VoiceCreditDailyDto
+import database.dto.activity.VoiceCreditDailyDto
 import database.persistence.activity.VoiceCreditDailyPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

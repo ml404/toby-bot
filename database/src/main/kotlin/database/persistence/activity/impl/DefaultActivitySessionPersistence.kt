@@ -1,6 +1,6 @@
 package database.persistence.activity.impl
 
-import database.dto.ActivitySessionDto
+import database.dto.activity.ActivitySessionDto
 import database.persistence.activity.ActivitySessionPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext

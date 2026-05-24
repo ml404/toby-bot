@@ -6,8 +6,8 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.dto.TitleDto
-import database.dto.UserDto
+import database.dto.guild.TitleDto
+import database.dto.user.UserDto
 import database.service.economy.EconomyTradeService
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService
