@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Regroup 88 files into themed sub-packages",
+    "summary": "Eighth wave of the refactor pass — and the first of four planned packaging-only PRs to improve navigation ease. The flat `database/service/` (62) + `service/impl/` (26) directory had grown into an **88-file bucket** where casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild-config services all sat alongside each other. Opening it in the IDE meant scrolling through 88 names to find one service. Regroup into themed sub-packages. Each theme mirror…",
+    "emoji": "🎰",
+    "prNumber": 586
+  },
+  {
+    "date": "May 2026",
     "title": "Move PvpResolutionOutcome translation factories beside the DTO",
     "summary": "Seventh wave of the refactor pass (continuing from #579, #580, #581, #582, #583, #584). The two `translate*Outcome` helpers in `PvpController` were private sealed-type → DTO mappings that called the existing factory methods (`rpsWin`, `rpsDraw`, `rpsDoubleRefund`, `boardWin`, `boardDraw`) already living on `PvpWebService.PvpResolutionOutcome.Companion`. They were invoked from 12 sites in the controller (5 RPS branches, 7 TTT/C4 branches) but logically belonged with the DTO…",
     "emoji": "🧹",
