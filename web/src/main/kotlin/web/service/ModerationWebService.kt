@@ -150,8 +150,29 @@ class ModerationWebService(
                 memberIds = it.members.mapNotNull { m -> if (m.user.isBot) null else m.id }
             )
         }
+
+        val configByKey = ConfigDto.Configurations.entries.associate { cfg ->
+            cfg.name to configService.getConfigByName(cfg.configValue, guild.id)?.value
+        }
+
+        // Always include any channel that's currently referenced by a
+        // config value, even if the bot's live MESSAGE_SEND check fails.
+        // Otherwise an admin who saved e.g. LOTTERY_CHANNEL and later lost
+        // posting perms on it (channel-perm change, role reshuffle, fresh
+        // re-invite with cache-lagged overwrites) sees the picker silently
+        // drop their selection and can't pick it back without using the
+        // raw API. MOVE config stores a channel name not an id, so a
+        // snowflake regex match keeps the gate ID-only.
+        val snowflakeRegex = Regex("\\d{17,20}")
+        val configuredChannelIds = configByKey.values
+            .filterNotNull()
+            .filter { it.matches(snowflakeRegex) }
+            .toSet()
         val textChannels = guild.textChannels
-            .filter { guild.selfMember.hasPermission(it, Permission.MESSAGE_SEND) }
+            .filter { ch ->
+                ch.id in configuredChannelIds ||
+                    guild.selfMember.hasPermission(ch, Permission.MESSAGE_SEND)
+            }
             .map { TextChannelInfo(id = it.id, name = it.name) }
         // Categories are only used by the create-read-only-channel form
         // for grouping. Order matches Discord's left-rail order so
@@ -159,10 +180,6 @@ class ModerationWebService(
         val categories = guild.categories
             .sortedBy { it.position }
             .map { CategoryInfo(id = it.id, name = it.name) }
-
-        val configByKey = ConfigDto.Configurations.entries.associate { cfg ->
-            cfg.name to configService.getConfigByName(cfg.configValue, guild.id)?.value
-        }
 
         // Resolve the incentive tier triples through LotteryHelper so the
         // template, the buy-time service, and the announcer all share one
