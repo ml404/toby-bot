@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Bound suspicion-tracker map + cache 12-month rollup query",
+    "summary": "Follow-up to the audit after #574 landed — that PR trimmed `ProfileCardRenderer`, which is a rarely-exercised path. The real memory pressure comes from surfaces the bot exercises all day. This PR addresses two of them: **C) Bound `CasinoBotSuspicionService`** — the per-(user, guild, game) state map was an unbounded `ConcurrentHashMap`. `evictGuild` only fires on bot-leave and the idle-reset clears the deque but leaves the map entry, so a one-and-done casino player left a p…",
+    "emoji": "⚡",
+    "prNumber": 577
+  },
+  {
+    "date": "May 2026",
     "title": "TicTacToe + Connect 4 frontends + home counter bump",
     "summary": "**Stacked on top of #573 (TTT + C4 backends)** — this branch includes both PRs' commits. When #573 merges, GitHub will auto-strip those commits from this diff. Activates the last two PvP tabs end-to-end **and** bumps the home page counter to honestly advertise all four PvP games now that every tab is playable in the browser. After both #573 and this land, the original ask — \"should the home page counter advertise PvP games — maybe if they have a web UI?\" — is closed. ### F…",
     "emoji": "✨",
