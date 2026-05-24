@@ -1,4 +1,4 @@
-package web.controller
+package web.controller.moderation
 
 import io.mockk.every
 import io.mockk.mockk
@@ -13,13 +13,13 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import web.service.ModerationWebService
 
 /**
- * Welcome-tab slice of [ModerationController] — POST `/auto-role` and
- * DELETE `/auto-role/{roleId}`. Welcome / goodbye scalar settings ride
- * the existing `/config` endpoint and are covered by the
- * `ModerationWebServiceWelcomeTest` validation tests, so no additional
- * controller test is needed for them.
+ * Welcome-tab slice of [ModerationMutationsController] — POST
+ * `/auto-role` and DELETE `/auto-role/{roleId}`. Welcome / goodbye
+ * scalar settings ride the existing `/config` endpoint and are
+ * covered by the `ModerationWebServiceWelcomeTest` validation tests,
+ * so no additional controller test is needed for them.
  */
-class ModerationControllerWelcomeTest {
+class ModerationMutationsControllerWelcomeTest {
 
     private val guildId = 42L
     private val actorId = 100L
@@ -27,7 +27,7 @@ class ModerationControllerWelcomeTest {
 
     private lateinit var moderationWebService: ModerationWebService
     private lateinit var user: OAuth2User
-    private lateinit var controller: ModerationController
+    private lateinit var controller: ModerationMutationsController
 
     @BeforeEach
     fun setup() {
@@ -36,7 +36,7 @@ class ModerationControllerWelcomeTest {
             every { getAttribute<String>("id") } returns actorId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
-        controller = ModerationController(moderationWebService, mockk(relaxed = true), "test-client-id")
+        controller = ModerationMutationsController(moderationWebService)
     }
 
     // ---- addAutoRole ----

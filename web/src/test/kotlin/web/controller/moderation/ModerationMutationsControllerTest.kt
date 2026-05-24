@@ -1,4 +1,4 @@
-package web.controller
+package web.controller.moderation
 
 import io.mockk.every
 import io.mockk.mockk
@@ -13,7 +13,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User
 import web.service.ModerationWebService
 import web.service.PurgeResult
 
-class ModerationControllerTest {
+class ModerationMutationsControllerTest {
 
     private val guildId = 42L
     private val actorId = 100L
@@ -21,7 +21,7 @@ class ModerationControllerTest {
 
     private lateinit var moderationWebService: ModerationWebService
     private lateinit var user: OAuth2User
-    private lateinit var controller: ModerationController
+    private lateinit var controller: ModerationMutationsController
 
     @BeforeEach
     fun setup() {
@@ -30,7 +30,7 @@ class ModerationControllerTest {
             every { getAttribute<String>("id") } returns actorId.toString()
             every { getAttribute<String>("username") } returns "tester"
         }
-        controller = ModerationController(moderationWebService, mockk(relaxed = true), "test-client-id")
+        controller = ModerationMutationsController(moderationWebService)
     }
 
     // ---- ban ----
