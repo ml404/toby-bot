@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "RPS web backend — endpoints, SSE fan-out, view DTOs",
+    "summary": "First slice of PR 1b. Wires the **backend half of Rock-Paper-Scissors web play** onto the existing `/pvp` surface; the page still shows the \"coming soon\" RPS panel until the next slice adds JS/HTML/CSS. Established the SSE infrastructure that TicTacToe and Connect 4 will reuse. ### Backend endpoints `POST /pvp/{guildId}/rps/{challenge,accept,decline,cancel,pick,forfeit}` — all six mutations call into the existing `RpsService` + `RpsSessionRegistry`, so achievements / XP /…",
+    "emoji": "✨",
+    "prNumber": 568
+  },
+  {
+    "date": "May 2026",
     "title": "Redesign Activity tab + pill-style sub-nav",
     "summary": "The Moderation → Activity tab was previously two bare SVG polylines with a one-line \"total · peak\" caption — accurate but flat. This PR turns it into a small dashboard and gives the shared moderation sub-nav a chrome refresh that lifts every tab. ### Activity tab **Stat-tile row per metric**: Total · Average/day · Peak day · Active days, for both messages and voice hours. **Polished area charts**: gradient fill under the line, dashed Y-axis gridlines, Y/X axis labels, per-…",
     "emoji": "🛡️",
