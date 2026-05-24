@@ -8,8 +8,8 @@ import bot.toby.command.DefaultCommandContext
 import database.dto.TitleDto
 import database.dto.UserDto
 import database.dto.UserOwnedTitleDto
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

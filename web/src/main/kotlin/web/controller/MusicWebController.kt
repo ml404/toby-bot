@@ -1,7 +1,7 @@
 package web.controller
 
 import core.music.MusicControlGateway
-import database.service.MusicPlaylistService.PlaylistNameTakenException
+import database.service.music.MusicPlaylistService.PlaylistNameTakenException
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal

@@ -3,8 +3,8 @@ package bot.toby.handler
 import database.dto.AutoRoleDto
 import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations
-import database.service.AutoRoleService
-import database.service.ConfigService
+import database.service.guild.AutoRoleService
+import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

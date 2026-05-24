@@ -9,8 +9,8 @@ import database.dto.ConfigDto
 import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

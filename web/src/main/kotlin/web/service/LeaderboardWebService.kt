@@ -1,11 +1,11 @@
 package web.service
 
-import database.service.AchievementService
-import database.service.ActivityMonthlyRollupService
-import database.service.MonthlyCreditSnapshotService
-import database.service.TitleService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.economy.MonthlyCreditSnapshotService
+import database.service.guild.TitleService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership

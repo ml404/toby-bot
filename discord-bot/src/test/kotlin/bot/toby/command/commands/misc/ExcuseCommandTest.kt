@@ -6,8 +6,8 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import bot.toby.modal.modals.ExcuseSubmitModal
 import database.dto.ExcuseDto
-import database.service.ExcuseService
-import database.service.PagedExcuses
+import database.service.social.ExcuseService
+import database.service.social.PagedExcuses
 import io.mockk.*
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.modals.Modal

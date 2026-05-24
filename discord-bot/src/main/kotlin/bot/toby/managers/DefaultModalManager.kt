@@ -5,7 +5,7 @@ import common.logging.DiscordLogger
 import core.managers.ModalManager
 import core.modal.Modal
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Configurable

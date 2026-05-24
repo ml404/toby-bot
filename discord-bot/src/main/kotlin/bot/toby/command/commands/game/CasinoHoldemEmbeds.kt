@@ -13,7 +13,7 @@ import java.awt.Color
  * Component IDs encode the action and table id:
  *   `casinoholdem:CALL:<tableId>`
  * The [bot.toby.button.buttons.CasinoHoldemButton] handler parses this
- * back out and routes to [database.service.CasinoHoldemService.applyAction].
+ * back out and routes to [database.service.casino.casinoholdem.CasinoHoldemService.applyAction].
  */
 internal object CasinoHoldemEmbeds {
 

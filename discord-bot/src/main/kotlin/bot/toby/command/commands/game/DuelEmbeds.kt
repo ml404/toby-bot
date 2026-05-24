@@ -1,8 +1,8 @@
 package bot.toby.command.commands.game
 
 import database.duel.PendingDuelRegistry
-import database.service.DuelService.AcceptOutcome
-import database.service.DuelService.StartOutcome
+import database.service.pvp.duel.DuelService.AcceptOutcome
+import database.service.pvp.duel.DuelService.StartOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

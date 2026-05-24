@@ -108,7 +108,7 @@ class BlackjackTable(
         var doubled: Boolean = false,
         var status: SeatStatus = SeatStatus.ACTIVE,
         /**
-         * True if this slot was created by [database.service.BlackjackService]
+         * True if this slot was created by [database.service.casino.blackjack.BlackjackService]
          * splitting a pair. Two-card 21s on a split hand pay 1:1, not
          * 3:2 — the natural-blackjack premium only applies to the
          * originally-dealt pair.
@@ -130,7 +130,7 @@ class BlackjackTable(
         var activeHandIndex: Int = 0,
         /**
          * Set when a seated player asks to leave during a hand (multi
-         * mode only). Honoured by [database.service.BlackjackService] —
+         * mode only). Honoured by [database.service.casino.blackjack.BlackjackService] —
          * the seat is auto-stood on its turn during the in-flight hand,
          * then dropped from the table as soon as the hand resolves.
          * Stays `false` for between-hand `/blackjack leave`, which goes
@@ -210,7 +210,7 @@ class BlackjackTable(
         /**
          * Reset this seat's per-hand state for a fresh round: drop any
          * split hands, replace with a single empty active hand, clear
-         * the leave flag. Called by [database.service.BlackjackService]
+         * the leave flag. Called by [database.service.casino.blackjack.BlackjackService]
          * on every `startMultiHand` for surviving seats.
          */
         fun resetForNextHand(stake: Long) {

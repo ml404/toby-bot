@@ -6,8 +6,8 @@ import org.junit.jupiter.api.Test
 
 /**
  * Pure-math tests for the sell-to-cover-shortfall helper used by
- * [web.service.TitlesWebService] and [database.service.CasinoTopUpHelper].
- * Pinned to the same sale arithmetic [database.service.EconomyTradeService]
+ * [web.service.TitlesWebService] and [database.service.casino.CasinoTopUpHelper].
+ * Pinned to the same sale arithmetic [database.service.economy.EconomyTradeService]
  * applies — drift between the two would mean the chosen N would land
  * a few credits short of the shortfall after the fee + slippage land,
  * which is exactly what these helpers are written to prevent.

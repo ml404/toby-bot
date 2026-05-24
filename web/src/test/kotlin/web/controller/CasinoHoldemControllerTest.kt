@@ -6,9 +6,9 @@ import common.card.Suit
 import common.poker.CasinoHoldem
 import common.poker.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
-import database.service.CasinoHoldemService
-import database.service.CasinoHoldemService.ActionOutcome
-import database.service.CasinoHoldemService.DealOutcome
+import database.service.casino.casinoholdem.CasinoHoldemService
+import database.service.casino.casinoholdem.CasinoHoldemService.ActionOutcome
+import database.service.casino.casinoholdem.CasinoHoldemService.DealOutcome
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

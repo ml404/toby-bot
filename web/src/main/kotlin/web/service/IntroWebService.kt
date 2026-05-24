@@ -5,8 +5,8 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.service.MusicFileService
-import database.service.UserService
+import database.service.music.MusicFileService
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import okhttp3.OkHttpClient
 import okhttp3.Request

@@ -6,6 +6,9 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import database.service.guild.ConfigService
+import database.service.guild.cfgLong
+import database.service.guild.cfgLongMax
 
 /**
  * Read-time semantics for [cfgLong] and [cfgLongMax]. The interesting case

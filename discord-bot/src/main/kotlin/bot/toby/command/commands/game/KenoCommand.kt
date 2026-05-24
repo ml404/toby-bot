@@ -3,7 +3,7 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.Keno
-import database.service.KenoService
+import database.service.casino.keno.KenoService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired

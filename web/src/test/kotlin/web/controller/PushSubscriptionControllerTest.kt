@@ -3,7 +3,7 @@ package web.controller
 import common.notification.PushAdapter
 import common.notification.PushPayload
 import database.dto.PushSubscriptionDto
-import database.service.PushSubscriptionService
+import database.service.user.PushSubscriptionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

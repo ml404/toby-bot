@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
-import database.service.UserService
+import database.service.user.UserService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

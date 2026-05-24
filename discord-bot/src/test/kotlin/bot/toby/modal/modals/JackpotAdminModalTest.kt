@@ -3,9 +3,9 @@ package bot.toby.modal.modals
 import bot.toby.scheduling.LotteryAnnouncer
 import core.modal.ModalContext
 import database.dto.JackpotLotteryDto
-import database.service.JackpotLotteryService
-import database.service.JackpotLotteryService.OpenOutcome
-import database.service.LotteryHelper
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.JackpotLotteryService.OpenOutcome
+import database.service.lottery.LotteryHelper
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

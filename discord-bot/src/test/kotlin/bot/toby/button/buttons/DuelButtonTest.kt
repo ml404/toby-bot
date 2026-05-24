@@ -8,7 +8,7 @@ import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.DuelEmbeds
 import database.duel.PendingDuelRegistry
 import database.dto.UserDto
-import database.service.DuelService
+import database.service.pvp.duel.DuelService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

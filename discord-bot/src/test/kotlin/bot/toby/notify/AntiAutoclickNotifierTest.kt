@@ -2,7 +2,7 @@ package bot.toby.notify
 
 import common.events.AntiAutoclickEvent
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

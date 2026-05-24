@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Drives the per-table shot-clock plumbing in [PokerTableRegistry]
- * directly, without the [database.service.PokerService] auto-fold
+ * directly, without the [database.service.casino.poker.PokerService] auto-fold
  * path. The clock is a small piece of scheduler bookkeeping that
  * deserves coverage on its own — the production callback (auto-fold
  * via PokerService) is exercised separately by the service tests.

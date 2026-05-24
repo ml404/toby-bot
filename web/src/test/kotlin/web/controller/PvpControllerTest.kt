@@ -4,13 +4,13 @@ import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.pvp.PvpSessionRegistry
 import database.rps.RpsSessionRegistry
-import database.service.Connect4Service
-import database.service.DuelService
-import database.service.DuelService.AcceptOutcome
-import database.service.DuelService.StartOutcome
-import database.service.RpsService
-import database.service.TicTacToeService
-import database.service.UserService
+import database.service.pvp.connect4.Connect4Service
+import database.service.pvp.duel.DuelService
+import database.service.pvp.duel.DuelService.AcceptOutcome
+import database.service.pvp.duel.DuelService.StartOutcome
+import database.service.pvp.rps.RpsService
+import database.service.pvp.tictactoe.TicTacToeService
+import database.service.user.UserService
 import database.tictactoe.TicTacToeSessionRegistry
 import io.mockk.every
 import io.mockk.mockk
@@ -330,7 +330,7 @@ class PvpControllerTest {
     fun `rpsChallenge happy path registers session and SSE fans out to opponent`() {
         every {
             rpsService.startMatch(discordId, opponentId, guildId, 50L)
-        } returns database.service.PvpWagerService.StartOutcome.Ok(initiatorBalance = 1000L)
+        } returns database.service.pvp.PvpWagerService.StartOutcome.Ok(initiatorBalance = 1000L)
         val registered = rpsSession()
         every {
             rpsSessionRegistry.register(guildId, discordId, opponentId, 50L, any(), any())
@@ -372,7 +372,7 @@ class PvpControllerTest {
         every { rpsSessionRegistry.accept(1L, any()) } returns session
         every {
             rpsService.acceptMatch(discordId, opponentId, guildId, 50L)
-        } returns database.service.PvpWagerService.AcceptOutcome.Ok(
+        } returns database.service.pvp.PvpWagerService.AcceptOutcome.Ok(
             initiatorNewBalance = 950L, opponentNewBalance = 950L,
         )
 

@@ -4,7 +4,7 @@ import bot.toby.command.commands.misc.ExcuseCommand
 import core.modal.Modal
 import core.modal.ModalContext
 import database.dto.ExcuseDto
-import database.service.ExcuseService
+import database.service.social.ExcuseService
 import org.springframework.stereotype.Component
 
 /**

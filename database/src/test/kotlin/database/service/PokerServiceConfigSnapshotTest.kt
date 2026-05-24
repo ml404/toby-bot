@@ -15,6 +15,10 @@ import database.dto.PokerHandPotDto
 import database.poker.PokerTableRegistry
 import java.time.Duration
 import kotlin.random.Random
+import database.service.guild.ConfigService
+import database.service.economy.JackpotService
+import database.service.casino.poker.PokerService
+import database.service.user.UserService
 
 /**
  * Verifies that [PokerService.createTable] reads the per-guild

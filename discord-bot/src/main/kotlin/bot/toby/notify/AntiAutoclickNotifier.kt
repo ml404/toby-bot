@@ -4,7 +4,7 @@ import bot.toby.command.commands.moderation.AntiAutoclickEmbeds
 import common.events.AntiAutoclickEvent
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild

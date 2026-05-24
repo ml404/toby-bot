@@ -4,7 +4,7 @@ import database.dto.PokerHandLogDto
 import common.card.Card
 import common.poker.PokerTable
 import common.poker.PokerTable.Phase
-import database.service.PokerService
+import database.service.casino.poker.PokerService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

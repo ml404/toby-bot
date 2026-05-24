@@ -2,7 +2,7 @@ package web.service
 
 import database.dto.GuildTitleRoleDto
 import database.dto.TitleDto
-import database.service.GuildTitleRoleService
+import database.service.guild.GuildTitleRoleService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

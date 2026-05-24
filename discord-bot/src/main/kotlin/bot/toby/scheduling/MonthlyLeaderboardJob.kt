@@ -3,11 +3,11 @@ package bot.toby.scheduling
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.MonthlyCreditSnapshotDto
-import database.service.ConfigService
-import database.service.MonthlyCreditSnapshotService
-import database.service.UbiDailyService
-import database.service.UserService
-import database.service.VoiceSessionService
+import database.service.guild.ConfigService
+import database.service.economy.MonthlyCreditSnapshotService
+import database.service.activity.UbiDailyService
+import database.service.user.UserService
+import database.service.activity.VoiceSessionService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission

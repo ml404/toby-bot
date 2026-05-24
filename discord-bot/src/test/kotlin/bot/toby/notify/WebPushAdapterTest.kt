@@ -3,7 +3,7 @@ package bot.toby.notify
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.notification.PushPayload
 import database.dto.PushSubscriptionDto
-import database.service.PushSubscriptionService
+import database.service.user.PushSubscriptionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

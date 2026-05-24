@@ -28,9 +28,9 @@ import common.events.WheelJackpotEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.service.AchievementService
-import database.service.ConfigService
-import database.service.UserNotificationPrefService
+import database.service.guild.AchievementService
+import database.service.guild.ConfigService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

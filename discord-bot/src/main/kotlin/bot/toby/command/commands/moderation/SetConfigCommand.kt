@@ -15,7 +15,7 @@ import bot.toby.modal.modals.setconfig.SetConfigStakesModal
 import core.command.CommandContext
 import database.dto.ConfigDto.Configurations
 import database.dto.UserDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData

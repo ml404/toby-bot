@@ -4,11 +4,11 @@ import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.TobyCoinTradeDto
 import database.dto.UserDto
-import database.service.EconomyTradeService
-import database.service.TobyCoinMarketService
-import database.service.UserNotificationPrefService
-import database.service.UserPriceTriggerService
-import database.service.UserService
+import database.service.economy.EconomyTradeService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserNotificationPrefService
+import database.service.economy.UserPriceTriggerService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA

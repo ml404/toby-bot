@@ -8,12 +8,12 @@ import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import common.blackjack.canSplit
 import database.dto.UserDto
-import database.service.BlackjackService
-import database.service.BlackjackService.MultiCreateOutcome
-import database.service.BlackjackService.MultiJoinOutcome
-import database.service.BlackjackService.MultiLeaveOutcome
-import database.service.BlackjackService.MultiStartOutcome
-import database.service.BlackjackService.SoloDealOutcome
+import database.service.casino.blackjack.BlackjackService
+import database.service.casino.blackjack.BlackjackService.MultiCreateOutcome
+import database.service.casino.blackjack.BlackjackService.MultiJoinOutcome
+import database.service.casino.blackjack.BlackjackService.MultiLeaveOutcome
+import database.service.casino.blackjack.BlackjackService.MultiStartOutcome
+import database.service.casino.blackjack.BlackjackService.SoloDealOutcome
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component
  * `/blackjack solo|create|join|start|leave|tables|peek` — classic
  * blackjack against the casino dealer (solo) or against a shared dealer
  * with other players (multi). Solo settlement runs through
- * [database.service.WagerHelper] like the rest of the casino games;
+ * [database.service.pvp.WagerHelper] like the rest of the casino games;
  * multi settlement splits a pot among non-bust players that beat the
  * dealer, with a 5 % rake routed to the per-guild jackpot pool.
  */

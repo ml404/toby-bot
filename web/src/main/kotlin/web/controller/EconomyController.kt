@@ -20,8 +20,8 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.CreateWatchResult
 import web.service.EconomyWebService
-import database.service.EconomyTradeService.TradeOutcome
-import database.service.SocialCreditAwardService
+import database.service.economy.EconomyTradeService.TradeOutcome
+import database.service.social.SocialCreditAwardService
 import web.service.PricePoint
 import web.service.TradeMarker
 import web.service.WatchView

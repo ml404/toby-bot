@@ -4,6 +4,8 @@ import database.dto.UserDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import database.service.user.UserService
+import database.service.user.lockUsersInAscendingOrder
 
 /**
  * Pure unit test for the `UserService.lockUsersInAscendingOrder` extension.

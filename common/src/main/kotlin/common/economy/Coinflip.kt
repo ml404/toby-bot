@@ -14,7 +14,7 @@ import kotlin.random.Random
  *   edge).
  *
  * Anti-autoclicker bias is applied OUTSIDE this class by
- * `database.service.CasinoEdgeService.applyBotEdge`, which substitutes
+ * `database.service.casino.CasinoEdgeService.applyBotEdge`, which substitutes
  * a loss outcome with probability proportional to the player's
  * bot-suspicion streak. This class stays fair so its math reads cleanly
  * and matches the docstring.

@@ -3,7 +3,7 @@ package web.controller
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.dto.UserNotificationPrefDto
-import database.service.UserNotificationPrefService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.servlet.http.Cookie

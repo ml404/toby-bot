@@ -5,11 +5,11 @@ import common.notification.Surface
 import database.dto.AchievementDto
 import database.dto.LoginStreakDto
 import database.dto.UserNotificationPrefDto
-import database.service.AchievementService
-import database.service.AchievementService.AchievementView
-import database.service.LoginStreakService
-import database.service.LoginStreakService.ClaimResult
-import database.service.UserNotificationPrefService
+import database.service.guild.AchievementService
+import database.service.guild.AchievementService.AchievementView
+import database.service.social.LoginStreakService
+import database.service.social.LoginStreakService.ClaimResult
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

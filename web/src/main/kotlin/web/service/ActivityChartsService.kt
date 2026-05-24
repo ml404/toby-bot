@@ -1,7 +1,7 @@
 package web.service
 
 import database.persistence.MessageDailyCountPersistence
-import database.service.VoiceSessionService
+import database.service.activity.VoiceSessionService
 import org.springframework.stereotype.Service
 import java.time.Clock
 import java.time.Duration
@@ -16,7 +16,7 @@ import kotlin.math.round
  * Two charts, both 30-day-rolling, both bucketed by UTC date:
  *
  *  - [messagesPerDay] reads the dedicated `message_daily_count` counter
- *    (filled by [database.service.MessageActivityBuffer] in batches off
+ *    (filled by [database.service.activity.MessageActivityBuffer] in batches off
  *    the JDA dispatch thread)
  *  - [voiceHoursPerDay] aggregates closed voice sessions at query time;
  *    sessions that straddle midnight UTC are split proportionally across

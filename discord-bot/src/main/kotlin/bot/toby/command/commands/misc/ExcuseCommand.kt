@@ -6,8 +6,8 @@ import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.ExcuseDto
 import database.dto.UserDto
-import database.service.ExcuseService
-import database.service.PagedExcuses
+import database.service.social.ExcuseService
+import database.service.social.PagedExcuses
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.actionrow.ActionRow

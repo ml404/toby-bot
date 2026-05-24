@@ -2,7 +2,7 @@ package database.service.impl
 
 import database.dto.UserDto
 import database.persistence.UserPersistence
-import database.service.UserService
+import database.service.user.UserService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -23,6 +23,7 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import java.util.concurrent.atomic.AtomicInteger
+import database.service.user.impl.DefaultUserService
 
 private const val CACHE_EVICTION_TEST_PROFILE = "cache-eviction-unit-test"
 

@@ -4,10 +4,10 @@ import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import database.dto.ConfigDto
 import database.dto.UbiDailyDto
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
-import database.service.UbiDailyService
-import database.service.UserService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.activity.UbiDailyService
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.springframework.beans.factory.annotation.Autowired

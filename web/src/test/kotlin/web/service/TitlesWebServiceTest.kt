@@ -3,10 +3,10 @@ package web.service
 import database.dto.TitleDto
 import database.dto.UserDto
 import database.dto.UserOwnedTitleDto
-import database.service.EconomyTradeService
-import database.service.TitleService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.EconomyTradeService
+import database.service.guild.TitleService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

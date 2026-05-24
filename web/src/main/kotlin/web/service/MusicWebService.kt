@@ -4,9 +4,9 @@ import core.music.MusicControlGateway
 import core.music.MusicControlGateway.GuildPlayerState
 import core.music.MusicControlGateway.LoadResult
 import core.music.MusicControlGateway.TrackInfo
-import database.service.MusicPlaylistService
-import database.service.MusicPlaylistService.PlaylistItemInput
-import database.service.UserService
+import database.service.music.MusicPlaylistService
+import database.service.music.MusicPlaylistService.PlaylistItemInput
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership

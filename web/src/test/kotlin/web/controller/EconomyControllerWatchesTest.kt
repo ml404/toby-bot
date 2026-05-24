@@ -1,7 +1,7 @@
 package web.controller
 
 import database.dto.UserPriceTriggerDto
-import database.service.SocialCreditAwardService
+import database.service.social.SocialCreditAwardService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

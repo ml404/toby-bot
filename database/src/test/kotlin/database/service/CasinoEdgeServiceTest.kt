@@ -11,6 +11,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.random.Random
+import database.service.casino.CasinoBotSuspicionService
+import database.service.casino.CasinoEdgeService
+import database.service.guild.ConfigService
 
 class CasinoEdgeServiceTest {
 

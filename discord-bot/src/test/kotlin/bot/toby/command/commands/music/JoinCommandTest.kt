@@ -15,7 +15,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.JoinCommand
 import bot.toby.voice.LastConnectedChannelTracker
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel

@@ -12,6 +12,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
+import database.service.guild.ConfigService
+import database.service.economy.EconomyTradeService
+import database.service.casino.horseracing.HorseRacingService
+import database.service.economy.JackpotService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 
 class HorseRacingServiceTest {
 

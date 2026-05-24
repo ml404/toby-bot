@@ -9,6 +9,10 @@ import org.junit.jupiter.api.Test
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.user.UserService
+import database.service.activity.VoiceCreditDailyService
 
 class SocialCreditAwardServiceTest {
 

@@ -9,7 +9,7 @@ import database.duel.RecentDuelResolutions
 import database.dto.UserDto
 import database.pvp.PvpSessionRegistry
 import database.rps.RpsSessionRegistry
-import database.service.UserService
+import database.service.user.UserService
 import database.tictactoe.TicTacToeSessionRegistry
 import org.springframework.stereotype.Service
 
@@ -278,7 +278,7 @@ class PvpWebService(
         val opponentChoice: String?,
     ) {
         companion object {
-            fun rpsWin(o: database.service.RpsService.ResolveOutcome.Win, initiatorDiscordId: Long): PvpResolutionOutcome {
+            fun rpsWin(o: database.service.pvp.rps.RpsService.ResolveOutcome.Win, initiatorDiscordId: Long): PvpResolutionOutcome {
                 val initiatorWon = o.winnerDiscordId == initiatorDiscordId
                 return PvpResolutionOutcome(
                     verdict = "WIN",
@@ -296,7 +296,7 @@ class PvpWebService(
                 )
             }
 
-            fun rpsDraw(o: database.service.RpsService.ResolveOutcome.Draw): PvpResolutionOutcome =
+            fun rpsDraw(o: database.service.pvp.rps.RpsService.ResolveOutcome.Draw): PvpResolutionOutcome =
                 PvpResolutionOutcome(
                     verdict = "DRAW",
                     winnerDiscordId = null, loserDiscordId = null,
@@ -309,7 +309,7 @@ class PvpWebService(
                     opponentChoice = o.choice.name,
                 )
 
-            fun rpsDoubleRefund(o: database.service.RpsService.ResolveOutcome.DoubleRefund): PvpResolutionOutcome =
+            fun rpsDoubleRefund(o: database.service.pvp.rps.RpsService.ResolveOutcome.DoubleRefund): PvpResolutionOutcome =
                 PvpResolutionOutcome(
                     verdict = "REFUND",
                     winnerDiscordId = null, loserDiscordId = null,
@@ -357,13 +357,13 @@ class PvpWebService(
              * is JSON-serialised as `null`).
              */
             fun fromRps(
-                outcome: database.service.RpsService.ResolveOutcome,
+                outcome: database.service.pvp.rps.RpsService.ResolveOutcome,
                 initiatorDiscordId: Long,
             ): PvpResolutionOutcome? = when (outcome) {
-                is database.service.RpsService.ResolveOutcome.Win -> rpsWin(outcome, initiatorDiscordId)
-                is database.service.RpsService.ResolveOutcome.Draw -> rpsDraw(outcome)
-                is database.service.RpsService.ResolveOutcome.DoubleRefund -> rpsDoubleRefund(outcome)
-                database.service.RpsService.ResolveOutcome.Unknown -> null
+                is database.service.pvp.rps.RpsService.ResolveOutcome.Win -> rpsWin(outcome, initiatorDiscordId)
+                is database.service.pvp.rps.RpsService.ResolveOutcome.Draw -> rpsDraw(outcome)
+                is database.service.pvp.rps.RpsService.ResolveOutcome.DoubleRefund -> rpsDoubleRefund(outcome)
+                database.service.pvp.rps.RpsService.ResolveOutcome.Unknown -> null
             }
 
             /**

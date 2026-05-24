@@ -3,7 +3,7 @@ package web.service
 import common.logging.DiscordLogger
 import database.dto.GuildTitleRoleDto
 import database.dto.TitleDto
-import database.service.GuildTitleRoleService
+import database.service.guild.GuildTitleRoleService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member

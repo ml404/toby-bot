@@ -1,11 +1,11 @@
 package web.service
 
 import common.logging.DiscordLogger
-import database.service.CasinoAdminService
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.JackpotService
-import database.service.LotteryHelper
+import database.service.casino.CasinoAdminService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.economy.JackpotService
+import database.service.lottery.LotteryHelper
 import org.springframework.stereotype.Service
 
 /**

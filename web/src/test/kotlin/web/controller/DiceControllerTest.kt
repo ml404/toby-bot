@@ -1,7 +1,7 @@
 package web.controller
 
-import database.service.DiceService
-import database.service.DiceService.RollOutcome
+import database.service.casino.dice.DiceService
+import database.service.casino.dice.DiceService.RollOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

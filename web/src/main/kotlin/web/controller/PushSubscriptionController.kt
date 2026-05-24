@@ -2,7 +2,7 @@ package web.controller
 
 import common.notification.PushAdapter
 import common.notification.PushPayload
-import database.service.PushSubscriptionService
+import database.service.user.PushSubscriptionService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value

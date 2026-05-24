@@ -3,8 +3,8 @@ package bot.toby.command.commands.misc
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.LoginStreakService
-import database.service.LoginStreakService.ClaimResult
+import database.service.social.LoginStreakService
+import database.service.social.LoginStreakService.ClaimResult
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import org.springframework.beans.factory.annotation.Autowired

@@ -1,9 +1,9 @@
 package web.service
 
 import common.leveling.LevelCurve
-import database.service.AchievementService
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service

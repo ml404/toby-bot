@@ -9,8 +9,8 @@ import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
-import database.service.PvpWagerService
-import database.service.RpsService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.rps.RpsService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

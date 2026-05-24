@@ -3,9 +3,9 @@ package web.service
 import database.dto.AchievementDto
 import database.dto.TitleDto
 import database.dto.UserDto
-import database.service.AchievementService
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.entities.Guild

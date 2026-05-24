@@ -1,10 +1,10 @@
 package web.casino
 
 import database.dto.UserDto
-import database.service.JackpotGame
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.JackpotGame
+import database.service.economy.JackpotService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

@@ -3,8 +3,8 @@ package bot.toby.modal.modals
 import bot.toby.command.commands.misc.TeamCommand
 import core.modal.Modal
 import core.modal.ModalContext
-import database.service.TeamPresetService
-import database.service.TeamSplitSessionService
+import database.service.guild.TeamPresetService
+import database.service.guild.TeamSplitSessionService
 import org.springframework.stereotype.Component
 
 /**

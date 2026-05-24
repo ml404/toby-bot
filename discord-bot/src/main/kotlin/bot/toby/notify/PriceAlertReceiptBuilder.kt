@@ -3,7 +3,7 @@ package bot.toby.notify
 import common.notification.PushPayload
 import database.dto.UserPriceTriggerDto
 import database.dto.UserPriceTriggerDto.Side
-import database.service.EconomyTradeService.TradeOutcome
+import database.service.economy.EconomyTradeService.TradeOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateData

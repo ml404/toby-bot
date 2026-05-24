@@ -5,7 +5,7 @@ import common.logging.DiscordLogger
 import core.managers.MenuManager
 import core.menu.Menu
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.events.interaction.component.StringSelectInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired

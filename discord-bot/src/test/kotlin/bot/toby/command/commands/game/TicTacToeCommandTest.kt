@@ -8,8 +8,8 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.dto.UserDto
-import database.service.PvpWagerService
-import database.service.TicTacToeService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
 import io.mockk.every
 import io.mockk.just

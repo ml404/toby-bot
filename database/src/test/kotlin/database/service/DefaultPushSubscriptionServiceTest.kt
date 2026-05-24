@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.PushSubscriptionDto
 import database.persistence.PushSubscriptionPersistence
-import database.service.impl.DefaultPushSubscriptionService
+import database.service.user.impl.DefaultPushSubscriptionService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals

@@ -6,9 +6,9 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.TeamSplitSessionDto
 import database.dto.UserDto
-import database.service.TeamSplitSessionService
-import database.service.decodeAssignments
-import database.service.decodeTeamNames
+import database.service.guild.TeamSplitSessionService
+import database.service.guild.decodeAssignments
+import database.service.guild.decodeTeamNames
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import org.springframework.beans.factory.annotation.Autowired

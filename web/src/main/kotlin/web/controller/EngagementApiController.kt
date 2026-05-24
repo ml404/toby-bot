@@ -2,9 +2,9 @@ package web.controller
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.service.AchievementService
-import database.service.LoginStreakService
-import database.service.UserNotificationPrefService
+import database.service.guild.AchievementService
+import database.service.social.LoginStreakService
+import database.service.user.UserNotificationPrefService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

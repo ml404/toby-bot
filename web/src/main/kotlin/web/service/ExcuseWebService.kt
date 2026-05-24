@@ -1,9 +1,9 @@
 package web.service
 
 import database.dto.ExcuseDto
-import database.service.ExcuseService
-import database.service.PagedExcuses
-import database.service.UserService
+import database.service.social.ExcuseService
+import database.service.social.PagedExcuses
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import java.time.Instant

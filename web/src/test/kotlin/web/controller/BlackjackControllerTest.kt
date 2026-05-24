@@ -2,8 +2,8 @@ package web.controller
 
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import database.service.BlackjackService
-import database.service.JackpotGame
+import database.service.casino.blackjack.BlackjackService
+import database.service.economy.JackpotGame
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

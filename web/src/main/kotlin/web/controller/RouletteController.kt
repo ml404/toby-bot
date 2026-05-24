@@ -2,9 +2,9 @@ package web.controller
 
 import common.casino.CasinoCommonFailure
 import common.economy.Roulette
-import database.service.JackpotGame
-import database.service.RouletteService
-import database.service.RouletteService.SpinOutcome
+import database.service.economy.JackpotGame
+import database.service.casino.roulette.RouletteService
+import database.service.casino.roulette.RouletteService.SpinOutcome
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

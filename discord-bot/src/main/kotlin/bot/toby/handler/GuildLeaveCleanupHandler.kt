@@ -7,7 +7,7 @@ import core.managers.CommandManager
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
-import database.service.CasinoBotSuspicionService
+import database.service.casino.CasinoBotSuspicionService
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.springframework.stereotype.Service

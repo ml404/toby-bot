@@ -8,7 +8,7 @@ import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState
 import org.springframework.stereotype.Component

@@ -7,8 +7,8 @@ import database.dto.UserDto
 import common.poker.PokerEngine
 import common.poker.PokerTable
 import database.poker.PokerTableRegistry
-import database.service.PokerService
-import database.service.PokerService.ActionOutcome
+import database.service.casino.poker.PokerService
+import database.service.casino.poker.PokerService.ActionOutcome
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button as JdaButton

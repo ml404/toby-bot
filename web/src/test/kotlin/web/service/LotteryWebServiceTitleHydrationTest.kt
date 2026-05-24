@@ -4,10 +4,10 @@ import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
 import database.dto.TitleDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

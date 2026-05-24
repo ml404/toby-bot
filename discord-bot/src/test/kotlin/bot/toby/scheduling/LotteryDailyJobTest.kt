@@ -2,9 +2,9 @@ package bot.toby.scheduling
 
 import database.dto.ConfigDto
 import database.dto.JackpotLotteryDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.LotteryDailyService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.LotteryDailyService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

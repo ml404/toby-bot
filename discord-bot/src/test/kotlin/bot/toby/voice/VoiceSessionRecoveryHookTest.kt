@@ -1,7 +1,7 @@
 package bot.toby.voice
 
 import database.dto.VoiceSessionDto
-import database.service.VoiceSessionService
+import database.service.activity.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

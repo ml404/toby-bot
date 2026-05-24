@@ -12,7 +12,7 @@ import java.time.Instant
 
 /**
  * One settled blackjack hand. Written by
- * [database.service.BlackjackService] in the same transaction as the
+ * [database.service.casino.blackjack.BlackjackService] in the same transaction as the
  * payout. Mirrors [PokerHandLogDto] but captures blackjack-specific
  * fields (mode = SOLO/MULTI, dealer hand text + total, seat-level
  * result map).

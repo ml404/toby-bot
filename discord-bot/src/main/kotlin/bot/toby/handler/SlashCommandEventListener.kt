@@ -3,7 +3,7 @@ package bot.toby.handler
 import common.leveling.XpAmounts
 import common.logging.DiscordLogger
 import core.managers.CommandManager
-import database.service.XpAwardService
+import database.service.leveling.XpAwardService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

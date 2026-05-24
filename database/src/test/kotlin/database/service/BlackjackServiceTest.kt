@@ -22,6 +22,11 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import kotlin.random.Random
+import database.service.casino.blackjack.BlackjackService
+import database.service.guild.ConfigService
+import database.service.economy.JackpotHelper
+import database.service.economy.JackpotService
+import database.service.user.UserService
 
 class BlackjackServiceTest {
 

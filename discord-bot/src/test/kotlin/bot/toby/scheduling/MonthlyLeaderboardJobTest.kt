@@ -3,11 +3,11 @@ package bot.toby.scheduling
 import database.dto.ConfigDto
 import database.dto.MonthlyCreditSnapshotDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.MonthlyCreditSnapshotService
-import database.service.UbiDailyService
-import database.service.UserService
-import database.service.VoiceSessionService
+import database.service.guild.ConfigService
+import database.service.economy.MonthlyCreditSnapshotService
+import database.service.activity.UbiDailyService
+import database.service.user.UserService
+import database.service.activity.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

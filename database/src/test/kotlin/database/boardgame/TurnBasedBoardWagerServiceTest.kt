@@ -1,7 +1,7 @@
 package database.boardgame
 
 import database.dto.ConfigDto
-import database.service.PvpWagerService
+import database.service.pvp.PvpWagerService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

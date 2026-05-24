@@ -2,8 +2,8 @@ package bot.toby.modal.modals
 
 import core.modal.Modal
 import core.modal.ModalContext
-import database.service.JackpotLotteryService
-import database.service.JackpotLotteryService.BuyOutcome
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.JackpotLotteryService.BuyOutcome
 import org.springframework.stereotype.Component
 
 @Component

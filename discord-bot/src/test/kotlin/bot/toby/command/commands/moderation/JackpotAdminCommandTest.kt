@@ -10,9 +10,9 @@ import bot.toby.command.DefaultCommandContext
 import bot.toby.scheduling.LotteryAnnouncer
 import database.dto.JackpotLotteryDto
 import database.dto.UserDto
-import database.service.CasinoAdminService
-import database.service.JackpotLotteryService
-import database.service.JackpotService
+import database.service.casino.CasinoAdminService
+import database.service.lottery.JackpotLotteryService
+import database.service.economy.JackpotService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

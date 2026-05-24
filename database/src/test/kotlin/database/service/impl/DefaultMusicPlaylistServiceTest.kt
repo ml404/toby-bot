@@ -2,8 +2,8 @@ package database.service.impl
 
 import database.dto.MusicPlaylistDto
 import database.persistence.MusicPlaylistPersistence
-import database.service.MusicPlaylistService.PlaylistItemInput
-import database.service.MusicPlaylistService.PlaylistNameTakenException
+import database.service.music.MusicPlaylistService.PlaylistItemInput
+import database.service.music.MusicPlaylistService.PlaylistNameTakenException
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import database.service.music.impl.DefaultMusicPlaylistService
 
 class DefaultMusicPlaylistServiceTest {
 

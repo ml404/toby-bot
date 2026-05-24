@@ -1,7 +1,7 @@
 package bot.toby.activity
 
-import database.service.ActivityMonthlyRollupService
-import database.service.ActivitySessionService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.activity.ActivitySessionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

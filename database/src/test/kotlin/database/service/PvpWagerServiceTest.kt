@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import database.service.guild.ConfigService
+import database.service.economy.JackpotService
+import database.service.pvp.PvpWagerService
+import database.service.user.UserService
+import database.service.leveling.XpAwardService
 
 /**
  * Behavioural tests for [PvpWagerService] — the wager primitives shared

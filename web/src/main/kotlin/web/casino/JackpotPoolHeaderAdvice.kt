@@ -1,6 +1,6 @@
 package web.casino
 
-import database.service.JackpotService
+import database.service.economy.JackpotService
 import org.springframework.core.MethodParameter
 import org.springframework.core.ResolvableType
 import org.springframework.http.HttpEntity

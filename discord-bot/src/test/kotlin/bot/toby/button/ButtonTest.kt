@@ -13,6 +13,11 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.components.buttons.ButtonInteraction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
+import database.service.social.BrotherService
+import database.service.guild.ConfigService
+import database.service.social.ExcuseService
+import database.service.music.MusicFileService
+import database.service.user.UserService
 
 interface ButtonTest {
 

@@ -9,7 +9,7 @@ import common.card.Rank
 import common.card.Suit
 import database.dto.UserDto
 import common.economy.Baccarat
-import database.service.BaccaratService
+import database.service.casino.baccarat.BaccaratService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

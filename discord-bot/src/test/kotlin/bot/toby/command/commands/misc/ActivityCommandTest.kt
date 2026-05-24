@@ -6,8 +6,8 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.DefaultCommandContext
 import database.dto.ActivityMonthlyRollupDto
 import database.dto.UserDto
-import database.service.ActivityMonthlyRollupService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.user.UserService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

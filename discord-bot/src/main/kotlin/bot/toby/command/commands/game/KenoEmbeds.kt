@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game
 
-import database.service.KenoService.PlayOutcome
+import database.service.casino.keno.KenoService.PlayOutcome
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
 

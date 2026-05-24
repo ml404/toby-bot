@@ -15,8 +15,8 @@ import core.managers.MenuManager
 import core.managers.ModalManager
 import core.menu.Menu
 import core.modal.Modal
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile

@@ -3,9 +3,9 @@ package web.controller
 import common.casino.CasinoCommonFailure
 import common.economy.ScratchCard
 import common.economy.SlotMachine
-import database.service.JackpotGame
-import database.service.ScratchService
-import database.service.ScratchService.ScratchOutcome
+import database.service.economy.JackpotGame
+import database.service.casino.scratch.ScratchService
+import database.service.casino.scratch.ScratchService.ScratchOutcome
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

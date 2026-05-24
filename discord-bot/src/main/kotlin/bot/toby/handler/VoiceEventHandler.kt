@@ -12,9 +12,9 @@ import bot.toby.voice.VoiceSessionLifecycle
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations.DELETE_DELAY
 import database.dto.ConfigDto.Configurations.VOLUME
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
-import database.service.XpAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.leveling.XpAwardService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel

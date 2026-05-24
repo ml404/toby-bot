@@ -3,8 +3,8 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.Roulette
-import database.service.RouletteService
-import database.service.RouletteService.SpinOutcome
+import database.service.casino.roulette.RouletteService
+import database.service.casino.roulette.RouletteService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

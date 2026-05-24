@@ -3,10 +3,10 @@ package web.controller
 import common.casino.CasinoCommonFailure
 import common.poker.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
-import database.service.CasinoHoldemService
-import database.service.CasinoHoldemService.ActionOutcome
-import database.service.CasinoHoldemService.DealOutcome
-import database.service.JackpotGame
+import database.service.casino.casinoholdem.CasinoHoldemService
+import database.service.casino.casinoholdem.CasinoHoldemService.ActionOutcome
+import database.service.casino.casinoholdem.CasinoHoldemService.DealOutcome
+import database.service.economy.JackpotGame
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

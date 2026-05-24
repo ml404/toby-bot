@@ -1,7 +1,7 @@
 package web.controller
 
 import database.dto.MusicDto
-import database.service.MusicFileService
+import database.service.music.MusicFileService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpSession
 import org.springframework.beans.factory.annotation.Value

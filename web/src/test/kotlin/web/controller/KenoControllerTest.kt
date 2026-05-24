@@ -1,8 +1,8 @@
 package web.controller
 
 import common.economy.Keno
-import database.service.KenoService
-import database.service.KenoService.PlayOutcome
+import database.service.casino.keno.KenoService
+import database.service.casino.keno.KenoService.PlayOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

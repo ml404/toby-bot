@@ -5,7 +5,7 @@ package web.view
  * the moderation page (`overview.lotteryIncentives`) and the player
  * lottery page (`snapshot.weighted.incentives`). Carrying only the
  * active tiers — anything with a zero threshold is filtered out by
- * `database.service.LotteryHelper` — so the surfaces never have to
+ * `database.service.lottery.LotteryHelper` — so the surfaces never have to
  * branch on "is this tier configured" themselves.
  */
 data class LotteryIncentivesView(

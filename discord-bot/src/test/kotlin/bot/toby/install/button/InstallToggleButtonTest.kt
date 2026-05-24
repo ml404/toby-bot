@@ -4,7 +4,7 @@ import bot.toby.install.InstallWizard
 import bot.toby.install.OptInFeatures
 import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk

@@ -1,7 +1,7 @@
 package bot.toby.activity
 
 import common.logging.DiscordLogger
-import database.service.ActivitySessionService
+import database.service.activity.ActivitySessionService
 import org.springframework.beans.factory.InitializingBean
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component

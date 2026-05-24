@@ -1,8 +1,8 @@
 package web.controller
 
 import common.economy.Plinko
-import database.service.PlinkoService
-import database.service.PlinkoService.DropOutcome
+import database.service.casino.plinko.PlinkoService
+import database.service.casino.plinko.PlinkoService.DropOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

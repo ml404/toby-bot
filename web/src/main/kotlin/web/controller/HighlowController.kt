@@ -2,9 +2,9 @@ package web.controller
 
 import common.casino.CasinoCommonFailure
 import common.economy.Highlow
-import database.service.HighlowService
-import database.service.HighlowService.PlayOutcome
-import database.service.JackpotGame
+import database.service.casino.highlow.HighlowService
+import database.service.casino.highlow.HighlowService.PlayOutcome
+import database.service.economy.JackpotGame
 import jakarta.servlet.http.HttpSession
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal

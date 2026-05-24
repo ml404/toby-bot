@@ -3,7 +3,7 @@ package bot.toby.command.commands.misc
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.DefaultCommandContext
-import database.service.UserService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

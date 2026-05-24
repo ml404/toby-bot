@@ -8,9 +8,9 @@ import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.UserPriceTriggerDto
 import common.economy.TobyCoinEngine
-import database.service.EconomyTradeService
-import database.service.TobyCoinMarketService
-import database.service.UserPriceTriggerService
+import database.service.economy.EconomyTradeService
+import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserPriceTriggerService
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile

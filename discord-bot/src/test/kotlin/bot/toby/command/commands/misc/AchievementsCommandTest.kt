@@ -3,8 +3,8 @@ package bot.toby.command.commands.misc
 import bot.toby.command.DefaultCommandContext
 import database.dto.AchievementDto
 import database.dto.UserDto
-import database.service.AchievementService
-import database.service.AchievementService.AchievementView
+import database.service.guild.AchievementService
+import database.service.guild.AchievementService.AchievementView
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

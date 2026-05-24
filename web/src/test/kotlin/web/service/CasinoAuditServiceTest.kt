@@ -1,9 +1,9 @@
 package web.service
 
-import database.service.CasinoAdminService
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.JackpotService
+import database.service.casino.CasinoAdminService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.economy.JackpotService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

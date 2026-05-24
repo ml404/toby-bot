@@ -7,7 +7,7 @@ import bot.toby.command.DefaultCommandContext
 import database.duel.PendingDuelRegistry
 import bot.toby.helpers.UserDtoHelper
 import database.dto.UserDto
-import database.service.DuelService
+import database.service.pvp.duel.DuelService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

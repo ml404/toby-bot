@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.dto.UserDto
 import common.economy.Keno
-import database.service.KenoService
+import database.service.casino.keno.KenoService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

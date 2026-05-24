@@ -6,9 +6,9 @@ import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.CasinoAdminService
-import database.service.JackpotLotteryService
-import database.service.JackpotService
+import database.service.casino.CasinoAdminService
+import database.service.lottery.JackpotLotteryService
+import database.service.economy.JackpotService
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.components.textinput.TextInputStyle

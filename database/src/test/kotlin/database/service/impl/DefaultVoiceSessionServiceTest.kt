@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
+import database.service.activity.impl.DefaultVoiceSessionService
 
 class DefaultVoiceSessionServiceTest {
 

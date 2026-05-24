@@ -6,7 +6,7 @@ import kotlin.random.Random
  * Pure-logic horse racing minigame — six horses, one race, one bet per
  * call. No Spring, no DB, no JDA. Mirrors the shape of [Roulette]: a
  * [Bet] enum, a [Race] result data class, and a single [race] entry point
- * the [database.service.HorseRacingService] calls through.
+ * the [database.service.casino.horseracing.HorseRacingService] calls through.
  *
  * Field: six horses indexed 1..6 (H1 favourite, H6 longshot). Each
  * [HorseProfile] carries a fixed win probability plus a per-bet-type
@@ -25,7 +25,7 @@ import kotlin.random.Random
  * The per-bet-type multipliers are calibrated so each bet on each horse
  * lands at the target RTP of ~0.92 — verified by [HorseRacingTest]. The
  * payouts are fractional (Place/Show pay less than even money for the
- * favourite) so the service uses [database.service.WagerHelper.applyMultiplier]'s
+ * favourite) so the service uses [database.service.pvp.WagerHelper.applyMultiplier]'s
  * `Double` overload (the same path Highlow uses).
  */
 class HorseRacing {

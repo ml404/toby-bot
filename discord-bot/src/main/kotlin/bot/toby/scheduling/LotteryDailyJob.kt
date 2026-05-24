@@ -2,10 +2,10 @@ package bot.toby.scheduling
 
 import common.logging.DiscordLogger
 import database.dto.JackpotLotteryDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.LotteryDailyService
-import database.service.LotteryHelper
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.LotteryDailyService
+import database.service.lottery.LotteryHelper
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.springframework.beans.factory.annotation.Autowired

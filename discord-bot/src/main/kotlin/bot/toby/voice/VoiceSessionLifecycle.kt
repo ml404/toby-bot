@@ -2,7 +2,7 @@ package bot.toby.voice
 
 import common.logging.DiscordLogger
 import database.dto.VoiceSessionDto
-import database.service.VoiceSessionService
+import database.service.activity.VoiceSessionService
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel
 import org.springframework.stereotype.Service
 import java.time.Instant

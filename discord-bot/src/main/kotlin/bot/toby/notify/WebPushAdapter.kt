@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import common.logging.DiscordLogger
 import common.notification.PushAdapter
 import common.notification.PushPayload
-import database.service.PushSubscriptionService
+import database.service.user.PushSubscriptionService
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import org.bouncycastle.jce.provider.BouncyCastleProvider

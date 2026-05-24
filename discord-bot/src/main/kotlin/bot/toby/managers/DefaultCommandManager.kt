@@ -15,8 +15,8 @@ import core.command.CommandContext
 import core.managers.CommandManager
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData

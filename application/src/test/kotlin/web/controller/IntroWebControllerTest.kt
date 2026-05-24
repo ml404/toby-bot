@@ -1,6 +1,6 @@
 package web.controller
 
-import database.service.MusicFileService
+import database.service.music.MusicFileService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

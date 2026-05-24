@@ -12,7 +12,7 @@ import kotlin.random.Random
  * decisions (HIT until you stand or bust). Rather than thread an
  * immutable HandState through every call, this engine exposes small
  * primitives that mutate the supplied [Deck] / hand list. The owning
- * caller (solo flow in [database.service.BlackjackService] or the
+ * caller (solo flow in [database.service.casino.blackjack.BlackjackService] or the
  * multi-seat table) holds the actual state under a monitor and calls
  * each primitive as decisions come in.
  *
@@ -115,7 +115,7 @@ class Blackjack(private val random: Random = Random.Default) {
     /**
      * Payout multiplier on the player's (possibly doubled) stake for
      * the given [result]. Same shape as [common.economy.Highlow] —
-     * fed straight to [database.service.WagerHelper.applyMultiplier]
+     * fed straight to [database.service.pvp.WagerHelper.applyMultiplier]
      * for solo settlement. [blackjackPayoutMult] overrides the natural
      * blackjack multiplier (default 2.5 i.e. 3:2; set to 2.2 for 6:5).
      */

@@ -3,10 +3,10 @@ package bot.toby.activity
 import database.dto.ActivitySessionDto
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.service.ActivityMonthlyRollupService
-import database.service.ActivitySessionService
-import database.service.ConfigService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.activity.ActivitySessionService
+import database.service.guild.ConfigService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

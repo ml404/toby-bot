@@ -4,10 +4,10 @@ import core.command.Command.Companion.replyAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.JackpotLotteryService.BuyOutcome
-import database.service.LotteryHelper
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.JackpotLotteryService.BuyOutcome
+import database.service.lottery.LotteryHelper
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

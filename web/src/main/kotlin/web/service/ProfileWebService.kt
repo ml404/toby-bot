@@ -2,10 +2,10 @@ package web.service
 
 import common.leveling.LevelCurve
 import database.dto.UserDto
-import database.service.AchievementService
-import database.service.LoginStreakService
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.social.LoginStreakService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
+import database.service.music.impl.DefaultMusicFileService
 
 class DefaultMusicFileServiceTest {
 

@@ -3,8 +3,8 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.HorseRacing
-import database.service.HorseRacingService
-import database.service.HorseRacingService.RaceOutcome
+import database.service.casino.horseracing.HorseRacingService
+import database.service.casino.horseracing.HorseRacingService.RaceOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

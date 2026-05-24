@@ -5,8 +5,8 @@ import core.command.CommandContext
 import database.dto.UserDto
 import common.poker.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
-import database.service.CasinoHoldemService
-import database.service.CasinoHoldemService.DealOutcome
+import database.service.casino.casinoholdem.CasinoHoldemService
+import database.service.casino.casinoholdem.CasinoHoldemService.DealOutcome
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent

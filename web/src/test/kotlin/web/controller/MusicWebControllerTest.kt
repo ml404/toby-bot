@@ -3,7 +3,7 @@ package web.controller
 import core.music.MusicControlGateway
 import core.music.MusicControlGateway.LoadResult
 import core.music.MusicControlGateway.TrackInfo
-import database.service.MusicPlaylistService.PlaylistNameTakenException
+import database.service.music.MusicPlaylistService.PlaylistNameTakenException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

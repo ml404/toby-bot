@@ -1,7 +1,7 @@
 package bot.toby.scheduling
 
 import common.logging.DiscordLogger
-import database.service.JackpotLotteryService
+import database.service.lottery.JackpotLotteryService
 import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Profile

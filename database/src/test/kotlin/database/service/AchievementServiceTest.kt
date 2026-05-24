@@ -9,7 +9,7 @@ import database.dto.UserDto
 import database.dto.VoiceCreditDailyDto
 import database.dto.XpDailyDto
 import database.persistence.AchievementPersistence
-import database.service.impl.DefaultAchievementService
+import database.service.guild.impl.DefaultAchievementService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -20,6 +20,12 @@ import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 import java.time.LocalDate
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.user.UserService
+import database.service.activity.VoiceCreditDailyService
+import database.service.leveling.XpAwardService
+import database.service.leveling.XpDailyService
 
 class AchievementServiceTest {
 

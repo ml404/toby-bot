@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
+import database.service.pvp.connect4.Connect4Service
+import database.service.pvp.PvpWagerService
 
 /**
  * Behavioural tests for the C4-specific knobs on [Connect4Service].

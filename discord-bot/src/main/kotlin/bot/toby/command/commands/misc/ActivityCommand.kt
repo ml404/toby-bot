@@ -8,8 +8,8 @@ import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.ActivityMonthlyRollupService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.user.UserService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.selections.SelectOption

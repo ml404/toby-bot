@@ -30,7 +30,7 @@ import common.events.WheelJackpotEvent
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.service.AchievementService
+import database.service.guild.AchievementService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Value

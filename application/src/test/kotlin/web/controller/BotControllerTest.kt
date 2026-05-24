@@ -4,10 +4,10 @@ import database.dto.BrotherDto
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.service.BrotherService
-import database.service.ConfigService
-import database.service.MusicFileService
-import database.service.UserService
+import database.service.social.BrotherService
+import database.service.guild.ConfigService
+import database.service.music.MusicFileService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertArrayEquals

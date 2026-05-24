@@ -4,7 +4,7 @@ import bot.toby.helpers.UserDtoHelper
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

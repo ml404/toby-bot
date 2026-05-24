@@ -4,9 +4,9 @@ import bot.toby.command.commands.misc.TeamCommand
 import core.button.ButtonContext
 import database.dto.TeamSplitSessionDto
 import database.dto.UserDto
-import database.service.TeamSplitSessionService
-import database.service.encodeAssignments
-import database.service.encodeTeamNames
+import database.service.guild.TeamSplitSessionService
+import database.service.guild.encodeAssignments
+import database.service.guild.encodeTeamNames
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

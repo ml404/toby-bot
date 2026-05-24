@@ -8,8 +8,8 @@ import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry
 import database.dto.UserDto
-import database.service.Connect4Service
-import database.service.PvpWagerService
+import database.service.pvp.connect4.Connect4Service
+import database.service.pvp.PvpWagerService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent

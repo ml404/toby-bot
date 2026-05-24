@@ -13,7 +13,7 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.channel.LeaveCommand
 import bot.toby.voice.LastConnectedChannelTracker
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

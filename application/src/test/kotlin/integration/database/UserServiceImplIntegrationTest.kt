@@ -7,7 +7,7 @@ import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.MusicDto
-import database.service.UserService
+import database.service.user.UserService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -34,7 +34,7 @@ class UserServiceImplIntegrationTest {
     lateinit var userService: UserService
 
     @Autowired
-    lateinit var musicService: database.service.MusicFileService
+    lateinit var musicService: database.service.music.MusicFileService
 
     @BeforeEach
     fun setUp() {

@@ -4,12 +4,12 @@ import database.dto.ConfigDto
 import database.dto.MonthlyCreditSnapshotDto
 import database.dto.TitleDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.MonthlyCreditSnapshotService
-import database.service.TitleService
-import database.service.UbiDailyService
-import database.service.UserService
-import database.service.VoiceSessionService
+import database.service.guild.ConfigService
+import database.service.economy.MonthlyCreditSnapshotService
+import database.service.guild.TitleService
+import database.service.activity.UbiDailyService
+import database.service.user.UserService
+import database.service.activity.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -41,8 +41,8 @@ class ModerationWebServiceTest {
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var ubiDailyService: UbiDailyService
-    private lateinit var levelRoleRewardService: database.service.LevelRoleRewardService
-    private lateinit var autoRoleService: database.service.AutoRoleService
+    private lateinit var levelRoleRewardService: database.service.leveling.LevelRoleRewardService
+    private lateinit var autoRoleService: database.service.guild.AutoRoleService
     private lateinit var casinoAuditService: CasinoAuditService
     private lateinit var service: ModerationWebService
 

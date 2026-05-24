@@ -2,7 +2,7 @@ package bot.toby.modal.modals.setconfig
 
 import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 
 /**
  * Sub-base for `/setconfig` modals whose title + spec list + field-id

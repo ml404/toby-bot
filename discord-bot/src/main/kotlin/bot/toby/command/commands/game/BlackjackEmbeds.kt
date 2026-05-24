@@ -18,8 +18,8 @@ import java.time.format.DateTimeFormatter
  * Component IDs encode the action and table id:
  *   `blackjack:HIT:<tableId>`
  * The [bot.toby.button.buttons.BlackjackButton] handler parses this back
- * out and routes to either [database.service.BlackjackService.applySoloAction]
- * or [database.service.BlackjackService.applyMultiAction] depending on
+ * out and routes to either [database.service.casino.blackjack.BlackjackService.applySoloAction]
+ * or [database.service.casino.blackjack.BlackjackService.applyMultiAction] depending on
  * the table's [BlackjackTable.Mode].
  */
 internal object BlackjackEmbeds {

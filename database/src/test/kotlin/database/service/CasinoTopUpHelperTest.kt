@@ -3,7 +3,7 @@ package database.service
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
 import common.economy.TobyCoinEngine
-import database.service.EconomyTradeService.TradeOutcome
+import database.service.economy.EconomyTradeService.TradeOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -12,6 +12,11 @@ import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import database.service.casino.CasinoTopUpHelper
+import database.service.economy.EconomyTradeService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
+import database.service.casino.TopUpResult
 
 class CasinoTopUpHelperTest {
 

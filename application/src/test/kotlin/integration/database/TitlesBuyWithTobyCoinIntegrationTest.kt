@@ -8,10 +8,10 @@ import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.TitleDto
 import database.dto.UserDto
-import database.service.EconomyTradeService
-import database.service.TitleService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.EconomyTradeService
+import database.service.guild.TitleService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import net.dv8tion.jda.api.JDA

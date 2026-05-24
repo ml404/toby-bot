@@ -5,7 +5,7 @@ import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.BrotherDto
 import database.dto.UserDto
-import database.service.BrotherService
+import database.service.social.BrotherService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.OptionType

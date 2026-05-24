@@ -18,7 +18,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class BrotherCommandTest : CommandTest {
-    private lateinit var brotherService: database.service.BrotherService
+    private lateinit var brotherService: database.service.social.BrotherService
     private lateinit var brotherCommand: BrotherCommand
 
     @BeforeEach

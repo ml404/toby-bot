@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game
 
 import common.rps.RpsEngine
-import database.service.RpsService
+import database.service.pvp.rps.RpsService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button

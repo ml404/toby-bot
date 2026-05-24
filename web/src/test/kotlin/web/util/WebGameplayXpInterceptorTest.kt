@@ -1,7 +1,7 @@
 package web.util
 
 import common.leveling.XpAmounts
-import database.service.XpAwardService
+import database.service.leveling.XpAwardService
 import io.mockk.MockKVerificationScope
 import io.mockk.clearMocks
 import io.mockk.every

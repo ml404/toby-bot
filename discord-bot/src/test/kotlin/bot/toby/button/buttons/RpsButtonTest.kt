@@ -9,8 +9,8 @@ import bot.toby.command.commands.game.RpsEmbeds
 import database.dto.UserDto
 import common.rps.RpsEngine
 import database.rps.RpsSessionRegistry
-import database.service.PvpWagerService
-import database.service.RpsService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.rps.RpsService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

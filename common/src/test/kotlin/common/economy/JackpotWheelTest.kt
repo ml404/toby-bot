@@ -10,7 +10,7 @@ import kotlin.random.Random
 /**
  * Coverage for the jackpot payout wheel — CSV parsing, weight-respecting
  * spin distribution, and the validator used by the moderation save path.
- * The live reader is wired into [database.service.JackpotHelper.rollOnWin];
+ * The live reader is wired into [database.service.economy.JackpotHelper.rollOnWin];
  * see [database.service.JackpotHelperTest] for the integration test.
  */
 class JackpotWheelTest {

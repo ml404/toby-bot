@@ -2,11 +2,11 @@ package web.service
 
 import database.dto.JackpotLotteryDto
 import database.dto.JackpotLotteryTicketDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.LotteryHelper
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.LotteryHelper
+import database.service.guild.TitleService
+import database.service.user.UserService
 import org.springframework.stereotype.Service
 import web.view.BulkBonusTierView
 import web.view.LotteryIncentivesView

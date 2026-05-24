@@ -3,7 +3,7 @@ package bot.toby.command.commands.misc
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.UserService
+import database.service.user.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.*

@@ -2,10 +2,10 @@ package web.service
 
 import database.dto.TeamPresetDto
 import database.dto.TeamSplitSessionDto
-import database.service.TeamPresetService
-import database.service.TeamSplitSessionService
-import database.service.decodeAssignments
-import database.service.decodeTeamNames
+import database.service.guild.TeamPresetService
+import database.service.guild.TeamSplitSessionService
+import database.service.guild.decodeAssignments
+import database.service.guild.decodeTeamNames
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import web.util.GuildMembership

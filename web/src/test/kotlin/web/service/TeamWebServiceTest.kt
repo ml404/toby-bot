@@ -2,10 +2,10 @@ package web.service
 
 import database.dto.TeamPresetDto
 import database.dto.TeamSplitSessionDto
-import database.service.TeamPresetService
-import database.service.TeamSplitSessionService
-import database.service.encodeAssignments
-import database.service.encodeTeamNames
+import database.service.guild.TeamPresetService
+import database.service.guild.TeamSplitSessionService
+import database.service.guild.encodeAssignments
+import database.service.guild.encodeTeamNames
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll

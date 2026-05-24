@@ -1,7 +1,7 @@
 package bot.toby.voice
 
 import common.logging.DiscordLogger
-import database.service.VoiceSessionService
+import database.service.activity.VoiceSessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.event.ContextClosedEvent
 import org.springframework.context.event.EventListener

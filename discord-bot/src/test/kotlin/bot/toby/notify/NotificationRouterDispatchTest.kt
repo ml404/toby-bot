@@ -5,8 +5,8 @@ import common.notification.NotificationChannelKind
 import common.notification.PushAdapter
 import common.notification.PushPayload
 import common.notification.Surface
-import database.service.ConfigService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

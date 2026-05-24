@@ -3,7 +3,7 @@ package bot.toby.helpers
 import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.service.UserService
+import database.service.user.UserService
 import io.mockk.*
 import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.AfterEach

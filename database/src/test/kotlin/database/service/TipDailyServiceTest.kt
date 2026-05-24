@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.TipDailyDto
 import database.persistence.TipDailyPersistence
-import database.service.impl.DefaultTipDailyService
+import database.service.social.impl.DefaultTipDailyService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
+import database.service.social.TipDailyService
 
 class TipDailyServiceTest {
 

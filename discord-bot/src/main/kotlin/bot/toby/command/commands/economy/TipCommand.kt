@@ -3,7 +3,7 @@ package bot.toby.command.commands.economy
 import bot.toby.modal.modals.TipMessageModal
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.TipService
+import database.service.social.TipService
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.components.textinput.TextInputStyle

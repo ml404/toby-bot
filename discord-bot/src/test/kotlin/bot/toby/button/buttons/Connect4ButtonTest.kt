@@ -10,8 +10,8 @@ import common.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry
 import database.dto.UserDto
-import database.service.Connect4Service
-import database.service.PvpWagerService
+import database.service.pvp.connect4.Connect4Service
+import database.service.pvp.PvpWagerService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
