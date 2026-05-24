@@ -1423,3 +1423,232 @@ details.config-section.is-hidden { display: none; }
 @media (max-width: 380px) {
     .activity-stats { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* ==============================================================
+   Settings tab — sticky left-rail nav + stake-limits table +
+   bulk "set every game" form. The rail jumps to the matching
+   <details> and an IntersectionObserver in settings.js mirrors
+   the scroll position back into the rail's `.is-active` link.
+   ============================================================== */
+
+.settings-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+}
+@media (max-width: 768px) {
+    .settings-shell {
+        grid-template-columns: minmax(0, 1fr);
+        gap: var(--space-3);
+    }
+}
+
+.settings-nav {
+    position: sticky;
+    /* Sit just below the page header so the rail never tucks under
+       the moderation chrome when the user scrolls past it. */
+    top: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-3);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+@media (max-width: 768px) {
+    .settings-nav {
+        position: static;
+        max-height: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+}
+
+.settings-nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+@media (max-width: 768px) {
+    .settings-nav-group { flex: 1 1 auto; min-width: 140px; }
+}
+
+.settings-nav-heading {
+    margin: 0 0 var(--space-1);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 700;
+}
+
+.settings-nav-link {
+    display: block;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    text-decoration: none;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1.3;
+}
+.settings-nav-link:hover {
+    color: var(--text);
+    background: var(--bg);
+}
+.settings-nav-link.is-active {
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 600;
+}
+
+.settings-content {
+    min-width: 0;
+}
+
+/* The .config-pillar headings now live alongside the rail; tighten
+   the in-content rhythm so they don't double-up with the rail's
+   .settings-nav-heading. */
+.settings-content .config-pillar:first-of-type {
+    margin-top: 0;
+}
+
+/* ---- Stake-limits table ----
+   Two columns of editable stake cells, one row per game. The cells
+   wrap the existing `.config-row` markup so the per-row save handler
+   in moderationCommon.js works without modification. The `.btn-sm`
+   override keeps the inline Save button tight inside the cell. */
+.settings-stakes-wrap {
+    margin: 0 var(--space-4) var(--space-4);
+    overflow-x: auto;
+    border-top: 1px solid var(--border);
+}
+.settings-stakes-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 480px;
+}
+.settings-stakes-table thead th {
+    text-align: left;
+    padding: var(--space-3) var(--space-2);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.settings-stakes-table tbody th {
+    text-align: left;
+    padding: var(--space-3) var(--space-2);
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    width: 1%;
+}
+.settings-stakes-table tbody td {
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+.settings-stakes-table tbody tr:last-child th,
+.settings-stakes-table tbody tr:last-child td { border-bottom: 0; }
+.settings-stakes-table tbody tr.is-hidden { display: none; }
+.settings-stakes-table tbody tr:hover { background: var(--bg); }
+
+/* Stake cells override .config-row's desktop grid (which was sized
+   for the wide label-on-left layout) — inside a table cell we just
+   want input + Save sitting flush together. */
+.config-row.settings-stake-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0;
+    border: 0 !important;
+    background: transparent;
+}
+.config-row.settings-stake-cell input {
+    grid-column: auto;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 140px;
+    padding: 6px 8px;
+}
+.config-row.settings-stake-cell .save-config {
+    grid-column: auto;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+}
+
+/* ---- Bulk "set every game" form ----
+   Sits between the section lead paragraph and the stakes table.
+   Three-column layout on desktop (text | fields | submit) collapses
+   to a stack on mobile. */
+.settings-stakes-bulk {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-4);
+    align-items: center;
+    margin: 0 var(--space-4) var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+.settings-stakes-bulk-text strong {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--text);
+    font-size: 0.92rem;
+}
+.settings-stakes-bulk-text p {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+.settings-stakes-bulk-fields {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.settings-stakes-bulk-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+.settings-stakes-bulk-field input {
+    width: 110px;
+    padding: 6px 8px;
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+.settings-stakes-bulk-field input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+@media (max-width: 768px) {
+    .settings-stakes-bulk { grid-template-columns: minmax(0, 1fr); }
+    .settings-stakes-bulk-fields { justify-content: flex-start; }
+}
