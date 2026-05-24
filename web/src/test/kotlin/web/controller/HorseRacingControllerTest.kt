@@ -1,6 +1,6 @@
 package web.controller
 
-import common.economy.HorseRacing
+import common.casino.horseracing.HorseRacing
 import database.service.casino.horseracing.HorseRacingService
 import database.service.casino.horseracing.HorseRacingService.RaceOutcome
 import io.mockk.every

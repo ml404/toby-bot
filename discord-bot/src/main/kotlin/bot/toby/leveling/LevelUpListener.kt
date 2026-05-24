@@ -2,7 +2,7 @@ package bot.toby.leveling
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
-import common.events.LevelUpEvent
+import common.events.leveling.LevelUpEvent
 import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey

@@ -1,6 +1,6 @@
 package database.service.music.impl
 
-import common.events.IntroSetEvent
+import common.events.user.IntroSetEvent
 import database.dto.music.MusicDto
 import database.persistence.music.MusicFilePersistence
 import org.springframework.beans.factory.annotation.Autowired

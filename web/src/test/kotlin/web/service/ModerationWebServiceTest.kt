@@ -1030,7 +1030,7 @@ class ModerationWebServiceTest {
         // de-duplicates via ACTIVITY_TRACKING_NOTIFIED, so publishing on
         // every "true" write is the right contract.
         verify(exactly = 1) {
-            eventPublisher.publishEvent(common.events.ActivityTrackingEnabled(guildId))
+            eventPublisher.publishEvent(common.events.activity.ActivityTrackingEnabled(guildId))
         }
     }
 
@@ -1042,7 +1042,7 @@ class ModerationWebServiceTest {
 
         // Disabling tracking must never trigger member DMs.
         verify(exactly = 0) {
-            eventPublisher.publishEvent(any<common.events.ActivityTrackingEnabled>())
+            eventPublisher.publishEvent(any<common.events.activity.ActivityTrackingEnabled>())
         }
     }
 
@@ -1055,7 +1055,7 @@ class ModerationWebServiceTest {
         assertEquals("Value must be true or false.", err)
         verify(exactly = 0) { configService.upsertConfig(any(), any(), any()) }
         verify(exactly = 0) {
-            eventPublisher.publishEvent(any<common.events.ActivityTrackingEnabled>())
+            eventPublisher.publishEvent(any<common.events.activity.ActivityTrackingEnabled>())
         }
     }
 

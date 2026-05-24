@@ -26,6 +26,7 @@ import database.service.casino.casinoholdem.CasinoHoldemService
 import database.service.guild.ConfigService
 import database.service.economy.JackpotService
 import database.service.user.UserService
+import common.events.casino.casinoholdem.CasinoHoldemWonEvent
 
 class CasinoHoldemServiceTest {
 

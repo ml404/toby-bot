@@ -1,5 +1,6 @@
 package database.achievement
 
+import common.casino.dice.Dice
 /**
  * Static catalogue of every achievement the bot can grant. Seeded into
  * the `achievement` table on startup by [AchievementSeeder] — adding a

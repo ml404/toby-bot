@@ -22,7 +22,7 @@ import database.service.economy.JackpotGame
  *
  * The pool is fed by a flat fee on every Toby Coin trade (see
  * [EconomyTradeService]). Casino minigame wins roll a small chance to
- * hit the jackpot — on a hit the per-guild [common.economy.JackpotWheel]
+ * hit the jackpot — on a hit the per-guild [common.casino.JackpotWheel]
  * is spun for a tier and the player banks that fraction of the pool
  * (default tiers `80:1,10:5,5:10,4:20,1:50` — EV ~3.1% per win).
  *
@@ -114,12 +114,12 @@ class JackpotService(
     /**
      * Parsed payout-wheel segments for [guildId] — reads the
      * `JACKPOT_WHEEL_SEGMENTS` config and falls back to
-     * [common.economy.JackpotWheel.DEFAULT_SEGMENTS] when unset or
+     * [common.casino.JackpotWheel.DEFAULT_SEGMENTS] when unset or
      * malformed. Surfaced for the casino page so the wheel UI can
      * render the same segments the server spins.
      */
-    fun wheelSegments(guildId: Long): List<common.economy.JackpotWheel.Segment> =
-        common.economy.JackpotWheel.parse(JackpotHelper.wheelSegmentsConfig(configService, guildId))
+    fun wheelSegments(guildId: Long): List<common.casino.JackpotWheel.Segment> =
+        common.casino.JackpotWheel.parse(JackpotHelper.wheelSegmentsConfig(configService, guildId))
 
     /**
      * Raw `JACKPOT_WHEEL_SEGMENTS` config value for [guildId] (or null

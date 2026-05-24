@@ -2,7 +2,7 @@ package database.service.economy
 
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
-import common.economy.JackpotWheel
+import common.casino.JackpotWheel
 import kotlin.random.Random
 import database.service.guild.ConfigService
 import database.service.economy.JackpotService

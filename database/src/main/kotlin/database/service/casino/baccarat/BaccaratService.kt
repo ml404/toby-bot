@@ -1,11 +1,11 @@
 package database.service.casino.baccarat
 
 import common.casino.CasinoCommonFailure
-import common.events.BaccaratWonEvent
+import common.events.casino.baccarat.BaccaratWonEvent
 import common.card.Card
 import common.card.Deck
 import database.dto.guild.ConfigDto
-import common.economy.Baccarat
+import common.casino.baccarat.Baccarat
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

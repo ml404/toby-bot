@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.user.UserDto
-import common.economy.Highlow
+import common.casino.highlow.Highlow
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -17,6 +17,7 @@ import database.service.casino.highlow.HighlowService
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.highlow.HighlowHandResolvedEvent
 
 class HighlowServiceTest {
 

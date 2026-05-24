@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.DuelResolvedEvent
+import common.events.pvp.duel.DuelResolvedEvent
 import database.dto.guild.ConfigDto
 import database.dto.pvp.duel.DuelLogDto
 import database.dto.user.UserDto

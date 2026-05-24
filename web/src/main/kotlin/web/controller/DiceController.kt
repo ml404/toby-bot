@@ -1,7 +1,7 @@
 package web.controller
 
 import common.casino.CasinoCommonFailure
-import common.economy.Dice
+import common.casino.dice.Dice
 import database.service.casino.dice.DiceService
 import database.service.casino.dice.DiceService.RollOutcome
 import database.service.economy.JackpotGame

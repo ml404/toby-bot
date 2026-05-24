@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.horseracing
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.HorseRacing
+import common.casino.horseracing.HorseRacing
 import database.service.casino.horseracing.HorseRacingService
 import database.service.casino.horseracing.HorseRacingService.RaceOutcome
 import net.dv8tion.jda.api.EmbedBuilder

@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.RpsResolvedEvent
+import common.events.pvp.rps.RpsResolvedEvent
 import common.rps.RpsEngine
 import io.mockk.every
 import io.mockk.mockk

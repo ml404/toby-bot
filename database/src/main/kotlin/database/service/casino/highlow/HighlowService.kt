@@ -1,9 +1,9 @@
 package database.service.casino.highlow
 
 import common.casino.CasinoCommonFailure
-import common.events.HighlowHandResolvedEvent
+import common.events.casino.highlow.HighlowHandResolvedEvent
 import database.dto.guild.ConfigDto
-import common.economy.Highlow
+import common.casino.highlow.Highlow
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

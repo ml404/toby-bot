@@ -1,6 +1,6 @@
 package database.service.social.impl
 
-import common.events.StreakClaimedEvent
+import common.events.social.StreakClaimedEvent
 import database.dto.guild.ConfigDto
 import database.dto.social.LoginStreakDto
 import database.persistence.social.LoginStreakPersistence

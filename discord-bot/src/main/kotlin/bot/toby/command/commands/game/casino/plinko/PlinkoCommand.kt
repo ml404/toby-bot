@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.plinko
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.Plinko
+import common.casino.plinko.Plinko
 import database.service.casino.plinko.PlinkoService
 import database.service.casino.plinko.PlinkoService.DropOutcome
 import net.dv8tion.jda.api.EmbedBuilder

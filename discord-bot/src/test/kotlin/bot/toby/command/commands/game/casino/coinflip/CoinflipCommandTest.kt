@@ -5,7 +5,7 @@ import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import database.dto.user.UserDto
-import common.economy.Coinflip
+import common.casino.coinflip.Coinflip
 import database.service.casino.coinflip.CoinflipService
 import io.mockk.clearAllMocks
 import io.mockk.every

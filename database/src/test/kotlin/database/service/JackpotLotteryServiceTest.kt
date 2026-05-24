@@ -20,6 +20,7 @@ import database.service.lottery.JackpotLotteryService
 import database.service.economy.JackpotService
 import database.service.lottery.LotteryHelper
 import database.service.user.UserService
+import common.events.lottery.LotteryWonEvent
 
 class JackpotLotteryServiceTest {
 
@@ -270,10 +271,10 @@ class JackpotLotteryServiceTest {
     }
 
     private class RecordingEventPublisher : org.springframework.context.ApplicationEventPublisher {
-        val lotteryEvents: MutableList<common.events.LotteryWonEvent> = mutableListOf()
+        val lotteryEvents: MutableList<common.events.lottery.LotteryWonEvent> = mutableListOf()
         override fun publishEvent(event: org.springframework.context.ApplicationEvent) {}
         override fun publishEvent(event: Any) {
-            if (event is common.events.LotteryWonEvent) lotteryEvents.add(event)
+            if (event is common.events.lottery.LotteryWonEvent) lotteryEvents.add(event)
         }
     }
 

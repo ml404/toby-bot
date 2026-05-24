@@ -14,6 +14,7 @@ import database.service.economy.JackpotHelper
 import database.service.economy.JackpotService
 import database.service.user.UserService
 import database.service.economy.JackpotGame
+import common.casino.coinflip.Coinflip
 
 class JackpotHelperTest {
 

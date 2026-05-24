@@ -2,7 +2,7 @@ package bot.toby.scheduling
 
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
-import common.events.LotteryDrawnForTicketHolderEvent
+import common.events.lottery.LotteryDrawnForTicketHolderEvent
 import common.logging.DiscordLogger
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind

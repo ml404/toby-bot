@@ -1,9 +1,9 @@
 package web.service
 
-import common.events.AchievementUnlockedEvent
-import common.events.LevelUpEvent
-import common.events.LotteryDrawnForTicketHolderEvent
-import common.events.TipSentEvent
+import common.events.user.AchievementUnlockedEvent
+import common.events.leveling.LevelUpEvent
+import common.events.lottery.LotteryDrawnForTicketHolderEvent
+import common.events.social.TipSentEvent
 import org.springframework.context.event.EventListener
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service

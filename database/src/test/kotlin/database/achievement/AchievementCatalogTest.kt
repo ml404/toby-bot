@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.events.pvp.duel.DuelResolvedEvent
+import common.events.social.TipSentEvent
 
 class AchievementCatalogTest {
 

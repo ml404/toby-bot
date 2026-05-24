@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.dice
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.Dice
+import common.casino.dice.Dice
 import database.service.casino.dice.DiceService
 import database.service.casino.dice.DiceService.RollOutcome
 import net.dv8tion.jda.api.EmbedBuilder

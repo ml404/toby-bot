@@ -27,6 +27,7 @@ import database.service.guild.ConfigService
 import database.service.economy.JackpotHelper
 import database.service.economy.JackpotService
 import database.service.user.UserService
+import common.events.casino.blackjack.BlackjackNaturalEvent
 
 class BlackjackServiceTest {
 
@@ -1334,10 +1335,10 @@ class BlackjackServiceTest {
     }
 
     private class RecordingEventPublisher : org.springframework.context.ApplicationEventPublisher {
-        val naturalEvents: MutableList<common.events.BlackjackNaturalEvent> = mutableListOf()
+        val naturalEvents: MutableList<common.events.casino.blackjack.BlackjackNaturalEvent> = mutableListOf()
         override fun publishEvent(event: org.springframework.context.ApplicationEvent) {}
         override fun publishEvent(event: Any) {
-            if (event is common.events.BlackjackNaturalEvent) naturalEvents.add(event)
+            if (event is common.events.casino.blackjack.BlackjackNaturalEvent) naturalEvents.add(event)
         }
     }
 }

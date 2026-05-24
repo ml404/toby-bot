@@ -3,7 +3,7 @@ package bot.toby.leveling
 import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
 import common.notification.PushAdapter
-import common.events.LevelUpEvent
+import common.events.leveling.LevelUpEvent
 import common.leveling.LevelCurve
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind

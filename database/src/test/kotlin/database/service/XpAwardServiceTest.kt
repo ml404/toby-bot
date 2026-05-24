@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.LevelUpEvent
+import common.events.leveling.LevelUpEvent
 import common.leveling.LevelCurve
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto

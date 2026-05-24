@@ -1,7 +1,7 @@
 package database.service
 
 import database.dto.user.UserDto
-import common.economy.Roulette
+import common.casino.roulette.Roulette
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -16,11 +16,12 @@ import database.service.economy.JackpotService
 import database.service.casino.roulette.RouletteService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.roulette.RouletteStraightWinEvent
 
 /**
  * Focused coverage of [RouletteService]'s achievement-event publication.
  * The broader spin/payout maths are covered by upstream `Roulette` engine
- * tests; this class pins the [common.events.RouletteStraightWinEvent]
+ * tests; this class pins the [common.events.casino.roulette.RouletteStraightWinEvent]
  * wiring added in the PR #520 follow-up.
  */
 class RouletteServiceTest {

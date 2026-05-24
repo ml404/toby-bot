@@ -28,6 +28,7 @@ import database.service.economy.JackpotService
 import database.service.casino.poker.PokerService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
+import common.events.casino.poker.PokerRoyalFlushEvent
 
 class PokerServiceTest {
 

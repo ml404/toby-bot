@@ -3,7 +3,7 @@ package web.controller
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.economy.Baccarat
+import common.casino.baccarat.Baccarat
 import database.service.casino.baccarat.BaccaratService
 import database.service.casino.baccarat.BaccaratService.PlayOutcome
 import io.mockk.every

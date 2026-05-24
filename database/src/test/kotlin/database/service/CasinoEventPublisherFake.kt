@@ -1,18 +1,18 @@
 package database.service
 
-import common.events.BaccaratWonEvent
-import common.events.CasinoHoldemWonEvent
-import common.events.CoinflipWonEvent
-import common.events.DiceWonEvent
-import common.events.HighlowHandResolvedEvent
-import common.events.HorseRacingWonEvent
-import common.events.KenoPerfectEvent
-import common.events.PlinkoJackpotEvent
-import common.events.PokerRoyalFlushEvent
-import common.events.RouletteStraightWinEvent
-import common.events.ScratchJackpotEvent
-import common.events.SlotsJackpotEvent
-import common.events.WheelJackpotEvent
+import common.events.casino.baccarat.BaccaratWonEvent
+import common.events.casino.casinoholdem.CasinoHoldemWonEvent
+import common.events.casino.coinflip.CoinflipWonEvent
+import common.events.casino.dice.DiceWonEvent
+import common.events.casino.highlow.HighlowHandResolvedEvent
+import common.events.casino.horseracing.HorseRacingWonEvent
+import common.events.casino.keno.KenoPerfectEvent
+import common.events.casino.plinko.PlinkoJackpotEvent
+import common.events.casino.poker.PokerRoyalFlushEvent
+import common.events.casino.roulette.RouletteStraightWinEvent
+import common.events.casino.scratch.ScratchJackpotEvent
+import common.events.casino.slots.SlotsJackpotEvent
+import common.events.casino.wheeloffortune.WheelJackpotEvent
 import org.springframework.context.ApplicationEvent
 import org.springframework.context.ApplicationEventPublisher
 

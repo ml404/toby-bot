@@ -2,7 +2,7 @@ package database.service.casino
 
 import com.github.benmanes.caffeine.cache.Cache
 import com.github.benmanes.caffeine.cache.Caffeine
-import common.events.AntiAutoclickEvent
+import common.events.moderation.AntiAutoclickEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import java.time.Clock

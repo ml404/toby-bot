@@ -1,6 +1,6 @@
 package bot.toby.activity
 
-import common.events.ActivityTrackingEnabled
+import common.events.activity.ActivityTrackingEnabled
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED
 import database.service.guild.ConfigService

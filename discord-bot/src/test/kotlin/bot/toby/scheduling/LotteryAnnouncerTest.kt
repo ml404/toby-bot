@@ -1,7 +1,7 @@
 package bot.toby.scheduling
 
 import bot.toby.notify.NotificationRouter
-import common.events.LotteryDrawnForTicketHolderEvent
+import common.events.lottery.LotteryDrawnForTicketHolderEvent
 import common.notification.PushAdapter
 import common.notification.ChannelRouteKey
 import common.notification.PushPayload

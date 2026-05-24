@@ -1,7 +1,7 @@
 package bot.toby.notify
 
 import bot.toby.command.commands.moderation.AntiAutoclickEmbeds
-import common.events.AntiAutoclickEvent
+import common.events.moderation.AntiAutoclickEvent
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService

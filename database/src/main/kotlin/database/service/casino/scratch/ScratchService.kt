@@ -1,10 +1,10 @@
 package database.service.casino.scratch
 
 import common.casino.CasinoCommonFailure
-import common.events.ScratchJackpotEvent
+import common.events.casino.scratch.ScratchJackpotEvent
 import database.dto.guild.ConfigDto
-import common.economy.ScratchCard
-import common.economy.SlotMachine
+import common.casino.scratch.ScratchCard
+import common.casino.slots.SlotMachine
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -47,8 +47,8 @@ class ScratchService(
             val stake: Long,
             val payout: Long,
             val net: Long,
-            val cells: List<common.economy.SlotMachine.Symbol>,
-            val winningSymbol: common.economy.SlotMachine.Symbol,
+            val cells: List<common.casino.slots.SlotMachine.Symbol>,
+            val winningSymbol: common.casino.slots.SlotMachine.Symbol,
             val matchCount: Int,
             val newBalance: Long,
             val jackpotPayout: Long = 0L,
@@ -60,7 +60,7 @@ class ScratchService(
 
         data class Lose(
             val stake: Long,
-            val cells: List<common.economy.SlotMachine.Symbol>,
+            val cells: List<common.casino.slots.SlotMachine.Symbol>,
             val newBalance: Long,
             val soldTobyCoins: Long = 0L,
             val newPrice: Double? = null,

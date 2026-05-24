@@ -1,7 +1,7 @@
 package web.controller
 
 import common.casino.CasinoCommonFailure
-import common.economy.Baccarat
+import common.casino.baccarat.Baccarat
 import database.service.casino.baccarat.BaccaratService
 import database.service.casino.baccarat.BaccaratService.PlayOutcome
 import database.service.economy.JackpotGame

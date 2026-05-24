@@ -1,6 +1,6 @@
 package database.service.pvp.tictactoe
 
-import common.events.TicTacToeResolvedEvent
+import common.events.pvp.tictactoe.TicTacToeResolvedEvent
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired

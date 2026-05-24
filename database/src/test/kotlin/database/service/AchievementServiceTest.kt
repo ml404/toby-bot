@@ -1,6 +1,6 @@
 package database.service
 
-import common.events.AchievementUnlockedEvent
+import common.events.user.AchievementUnlockedEvent
 import database.dto.guild.AchievementDto
 import database.dto.guild.AchievementProgressDto
 import database.dto.guild.ConfigDto

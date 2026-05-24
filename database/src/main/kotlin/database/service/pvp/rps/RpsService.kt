@@ -1,6 +1,6 @@
 package database.service.pvp.rps
 
-import common.events.RpsResolvedEvent
+import common.events.pvp.rps.RpsResolvedEvent
 import common.rps.RpsEngine
 import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired

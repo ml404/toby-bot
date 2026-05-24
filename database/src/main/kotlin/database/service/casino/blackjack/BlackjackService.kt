@@ -1,6 +1,6 @@
 package database.service.casino.blackjack
 
-import common.events.BlackjackNaturalEvent
+import common.events.casino.blackjack.BlackjackNaturalEvent
 import common.blackjack.Blackjack
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry

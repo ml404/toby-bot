@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
-import common.economy.WheelOfFortune
+import common.casino.wheeloffortune.WheelOfFortune
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -21,6 +21,7 @@ import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
 import database.service.casino.wheeloffortune.WheelOfFortuneService
+import common.events.casino.wheeloffortune.WheelJackpotEvent
 
 class WheelOfFortuneServiceTest {
 

@@ -2,7 +2,7 @@ package bot.toby.command.commands.game.casino.roulette
 
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.economy.Roulette
+import common.casino.roulette.Roulette
 import database.service.casino.roulette.RouletteService
 import database.service.casino.roulette.RouletteService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder

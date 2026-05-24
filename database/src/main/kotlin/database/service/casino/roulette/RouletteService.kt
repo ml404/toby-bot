@@ -1,9 +1,9 @@
 package database.service.casino.roulette
 
 import common.casino.CasinoCommonFailure
-import common.events.RouletteStraightWinEvent
+import common.events.casino.roulette.RouletteStraightWinEvent
 import database.dto.guild.ConfigDto
-import common.economy.Roulette
+import common.casino.roulette.Roulette
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional

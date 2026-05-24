@@ -1,6 +1,6 @@
 package database.service.lottery
 
-import common.events.LotteryWonEvent
+import common.events.lottery.LotteryWonEvent
 import database.dto.lottery.JackpotLotteryDto
 import database.dto.lottery.JackpotLotteryTicketDto
 import database.persistence.lottery.JackpotLotteryPersistence
