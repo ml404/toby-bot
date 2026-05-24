@@ -1,6 +1,6 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.game.CasinoHoldemEmbeds
+import bot.toby.command.commands.game.casino.casinoholdem.CasinoHoldemEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto

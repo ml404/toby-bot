@@ -1,6 +1,6 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.game.DuelEmbeds
+import bot.toby.command.commands.game.pvp.duel.DuelEmbeds
 import database.duel.PendingDuelRegistry
 import core.button.Button
 import core.button.ButtonContext

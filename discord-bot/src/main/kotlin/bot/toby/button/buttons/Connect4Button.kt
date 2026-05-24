@@ -1,7 +1,7 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.game.Connect4Embeds
-import bot.toby.command.commands.game.PvpEmbeds
+import bot.toby.command.commands.game.pvp.connect4.Connect4Embeds
+import bot.toby.command.commands.game.pvp.PvpEmbeds
 import common.connect4.Connect4Engine
 import core.button.Button
 import core.button.ButtonContext

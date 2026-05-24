@@ -1,7 +1,7 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.game.PvpEmbeds
-import bot.toby.command.commands.game.RpsEmbeds
+import bot.toby.command.commands.game.pvp.PvpEmbeds
+import bot.toby.command.commands.game.pvp.rps.RpsEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto

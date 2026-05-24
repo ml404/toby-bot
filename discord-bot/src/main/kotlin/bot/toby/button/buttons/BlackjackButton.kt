@@ -1,6 +1,6 @@
 package bot.toby.button.buttons
 
-import bot.toby.command.commands.game.BlackjackEmbeds
+import bot.toby.command.commands.game.casino.blackjack.BlackjackEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import common.blackjack.Blackjack
