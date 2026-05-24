@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Lift shared challenge ceremony out of the three slash commands",
+    "summary": "Fifth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581, #582). `RpsCommand`, `TicTacToeCommand`, and `Connect4Command` each carried a verbatim copy of a ~60-line `handle()` body — guild / target / bot / self / stake validation, opponent lazy-create, service.startMatch pre-flight + error embed, registry.register with a pending-timeout embed-edit callback, and the final pending-embed send. The only per-game bits were the service / registr…",
+    "emoji": "🧹",
+    "prNumber": 583
+  },
+  {
+    "date": "May 2026",
     "title": "Extract shared PvpButtonIdCodec for the three PvP embeds",
     "summary": "Fourth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581). Each of `RpsEmbeds`, `TicTacToeEmbeds`, and `Connect4Embeds` carried a line-for-line identical `encode()` and `parseButtonId()` body — same 4-segment colon-delimited wire format, same case-insensitive prefix check, same null-on-malformed contract. Only the `BUTTON_NAME` constant and the per-game `Action` enum type differed. Lift the wire-format halves to a new shared `PvpButtonId…",
     "emoji": "🧹",
