@@ -206,6 +206,7 @@ class ModerationWebService(
             categories = categories,
             config = configByKey,
             lotteryIncentives = incentives,
+            guildIconUrl = guild.iconUrl,
         )
     }
 
@@ -1592,6 +1593,7 @@ data class GuildOverview(
     val categories: List<CategoryInfo> = emptyList(),
     val config: Map<String, String?>,
     val lotteryIncentives: LotteryIncentivesView = LotteryIncentivesView.empty(),
+    val guildIconUrl: String? = null,
 )
 
 data class ModeratedMember(

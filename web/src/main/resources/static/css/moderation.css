@@ -95,6 +95,143 @@ details.config-section.is-hidden { display: none; }
 
 .mod-panel { display: block; }
 
+/* ---- Moderation page header ----
+   Shared identity strip used by every tab via fragments/moderationHeader.
+   Replaces the old "title + lede" stack with a guild-avatar + eyebrow
+   (server name) + h1 (active tab name) + one-line subtitle (per-tab
+   description), plus an owner/superuser badge pinned to the right. The
+   page-header / mod-header rules in base.css still apply elsewhere (the
+   moderation pages don't use them anymore). */
+.mod-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+/* base.css gives `.back-link` an 8px bottom margin so it doesn't sit
+   flush against the H1 on simpler pages. Inside this flex column the
+   parent's `gap` already provides the spacing, so the extra margin
+   double-counts. Zero it out for the moderation header. */
+.mod-page-header > .back-link { margin-bottom: 0; }
+.mod-page-header__row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+}
+.mod-page-header__identity {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    min-width: 0;
+    flex: 1 1 auto;
+}
+.mod-page-header__avatar {
+    flex: 0 0 auto;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    object-fit: cover;
+    display: block;
+}
+.mod-page-header__avatar--initial {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: var(--accent-soft);
+}
+.mod-page-header__titles {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.mod-page-header__eyebrow {
+    margin: 0;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    font-weight: 600;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mod-page-header__title {
+    margin: 0;
+    font-size: 1.6rem;
+    line-height: 1.15;
+    color: var(--text);
+}
+.mod-page-header__subtitle {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    line-height: 1.5;
+    max-width: 60ch;
+    font-size: 0.95rem;
+}
+.mod-page-header__badges {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+}
+.mod-page-header__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+.mod-page-header__badge--owner {
+    background: var(--accent-soft);
+    color: var(--accent);
+    border-color: var(--accent-soft);
+}
+.mod-page-header__badge--super {
+    background: rgba(87, 242, 135, 0.12);
+    color: #57f287;
+    border-color: rgba(87, 242, 135, 0.18);
+}
+
+@media (max-width: 600px) {
+    .mod-page-header__row {
+        align-items: stretch;
+    }
+    .mod-page-header__identity { gap: var(--space-3); }
+    .mod-page-header__avatar { width: 44px; height: 44px; }
+    .mod-page-header__title { font-size: 1.3rem; }
+    .mod-page-header__subtitle { font-size: 0.9rem; }
+    .mod-page-header__badges { width: 100%; }
+}
+
+/* ---- Page-intro paragraph ----
+   Standardised lead paragraph that sits between the page header and the
+   first content card/section. Replaces the ad-hoc `<p class="muted mb-4">`
+   pattern that every tab used to copy-paste with slightly different
+   spacing. */
+.mod-page-intro {
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 70ch;
+    margin: 0 0 var(--space-5);
+}
+
 /* Sub-section heading inside a moderation panel (e.g. "Move members"
    below the voice-channel grid). Replaces inline `class="mt-5"` so
    every sub-section uses the same rhythm. */
@@ -615,6 +752,8 @@ details.config-section.is-hidden { display: none; }
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18),
+                0 4px 12px rgba(0, 0, 0, 0.18);
 }
 .mod-card-wide { max-width: none; }
 .mod-card h3 {

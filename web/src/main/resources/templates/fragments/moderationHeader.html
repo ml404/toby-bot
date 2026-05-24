@@ -2,21 +2,71 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 <!--
-    Per-guild moderation page header. Each split sub-page (users, actions,
-    settings, voice, poll, casino, lottery) embeds this fragment so the
-    back link, guild name, owner/superuser banner, alerts include, and
-    sub-nav are laid out identically. The `active` arg is the slug of the
-    currently rendered sub-page (users / actions / settings / voice / poll
-    / casino / lottery); the matching link gets the .active class +
-    aria-current so the user knows where they are.
+    Per-guild moderation page header. Every split sub-page (users, actions,
+    settings, voice, poll, casino, lottery, leveling, activity, welcome)
+    embeds this fragment so back-link, guild title, active-tab subtitle,
+    owner/superuser badge, alerts, and sub-nav are laid out identically.
+    `active` is the slug of the current sub-page; the matching link gets
+    .active + aria-current, and the H1 + lede pull from the local
+    `tabLabels` / `tabDescs` maps so each tab has its own page title and
+    one-line description without round-tripping through the controller.
 -->
-<div th:fragment="moderationHeader(overview, isOwner, active)">
-    <div class="page-header mod-header">
+<div th:fragment="moderationHeader(overview, isOwner, active)"
+     th:with="
+        tabLabels=${ {
+            'users':'Users',
+            'actions':'Actions',
+            'settings':'Settings',
+            'voice':'Voice',
+            'poll':'Poll',
+            'casino':'Casino',
+            'lottery':'Lottery',
+            'leveling':'Leveling',
+            'activity':'Activity',
+            'welcome':'Welcome'
+        } },
+        tabDescs=${ {
+            'users':'Toggle TobyBot permissions and adjust social credit per member.',
+            'actions':'Kick, ban, timeout, lock, slowmode, and purge — all audit-logged.',
+            'settings':'Per-guild knobs for economy, casino, leveling, and shared bot behaviour.',
+            'voice':'See who is in voice and shuffle members between channels.',
+            'poll':'Post an emoji-reaction poll into any text channel.',
+            'casino':'Jackpot pool admin, refunds, and casino-wide controls.',
+            'lottery':'Bulk-buy bonuses, multiplier tiers, milestone draws, force-draw.',
+            'leveling':'XP tuning, role rewards, level-gated titles, and streak rewards.',
+            'activity':'30-day rolling server activity — messages per day and voice hours.',
+            'welcome':'Welcome-channel routing and auto-roles for new members.'
+        } },
+        tabLabel=${tabLabels[active] ?: 'Moderation'},
+        tabDesc=${tabDescs[active] ?: ''},
+        guildInitial=${overview.guildName != null and !overview.guildName.isEmpty() ? overview.guildName.substring(0, 1).toUpperCase() : 'G'}">
+
+    <header class="mod-page-header">
         <a class="back-link" th:href="@{/moderation/guilds(pick=true)}">&larr; All servers</a>
-        <h1 th:text="${overview.guildName}">Guild Name</h1>
-        <p class="lede" th:if="${isOwner}">You are the server owner.</p>
-        <p class="lede" th:unless="${isOwner}">You are a TobyBot superuser.</p>
-    </div>
+        <div class="mod-page-header__row">
+            <div class="mod-page-header__identity">
+                <img th:if="${overview.guildIconUrl != null}"
+                     th:src="${overview.guildIconUrl}"
+                     th:alt="${overview.guildName + ' icon'}"
+                     class="mod-page-header__avatar">
+                <span th:unless="${overview.guildIconUrl != null}"
+                      class="mod-page-header__avatar mod-page-header__avatar--initial"
+                      aria-hidden="true"
+                      th:text="${guildInitial}">G</span>
+                <div class="mod-page-header__titles">
+                    <p class="mod-page-header__eyebrow" th:text="${overview.guildName}">Guild Name</p>
+                    <h1 class="mod-page-header__title" th:text="${tabLabel}">Section</h1>
+                    <p class="mod-page-header__subtitle" th:if="${tabDesc != null and !tabDesc.isEmpty()}" th:text="${tabDesc}">
+                        Short description of this tab.
+                    </p>
+                </div>
+            </div>
+            <div class="mod-page-header__badges">
+                <span class="mod-page-header__badge mod-page-header__badge--owner" th:if="${isOwner}">Server owner</span>
+                <span class="mod-page-header__badge mod-page-header__badge--super" th:unless="${isOwner}">TobyBot superuser</span>
+            </div>
+        </div>
+    </header>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
