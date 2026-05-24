@@ -48,7 +48,7 @@ const CASES = [
     ['economy.html',           '/economy/guilds'],
     ['titles.html',            '/titles/guilds'],
     ['tip.html',               '/tip/guilds'],
-    ['duel.html',              '/duel/guilds'],
+    ['pvp.html',               '/pvp/guilds'],
     ['music-player.html',      '/music-player/guilds'],
 
     // Shared fragment used by every /moderation/{guildId}/... page.

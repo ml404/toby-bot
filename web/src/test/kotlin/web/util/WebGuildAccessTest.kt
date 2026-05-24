@@ -65,10 +65,10 @@ class WebGuildAccessTest {
         every { economyWebService.isMember(discordId, guildId) } returns false
 
         val result = WebGuildAccess.requireMemberForPage(
-            user, guildId, economyWebService, ra, lobbyPath = "/duel/guilds"
+            user, guildId, economyWebService, ra, lobbyPath = "/pvp/guilds"
         ) { _ -> error("block must not run") }
 
-        assertEquals("redirect:/duel/guilds", result)
+        assertEquals("redirect:/pvp/guilds", result)
         verify(exactly = 1) { ra.addFlashAttribute("error", "You are not a member of that server.") }
     }
 
@@ -78,7 +78,7 @@ class WebGuildAccessTest {
         every { economyWebService.isMember(discordId, guildId) } returns true
 
         val result = WebGuildAccess.requireMemberForPage(
-            user, guildId, economyWebService, ra, lobbyPath = "/duel/guilds"
+            user, guildId, economyWebService, ra, lobbyPath = "/pvp/guilds"
         ) { id ->
             assertEquals(discordId, id)
             "duel"

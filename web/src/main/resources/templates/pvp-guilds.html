@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{fragments/guildListPage :: singleAction(
+        pageTitle='TobyBot - PvP',
+        cssPath='/css/leaderboard.css',
+        emoji='⚔️',
+        headingTitle='PvP',
+        description='Challenge another user head-to-head — duel, rock-paper-scissors, tic-tac-toe, or connect 4. Winner takes the pot (minus a small jackpot tribute).',
+        actionHref='/pvp/{id}',
+        actionLabel='⚔️ Play',
+        pickerPath='/pvp/guilds',
+        emptyEmoji='⚔️',
+        emptyHeading='No servers to play in yet',
+        emptyBody='You need to share at least one server with TobyBot to challenge someone.')}">
+</html>

@@ -112,8 +112,8 @@ class WebGameplayXpInterceptorTest {
     @Test
     fun `duel challenge POST awards XP`() {
         authenticate(discordId.toString())
-        runAfterCompletion(request("POST", "/duel/$guildId/challenge"))
-        verify(exactly = 1) { awardedWithReason("web:/duel/$guildId/challenge") }
+        runAfterCompletion(request("POST", "/pvp/$guildId/duel/challenge"))
+        verify(exactly = 1) { awardedWithReason("web:/pvp/$guildId/duel/challenge") }
     }
 
     @Test

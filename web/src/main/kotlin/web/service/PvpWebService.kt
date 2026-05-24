@@ -7,12 +7,16 @@ import database.service.UserService
 import org.springframework.stereotype.Service
 
 /**
- * Read-only projection helpers around the in-memory
- * [PendingDuelRegistry] for the web UI plus a lazy-create for the
- * opponent's [UserDto] row.
+ * Read-only projection helpers around the in-memory PvP session
+ * registries for the web UI, plus a lazy-create for the opponent's
+ * [UserDto] row. Today only the Duel helpers are wired; RPS,
+ * tic-tac-toe and connect 4 projections land alongside their tabs in
+ * a follow-up PR. The method names carry the game prefix so PR 1b
+ * can add `rps*` / `ticTacToe*` / `connect4*` helpers without
+ * colliding.
  */
 @Service
-class DuelWebService(
+class PvpWebService(
     private val pendingDuelRegistry: PendingDuelRegistry,
     private val userService: UserService,
     private val memberLookup: MemberLookupHelper,
@@ -21,7 +25,7 @@ class DuelWebService(
     data class PendingDuelView(
         val duelId: Long,
         // Stringified so the 18-digit Discord snowflake survives JS's 53-bit
-        // Number precision. duel.js renders these into the row text directly,
+        // Number precision. pvp.js renders these into the row text directly,
         // so a numeric round-trip would print a rounded id.
         val initiatorDiscordId: String,
         val initiatorName: String,
@@ -33,14 +37,14 @@ class DuelWebService(
         val createdAtEpochSeconds: Long,
     )
 
-    fun pendingForOpponent(discordId: Long, guildId: Long): List<PendingDuelView> {
+    fun duelPendingForOpponent(discordId: Long, guildId: Long): List<PendingDuelView> {
         val rows = pendingDuelRegistry.pendingForOpponent(discordId, guildId)
-        return project(rows, guildId)
+        return projectDuel(rows, guildId)
     }
 
-    fun pendingForInitiator(discordId: Long, guildId: Long): List<PendingDuelView> {
+    fun duelPendingForInitiator(discordId: Long, guildId: Long): List<PendingDuelView> {
         val rows = pendingDuelRegistry.pendingForInitiator(discordId, guildId)
-        return project(rows, guildId)
+        return projectDuel(rows, guildId)
     }
 
     data class ResolutionView(
@@ -63,8 +67,8 @@ class DuelWebService(
         val resolutions: List<ResolutionView>,
     )
 
-    fun outgoingPayload(discordId: Long, guildId: Long): OutgoingPayload {
-        val pending = pendingForInitiator(discordId, guildId)
+    fun duelOutgoingPayload(discordId: Long, guildId: Long): OutgoingPayload {
+        val pending = duelPendingForInitiator(discordId, guildId)
         val resolved = recentDuelResolutions.consumeForInitiator(discordId, guildId)
         if (resolved.isEmpty()) return OutgoingPayload(pending, emptyList())
         val ids = resolved.flatMapTo(HashSet()) { listOf(it.initiatorDiscordId, it.opponentDiscordId) }
@@ -87,7 +91,7 @@ class DuelWebService(
         return OutgoingPayload(pending, resolutions)
     }
 
-    private fun project(rows: List<PendingDuelRegistry.PendingDuel>, guildId: Long): List<PendingDuelView> {
+    private fun projectDuel(rows: List<PendingDuelRegistry.PendingDuel>, guildId: Long): List<PendingDuelView> {
         if (rows.isEmpty()) return emptyList()
         val ids = rows.flatMapTo(HashSet()) { listOf(it.initiatorDiscordId, it.opponentDiscordId) }
         val members = memberLookup.resolveAll(guildId, ids)

@@ -28,8 +28,8 @@ class WebMvcConfig(
             .addPathPatterns("/blackjack/{guildId}/**")
             // Poker — multi-table cash games.
             .addPathPatterns("/poker/{guildId}/**")
-            // 1v1 duels.
-            .addPathPatterns("/duel/{guildId}/**")
+            // Head-to-head matchups: duel, RPS, tic-tac-toe, connect 4.
+            .addPathPatterns("/pvp/{guildId}/**")
             // Toby-coin market: buy / sell.
             .addPathPatterns("/economy/{guildId}/**")
             // Peer tipping — `/tip/{guildId}` is a single POST.

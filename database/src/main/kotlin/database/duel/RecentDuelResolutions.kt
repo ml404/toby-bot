@@ -14,8 +14,8 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Short-TTL cache of "I just resolved a duel — anyone polling for
  * their outgoing offers should learn about it before the entry
- * expires." The only consumer today is `DuelWebService` projecting
- * resolutions into the `/duel/{guildId}/outgoing` response so the
+ * expires." The only consumer today is `PvpWebService` projecting
+ * resolutions into the `/pvp/{guildId}/duel/outgoing` response so the
  * initiator's browser can replay the same accept-time animation the
  * acceptor saw.
  *

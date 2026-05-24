@@ -1,7 +1,7 @@
 package web.event
 
 /**
- * Fired by [web.controller.DuelController] right after a successful
+ * Fired by [web.controller.PvpController] right after a successful
  * web-initiated duel challenge. Listened to in `discord-bot`
  * (`WebDuelOfferNotifier`), which posts the same embed + ping +
  * Accept/Decline buttons the slash-command path produces. The
