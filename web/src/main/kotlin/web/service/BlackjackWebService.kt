@@ -1,6 +1,5 @@
 package web.service
 
-import common.blackjack.*
 import common.card.Card
 import database.blackjack.BlackjackTableRegistry
 import org.springframework.stereotype.Service
