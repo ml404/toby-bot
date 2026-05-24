@@ -167,6 +167,103 @@
     transform: translateY(0);
 }
 
+/* Tic-Tac-Toe — 3x3 cell grid. Cells are clickable when myTurn,
+   disabled otherwise. Winning line gets a highlighted background. */
+.pvp-ttt-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.35rem;
+    max-width: 18rem;
+}
+
+.pvp-ttt-cell {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border, #2c2f3a);
+    border-radius: 0.35rem;
+    aspect-ratio: 1 / 1;
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--text, #e3e4ea);
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+}
+
+.pvp-ttt-cell:disabled {
+    cursor: not-allowed;
+    opacity: 0.92;
+}
+
+.pvp-ttt-cell:not(:disabled):hover,
+.pvp-ttt-cell:not(:disabled):focus-visible {
+    background: var(--accent-soft, rgba(114, 128, 255, 0.18));
+    border-color: var(--accent, #7280ff);
+}
+
+.pvp-ttt-cell.is-x { color: #7280ff; }
+.pvp-ttt-cell.is-o { color: #ffb86b; }
+
+.pvp-ttt-cell.is-winning {
+    background: rgba(120, 220, 140, 0.22);
+    border-color: #57d27a;
+}
+
+/* Connect 4 — 7x6 cell grid plus a top row of drop buttons. The drop
+   button mirrors the column's clickable target; cells themselves are
+   non-interactive (display-only). */
+.pvp-c4-drop-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+    max-width: 28rem;
+    margin-bottom: 0.25rem;
+}
+
+.pvp-c4-drop {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border, #2c2f3a);
+    border-radius: 999px 999px 0 0;
+    padding: 0.35rem 0;
+    color: var(--text, #e3e4ea);
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, transform 80ms ease;
+}
+
+.pvp-c4-drop:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.pvp-c4-drop:not(:disabled):hover,
+.pvp-c4-drop:not(:disabled):focus-visible {
+    background: var(--accent-soft, rgba(114, 128, 255, 0.18));
+    border-color: var(--accent, #7280ff);
+    transform: translateY(-2px);
+}
+
+.pvp-c4-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.25rem;
+    max-width: 28rem;
+    background: rgba(60, 80, 180, 0.18);
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+}
+
+.pvp-c4-cell {
+    aspect-ratio: 1 / 1;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 50%;
+    border: 2px solid rgba(60, 80, 180, 0.35);
+}
+
+.pvp-c4-cell.is-red    { background: #e84a4a; border-color: #b53333; }
+.pvp-c4-cell.is-yellow { background: #f4d35e; border-color: #c1a234; }
+
+.pvp-c4-cell.is-winning {
+    box-shadow: 0 0 0 3px #57d27a, 0 0 14px rgba(87, 210, 122, 0.6);
+}
+
 .duel-card,
 .duel-inbox {
     background: var(--surface, #1f2128);

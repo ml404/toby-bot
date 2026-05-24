@@ -11,15 +11,16 @@ package web.catalog
  *
  * Two surfaces share this catalog but mean different things by "game":
  *  - **Casino**: minigames + tables + draws. House-edge games that
- *    tribute to the shared jackpot pool. Reflected by [total],
- *    [minigames], [minigameNames] — the numbers the hero and casino
- *    feature card render.
+ *    tribute to the shared jackpot pool. Reflected by [casinoCount],
+ *    [minigames], [minigameNames] — the numbers the casino feature
+ *    card and hero "X-game casino" prose render.
  *  - **PvP**: head-to-head player matchups (no house, no jackpot
  *    tribute). Reflected by [pvpGames], [pvpCount], [pvpNames].
  *
- * [total] deliberately excludes PvP so the hero copy ("[N]-game casino")
- * stays accurate when PvP games are added or removed. Surfaces that
- * want to mention PvP should read [pvpCount] / [pvpNames] alongside.
+ * [total] = casino + pvp. Now that every PvP game has a working web
+ * surface (`/pvp/{guildId}`), the hero stats strip and numbers strip
+ * advertise the grand total honestly. Copy that wants the casino-only
+ * number (e.g. "[N]-game casino") reads [casinoCount] explicitly.
  */
 object GameCatalog {
 
@@ -43,18 +44,28 @@ object GameCatalog {
         Game("Poker", Category.TABLE),
         Game("Blackjack", Category.TABLE),
         Game("Lottery", Category.DRAW),
+        Game("duel", Category.PVP),
         Game("rock-paper-scissors", Category.PVP),
         Game("tic-tac-toe", Category.PVP),
         Game("connect 4", Category.PVP),
     )
 
-    val total: Int = games.count { it.category != Category.PVP }
+    /** Grand total — casino + pvp. Used by the hero stats strip's
+     *  "Games" tile and the numbers strip's by-the-numbers cell. */
+    val total: Int = games.size
 
     val minigames: List<Game> = games.filter { it.category == Category.MINIGAME }
 
     val minigameCount: Int = minigames.size
 
     val minigameNames: String = minigames.joinToString(", ") { it.displayName }
+
+    /** Casino-only count (minigames + tables + draws). Used by the
+     *  "X-game casino" hero prose and the casino feature card tag. */
+    val casinoCount: Int = games.count { it.category != Category.PVP }
+
+    val casinoNames: String = games.filter { it.category != Category.PVP }
+        .joinToString(", ") { it.displayName }
 
     val pvpGames: List<Game> = games.filter { it.category == Category.PVP }
 

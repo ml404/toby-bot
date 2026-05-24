@@ -517,6 +517,23 @@
     // fetched once on tab show; subsequent updates come from SSE events.
     initRpsPanel(document, guildId);
 
+    // ─── Tic-Tac-Toe + Connect 4 panels ───────────────────────────────
+    //
+    // Both share the same turn-based shape (alternating moves with a per-
+    // move shot-clock, `/move` POST taking `{move: Int}`) so one factory
+    // drives both. The per-game divergence — board grid + move type
+    // validation — lives in the `renderBoard` callback each passes in.
+    initBoardGamePanel(document, guildId, {
+        slug: 'tictactoe',
+        emptyLabel: 'Tic-Tac-Toe',
+        renderBoard: renderTicTacToeBoard,
+    });
+    initBoardGamePanel(document, guildId, {
+        slug: 'connect4',
+        emptyLabel: 'Connect 4',
+        renderBoard: renderConnect4Board,
+    });
+
     function initRpsPanel(doc, guildId) {
         const panel = doc.getElementById('pvp-panel-rps');
         if (!panel) return;
@@ -810,5 +827,349 @@
                     body: JSON.stringify(body),
                 }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
         }
+    }
+    // ─── Shared TTT / C4 panel factory ────────────────────────────────
+    //
+    // Generic turn-based board panel. Wires the challenge form, the
+    // pending / outgoing list rendering, the live-match polling-via-SSE,
+    // and the accept / decline / cancel / forfeit buttons. The per-game
+    // board renderer (3x3 grid for TTT, 7x6 grid for C4) is passed in
+    // via `opts.renderBoard(boardEl, view, ctx)` where `ctx` exposes
+    // `submitMove(cellOrColumn)` and `submitForfeit()` for the per-game
+    // grid to wire its click handlers to.
+    function initBoardGamePanel(doc, guildId, opts) {
+        const slug = opts.slug;
+        const panel = doc.getElementById('pvp-panel-' + slug);
+        if (!panel) return;
+        const form = doc.getElementById(slug + '-challenge');
+        const pendingList = doc.getElementById(slug + '-pending-list');
+        const outgoingList = doc.getElementById(slug + '-outgoing-list');
+        const activeSection = doc.getElementById(slug + '-active-section');
+        const activeBoard = doc.getElementById(slug + '-active');
+        if (!form || !pendingList || !outgoingList || !activeBoard) return;
+
+        let activeSessionId = null;
+        let activeSnapshot = null;
+        let initialFetched = false;
+
+        function fetchInitialState() {
+            if (initialFetched) return;
+            initialFetched = true;
+            Promise.all([
+                fetch('/pvp/' + guildId + '/' + slug + '/pending', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/' + slug + '/outgoing', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/' + slug + '/active', { credentials: 'same-origin' }).then(safeJson),
+            ]).then(function (results) {
+                renderPendingList(pendingList, results[0] || [], 'incoming');
+                renderPendingList(outgoingList, results[1] || [], 'outgoing');
+                const active = (results[2] || []);
+                if (active.length > 0) openActiveSession(active[0]);
+            }).catch(function () { /* SSE will catch us up */ });
+        }
+        const observer = new MutationObserver(function () {
+            if (!panel.hidden) fetchInitialState();
+        });
+        observer.observe(panel, { attributes: true, attributeFilter: ['hidden'] });
+        if (!panel.hidden) fetchInitialState();
+
+        // The page-wide EventSource opens once for the whole /pvp page (see
+        // initRpsPanel). We piggyback on that channel; SSE event names are
+        // namespaced by slug so cross-tab noise stays low.
+        ensureSharedStream();
+        document.addEventListener('pvp.sse.' + slug + '.offered', function (e) { onOffered(e.detail); });
+        document.addEventListener('pvp.sse.' + slug + '.accepted', function (e) { onAccepted(e.detail); });
+        document.addEventListener('pvp.sse.' + slug + '.moved', function (e) { onMoved(e.detail); });
+        document.addEventListener('pvp.sse.' + slug + '.resolved', function (e) { onResolved(e.detail); });
+        document.addEventListener('pvp.sse.' + slug + '.removed', function (e) { onRemoved(e.detail); });
+
+        function onOffered() { refreshLists(); }
+        function onAccepted(payload) {
+            if (!payload || !payload.sessionId) return;
+            fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, { credentials: 'same-origin' })
+                .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
+            refreshLists();
+        }
+        function onMoved(payload) {
+            if (!payload || !payload.sessionId || activeSessionId !== payload.sessionId) return;
+            if (payload.view && Object.keys(payload.view).length > 0) {
+                openActiveSession(payload.view);
+            } else {
+                // Empty view fan-out — refetch the canonical state.
+                fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, { credentials: 'same-origin' })
+                    .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
+            }
+        }
+        function onResolved(payload) {
+            if (!payload || !payload.sessionId) return;
+            if (activeSessionId === payload.sessionId && payload.outcome) {
+                renderBoardOutcome(activeBoard, payload.outcome, activeSnapshot);
+                setTimeout(closeActiveSession, 6000);
+            }
+            refreshLists();
+        }
+        function onRemoved(payload) {
+            if (!payload || !payload.sessionId) return;
+            if (activeSessionId === payload.sessionId) closeActiveSession();
+            refreshLists();
+        }
+
+        function refreshLists() {
+            fetch('/pvp/' + guildId + '/' + slug + '/pending', { credentials: 'same-origin' })
+                .then(safeJson).then(function (rows) { renderPendingList(pendingList, rows || [], 'incoming'); });
+            fetch('/pvp/' + guildId + '/' + slug + '/outgoing', { credentials: 'same-origin' })
+                .then(safeJson).then(function (rows) { renderPendingList(outgoingList, rows || [], 'outgoing'); });
+        }
+
+        function renderPendingList(container, rows, kind) {
+            container.querySelectorAll('.pvp-pending-row').forEach(function (r) { r.remove(); });
+            const empty = container.querySelector('[data-empty]');
+            if (rows.length === 0) {
+                if (empty) empty.hidden = false;
+                return;
+            }
+            if (empty) empty.hidden = true;
+            rows.forEach(function (row) {
+                container.appendChild(buildPendingRow(row, kind));
+            });
+        }
+        function buildPendingRow(row, kind) {
+            const sessionId = row.sessionId;
+            const participants = row.participants || {};
+            const incoming = kind === 'incoming';
+            const otherSide = incoming ? participants.initiator : participants.opponent;
+            const div = document.createElement('div');
+            div.className = 'pvp-pending-row';
+            div.dataset.sessionId = String(sessionId);
+            div.innerHTML =
+                '<div class="pvp-pending-info">' +
+                  '<div class="pvp-pending-who"><span class="muted">' + (incoming ? 'From' : 'To') + '</span> ' +
+                    '<strong></strong></div>' +
+                  '<div class="pvp-pending-meta"><span>for <strong></strong> credits</span></div>' +
+                '</div>' +
+                '<div class="pvp-pending-actions"></div>';
+            div.querySelector('.pvp-pending-who strong').textContent = (otherSide && otherSide.name) || 'Unknown';
+            div.querySelectorAll('strong')[1].textContent = String(participants.stake || 0);
+            const actions = div.querySelector('.pvp-pending-actions');
+            if (incoming) {
+                actions.appendChild(makeButton('Accept', 'btn-primary', function () {
+                    postJson('/pvp/' + guildId + '/' + slug + '/' + sessionId + '/accept', {});
+                }));
+                actions.appendChild(makeButton('Decline', 'btn-secondary', function () {
+                    postJson('/pvp/' + guildId + '/' + slug + '/' + sessionId + '/decline', {});
+                }));
+            } else {
+                actions.appendChild(makeButton('Cancel', 'btn-secondary', function () {
+                    postJson('/pvp/' + guildId + '/' + slug + '/' + sessionId + '/cancel', {});
+                }));
+            }
+            return div;
+        }
+
+        function openActiveSession(view) {
+            activeSessionId = view.sessionId;
+            activeSnapshot = view;
+            activeSection.hidden = false;
+            const ctx = {
+                submitMove: function (moveValue) {
+                    postJson('/pvp/' + guildId + '/' + slug + '/' + view.sessionId + '/move', { move: moveValue })
+                        .then(function (resp) {
+                            if (!resp) return;
+                            if (!resp.ok) {
+                                if (window.toast) window.toast(resp.error || 'Move failed.', 'error');
+                                return;
+                            }
+                            if (resp.outcome) {
+                                renderBoardOutcome(activeBoard, resp.outcome, activeSnapshot);
+                                setTimeout(closeActiveSession, 6000);
+                            }
+                            // Continued moves: opponent gets the SSE update; our local board
+                            // refreshes on the next onMoved fan-out (or the immediate /move
+                            // response). Refetch for safety.
+                            else {
+                                fetch('/pvp/' + guildId + '/' + slug + '/' + view.sessionId, { credentials: 'same-origin' })
+                                    .then(safeJson).then(function (v) { if (v) openActiveSession(v); });
+                            }
+                        });
+                },
+                submitForfeit: function () {
+                    postJson('/pvp/' + guildId + '/' + slug + '/' + view.sessionId + '/forfeit', {});
+                },
+            };
+            opts.renderBoard(activeBoard, view, ctx);
+        }
+        function closeActiveSession() {
+            activeSessionId = null;
+            activeSnapshot = null;
+            activeSection.hidden = true;
+            activeBoard.innerHTML = '';
+        }
+
+        function renderBoardOutcome(boardEl, outcome, snapshot) {
+            boardEl.innerHTML = '';
+            const verdict = document.createElement('h3');
+            verdict.className = 'pvp-board-verdict';
+            if (outcome.verdict === 'WIN') {
+                const initiator = snapshot && snapshot.participants && snapshot.participants.initiator;
+                const opponent = snapshot && snapshot.participants && snapshot.participants.opponent;
+                const winnerName = (initiator && outcome.winnerDiscordId === initiator.discordId)
+                    ? initiator.name
+                    : (opponent && opponent.name) || 'Opponent';
+                verdict.textContent = winnerName + ' wins — pot ' + outcome.pot;
+            } else if (outcome.verdict === 'DRAW') {
+                verdict.textContent = 'Draw — stakes refunded';
+            } else {
+                verdict.textContent = 'Refund';
+            }
+            boardEl.appendChild(verdict);
+        }
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const opponent = document.getElementById(slug + '-opponent').value;
+            const stakeRaw = parseInt(document.getElementById(slug + '-stake').value, 10);
+            if (!opponent) {
+                if (window.toast) window.toast('Pick an opponent.', 'error');
+                return;
+            }
+            postJson('/pvp/' + guildId + '/' + slug + '/challenge', {
+                opponentDiscordId: opponent, stake: isFinite(stakeRaw) ? stakeRaw : 0,
+            }).then(function (resp) {
+                if (!resp) return;
+                if (!resp.ok) {
+                    if (window.toast) window.toast(resp.error || 'Challenge failed.', 'error');
+                    return;
+                }
+                if (window.toast) window.toast('Challenge sent.', 'success');
+                refreshLists();
+            });
+        });
+    }
+
+    // The page opens one EventSource (in initRpsPanel above). We
+    // re-broadcast each named SSE event as a DOM CustomEvent so multiple
+    // panels (initRpsPanel + the two initBoardGamePanel calls) can each
+    // attach listeners without needing direct EventSource access.
+    let sharedStreamOpened = false;
+    function ensureSharedStream() {
+        if (sharedStreamOpened) return;
+        sharedStreamOpened = true;
+        const main = document.getElementById('main');
+        if (!main || !main.dataset.guildId) return;
+        const eventSource = (function () {
+            try { return new EventSource('/pvp/' + main.dataset.guildId + '/stream'); } catch (_) { return null; }
+        })();
+        if (!eventSource) return;
+        ['tictactoe.offered','tictactoe.accepted','tictactoe.moved','tictactoe.resolved','tictactoe.removed',
+         'connect4.offered','connect4.accepted','connect4.moved','connect4.resolved','connect4.removed']
+            .forEach(function (name) {
+                eventSource.addEventListener(name, function (e) {
+                    let detail = null;
+                    try { detail = JSON.parse(e.data); } catch (_) {}
+                    document.dispatchEvent(new CustomEvent('pvp.sse.' + name, { detail: detail }));
+                });
+            });
+    }
+
+    function renderTicTacToeBoard(boardEl, view, ctx) {
+        boardEl.innerHTML = '';
+        const header = document.createElement('p');
+        header.className = 'pvp-board-header';
+        const oppName = view.participants && view.participants.opponent && view.participants.opponent.name;
+        header.textContent = 'vs ' + (oppName || 'opponent') +
+            ' — stake ' + ((view.participants && view.participants.stake) || 0) + ' credits' +
+            (view.myTurn ? ' — your turn' : ' — waiting for opponent');
+        boardEl.appendChild(header);
+
+        const grid = document.createElement('div');
+        grid.className = 'pvp-ttt-grid';
+        const cells = view.cells || new Array(9).fill(null);
+        const winning = new Set(view.winningLine || []);
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('button');
+            cell.type = 'button';
+            cell.className = 'pvp-ttt-cell';
+            const mark = cells[i];
+            if (mark) {
+                cell.classList.add('is-' + mark.toLowerCase());
+                cell.textContent = mark === 'X' ? '✕' : '○';
+                cell.disabled = true;
+            } else if (!view.myTurn) {
+                cell.disabled = true;
+            } else {
+                cell.addEventListener('click', function () { ctx.submitMove(i); });
+            }
+            if (winning.has(i)) cell.classList.add('is-winning');
+            grid.appendChild(cell);
+        }
+        boardEl.appendChild(grid);
+
+        const forfeit = makeButton('Forfeit', 'btn-secondary', ctx.submitForfeit);
+        forfeit.classList.add('pvp-board-forfeit');
+        boardEl.appendChild(forfeit);
+    }
+
+    function renderConnect4Board(boardEl, view, ctx) {
+        boardEl.innerHTML = '';
+        const header = document.createElement('p');
+        header.className = 'pvp-board-header';
+        const oppName = view.participants && view.participants.opponent && view.participants.opponent.name;
+        header.textContent = 'vs ' + (oppName || 'opponent') +
+            ' — stake ' + ((view.participants && view.participants.stake) || 0) + ' credits' +
+            (view.myTurn ? ' — your turn (pick a column)' : ' — waiting for opponent');
+        boardEl.appendChild(header);
+
+        // Column-drop buttons across the top. Disabled when not myTurn or
+        // when the column is full (top cell of column is non-null).
+        const cells = view.cells || new Array(42).fill(null);
+        const dropRow = document.createElement('div');
+        dropRow.className = 'pvp-c4-drop-row';
+        for (let col = 0; col < 7; col++) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'pvp-c4-drop';
+            btn.textContent = '↓';
+            btn.dataset.col = String(col);
+            const colFull = cells[col] !== null && cells[col] !== undefined; // top row of column = index col
+            if (!view.myTurn || colFull) btn.disabled = true;
+            else btn.addEventListener('click', function () { ctx.submitMove(col); });
+            dropRow.appendChild(btn);
+        }
+        boardEl.appendChild(dropRow);
+
+        const grid = document.createElement('div');
+        grid.className = 'pvp-c4-grid';
+        const winning = new Set(view.winningLine || []);
+        for (let i = 0; i < 42; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'pvp-c4-cell';
+            const mark = cells[i];
+            if (mark) cell.classList.add('is-' + mark.toLowerCase());
+            if (winning.has(i)) cell.classList.add('is-winning');
+            grid.appendChild(cell);
+        }
+        boardEl.appendChild(grid);
+
+        const forfeit = makeButton('Forfeit', 'btn-secondary', ctx.submitForfeit);
+        forfeit.classList.add('pvp-board-forfeit');
+        boardEl.appendChild(forfeit);
+    }
+
+    function makeButton(label, cls, onClick) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = cls;
+        b.textContent = label;
+        b.addEventListener('click', onClick);
+        return b;
+    }
+    function safeJson(r) { return r.ok ? r.json() : null; }
+    function postJson(url, body) {
+        return window.TobyApi
+            ? window.TobyApi.postJson(url, body).catch(function () { return null; })
+            : fetch(url, {
+                method: 'POST', credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
     }
 })(typeof window !== 'undefined' ? window : null);
