@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Regroup 77 files into themed sub-packages",
+    "summary": "Ninth wave of the refactor pass — and PR 2 of 4 in the packaging-only re-organisation series (continuing from #586). The flat `database/persistence/` (38) + `persistence/impl/` (38 + 1 helper) directory had the same **77-file-bucket** discoverability problem the service side did — casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild entity persistence types all sat alongside each other. Mirrors the service-side regroup landed in #586. Theme buc…",
+    "emoji": "🎰",
+    "prNumber": 587
+  },
+  {
+    "date": "May 2026",
     "title": "Regroup 88 files into themed sub-packages",
     "summary": "Eighth wave of the refactor pass — and the first of four planned packaging-only PRs to improve navigation ease. The flat `database/service/` (62) + `service/impl/` (26) directory had grown into an **88-file bucket** where casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild-config services all sat alongside each other. Opening it in the IDE meant scrolling through 88 names to find one service. Regroup into themed sub-packages. Each theme mirror…",
     "emoji": "🎰",
