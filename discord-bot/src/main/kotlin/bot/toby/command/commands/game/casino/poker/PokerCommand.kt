@@ -33,7 +33,7 @@ import bot.toby.command.commands.game.casino.poker.PokerEmbeds
  * by [PokerService], which keeps tables in [PokerTableRegistry] (shared
  * with the web layer) and routes 5 % of every settled pot into the
  * existing per-guild jackpot pool. Per-turn betting is handled by
- * [bot.toby.button.buttons.PokerActionButton] under the hand-state
+ * [bot.toby.button.buttons.casino.poker.PokerActionButton] under the hand-state
  * embed posted by `/poker start` (and re-posted on each street).
  */
 @Component

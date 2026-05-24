@@ -23,7 +23,7 @@ import bot.toby.command.commands.game.pvp.tictactoe.TicTacToeEmbeds
  * Initiator plays ❌ (moves first); opponent plays ⭕.
  *
  * Accept/decline + per-cell place + forfeit clicks are handled by
- * [bot.toby.button.buttons.TicTacToeButton], which routes through
+ * [bot.toby.button.buttons.pvp.tictactoe.TicTacToeButton], which routes through
  * [TicTacToeSessionRegistry] (in-memory board + turn state) and
  * [TicTacToeService] (wager arithmetic).
  *

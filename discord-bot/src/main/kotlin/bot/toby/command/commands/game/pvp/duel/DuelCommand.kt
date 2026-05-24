@@ -24,7 +24,7 @@ import bot.toby.command.commands.game.pvp.GameCommand
  * winner takes the pot minus the per-guild jackpot tribute.
  *
  * The opponent's accept/decline click is handled by
- * [bot.toby.button.buttons.DuelButton], which atomically consumes the
+ * [bot.toby.button.buttons.pvp.duel.DuelButton], which atomically consumes the
  * pending offer from [PendingDuelRegistry] and resolves through
  * [DuelService.acceptDuel].
  */

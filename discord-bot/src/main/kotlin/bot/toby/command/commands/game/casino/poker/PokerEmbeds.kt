@@ -16,7 +16,7 @@ import java.time.format.DateTimeFormatter
  *
  * Component IDs encode the action and table id:
  *   `poker:CHECK_CALL:<tableId>`
- * The `bot.toby.button.buttons.PokerActionButton` handler parses this
+ * The `bot.toby.button.buttons.casino.poker.PokerActionButton` handler parses this
  * back out and routes to [PokerService.applyAction]. The "peek" button
  * has no game effect — it just sends the clicker an ephemeral list of
  * their hole cards.

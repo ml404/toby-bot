@@ -24,7 +24,7 @@ import bot.toby.command.commands.game.WagerCommandEmbeds
  * [Baccarat.play] and the round resolves in-place. Mirrors `/highlow`'s
  * post-then-button shape.
  *
- * The button click is handled by [bot.toby.button.buttons.BaccaratButton],
+ * The button click is handled by [bot.toby.button.buttons.casino.baccarat.BaccaratButton],
  * which decodes the side + stake + owning user from the component ID
  * and resolves via [BaccaratService.play].
  */
