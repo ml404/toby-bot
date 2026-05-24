@@ -7,6 +7,9 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import database.service.casino.CasinoAdminService
+import database.service.economy.JackpotService
+import database.service.user.UserService
 
 class CasinoAdminServiceTest {
 

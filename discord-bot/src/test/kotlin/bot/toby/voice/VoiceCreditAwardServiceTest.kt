@@ -1,9 +1,9 @@
 package bot.toby.voice
 
 import database.dto.VoiceSessionDto
-import database.service.SocialCreditAwardService
-import database.service.VoiceSessionService
-import database.service.XpAwardService
+import database.service.social.SocialCreditAwardService
+import database.service.activity.VoiceSessionService
+import database.service.leveling.XpAwardService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

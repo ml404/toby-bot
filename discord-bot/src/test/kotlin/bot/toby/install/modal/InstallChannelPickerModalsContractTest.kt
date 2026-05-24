@@ -1,6 +1,6 @@
 package bot.toby.install.modal
 
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.mockk
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu

@@ -2,8 +2,8 @@ package web.service
 
 import database.dto.TipDailyDto
 import database.dto.UserDto
-import database.service.TipDailyService
-import database.service.UserService
+import database.service.social.TipDailyService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

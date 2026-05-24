@@ -4,7 +4,7 @@ import bot.toby.command.commands.misc.TeamCommand
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.service.TeamSplitSessionService
+import database.service.guild.TeamSplitSessionService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.UUID

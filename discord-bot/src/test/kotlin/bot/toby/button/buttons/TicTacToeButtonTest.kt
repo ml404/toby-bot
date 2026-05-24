@@ -9,8 +9,8 @@ import bot.toby.command.commands.game.TicTacToeEmbeds
 import common.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.UserDto
-import database.service.PvpWagerService
-import database.service.TicTacToeService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
 import io.mockk.Runs
 import io.mockk.every

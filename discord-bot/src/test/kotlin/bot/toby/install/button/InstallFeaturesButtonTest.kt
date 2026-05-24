@@ -1,6 +1,6 @@
 package bot.toby.install.button
 
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.mockk
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent

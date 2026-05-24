@@ -9,7 +9,7 @@ import common.blackjack.Blackjack
 import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.dto.UserDto
-import database.service.BlackjackService
+import database.service.casino.blackjack.BlackjackService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

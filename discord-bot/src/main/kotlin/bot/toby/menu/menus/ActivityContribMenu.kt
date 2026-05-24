@@ -4,8 +4,8 @@ import bot.toby.helpers.MenuHelper.ACTIVITY_CONTRIB
 import core.command.Command.Companion.deleteAfter
 import core.menu.Menu
 import core.menu.MenuContext
-import database.service.ActivityMonthlyRollupService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.user.UserService
 import net.dv8tion.jda.api.EmbedBuilder
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component

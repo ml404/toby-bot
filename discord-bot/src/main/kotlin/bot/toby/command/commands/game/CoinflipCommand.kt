@@ -3,8 +3,8 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.Coinflip
-import database.service.CoinflipService
-import database.service.CoinflipService.FlipOutcome
+import database.service.casino.coinflip.CoinflipService
+import database.service.casino.coinflip.CoinflipService.FlipOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

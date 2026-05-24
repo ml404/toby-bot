@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
+import database.service.activity.impl.DefaultActivityMonthlyRollupService
 
 class DefaultActivityMonthlyRollupServiceTest {
 

@@ -22,6 +22,10 @@ import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.Executors
 import kotlin.random.Random
+import database.service.casino.casinoholdem.CasinoHoldemService
+import database.service.guild.ConfigService
+import database.service.economy.JackpotService
+import database.service.user.UserService
 
 class CasinoHoldemServiceTest {
 

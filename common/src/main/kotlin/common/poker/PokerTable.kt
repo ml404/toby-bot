@@ -36,7 +36,7 @@ class PokerTable(
     val shotClockSeconds: Int = 0,
     /**
      * v2-7: free-play flag snapshotted at create time. When `true`,
-     * [database.service.PokerService] skips every wallet write
+     * [database.service.casino.poker.PokerService] skips every wallet write
      * (buy-in / rebuy debit, cash-out / sweep / evict credit) and
      * skips the jackpot route + `poker_hand_log` persistence on hand
      * resolution. The engine itself stays oblivious — it only cares
@@ -64,7 +64,7 @@ class PokerTable(
      * hand is in progress, the clock is disabled, or the deadline
      * has not yet been armed for this actor. The registry's
      * scheduled future does the actual auto-fold; this field exists
-     * so the [database.service.PokerService] / web projection can
+     * so the [database.service.casino.poker.PokerService] / web projection can
      * render a countdown without touching scheduler internals.
      */
     var currentActorDeadline: Instant? = null
@@ -84,7 +84,7 @@ class PokerTable(
         /**
          * v2 (PR #v2-3): set when a seated player asks to leave during
          * a hand. Honoured by [PokerEngine] (the seat is excluded from
-         * the next hand's start) and by [database.service.PokerService]
+         * the next hand's start) and by [database.service.casino.poker.PokerService]
          * (the seat is folded on its turn during the in-flight hand,
          * then cashed out as soon as the hand resolves). Stays `false`
          * for buy-in / between-hand cash-outs — those go through the

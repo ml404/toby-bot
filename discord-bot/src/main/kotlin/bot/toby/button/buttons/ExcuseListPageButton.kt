@@ -4,7 +4,7 @@ import bot.toby.command.commands.misc.ExcuseCommand
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.service.ExcuseService
+import database.service.social.ExcuseService
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button as JdaButton
 import org.springframework.beans.factory.annotation.Autowired

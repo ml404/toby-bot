@@ -9,8 +9,8 @@ import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
 import database.dto.TitleDto
-import database.service.LevelRoleRewardService
-import database.service.TitleService
+import database.service.leveling.LevelRoleRewardService
+import database.service.guild.TitleService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild

@@ -4,11 +4,11 @@ import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.dto.TobyCoinMarketDto
 import database.dto.UserPriceTriggerDto
-import database.service.EconomyTradeService
-import database.service.TobyCoinMarketService
-import database.service.UserNotificationPrefService
-import database.service.UserPriceTriggerService
-import database.service.UserService
+import database.service.economy.EconomyTradeService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserNotificationPrefService
+import database.service.economy.UserPriceTriggerService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

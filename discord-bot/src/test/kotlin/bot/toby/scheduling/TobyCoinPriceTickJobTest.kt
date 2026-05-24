@@ -3,9 +3,9 @@ package bot.toby.scheduling
 import bot.toby.notify.NotificationRouter
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
-import database.service.EconomyTradeService
-import database.service.TobyCoinMarketService
-import database.service.UserPriceTriggerService
+import database.service.economy.EconomyTradeService
+import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserPriceTriggerService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

@@ -4,8 +4,8 @@ import bot.toby.command.commands.economy.TipEmbeds
 import bot.toby.helpers.UserDtoHelper
 import core.modal.Modal
 import core.modal.ModalContext
-import database.service.TipService
-import database.service.TipService.TipOutcome
+import database.service.social.TipService
+import database.service.social.TipService.TipOutcome
 import org.springframework.stereotype.Component
 
 /**

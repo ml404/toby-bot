@@ -8,9 +8,9 @@ import bot.toby.economy.TobyCoinChartRenderer
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
 import common.economy.TobyCoinEngine
-import database.service.EconomyTradeService
-import database.service.EconomyTradeService.TradeOutcome
-import database.service.TobyCoinMarketService
+import database.service.economy.EconomyTradeService
+import database.service.economy.EconomyTradeService.TradeOutcome
+import database.service.economy.TobyCoinMarketService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

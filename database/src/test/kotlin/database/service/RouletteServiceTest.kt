@@ -10,6 +10,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
+import database.service.guild.ConfigService
+import database.service.economy.EconomyTradeService
+import database.service.economy.JackpotService
+import database.service.casino.roulette.RouletteService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 
 /**
  * Focused coverage of [RouletteService]'s achievement-event publication.

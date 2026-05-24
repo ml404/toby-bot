@@ -1,8 +1,8 @@
 package bot.toby.modal.modals
 
 import core.modal.ModalContext
-import database.service.JackpotLotteryService
-import database.service.JackpotLotteryService.BuyOutcome
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.JackpotLotteryService.BuyOutcome
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

@@ -2,14 +2,14 @@ package web.controller
 
 import common.poker.PokerEngine
 import common.poker.PokerTable
-import database.service.JackpotService
-import database.service.PokerService
-import database.service.PokerService.ActionOutcome
-import database.service.PokerService.BuyInOutcome
-import database.service.PokerService.CashOutOutcome
-import database.service.PokerService.CreateOutcome
-import database.service.PokerService.StartHandOutcome
-import database.service.UserService
+import database.service.economy.JackpotService
+import database.service.casino.poker.PokerService
+import database.service.casino.poker.PokerService.ActionOutcome
+import database.service.casino.poker.PokerService.BuyInOutcome
+import database.service.casino.poker.PokerService.CashOutOutcome
+import database.service.casino.poker.PokerService.CreateOutcome
+import database.service.casino.poker.PokerService.StartHandOutcome
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

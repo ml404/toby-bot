@@ -5,8 +5,8 @@ import bot.toby.welcome.WelcomeMessageRenderer
 import common.discord.AutoRoleValidator
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations
-import database.service.AutoRoleService
-import database.service.ConfigService
+import database.service.guild.AutoRoleService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild

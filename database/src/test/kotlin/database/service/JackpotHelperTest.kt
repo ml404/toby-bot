@@ -9,6 +9,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
+import database.service.guild.ConfigService
+import database.service.economy.JackpotHelper
+import database.service.economy.JackpotService
+import database.service.user.UserService
+import database.service.economy.JackpotGame
 
 class JackpotHelperTest {
 

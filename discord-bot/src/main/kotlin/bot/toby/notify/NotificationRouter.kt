@@ -6,8 +6,8 @@ import common.notification.NotificationChannelKind
 import common.notification.PushAdapter
 import common.notification.PushPayload
 import common.notification.Surface
-import database.service.ConfigService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.user.UserNotificationPrefService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild

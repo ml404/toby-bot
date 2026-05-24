@@ -4,7 +4,7 @@ import bot.coroutines.MainCoroutineExtension
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper.Companion.MAX_FILE_SIZE_KB
 import database.dto.MusicDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -40,7 +40,7 @@ class IntroHelperTest {
 
     private lateinit var introHelper: IntroHelper
     private lateinit var userDtoHelper: UserDtoHelper
-    private lateinit var musicFileService: database.service.MusicFileService
+    private lateinit var musicFileService: database.service.music.MusicFileService
     private lateinit var configService: ConfigService
     private lateinit var httpHelper: HttpHelper
     private lateinit var eventWaiter: EventWaiter

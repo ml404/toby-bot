@@ -2,8 +2,8 @@ package web.service
 
 import database.dto.MusicDto
 import database.dto.UserDto
-import database.service.MusicFileService
-import database.service.UserService
+import database.service.music.MusicFileService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

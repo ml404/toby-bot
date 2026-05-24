@@ -3,8 +3,8 @@ package bot.toby.menu.menus
 import bot.toby.menu.DefaultMenuContext
 import database.dto.ActivityMonthlyRollupDto
 import database.dto.UserDto
-import database.service.ActivityMonthlyRollupService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

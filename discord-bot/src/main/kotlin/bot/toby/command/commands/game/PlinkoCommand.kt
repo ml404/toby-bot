@@ -3,8 +3,8 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.Plinko
-import database.service.PlinkoService
-import database.service.PlinkoService.DropOutcome
+import database.service.casino.plinko.PlinkoService
+import database.service.casino.plinko.PlinkoService.DropOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

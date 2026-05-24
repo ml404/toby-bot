@@ -1,8 +1,8 @@
 package web.service
 
-import database.service.AchievementService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA

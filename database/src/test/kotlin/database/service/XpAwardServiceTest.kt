@@ -16,6 +16,10 @@ import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import database.service.guild.ConfigService
+import database.service.user.UserService
+import database.service.leveling.XpAwardService
+import database.service.leveling.XpDailyService
 
 class XpAwardServiceTest {
 

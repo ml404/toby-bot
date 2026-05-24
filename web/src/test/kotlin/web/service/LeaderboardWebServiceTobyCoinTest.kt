@@ -4,10 +4,10 @@ import database.dto.MonthlyCreditSnapshotDto
 import database.dto.TitleDto
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
-import database.service.MonthlyCreditSnapshotService
-import database.service.TitleService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.MonthlyCreditSnapshotService
+import database.service.guild.TitleService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

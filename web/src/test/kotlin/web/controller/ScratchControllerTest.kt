@@ -1,8 +1,8 @@
 package web.controller
 
 import common.economy.SlotMachine
-import database.service.ScratchService
-import database.service.ScratchService.ScratchOutcome
+import database.service.casino.scratch.ScratchService
+import database.service.casino.scratch.ScratchService.ScratchOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

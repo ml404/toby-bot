@@ -4,8 +4,8 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.Command
 import database.dto.ConfigDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

@@ -8,9 +8,9 @@ import common.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import common.blackjack.canSplit
 import database.dto.UserDto
-import database.service.BlackjackService
-import database.service.BlackjackService.MultiActionOutcome
-import database.service.BlackjackService.SoloActionOutcome
+import database.service.casino.blackjack.BlackjackService
+import database.service.casino.blackjack.BlackjackService.MultiActionOutcome
+import database.service.casino.blackjack.BlackjackService.SoloActionOutcome
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button as JdaButton
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component
  * "not your hand" reply.
  *
  * Multi: turn discipline is enforced inside
- * [database.service.BlackjackService.applyMultiAction], and rejections
+ * [database.service.casino.blackjack.BlackjackService.applyMultiAction], and rejections
  * (NotYourTurn, IllegalAction, etc.) come back as ephemeral messages so
  * the shared embed isn't disrupted for everyone else.
  */

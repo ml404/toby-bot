@@ -6,8 +6,8 @@ import core.button.ButtonContext
 import database.dto.UserDto
 import common.poker.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
-import database.service.CasinoHoldemService
-import database.service.CasinoHoldemService.ActionOutcome
+import database.service.casino.casinoholdem.CasinoHoldemService
+import database.service.casino.casinoholdem.CasinoHoldemService.ActionOutcome
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired

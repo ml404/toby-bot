@@ -6,10 +6,10 @@ import common.notification.NotificationChannelKind
 import database.dto.TobyCoinMarketDto
 import database.dto.TobyCoinPricePointDto
 import database.dto.UserPriceTriggerDto
-import database.service.EconomyTradeService
-import database.service.EconomyTradeService.TradeOutcome
-import database.service.TobyCoinMarketService
-import database.service.UserPriceTriggerService
+import database.service.economy.EconomyTradeService
+import database.service.economy.EconomyTradeService.TradeOutcome
+import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserPriceTriggerService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

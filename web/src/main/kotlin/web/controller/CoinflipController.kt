@@ -2,9 +2,9 @@ package web.controller
 
 import common.casino.CasinoCommonFailure
 import common.economy.Coinflip
-import database.service.CoinflipService
-import database.service.CoinflipService.FlipOutcome
-import database.service.JackpotGame
+import database.service.casino.coinflip.CoinflipService
+import database.service.casino.coinflip.CoinflipService.FlipOutcome
+import database.service.economy.JackpotGame
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

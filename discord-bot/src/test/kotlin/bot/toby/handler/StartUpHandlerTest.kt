@@ -1,8 +1,8 @@
 import bot.toby.handler.StartUpHandler
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.DefaultCommandManager
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA

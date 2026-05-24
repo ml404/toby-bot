@@ -10,8 +10,8 @@ import database.dto.UserDto
 import common.poker.PokerEngine
 import common.poker.PokerTable
 import database.poker.PokerTableRegistry
-import database.service.PokerService
-import database.service.PokerService.ActionOutcome
+import database.service.casino.poker.PokerService
+import database.service.casino.poker.PokerService.ActionOutcome
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

@@ -27,7 +27,7 @@ import bot.toby.modal.modals.setconfig.SetConfigStakesModal
 import core.menu.MenuContext
 import database.dto.ConfigDto
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

@@ -3,11 +3,11 @@ package web.service
 import database.dto.AchievementDto
 import database.dto.LoginStreakDto
 import database.dto.UserDto
-import database.service.AchievementService
-import database.service.AchievementService.AchievementView
-import database.service.LoginStreakService
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.AchievementService
+import database.service.guild.AchievementService.AchievementView
+import database.service.social.LoginStreakService
+import database.service.guild.TitleService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA

@@ -5,8 +5,8 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.DuelService
-import database.service.DuelService.StartOutcome
+import database.service.pvp.duel.DuelService
+import database.service.pvp.duel.DuelService.StartOutcome
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button

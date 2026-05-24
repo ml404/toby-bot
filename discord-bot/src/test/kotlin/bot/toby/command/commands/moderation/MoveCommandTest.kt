@@ -9,7 +9,7 @@ import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.DefaultCommandContext
 import bot.toby.command.DefaultPermissionValidator
 import database.dto.ConfigDto
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.*
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.GuildVoiceState

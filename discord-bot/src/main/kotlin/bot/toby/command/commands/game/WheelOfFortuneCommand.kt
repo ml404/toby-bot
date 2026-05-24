@@ -3,8 +3,8 @@ package bot.toby.command.commands.game
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.WheelOfFortune
-import database.service.WheelOfFortuneService
-import database.service.WheelOfFortuneService.SpinOutcome
+import database.service.casino.wheeloffortune.WheelOfFortuneService
+import database.service.casino.wheeloffortune.WheelOfFortuneService.SpinOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData

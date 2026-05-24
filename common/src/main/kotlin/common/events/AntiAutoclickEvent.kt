@@ -4,8 +4,8 @@ package common.events
  * Lifecycle of a per-user, per-game anti-autoclicker suspicion session.
  *
  * Published via Spring's `ApplicationEventPublisher` from
- * `database.service.CasinoBotSuspicionService` (open/close — streak transitions)
- * and `database.service.CasinoEdgeService` (fire — forced-loss substitution).
+ * `database.service.casino.CasinoBotSuspicionService` (open/close — streak transitions)
+ * and `database.service.casino.CasinoEdgeService` (fire — forced-loss substitution).
  *
  * The discord-bot module owns one listener (`AntiAutoclickNotifier`) that posts
  * a single embed when a session opens, edits it in place on every fire (with

@@ -1,9 +1,9 @@
 package web.casino
 
-import database.service.JackpotGame
-import database.service.JackpotService
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.JackpotGame
+import database.service.economy.JackpotService
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.springframework.security.oauth2.core.user.OAuth2User

@@ -1,7 +1,7 @@
 package bot.toby.install
 
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 
 /**
  * Records the install sentinel (`INSTALL_MODE` + `INSTALLED_AT`) the

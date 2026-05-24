@@ -6,8 +6,8 @@ import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
-import database.service.TeamPresetService
-import database.service.TeamSplitSessionService
+import database.service.guild.TeamPresetService
+import database.service.guild.TeamSplitSessionService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

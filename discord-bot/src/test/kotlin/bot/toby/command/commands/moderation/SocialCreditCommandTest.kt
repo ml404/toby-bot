@@ -8,9 +8,9 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
 import bot.toby.command.CommandTest.Companion.user
 import bot.toby.command.DefaultCommandContext
-import database.service.TitleService
-import database.service.UserService
-import database.service.VoiceSessionService
+import database.service.guild.TitleService
+import database.service.user.UserService
+import database.service.activity.VoiceSessionService
 import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.mockk

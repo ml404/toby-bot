@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
+import database.service.pvp.PvpWagerService
+import database.service.pvp.rps.RpsService
 
 /**
  * Behavioural tests for the RPS-specific branching in [RpsService].

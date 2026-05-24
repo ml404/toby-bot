@@ -13,6 +13,7 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.concurrent.atomic.AtomicReference
+import database.service.casino.CasinoBotSuspicionService
 
 class CasinoBotSuspicionServiceTest {
 

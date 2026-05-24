@@ -11,9 +11,9 @@ import core.command.Command.Companion.replyEphemeralAndDelete
 import database.dto.ConfigDto
 import database.dto.MusicDto
 import database.dto.MusicDto.Companion.computeHash
-import database.service.ConfigService
-import database.service.MusicFileService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.music.MusicFileService
+import database.service.user.UserNotificationPrefService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

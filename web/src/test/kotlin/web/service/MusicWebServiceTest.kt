@@ -6,8 +6,8 @@ import core.music.MusicControlGateway.LoadResult
 import core.music.MusicControlGateway.TrackInfo
 import database.dto.MusicPlaylistDto
 import database.dto.MusicPlaylistItemDto
-import database.service.MusicPlaylistService
-import database.service.MusicPlaylistService.PlaylistItemInput
+import database.service.music.MusicPlaylistService
+import database.service.music.MusicPlaylistService.PlaylistItemInput
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -33,7 +33,7 @@ class MusicWebServiceTest {
     private lateinit var jda: JDA
     private lateinit var introWebService: IntroWebService
     private lateinit var membership: GuildMembership
-    private lateinit var userService: database.service.UserService
+    private lateinit var userService: database.service.user.UserService
     private lateinit var service: MusicWebService
 
     @BeforeEach

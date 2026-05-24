@@ -9,8 +9,8 @@ import common.notification.NotificationChannelKind
 import common.notification.Surface
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import database.dto.MusicDto
-import database.service.MusicFileService
-import database.service.UserNotificationPrefService
+import database.service.music.MusicFileService
+import database.service.user.UserNotificationPrefService
 import bot.toby.helpers.UserDtoHelper
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope

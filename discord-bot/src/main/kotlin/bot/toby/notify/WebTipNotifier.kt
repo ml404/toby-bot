@@ -4,7 +4,7 @@ import bot.toby.command.commands.economy.TipEmbeds
 import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.service.TipService.TipOutcome
+import database.service.social.TipService.TipOutcome
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.event.EventListener

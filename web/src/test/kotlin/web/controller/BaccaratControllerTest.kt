@@ -4,8 +4,8 @@ import common.card.Card
 import common.card.Rank
 import common.card.Suit
 import common.economy.Baccarat
-import database.service.BaccaratService
-import database.service.BaccaratService.PlayOutcome
+import database.service.casino.baccarat.BaccaratService
+import database.service.casino.baccarat.BaccaratService.PlayOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

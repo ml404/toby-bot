@@ -1,10 +1,10 @@
 package web.controller
 
 import database.dto.ConfigDto
-import database.service.BrotherService
-import database.service.ConfigService
-import database.service.MusicFileService
-import database.service.UserService
+import database.service.social.BrotherService
+import database.service.guild.ConfigService
+import database.service.music.MusicFileService
+import database.service.user.UserService
 import org.springframework.http.CacheControl
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType

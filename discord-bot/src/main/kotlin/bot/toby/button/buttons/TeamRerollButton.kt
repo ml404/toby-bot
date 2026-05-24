@@ -5,8 +5,8 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.TeamSplitSessionDto
 import database.dto.UserDto
-import database.service.TeamSplitSessionService
-import database.service.decodeTeamNames
+import database.service.guild.TeamSplitSessionService
+import database.service.guild.decodeTeamNames
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import java.util.UUID

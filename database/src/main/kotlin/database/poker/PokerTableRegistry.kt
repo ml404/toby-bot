@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicLong
  *
  * Tables are flushed by an idle sweeper after [idleTtl] of no activity:
  * any seated chips are returned to the player's wallet via the supplied
- * [onIdleEvict] callback (wired by [database.service.PokerService] at
+ * [onIdleEvict] callback (wired by [database.service.casino.poker.PokerService] at
  * startup so the registry stays Spring-only).
  *
  * Mid-flight tables vanish on bot restart. Each player's chips have
@@ -60,7 +60,7 @@ class PokerTableRegistry(
 
     /**
      * Register a per-table cleanup callback invoked when an idle table
-     * is evicted. Wired once at startup by [database.service.PokerService]
+     * is evicted. Wired once at startup by [database.service.casino.poker.PokerService]
      * so the registry can stay free of Spring-managed dependencies.
      */
     fun setOnIdleEvict(callback: (PokerTable) -> Unit) {
@@ -69,7 +69,7 @@ class PokerTableRegistry(
 
     /**
      * Register a callback invoked when a table's shot clock expires
-     * before the actor has acted. [database.service.PokerService] wires
+     * before the actor has acted. [database.service.casino.poker.PokerService] wires
      * this to its auto-fold path so the registry stays free of
      * Spring-managed dependencies.
      */
@@ -118,7 +118,7 @@ class PokerTableRegistry(
      * arm a fresh one for the table's current actor. No-op when the
      * table's [PokerTable.shotClockSeconds] is `0` (clock disabled).
      *
-     * Called by [database.service.PokerService.applyAction] /
+     * Called by [database.service.casino.poker.PokerService.applyAction] /
      * [startHand] / [advanceStreet] every time the actor changes,
      * keyed off `(tableId, handNumber, actorIndex)` so a stale fire
      * (one whose actor has already acted) is harmless.

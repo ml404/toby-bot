@@ -4,9 +4,9 @@ import bot.toby.notify.NotificationRouter
 import common.notification.PushAdapter
 import common.notification.NotificationChannelKind
 import database.dto.LoginStreakDto
-import database.service.ConfigService
-import database.service.LoginStreakService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.social.LoginStreakService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk

@@ -3,10 +3,10 @@ package bot.toby.scheduling
 import database.dto.ConfigDto
 import database.dto.UbiDailyDto
 import database.dto.UserDto
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
-import database.service.UbiDailyService
-import database.service.UserService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.activity.UbiDailyService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

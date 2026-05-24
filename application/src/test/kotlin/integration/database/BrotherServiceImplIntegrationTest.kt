@@ -30,7 +30,7 @@ import org.springframework.test.context.ActiveProfiles
 @ActiveProfiles("test")
 class BrotherServiceImplIntegrationTest {
     @Autowired
-    lateinit var brotherService: database.service.BrotherService
+    lateinit var brotherService: database.service.social.BrotherService
 
     @BeforeEach
     fun setUp() {

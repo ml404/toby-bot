@@ -1,8 +1,8 @@
 package web.controller
 
-import database.service.TipService
-import database.service.TipService.TipOutcome
-import database.service.UserService
+import database.service.social.TipService
+import database.service.social.TipService.TipOutcome
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

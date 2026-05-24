@@ -7,9 +7,9 @@ import common.notification.ChannelRouteKey
 import common.notification.PushPayload
 import database.dto.ConfigDto
 import database.dto.JackpotLotteryDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -180,8 +180,8 @@ class LotteryAnnouncerTest {
     fun `announceCycle passes LOTTERY_DRAW_WITH_MY_TICKET mentions with winner ids`() {
         val mentions = captureMentions()
         val payouts = listOf(
-            database.service.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
-            database.service.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
+            database.service.lottery.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+            database.service.lottery.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
         )
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
@@ -205,8 +205,8 @@ class LotteryAnnouncerTest {
         // CHANNEL + PUSH, but historically only the channel post fired.
         // Multi-recipient dispatch now also fans push out per-winner.
         val payouts = listOf(
-            database.service.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
-            database.service.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
+            database.service.lottery.JackpotLotteryService.WinnerPayout(discordId = 1L, ticketCount = 5, amount = 500L),
+            database.service.lottery.JackpotLotteryService.WinnerPayout(discordId = 2L, ticketCount = 3, amount = 300L),
         )
         val pushBuilders = mutableMapOf<Long, () -> PushPayload>()
         every {
@@ -241,9 +241,9 @@ class LotteryAnnouncerTest {
     @Test
     fun `MatchDrawn cycle pushes each tier winner with their tier share`() {
         val tierPayouts = listOf(
-            database.service.JackpotLotteryService.MatchTierPayout(discordId = 7L, matches = 5, share = 600L),
-            database.service.JackpotLotteryService.MatchTierPayout(discordId = 8L, matches = 4, share = 250L),
-            database.service.JackpotLotteryService.MatchTierPayout(discordId = 9L, matches = 3, share = 100L),
+            database.service.lottery.JackpotLotteryService.MatchTierPayout(discordId = 7L, matches = 5, share = 600L),
+            database.service.lottery.JackpotLotteryService.MatchTierPayout(discordId = 8L, matches = 4, share = 250L),
+            database.service.lottery.JackpotLotteryService.MatchTierPayout(discordId = 9L, matches = 3, share = 100L),
         )
         val pushBuilders = mutableMapOf<Long, () -> PushPayload>()
         every {
@@ -1200,10 +1200,10 @@ class LotteryAnnouncerTest {
         @Test
         fun `WeightedDrawn cycle publishes one event per winner with their payout amount`() {
             val payouts = listOf(
-                database.service.JackpotLotteryService.WinnerPayout(
+                database.service.lottery.JackpotLotteryService.WinnerPayout(
                     discordId = 1L, ticketCount = 5, amount = 500L,
                 ),
-                database.service.JackpotLotteryService.WinnerPayout(
+                database.service.lottery.JackpotLotteryService.WinnerPayout(
                     discordId = 2L, ticketCount = 3, amount = 300L,
                 ),
             )
@@ -1236,13 +1236,13 @@ class LotteryAnnouncerTest {
         @Test
         fun `MatchDrawn cycle publishes one event per tier winner with their share`() {
             val tierPayouts = listOf(
-                database.service.JackpotLotteryService.MatchTierPayout(
+                database.service.lottery.JackpotLotteryService.MatchTierPayout(
                     discordId = 7L, matches = 5, share = 600L,
                 ),
-                database.service.JackpotLotteryService.MatchTierPayout(
+                database.service.lottery.JackpotLotteryService.MatchTierPayout(
                     discordId = 8L, matches = 4, share = 250L,
                 ),
-                database.service.JackpotLotteryService.MatchTierPayout(
+                database.service.lottery.JackpotLotteryService.MatchTierPayout(
                     discordId = 9L, matches = 3, share = 100L,
                 ),
             )
@@ -1320,7 +1320,7 @@ class LotteryAnnouncerTest {
             // rather than crash. Today the two are aligned — this pins
             // the safe fallback semantics.
             val payouts = listOf(
-                database.service.JackpotLotteryService.WinnerPayout(
+                database.service.lottery.JackpotLotteryService.WinnerPayout(
                     discordId = 1L, ticketCount = 5, amount = 500L,
                 ),
             )

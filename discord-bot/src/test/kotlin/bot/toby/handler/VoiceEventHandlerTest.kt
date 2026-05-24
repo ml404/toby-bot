@@ -7,9 +7,9 @@ import bot.toby.voice.LastConnectedChannelTracker
 import bot.toby.voice.VoiceSessionLifecycle
 import database.dto.ConfigDto
 import database.dto.MusicDto
-import database.service.ConfigService
-import database.service.SocialCreditAwardService
-import database.service.XpAwardService
+import database.service.guild.ConfigService
+import database.service.social.SocialCreditAwardService
+import database.service.leveling.XpAwardService
 import io.mockk.*
 import io.mockk.junit5.MockKExtension
 import net.dv8tion.jda.api.JDA

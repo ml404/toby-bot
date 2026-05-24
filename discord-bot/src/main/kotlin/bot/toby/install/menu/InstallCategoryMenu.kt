@@ -29,7 +29,7 @@ import bot.toby.modal.modals.setconfig.SetConfigStakesModal
 import common.logging.DiscordLogger
 import core.menu.Menu
 import core.menu.MenuContext
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.modals.Modal

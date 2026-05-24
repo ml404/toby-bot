@@ -8,10 +8,10 @@ import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.UserDto
 import common.economy.TobyCoinEngine
-import database.service.EconomyTradeService
-import database.service.EconomyTradeService.TradeOutcome
-import database.service.TobyCoinMarketService
-import database.service.UserService
+import database.service.economy.EconomyTradeService
+import database.service.economy.EconomyTradeService.TradeOutcome
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue

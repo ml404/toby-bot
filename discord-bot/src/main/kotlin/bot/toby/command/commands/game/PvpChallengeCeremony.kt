@@ -5,7 +5,7 @@ import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import database.pvp.PvpSessionRegistry
-import database.service.PvpWagerService
+import database.service.pvp.PvpWagerService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.MessageEmbed

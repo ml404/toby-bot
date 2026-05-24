@@ -19,6 +19,7 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import database.service.activity.MessageActivityBuffer
 
 /**
  * Tests for the in-memory message-counter buffer. The scheduled flush

@@ -4,7 +4,7 @@ import bot.toby.command.commands.game.HighlowEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
-import database.service.HighlowService
+import database.service.casino.highlow.HighlowService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component

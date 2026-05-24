@@ -1,6 +1,6 @@
 package web.casino
 
-import database.service.JackpotService
+import database.service.economy.JackpotService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Test

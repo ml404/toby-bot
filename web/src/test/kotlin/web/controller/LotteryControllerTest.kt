@@ -1,8 +1,8 @@
 package web.controller
 
 import database.dto.JackpotLotteryDto
-import database.service.JackpotLotteryService.BuyMatchOutcome
-import database.service.JackpotLotteryService.BuyOutcome
+import database.service.lottery.JackpotLotteryService.BuyMatchOutcome
+import database.service.lottery.JackpotLotteryService.BuyOutcome
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -228,7 +228,7 @@ class LotteryControllerTest {
                 bonusTicketsGranted = 0L,
                 totalBonusTickets = 0L,
                 milestoneBonuses = listOf(
-                    database.service.JackpotLotteryService.MilestoneBonus(threshold = 50L, creditsAdded = 100L),
+                    database.service.lottery.JackpotLotteryService.MilestoneBonus(threshold = 50L, creditsAdded = 100L),
                 ),
             )
 

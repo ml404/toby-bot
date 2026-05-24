@@ -2,7 +2,7 @@ package web.controller
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.service.UserNotificationPrefService
+import database.service.user.UserNotificationPrefService
 import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import org.springframework.security.core.annotation.AuthenticationPrincipal

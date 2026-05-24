@@ -8,7 +8,7 @@ import common.configuration.TestCachingConfig
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.configuration.TestDatabaseConfig
-import database.service.UserNotificationPrefService
+import database.service.user.UserNotificationPrefService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

@@ -2,7 +2,7 @@ package bot.toby.command.commands.game
 
 import common.card.Card
 import common.economy.Baccarat
-import database.service.BaccaratService.PlayOutcome
+import database.service.casino.baccarat.BaccaratService.PlayOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

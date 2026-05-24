@@ -2,7 +2,7 @@ package database.service.impl
 
 import database.dto.ConfigDto
 import database.persistence.ConfigPersistence
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.mockk
@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.transaction.annotation.Transactional
+import database.service.guild.impl.DefaultConfigService
 
 /**
  * Unit tests for [DefaultConfigService.upsertAll].

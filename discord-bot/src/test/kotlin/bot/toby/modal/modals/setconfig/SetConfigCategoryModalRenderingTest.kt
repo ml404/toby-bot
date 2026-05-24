@@ -1,7 +1,7 @@
 package bot.toby.modal.modals.setconfig
 
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu

@@ -5,8 +5,8 @@ import common.discord.AutoRoleValidator
 import core.command.CommandContext
 import database.dto.ConfigDto.Configurations
 import database.dto.UserDto
-import database.service.AutoRoleService
-import database.service.ConfigService
+import database.service.guild.AutoRoleService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent

@@ -8,9 +8,9 @@ import common.notification.ChannelRouteKey
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
 import database.dto.JackpotLotteryDto
-import database.service.ConfigService
-import database.service.JackpotLotteryService
-import database.service.LotteryHelper
+import database.service.guild.ConfigService
+import database.service.lottery.JackpotLotteryService
+import database.service.lottery.LotteryHelper
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.actionrow.ActionRow

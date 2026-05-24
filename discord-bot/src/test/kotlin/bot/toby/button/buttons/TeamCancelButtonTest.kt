@@ -2,7 +2,7 @@ package bot.toby.button.buttons
 
 import bot.toby.command.commands.misc.TeamCommand
 import core.button.ButtonContext
-import database.service.TeamSplitSessionService
+import database.service.guild.TeamSplitSessionService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

@@ -1,14 +1,14 @@
 package web.service
 
 import database.dto.UserDto
-import database.service.TipDailyService
-import database.service.UserService
+import database.service.social.TipDailyService
+import database.service.user.UserService
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 
 /**
  * Read-only helpers the [web.controller.TipController] needs that
- * don't belong on [database.service.TipService] proper:
+ * don't belong on [database.service.social.TipService] proper:
  *  - daily-tipped lookup for the page render (TipService.tip itself
  *    only returns post-tip state).
  *  - lazy-create of the recipient's [UserDto] row so a tip to a

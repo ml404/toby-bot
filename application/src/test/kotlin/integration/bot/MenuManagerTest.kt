@@ -14,7 +14,7 @@ import bot.toby.menu.menus.dnd.DndMenu
 import common.configuration.TestCachingConfig
 import core.menu.Menu
 import database.configuration.TestDatabaseConfig
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach

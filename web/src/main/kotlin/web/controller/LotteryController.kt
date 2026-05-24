@@ -1,9 +1,9 @@
 package web.controller
 
 import database.dto.JackpotLotteryDto
-import database.service.JackpotLotteryService.BuyMatchOutcome
-import database.service.JackpotLotteryService.BuyOutcome
-import database.service.LotteryHelper
+import database.service.lottery.JackpotLotteryService.BuyMatchOutcome
+import database.service.lottery.JackpotLotteryService.BuyOutcome
+import database.service.lottery.LotteryHelper
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -189,7 +189,7 @@ data class BuyWeightedResponse(
     /**
      * Pool-growth milestones that fired during this purchase. Each
      * entry is `{threshold, creditsAdded}` — same shape as the
-     * service's [database.service.JackpotLotteryService.MilestoneBonus].
+     * service's [database.service.lottery.JackpotLotteryService.MilestoneBonus].
      * Null when no milestones fired (the client doesn't need an empty
      * list to know there's nothing to render).
      */
@@ -199,7 +199,7 @@ data class BuyWeightedResponse(
 /**
  * View projection of a single pool-growth milestone that fired during
  * a weighted ticket buy. Mirrors
- * [database.service.JackpotLotteryService.MilestoneBonus] but lives in
+ * [database.service.lottery.JackpotLotteryService.MilestoneBonus] but lives in
  * the controller layer so the response shape doesn't leak the service
  * type into the JSON contract.
  */
@@ -373,7 +373,7 @@ data class LotteryViewModel(
                 weighted = weighted,
                 dailyEnabled = snap.dailyEnabled,
                 dailyMode = snap.dailyMode,
-                isDailyWeighted = snap.dailyMode == database.service.LotteryHelper.MODE_WEIGHTED,
+                isDailyWeighted = snap.dailyMode == database.service.lottery.LotteryHelper.MODE_WEIGHTED,
             )
         }
 

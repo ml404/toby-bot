@@ -6,8 +6,8 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
-import database.service.PvpWagerService
-import database.service.RpsService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.rps.RpsService
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent

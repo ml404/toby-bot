@@ -1,6 +1,6 @@
 package bot.toby.command.commands.economy
 
-import database.service.TipService.TipOutcome
+import database.service.social.TipService.TipOutcome
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color

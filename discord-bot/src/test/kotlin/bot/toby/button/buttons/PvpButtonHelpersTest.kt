@@ -2,7 +2,7 @@ package bot.toby.button.buttons
 
 import database.dto.UserDto
 import database.pvp.PvpSessionRegistry
-import database.service.PvpWagerService
+import database.service.pvp.PvpWagerService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

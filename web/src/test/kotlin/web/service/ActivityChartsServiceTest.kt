@@ -3,7 +3,7 @@ package web.service
 import database.dto.MessageDailyCountDto
 import database.dto.VoiceSessionDto
 import database.persistence.MessageDailyCountPersistence
-import database.service.VoiceSessionService
+import database.service.activity.VoiceSessionService
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

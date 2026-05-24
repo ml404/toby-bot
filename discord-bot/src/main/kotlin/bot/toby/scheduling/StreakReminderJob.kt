@@ -4,7 +4,7 @@ import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
-import database.service.LoginStreakService
+import database.service.social.LoginStreakService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder

@@ -10,9 +10,9 @@ import common.notification.Surface
 import database.dto.TobyCoinMarketDto
 import database.dto.UserDto
 import database.dto.UserPriceTriggerDto
-import database.service.EconomyTradeService
-import database.service.UserNotificationPrefService
-import database.service.UserPriceTriggerService
+import database.service.economy.EconomyTradeService
+import database.service.user.UserNotificationPrefService
+import database.service.economy.UserPriceTriggerService
 // Wildcard so the `anyVararg()` MockKMatcherScope extension resolves —
 // it's not exposed as a top-level import like `every` / `mockk`.
 import io.mockk.*

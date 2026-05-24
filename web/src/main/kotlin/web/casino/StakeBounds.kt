@@ -14,12 +14,12 @@ import common.economy.SlotMachine
 import common.economy.WheelOfFortune
 import common.blackjack.Blackjack
 import common.poker.CasinoHoldem
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import database.boardgame.TurnBasedBoardWagerService
-import database.service.DuelService
-import database.service.RpsService
-import database.service.cfgLong
-import database.service.cfgLongMax
+import database.service.pvp.duel.DuelService
+import database.service.pvp.rps.RpsService
+import database.service.guild.cfgLong
+import database.service.guild.cfgLongMax
 import org.springframework.stereotype.Component
 
 /**

@@ -1,5 +1,5 @@
 import database.dto.MusicDto
-import database.service.UserService
+import database.service.user.UserService
 import io.mockk.*
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertNull
@@ -11,7 +11,7 @@ import java.nio.file.Paths
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MusicFileServiceImplTest {
 
-    private lateinit var musicFileService: database.service.MusicFileService
+    private lateinit var musicFileService: database.service.music.MusicFileService
     private lateinit var userService: UserService
 
     private val validUserDto = database.dto.UserDto(1, 1)

@@ -6,6 +6,8 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import database.service.guild.ConfigService
+import database.service.lottery.LotteryHelper
 
 /**
  * Pure-helper coverage for the participation-incentive tiers added to

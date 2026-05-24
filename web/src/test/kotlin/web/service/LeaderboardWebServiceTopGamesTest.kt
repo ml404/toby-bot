@@ -2,8 +2,8 @@ package web.service
 
 import database.dto.ActivityMonthlyRollupDto
 import database.dto.UserDto
-import database.service.ActivityMonthlyRollupService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.JDA

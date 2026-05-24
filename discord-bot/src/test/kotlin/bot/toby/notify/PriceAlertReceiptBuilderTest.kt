@@ -1,7 +1,7 @@
 package bot.toby.notify
 
 import database.dto.UserPriceTriggerDto
-import database.service.EconomyTradeService.TradeOutcome
+import database.service.economy.EconomyTradeService.TradeOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull

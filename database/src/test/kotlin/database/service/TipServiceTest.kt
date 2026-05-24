@@ -16,6 +16,9 @@ import org.springframework.context.ApplicationEventPublisher
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
+import database.service.social.TipDailyService
+import database.service.social.TipService
+import database.service.user.UserService
 
 class TipServiceTest {
 

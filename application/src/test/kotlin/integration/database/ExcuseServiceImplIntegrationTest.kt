@@ -7,7 +7,7 @@ import bot.configuration.TestManagerConfig
 import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.ExcuseDto
-import database.service.ExcuseService
+import database.service.social.ExcuseService
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach

@@ -10,10 +10,10 @@ import common.notification.NotificationChannelKind
 import common.notification.PushPayload
 import database.dto.LevelRoleRewardDto
 import database.dto.TitleDto
-import database.service.ConfigService
-import database.service.LevelRoleRewardService
-import database.service.TitleService
-import database.service.UserNotificationPrefService
+import database.service.guild.ConfigService
+import database.service.leveling.LevelRoleRewardService
+import database.service.guild.TitleService
+import database.service.user.UserNotificationPrefService
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.just

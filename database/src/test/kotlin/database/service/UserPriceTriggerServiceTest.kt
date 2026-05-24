@@ -2,7 +2,7 @@ package database.service
 
 import database.dto.UserPriceTriggerDto
 import database.persistence.UserPriceTriggerPersistence
-import database.service.impl.DefaultUserPriceTriggerService
+import database.service.economy.impl.DefaultUserPriceTriggerService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

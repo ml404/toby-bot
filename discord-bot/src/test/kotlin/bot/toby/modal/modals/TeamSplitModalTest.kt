@@ -3,8 +3,8 @@ package bot.toby.modal.modals
 import core.modal.ModalContext
 import database.dto.TeamPresetDto
 import database.dto.TeamSplitSessionDto
-import database.service.TeamPresetService
-import database.service.TeamSplitSessionService
+import database.service.guild.TeamPresetService
+import database.service.guild.TeamSplitSessionService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

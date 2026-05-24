@@ -1,8 +1,8 @@
 package web.controller
 
 import common.economy.WheelOfFortune
-import database.service.WheelOfFortuneService
-import database.service.WheelOfFortuneService.SpinOutcome
+import database.service.casino.wheeloffortune.WheelOfFortuneService
+import database.service.casino.wheeloffortune.WheelOfFortuneService.SpinOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

@@ -4,7 +4,7 @@ import database.duel.PendingDuelRegistry
 import database.duel.RecentDuelResolutions
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
-import database.service.UserService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

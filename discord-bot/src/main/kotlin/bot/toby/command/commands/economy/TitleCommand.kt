@@ -6,9 +6,9 @@ import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
-import database.service.TitlePurchasePolicy
-import database.service.TitleService
-import database.service.UserService
+import database.service.guild.TitlePurchasePolicy
+import database.service.guild.TitleService
+import database.service.user.UserService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member

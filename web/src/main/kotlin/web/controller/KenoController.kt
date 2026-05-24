@@ -1,9 +1,9 @@
 package web.controller
 
 import common.economy.Keno
-import database.service.JackpotGame
-import database.service.KenoService
-import database.service.KenoService.PlayOutcome
+import database.service.economy.JackpotGame
+import database.service.casino.keno.KenoService
+import database.service.casino.keno.KenoService.PlayOutcome
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User

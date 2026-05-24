@@ -7,8 +7,8 @@ import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.UserDto
-import database.service.PvpWagerService
-import database.service.TicTacToeService
+import database.service.pvp.PvpWagerService
+import database.service.pvp.tictactoe.TicTacToeService
 import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed

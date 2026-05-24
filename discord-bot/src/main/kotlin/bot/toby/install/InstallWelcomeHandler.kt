@@ -2,7 +2,7 @@ package bot.toby.install
 
 import common.logging.DiscordLogger
 import database.dto.ConfigDto.Configurations
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member

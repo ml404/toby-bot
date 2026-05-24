@@ -14,7 +14,7 @@ import kotlin.random.Random
  * even and the call pushes.
  *
  * No Spring, no DB, no JDA — just card maths and the per-leg
- * multiplier schedule. The owning [database.service.CasinoHoldemService]
+ * multiplier schedule. The owning [database.service.casino.casinoholdem.CasinoHoldemService]
  * holds the actual table state under a monitor.
  *
  * v1 schedule (call multiplier returns include the bet — e.g. 2.0 for

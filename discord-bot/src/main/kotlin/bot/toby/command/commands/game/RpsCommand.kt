@@ -4,7 +4,7 @@ import bot.toby.helpers.UserDtoHelper
 import core.command.CommandContext
 import database.dto.UserDto
 import database.rps.RpsSessionRegistry
-import database.service.RpsService
+import database.service.pvp.rps.RpsService
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component
  * players ante on accept and the winner takes the pot minus the
  * per-guild jackpot tribute (same model as `/duel`). When `stake` is
  * omitted or 0, the match is pure-fun and the winner only earns a
- * small XP grant via [database.service.XpAwardService].
+ * small XP grant via [database.service.leveling.XpAwardService].
  *
  * The opponent's accept/decline + both players' pick clicks are
  * handled by [bot.toby.button.buttons.RpsButton], which routes through

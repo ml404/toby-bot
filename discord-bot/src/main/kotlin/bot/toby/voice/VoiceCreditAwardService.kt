@@ -2,9 +2,9 @@ package bot.toby.voice
 
 import common.logging.DiscordLogger
 import database.dto.VoiceSessionDto
-import database.service.SocialCreditAwardService
-import database.service.VoiceSessionService
-import database.service.XpAwardService
+import database.service.social.SocialCreditAwardService
+import database.service.activity.VoiceSessionService
+import database.service.leveling.XpAwardService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.Duration

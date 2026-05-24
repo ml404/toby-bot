@@ -5,8 +5,8 @@ import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.UserDtoHelper
 import common.notification.NotificationChannelKind
 import common.notification.Surface
-import database.service.MusicFileService
-import database.service.UserNotificationPrefService
+import database.service.music.MusicFileService
+import database.service.user.UserNotificationPrefService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

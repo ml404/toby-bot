@@ -4,7 +4,7 @@ import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.UserDto
 import common.economy.Baccarat
-import database.service.BaccaratService
+import database.service.casino.baccarat.BaccaratService
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent

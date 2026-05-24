@@ -3,8 +3,8 @@ package bot.toby.handler
 import bot.toby.emote.Emotes
 import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
-import database.service.MessageActivityBuffer
-import database.service.XpAwardService
+import database.service.activity.MessageActivityBuffer
+import database.service.leveling.XpAwardService
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.springframework.beans.factory.annotation.Autowired

@@ -1,8 +1,8 @@
 package web.controller
 
 import common.economy.Highlow
-import database.service.HighlowService
-import database.service.HighlowService.PlayOutcome
+import database.service.casino.highlow.HighlowService
+import database.service.casino.highlow.HighlowService.PlayOutcome
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

@@ -3,10 +3,10 @@ package bot.toby.activity
 import common.logging.DiscordLogger
 import database.dto.ActivitySessionDto
 import database.dto.ConfigDto.Configurations.ACTIVITY_TRACKING
-import database.service.ActivityMonthlyRollupService
-import database.service.ActivitySessionService
-import database.service.ConfigService
-import database.service.UserService
+import database.service.activity.ActivityMonthlyRollupService
+import database.service.activity.ActivitySessionService
+import database.service.guild.ConfigService
+import database.service.user.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import java.time.Duration

@@ -3,7 +3,7 @@ package bot.toby.install.modal
 import bot.toby.modal.modals.setconfig.SetConfigStakesModal
 import core.modal.Modal
 import core.modal.ModalContext
-import database.service.ConfigService
+import database.service.guild.ConfigService
 import net.dv8tion.jda.api.components.label.Label
 import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.components.textinput.TextInputStyle

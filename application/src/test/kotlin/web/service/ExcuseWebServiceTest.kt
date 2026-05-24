@@ -2,9 +2,9 @@ package web.service
 
 import database.dto.ExcuseDto
 import database.dto.UserDto
-import database.service.ExcuseService
-import database.service.PagedExcuses
-import database.service.UserService
+import database.service.social.ExcuseService
+import database.service.social.PagedExcuses
+import database.service.user.UserService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just

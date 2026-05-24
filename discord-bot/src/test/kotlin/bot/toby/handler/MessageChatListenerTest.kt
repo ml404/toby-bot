@@ -1,7 +1,7 @@
 package bot.toby.handler
 
 import bot.toby.emote.Emotes
-import database.service.XpAwardService
+import database.service.leveling.XpAwardService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
@@ -21,7 +21,7 @@ import io.mockk.junit5.MockKExtension
 class MessageChatListenerTest {
 
     private val xpAwardService: XpAwardService = mockk(relaxed = true)
-    private val messageActivityBuffer: database.service.MessageActivityBuffer = mockk(relaxed = true)
+    private val messageActivityBuffer: database.service.activity.MessageActivityBuffer = mockk(relaxed = true)
     private val listener = spyk(MessageChatListener(xpAwardService, messageActivityBuffer))
 
     @Test
