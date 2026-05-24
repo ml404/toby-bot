@@ -31,7 +31,12 @@ class DnDHelper {
     private val logger = DiscordLogger(this::class.java)
 
     fun rollDice(diceValue: Int, diceToRoll: Int): Int =
-        (0 until diceToRoll).sumOf { Random.nextInt(1, diceValue + 1) }
+        rollDiceList(diceValue, diceToRoll).sum()
+
+    /** Same RNG path as [rollDice] but keeps the individual values so
+     *  callers can show a per-die breakdown. */
+    fun rollDiceList(diceValue: Int, diceToRoll: Int): List<Int> =
+        (0 until diceToRoll).map { Random.nextInt(1, diceValue + 1) }
 
     suspend fun doInitialLookup(
         typeName: String?,

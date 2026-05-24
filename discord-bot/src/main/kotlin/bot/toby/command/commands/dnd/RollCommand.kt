@@ -2,8 +2,6 @@ package bot.toby.command.commands.dnd
 
 import bot.toby.helpers.DnDHelper
 import bot.toby.helpers.intOption
-import common.discord.embed
-import common.discord.field
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -16,7 +14,6 @@ import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.awt.Color
 
 @Component
 class RollCommand @Autowired constructor(
@@ -42,18 +39,10 @@ class RollCommand @Autowired constructor(
         modifier: Int
     ): WebhookMessageCreateAction<Message> {
         event.deferReply().queue()
-        val rollTotal = dndHelper.rollDice(diceValue, diceToRoll)
-        val rollSummary = String.format(
-            "Your final roll total was '%d' (%d + %d).",
-            rollTotal + modifier, rollTotal, modifier
+        val rolls = dndHelper.rollDiceList(diceValue, diceToRoll)
+        val rollEmbed = RollEmbeds.resultEmbed(
+            diceValue, diceToRoll, modifier, rolls, event.user.effectiveName,
         )
-        val rollEmbed = embed(color = Color.GREEN) {
-            field(
-                name = String.format("%dd%d + %d", diceToRoll, diceValue, modifier),
-                value = rollSummary,
-                inline = true,
-            )
-        }
         val rollD20 = Button.primary("$name:20, 1, 0", "Roll D20")
         val rollD10 = Button.primary("$name:10, 1, 0", "Roll D10")
         val rollD6 = Button.primary("$name:6, 1, 0", "Roll D6")
