@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Regroup 43 entity DTOs into themed sub-packages",
+    "summary": "Deferred follow-up to the packaging series (#586/#587/#589/#590). The flat `database/dto/` directory held **43 JPA entity DTOs** mixed together — opening it showed an alphabetised list of every entity type in the system. Re-package into themed sub-packages mirroring the service-side (#586) and persistence-side (#587) layouts so DTOs sit in parallel paths with the services and persistences that touch them.",
+    "emoji": "🎰",
+    "prNumber": 591
+  },
+  {
+    "date": "May 2026",
     "title": "Regroup 19 button files into themed sub-packages",
     "summary": "Eleventh wave — and **PR 4 of 4 in the packaging-only re-organisation series** (continuing from #586, #587, #589). With this PR the packaging plan is complete. The flat `discord-bot/.../button/buttons/` directory mixed casino-game buttons, PvP-game buttons, team-split buttons, music buttons, the lottery buy button, the DnD roll button, and two misc buttons — **19 files alphabetised together**.",
     "emoji": "🎟️",
