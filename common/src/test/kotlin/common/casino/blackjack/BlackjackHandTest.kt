@@ -1,4 +1,4 @@
-package common.blackjack
+package common.casino.blackjack
 
 import common.card.Card
 import common.card.Rank
@@ -7,6 +7,11 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.canSplit
+import common.casino.blackjack.isBlackjack
+import common.casino.blackjack.isBust
+import common.casino.blackjack.isSoft
 
 class BlackjackHandTest {
 

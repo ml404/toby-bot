@@ -6,8 +6,8 @@ import database.dto.casino.poker.PokerHandPotDto
 import database.dto.user.UserDto
 import database.persistence.casino.poker.PokerHandLogPersistence
 import database.persistence.casino.poker.PokerHandPotPersistence
-import common.poker.PokerEngine
-import common.poker.PokerTable
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.economy.EconomyTradeService.TradeOutcome
 import io.mockk.every

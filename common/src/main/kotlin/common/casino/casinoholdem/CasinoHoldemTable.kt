@@ -1,13 +1,14 @@
-package common.poker
+package common.casino.casinoholdem
 
 import common.card.Card
 import common.card.Deck
 import java.time.Instant
+import common.casino.casinoholdem.CasinoHoldem
 
 /**
  * Mutable state of a single Casino Hold'em table. One table per active
  * hand — there's no lobby phase or multi-seat support, so the layout is
- * deliberately flatter than [common.blackjack.BlackjackTable] /
+ * deliberately flatter than [common.casino.blackjack.BlackjackTable] /
  * [PokerTable].
  *
  * All mutations happen inside a monitor on the table object (see

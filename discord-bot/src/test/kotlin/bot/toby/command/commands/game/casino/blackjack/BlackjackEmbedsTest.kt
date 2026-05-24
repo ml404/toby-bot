@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.blackjack
 
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import common.card.Card
 import common.card.Rank
 import common.card.Suit

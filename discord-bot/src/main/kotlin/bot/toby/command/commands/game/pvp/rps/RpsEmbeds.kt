@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game.pvp.rps
 
-import common.rps.RpsEngine
+import common.pvp.rps.RpsEngine
 import database.service.pvp.rps.RpsService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.components.actionrow.ActionRow

@@ -1,10 +1,11 @@
-package common.tictactoe
+package common.pvp.tictactoe
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.pvp.tictactoe.TicTacToeEngine
 
 /**
  * Truth table for [TicTacToeEngine]. Pure-function unit tests — no

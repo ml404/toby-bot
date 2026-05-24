@@ -1,11 +1,11 @@
-package common.poker
+package common.casino.poker
 
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.poker.PokerEngine.PokerAction
-import common.poker.PokerTable.Phase
-import common.poker.PokerTable.SeatStatus
+import common.casino.poker.PokerEngine.PokerAction
+import common.casino.poker.PokerTable.Phase
+import common.casino.poker.PokerTable.SeatStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.random.Random
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerTable
 
 class PokerEngineTest {
 

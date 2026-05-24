@@ -1,6 +1,6 @@
 package database.rps
 
-import common.rps.RpsEngine
+import common.pvp.rps.RpsEngine
 import database.configuration.RegistryScheduler
 import database.pvp.PvpSessionRegistry
 import org.springframework.stereotype.Component

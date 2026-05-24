@@ -2,7 +2,7 @@ package bot.toby.button.buttons.pvp.connect4
 
 import bot.toby.command.commands.game.pvp.connect4.Connect4Embeds
 import bot.toby.command.commands.game.pvp.PvpEmbeds
-import common.connect4.Connect4Engine
+import common.pvp.connect4.Connect4Engine
 import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService

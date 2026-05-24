@@ -1,7 +1,7 @@
 package bot.toby.command.commands.game.casino.poker
 
 import common.card.Card
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import common.card.Rank
 import common.card.Suit
 import org.junit.jupiter.api.Assertions.assertEquals

@@ -1,6 +1,6 @@
 package database.rps
 
-import common.rps.RpsEngine
+import common.pvp.rps.RpsEngine
 import database.pvp.PvpSessionRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

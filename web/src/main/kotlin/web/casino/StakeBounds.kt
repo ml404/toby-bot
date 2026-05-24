@@ -12,8 +12,8 @@ import common.casino.roulette.Roulette
 import common.casino.scratch.ScratchCard
 import common.casino.slots.SlotMachine
 import common.casino.wheeloffortune.WheelOfFortune
-import common.blackjack.Blackjack
-import common.poker.CasinoHoldem
+import common.casino.blackjack.Blackjack
+import common.casino.casinoholdem.CasinoHoldem
 import database.service.guild.ConfigService
 import database.boardgame.TurnBasedBoardWagerService
 import database.service.pvp.duel.DuelService

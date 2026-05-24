@@ -3,8 +3,8 @@ package web.controller
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.poker.CasinoHoldem
-import common.poker.CasinoHoldemTable
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
 import database.service.casino.casinoholdem.CasinoHoldemService
 import database.service.casino.casinoholdem.CasinoHoldemService.ActionOutcome

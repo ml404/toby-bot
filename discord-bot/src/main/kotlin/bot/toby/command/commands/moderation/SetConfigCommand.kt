@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import common.casino.blackjack.Blackjack
 
 /**
  * `/setconfig <subcommand>` — guild-owner-only configuration editor.

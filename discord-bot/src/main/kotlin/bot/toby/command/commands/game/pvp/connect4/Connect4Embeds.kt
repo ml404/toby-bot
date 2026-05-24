@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game.pvp.connect4
 
-import common.connect4.Connect4Engine
+import common.pvp.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardWagerService
 import database.connect4.Connect4SessionRegistry
 import net.dv8tion.jda.api.EmbedBuilder

@@ -2,7 +2,7 @@ package common.events.casino.blackjack
 
 /**
  * Fact emitted by `BlackjackService` whenever a player slot resolves to
- * [common.blackjack.Blackjack.Result.PLAYER_BLACKJACK]. That result is
+ * [common.casino.blackjack.Blackjack.Result.PLAYER_BLACKJACK]. That result is
  * only produced by `evaluate()` on a two-card hand, so it always means a
  * natural-on-the-deal win (not a 21 reached after a hit, and not a
  * split-hand 21 — both of which return PLAYER_WIN instead).

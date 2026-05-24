@@ -1,7 +1,7 @@
 package web.controller
 
-import common.connect4.Connect4Engine
-import common.tictactoe.TicTacToeEngine
+import common.pvp.connect4.Connect4Engine
+import common.pvp.tictactoe.TicTacToeEngine
 import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.rps.RpsSessionRegistry

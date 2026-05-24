@@ -1,8 +1,8 @@
 package web.service
 
-import common.connect4.Connect4Engine
-import common.rps.RpsEngine
-import common.tictactoe.TicTacToeEngine
+import common.pvp.connect4.Connect4Engine
+import common.pvp.rps.RpsEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import database.connect4.Connect4SessionRegistry
 import database.duel.PendingDuelRegistry
 import database.duel.RecentDuelResolutions

@@ -6,7 +6,7 @@ import bot.toby.button.ButtonTest.Companion.mockGuild
 import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.pvp.tictactoe.TicTacToeEmbeds
-import common.tictactoe.TicTacToeEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardWagerService
 import database.dto.user.UserDto
 import database.service.pvp.PvpWagerService

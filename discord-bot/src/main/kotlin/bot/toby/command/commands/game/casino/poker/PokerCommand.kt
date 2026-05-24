@@ -5,7 +5,7 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.casino.poker.PokerService
 import database.service.casino.poker.PokerService.BuyInOutcome
@@ -29,7 +29,7 @@ import bot.toby.command.commands.game.casino.poker.PokerEmbeds
  * `/poker create|join|start|leave|tables` — multiplayer fixed-limit
  * Texas Hold'em over the social-credit economy.
  *
- * The state machine lives in [common.poker.PokerEngine] and is driven
+ * The state machine lives in [common.casino.poker.PokerEngine] and is driven
  * by [PokerService], which keeps tables in [PokerTableRegistry] (shared
  * with the web layer) and routes 5 % of every settled pot into the
  * existing per-guild jackpot pool. Per-turn betting is handled by

@@ -1,4 +1,4 @@
-package common.poker
+package common.casino.poker
 
 import common.card.Card
 import common.card.Deck

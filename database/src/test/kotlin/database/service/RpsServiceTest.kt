@@ -1,7 +1,7 @@
 package database.service
 
 import common.events.pvp.rps.RpsResolvedEvent
-import common.rps.RpsEngine
+import common.pvp.rps.RpsEngine
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

@@ -1,6 +1,6 @@
 package bot.toby.command.commands.game.pvp.tictactoe
 
-import common.tictactoe.TicTacToeEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardWagerService
 import database.tictactoe.TicTacToeSessionRegistry
 import net.dv8tion.jda.api.EmbedBuilder

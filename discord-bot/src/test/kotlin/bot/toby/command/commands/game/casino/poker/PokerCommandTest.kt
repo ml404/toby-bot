@@ -6,7 +6,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.DefaultCommandContext
 import bot.toby.helpers.UserDtoHelper
 import database.dto.user.UserDto
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.casino.poker.PokerService
 import database.service.casino.poker.PokerService.BuyInOutcome

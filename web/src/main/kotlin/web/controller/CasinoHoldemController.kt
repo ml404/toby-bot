@@ -1,7 +1,7 @@
 package web.controller
 
 import common.casino.CasinoCommonFailure
-import common.poker.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldem
 import database.poker.CasinoHoldemTableRegistry
 import database.service.casino.casinoholdem.CasinoHoldemService
 import database.service.casino.casinoholdem.CasinoHoldemService.ActionOutcome

@@ -1,6 +1,7 @@
 package bot.toby.install
 
 import bot.toby.command.commands.moderation.SetConfigCommand
+import common.casino.blackjack.Blackjack
 
 /** Synthetic category token for the General section's Quick channels modal (`InstallQuickChannelsModal`). */
 const val QUICK_CHANNELS_TOKEN = "quick_channels"

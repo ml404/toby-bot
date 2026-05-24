@@ -3,10 +3,10 @@ package bot.toby.button.buttons.casino.blackjack
 import bot.toby.command.commands.game.casino.blackjack.BlackjackEmbeds
 import core.button.Button
 import core.button.ButtonContext
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import common.blackjack.canSplit
+import common.casino.blackjack.canSplit
 import database.dto.user.UserDto
 import database.service.casino.blackjack.BlackjackService
 import database.service.casino.blackjack.BlackjackService.MultiActionOutcome
@@ -17,6 +17,7 @@ import net.dv8tion.jda.api.components.buttons.Button as JdaButton
 import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import common.casino.blackjack.canSplit
 
 /**
  * Resolves a click on a `/blackjack` action button. The button id

@@ -1,7 +1,7 @@
 package web.service
 
 import common.card.Card
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import org.springframework.stereotype.Service
 
