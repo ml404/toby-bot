@@ -12,6 +12,16 @@
 
     <div th:replace="~{fragments/moderationHeader :: moderationHeader(${overview}, ${isOwner}, 'settings')}"></div>
 
+    <!--
+        Settings tab — split into a sticky left-rail nav (pillars and
+        their sections as jump links) and a scrollable content column.
+        Each <details> section carries an id matching its rail link so a
+        click on the rail opens + scrolls to it; an IntersectionObserver
+        in settings.js syncs the rail's active-link state as the user
+        scrolls. The per-row .save-config wiring stays untouched —
+        moderationCommon.js handles every .config-row regardless of where
+        it sits in the page.
+    -->
     <section class="mod-panel" data-panel="settings">
         <div class="alert alert-error" th:if="${!isOwner}" style="margin-bottom: 16px;">
             <strong>Read-only.</strong> Only the server owner can change guild
@@ -21,957 +31,1098 @@
             first.
         </div>
 
-        <div class="mod-search config-search-bar">
-            <label for="config-search" class="sr-only">Search settings</label>
-            <input id="config-search"
-                   type="search"
-                   class="mod-search-input"
-                   placeholder="Search settings (e.g. jackpot, RTP, ante)…"
-                   autocomplete="off"
-                   aria-describedby="config-search-count">
-            <span id="config-search-count" class="mod-search-count" aria-live="polite"></span>
-        </div>
+        <div class="settings-shell">
+            <aside class="settings-nav" aria-label="Settings sections">
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Server</p>
+                    <a href="#settings-section-server-features" class="settings-nav-link">Server features</a>
+                    <a href="#settings-section-messages" class="settings-nav-link">Messages &amp; leaderboards</a>
+                </div>
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Economy</p>
+                    <a href="#settings-section-economy" class="settings-nav-link">Economy</a>
+                </div>
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Casino</p>
+                    <a href="#settings-section-jackpot" class="settings-nav-link">Jackpot</a>
+                    <a href="#settings-section-autoclicker" class="settings-nav-link">Anti-autoclicker</a>
+                    <a href="#settings-section-poker" class="settings-nav-link">Poker</a>
+                    <a href="#settings-section-blackjack" class="settings-nav-link">Blackjack</a>
+                    <a href="#settings-section-stakes" class="settings-nav-link">Game stake limits</a>
+                </div>
+            </aside>
 
-        <h2 class="config-pillar">Server</h2>
+            <div class="settings-content">
+                <div class="mod-search config-search-bar">
+                    <label for="config-search" class="sr-only">Search settings</label>
+                    <input id="config-search"
+                           type="search"
+                           class="mod-search-input"
+                           placeholder="Search settings (e.g. jackpot, RTP, ante)…"
+                           autocomplete="off"
+                           aria-describedby="config-search-count">
+                    <span id="config-search-count" class="mod-search-count" aria-live="polite"></span>
+                </div>
 
-        <details class="config-section" open>
-            <summary>Server features</summary>
-            <div class="config-grid">
-                <div class="config-row" data-key="VOLUME">
-                    <label>Default volume</label>
-                    <input type="number" min="0" max="200"
-                           th:value="${overview.config['VOLUME']}"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="INTRO_VOLUME">
-                    <label>Default intro volume</label>
-                    <input type="number" min="0" max="200"
-                           th:value="${overview.config['INTRO_VOLUME']}"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="MOVE">
-                    <label>Default move channel</label>
-                    <div th:replace="~{fragments/channelPicker :: channelPicker(
-                            name=null,
-                            id=null,
-                            channels=${overview.voiceChannels},
-                            selectedValue=${overview.config['MOVE']},
-                            placeholder='— none —',
-                            emptyLabel='— none —',
-                            required=false,
-                            valuePrefix='',
-                            valueField='name',
-                            disabled=${!isOwner})}"></div>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <!-- Saving "true" here kicks an ActivityTrackingEnabled event that
-                     fires the first-enable DM flow, matching the Discord
-                     /setconfig behaviour. Default value is "false" when no row
-                     exists yet — matches ActivityTrackingService's read default. -->
-                <div class="config-row" data-key="ACTIVITY_TRACKING">
-                    <label>Game-activity tracking</label>
-                    <select th:disabled="${!isOwner}">
-                        <option value="false"
-                                th:selected="${overview.config['ACTIVITY_TRACKING'] == null or overview.config['ACTIVITY_TRACKING'] == 'false'}">
-                            Disabled
-                        </option>
-                        <option value="true"
-                                th:selected="${overview.config['ACTIVITY_TRACKING'] == 'true'}">
-                            Enabled
-                        </option>
-                    </select>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-            </div>
-        </details>
+                <h2 class="config-pillar">Server</h2>
 
-        <details class="config-section">
-            <summary>Messages &amp; leaderboards</summary>
-            <div class="config-grid">
-                <div class="config-row" data-key="DELETE_DELAY">
-                    <label>Message delete delay (seconds)</label>
-                    <input type="number" min="0" max="600"
-                           th:value="${overview.config['DELETE_DELAY']}"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="LEADERBOARD_CHANNEL">
-                    <label>Monthly leaderboard channel</label>
-                    <div th:replace="~{fragments/channelPicker :: channelPicker(
-                            name=null,
-                            id=null,
-                            channels=${overview.textChannels},
-                            selectedValue=${overview.config['LEADERBOARD_CHANNEL']},
-                            placeholder='— system channel —',
-                            emptyLabel='— system channel —',
-                            required=false,
-                            valuePrefix='#',
-                            valueField='id',
-                            disabled=${!isOwner})}"></div>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-create-channel">
-                    <div class="config-create-channel-text">
-                        <strong>Create a read-only leaderboard channel</strong>
-                        <p class="muted">
-                            Creates a new text channel where @everyone can read but only
-                            TobyBot can post; auto-sets the leaderboard channel above to
-                            it. Bot needs the Manage Channels permission.
-                        </p>
-                    </div>
-                    <form class="config-create-channel-form"
-                          data-target-config="LEADERBOARD_CHANNEL"
-                          data-default-name="leaderboard">
-                        <label class="config-create-channel-field">
-                            <span>Channel name</span>
-                            <input type="text" name="name" value="leaderboard"
-                                   maxlength="90" th:disabled="${!isOwner}">
-                        </label>
-                        <label class="config-create-channel-field">
-                            <span>Category</span>
-                            <select name="parentCategoryId" th:disabled="${!isOwner}">
-                                <option value="">&mdash; top-level &mdash;</option>
-                                <option th:each="cat : ${overview.categories}"
-                                        th:value="${cat.id}"
-                                        th:text="${cat.name}"></option>
-                            </select>
-                        </label>
-                        <label class="config-create-channel-field">
-                            <span>or new category name</span>
-                            <input type="text" name="newCategoryName"
-                                   maxlength="100" placeholder="(blank = use existing)"
+                <details id="settings-section-server-features" class="config-section" open>
+                    <summary>Server features</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="VOLUME">
+                            <label>Default volume</label>
+                            <input type="number" min="0" max="200"
+                                   th:value="${overview.config['VOLUME']}"
                                    th:disabled="${!isOwner}">
-                        </label>
-                        <button type="submit" class="btn config-create-channel-btn"
-                                th:disabled="${!isOwner}">Create</button>
-                    </form>
-                </div>
-            </div>
-        </details>
-
-        <h2 class="config-pillar">Economy</h2>
-
-        <details class="config-section">
-            <summary>Economy</summary>
-            <div class="config-grid">
-                <div class="config-row" data-key="UBI_DAILY_AMOUNT">
-                    <label>
-                        UBI daily amount
-                        <span class="config-hint">Credits granted to every user once per UTC day. 0 disables.</span>
-                    </label>
-                    <input type="number" min="0" max="1000"
-                           th:value="${overview.config['UBI_DAILY_AMOUNT']}"
-                           placeholder="0"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="DAILY_CREDIT_CAP">
-                    <label>
-                        Daily credit cap
-                        <span class="config-hint">Voice / command / intro earnings ceiling. Default 90.</span>
-                    </label>
-                    <input type="number" min="0" max="10000"
-                           th:value="${overview.config['DAILY_CREDIT_CAP']}"
-                           placeholder="90"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
-                    <label>
-                        Toby Coin BUY fee
-                        <span class="config-hint">Charged per leg and routed to the jackpot pool.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="25" step="0.01"
-                               th:value="${overview.config['TRADE_BUY_FEE_PCT']}"
-                               placeholder="1"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="TRADE_SELL_FEE_PCT">
-                    <label>
-                        Toby Coin SELL fee
-                        <span class="config-hint">Charged per leg and routed to the jackpot pool.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="25" step="0.01"
-                               th:value="${overview.config['TRADE_SELL_FEE_PCT']}"
-                               placeholder="1"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-            </div>
-        </details>
-
-        <h2 class="config-pillar">Casino</h2>
-
-        <details class="config-section">
-            <summary>Jackpot</summary>
-            <p class="muted mb-2">
-                Jackpot pool tuning. The pool grows from loss tributes and
-                trade fees and pays out on a small chance per casino-game win.
-                Use the eligibility gates below (RTP cap, winner cooldown,
-                activity window) to keep the pool from being swept by
-                high-RTP games or low-activity edge cases. Set
-                <code>JACKPOT_WIN_PCT</code> to <code>0</code> to disable
-                jackpot wins entirely; set <code>JACKPOT_RTP_MAX_PCT</code>
-                to a value below a game's canonical RTP to disable jackpots
-                just for that game.
-            </p>
-            <div class="config-grid">
-                <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
-                    <label>
-                        Loss tribute
-                        <span class="config-hint">% of every lost casino stake routed to the pool. Default 10.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_WIN_PCT">
-                    <label>
-                        Win chance
-                        <span class="config-hint">Per casino-game win; decimals allowed. 0 disables jackpots. Default 1.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50" step="0.01"
-                               th:value="${overview.config['JACKPOT_WIN_PCT']}"
-                               placeholder="1"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row config-row-wide" data-key="JACKPOT_WHEEL_SEGMENTS">
-                    <label>Payout wheel segments</label>
-                    <p class="muted config-explainer">
-                        Each segment is a wedge of the spinning wheel that's
-                        spun when a player wins the jackpot. <strong>Weight</strong>
-                        is how often it's picked (positive integer; relative,
-                        not %). <strong>Payout %</strong> is how much of the pool
-                        the winner takes when the wheel lands there.
-                        Default <code>80:1,10:5,5:10,4:20,1:50</code> — most
-                        wins give a small pity prize, a rare 1-in-100 spin
-                        pays out half the pool. For a flat fixed-percent
-                        payout, set a single segment (e.g. <code>1:30</code>
-                        for "always 30% of the pool").
-                    </p>
-                    <div class="jackpot-wheel-editor"
-                         th:attr="data-current=${overview.config['JACKPOT_WHEEL_SEGMENTS']}">
-                        <div class="jackpot-wheel-editor-rows"></div>
-                        <div class="jackpot-wheel-editor-actions">
-                            <button type="button" class="btn btn-sm jackpot-wheel-add"
-                                    th:disabled="${!isOwner}">+ Add segment</button>
-                            <span class="muted jackpot-wheel-ev"></span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
-                        <p class="jackpot-wheel-error error-text" hidden></p>
-                    </div>
-                    <button type="button" class="btn jackpot-wheel-save" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_RTP_MAX_PCT">
-                    <label>
-                        Max eligible game RTP
-                        <span class="config-hint">
-                            Caps which games can pay the jackpot. 0 disables the gate;
-                            recommended 95 to exclude blackjack / coinflip / baccarat / roulette.
-                        </span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="100"
-                               th:value="${overview.config['JACKPOT_RTP_MAX_PCT']}"
-                               placeholder="0"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_WINNER_COOLDOWN_DAYS">
-                    <label>
-                        Winner cooldown
-                        <span class="config-hint">Days a recent winner is ineligible. 0 disables. Recommended 14.</span>
-                    </label>
-                    <input type="number" min="0" max="365"
-                           th:value="${overview.config['JACKPOT_WINNER_COOLDOWN_DAYS']}"
-                           placeholder="0"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_ACTIVITY_WINDOW_DAYS">
-                    <label>
-                        Activity window
-                        <span class="config-hint">Trailing-day window for the eligibility check. 0 disables the gate. Recommended 7.</span>
-                    </label>
-                    <input type="number" min="0" max="90"
-                           th:value="${overview.config['JACKPOT_ACTIVITY_WINDOW_DAYS']}"
-                           placeholder="0"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_ACTIVITY_MIN_DAYS">
-                    <label>
-                        Activity minimum
-                        <span class="config-hint">Distinct active days required within the window. Default 1. Ignored when window is 0.</span>
-                    </label>
-                    <input type="number" min="1" max="90"
-                           th:value="${overview.config['JACKPOT_ACTIVITY_MIN_DAYS']}"
-                           placeholder="1"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="JACKPOT_STAKE_ANCHOR">
-                    <label>
-                        Stake anchor
-                        <span class="config-hint">Reference stake for jackpot probability scaling. Default 500.</span>
-                    </label>
-                    <input type="number" min="1"
-                           th:value="${overview.config['JACKPOT_STAKE_ANCHOR']}"
-                           placeholder="500"
-                           th:disabled="${!isOwner}">
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-            </div>
-        </details>
-
-        <details class="config-section">
-            <summary>Anti-autoclicker</summary>
-            <p class="muted config-section-lead">
-                Suspected autoclickers (same screen pixel clicked repeatedly with no cursor
-                motion between bets) get a per-(user, guild) streak that ramps the house
-                edge by 2.5 percentage points per consecutive bot-like click, capped per
-                game by the values below. The cap is the forced-loss probability applied on
-                top of the fair game; the suspect's effective RTP becomes
-                <code>(1 − cap/100) × fair RTP</code>. Default cap is <strong>30 %</strong>;
-                <strong>0 disables</strong> that game's gate. Legitimate play never trips the
-                detector, and Discord call paths are unaffected (no mouse signal).
-            </p>
-            <div class="config-grid">
-                <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
-                    <label>
-                        Coinflip
-                        <span class="config-hint">Fair RTP 100 %.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="DICE_BOT_EDGE_MAX_PCT">
-                    <label>
-                        Dice
-                        <span class="config-hint">Fair RTP ≈ 83 %.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['DICE_BOT_EDGE_MAX_PCT']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="SLOTS_BOT_EDGE_MAX_PCT">
-                    <label>
-                        Slots
-                        <span class="config-hint">Fair RTP ≈ 89 %.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['SLOTS_BOT_EDGE_MAX_PCT']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="PLINKO_BOT_EDGE_MAX_PCT">
-                    <label>
-                        Plinko
-                        <span class="config-hint">Fair RTP ≈ 89 %.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['PLINKO_BOT_EDGE_MAX_PCT']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT">
-                    <label>
-                        Wheel of Fortune
-                        <span class="config-hint">Fair RTP ≈ 88 %.</span>
-                    </label>
-                    <span class="config-input-group">
-                        <input type="number" min="0" max="50"
-                               th:value="${overview.config['WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <span class="config-suffix">%</span>
-                    </span>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-row" data-key="CASINO_MODLOG_CHANNEL_ID">
-                    <label>
-                        Casino mod-log channel
-                        <span class="config-hint">Where anti-autoclicker session embeds post. Falls back to the system channel.</span>
-                    </label>
-                    <div th:replace="~{fragments/channelPicker :: channelPicker(
-                            name=null,
-                            id=null,
-                            channels=${overview.textChannels},
-                            selectedValue=${overview.config['CASINO_MODLOG_CHANNEL_ID']},
-                            placeholder='— system channel —',
-                            emptyLabel='— system channel —',
-                            required=false,
-                            valuePrefix='#',
-                            valueField='id',
-                            disabled=${!isOwner})}"></div>
-                    <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                </div>
-                <div class="config-create-channel">
-                    <div class="config-create-channel-text">
-                        <strong>Create a private mod-log channel</strong>
-                        <p class="muted">
-                            Creates a channel only TobyBot and server admins can see —
-                            @everyone is denied <code>VIEW_CHANNEL</code>; admins keep
-                            access via Discord's built-in Administrator-permission rule.
-                            Auto-sets the dropdown above. Bot needs the Manage Channels
-                            permission.
-                        </p>
-                    </div>
-                    <form class="config-create-admin-channel-form"
-                          data-target-config="CASINO_MODLOG_CHANNEL_ID"
-                          data-default-name="casino-modlog">
-                        <label class="config-create-channel-field">
-                            <span>Channel name</span>
-                            <input type="text" name="name" value="casino-modlog"
-                                   maxlength="90" th:disabled="${!isOwner}">
-                        </label>
-                        <label class="config-create-channel-field">
-                            <span>Category</span>
-                            <select name="parentCategoryId" th:disabled="${!isOwner}">
-                                <option value="">&mdash; top-level &mdash;</option>
-                                <option th:each="cat : ${overview.categories}"
-                                        th:value="${cat.id}"
-                                        th:text="${cat.name}"></option>
+                        <div class="config-row" data-key="INTRO_VOLUME">
+                            <label>Default intro volume</label>
+                            <input type="number" min="0" max="200"
+                                   th:value="${overview.config['INTRO_VOLUME']}"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="MOVE">
+                            <label>Default move channel</label>
+                            <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                    name=null,
+                                    id=null,
+                                    channels=${overview.voiceChannels},
+                                    selectedValue=${overview.config['MOVE']},
+                                    placeholder='— none —',
+                                    emptyLabel='— none —',
+                                    required=false,
+                                    valuePrefix='',
+                                    valueField='name',
+                                    disabled=${!isOwner})}"></div>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <!-- Saving "true" here kicks an ActivityTrackingEnabled event that
+                             fires the first-enable DM flow, matching the Discord
+                             /setconfig behaviour. Default value is "false" when no row
+                             exists yet — matches ActivityTrackingService's read default. -->
+                        <div class="config-row" data-key="ACTIVITY_TRACKING">
+                            <label>Game-activity tracking</label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="false"
+                                        th:selected="${overview.config['ACTIVITY_TRACKING'] == null or overview.config['ACTIVITY_TRACKING'] == 'false'}">
+                                    Disabled
+                                </option>
+                                <option value="true"
+                                        th:selected="${overview.config['ACTIVITY_TRACKING'] == 'true'}">
+                                    Enabled
+                                </option>
                             </select>
-                        </label>
-                        <label class="config-create-channel-field">
-                            <span>or new category name</span>
-                            <input type="text" name="newCategoryName"
-                                   maxlength="100" placeholder="(blank = use existing)"
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-messages" class="config-section">
+                    <summary>Messages &amp; leaderboards</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="DELETE_DELAY">
+                            <label>Message delete delay (seconds)</label>
+                            <input type="number" min="0" max="600"
+                                   th:value="${overview.config['DELETE_DELAY']}"
                                    th:disabled="${!isOwner}">
-                        </label>
-                        <button type="submit" class="btn config-create-channel-btn"
-                                th:disabled="${!isOwner}">Create</button>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="LEADERBOARD_CHANNEL">
+                            <label>Monthly leaderboard channel</label>
+                            <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                    name=null,
+                                    id=null,
+                                    channels=${overview.textChannels},
+                                    selectedValue=${overview.config['LEADERBOARD_CHANNEL']},
+                                    placeholder='— system channel —',
+                                    emptyLabel='— system channel —',
+                                    required=false,
+                                    valuePrefix='#',
+                                    valueField='id',
+                                    disabled=${!isOwner})}"></div>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-create-channel">
+                            <div class="config-create-channel-text">
+                                <strong>Create a read-only leaderboard channel</strong>
+                                <p class="muted">
+                                    Creates a new text channel where @everyone can read but only
+                                    TobyBot can post; auto-sets the leaderboard channel above to
+                                    it. Bot needs the Manage Channels permission.
+                                </p>
+                            </div>
+                            <form class="config-create-channel-form"
+                                  data-target-config="LEADERBOARD_CHANNEL"
+                                  data-default-name="leaderboard">
+                                <label class="config-create-channel-field">
+                                    <span>Channel name</span>
+                                    <input type="text" name="name" value="leaderboard"
+                                           maxlength="90" th:disabled="${!isOwner}">
+                                </label>
+                                <label class="config-create-channel-field">
+                                    <span>Category</span>
+                                    <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                        <option value="">&mdash; top-level &mdash;</option>
+                                        <option th:each="cat : ${overview.categories}"
+                                                th:value="${cat.id}"
+                                                th:text="${cat.name}"></option>
+                                    </select>
+                                </label>
+                                <label class="config-create-channel-field">
+                                    <span>or new category name</span>
+                                    <input type="text" name="newCategoryName"
+                                           maxlength="100" placeholder="(blank = use existing)"
+                                           th:disabled="${!isOwner}">
+                                </label>
+                                <button type="submit" class="btn config-create-channel-btn"
+                                        th:disabled="${!isOwner}">Create</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+
+                <h2 class="config-pillar">Economy</h2>
+
+                <details id="settings-section-economy" class="config-section">
+                    <summary>Economy</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="UBI_DAILY_AMOUNT">
+                            <label>
+                                UBI daily amount
+                                <span class="config-hint">Credits granted to every user once per UTC day. 0 disables.</span>
+                            </label>
+                            <input type="number" min="0" max="1000"
+                                   th:value="${overview.config['UBI_DAILY_AMOUNT']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="DAILY_CREDIT_CAP">
+                            <label>
+                                Daily credit cap
+                                <span class="config-hint">Voice / command / intro earnings ceiling. Default 90.</span>
+                            </label>
+                            <input type="number" min="0" max="10000"
+                                   th:value="${overview.config['DAILY_CREDIT_CAP']}"
+                                   placeholder="90"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
+                            <label>
+                                Toby Coin BUY fee
+                                <span class="config-hint">Charged per leg and routed to the jackpot pool.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="25" step="0.01"
+                                       th:value="${overview.config['TRADE_BUY_FEE_PCT']}"
+                                       placeholder="1"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="TRADE_SELL_FEE_PCT">
+                            <label>
+                                Toby Coin SELL fee
+                                <span class="config-hint">Charged per leg and routed to the jackpot pool.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="25" step="0.01"
+                                       th:value="${overview.config['TRADE_SELL_FEE_PCT']}"
+                                       placeholder="1"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <h2 class="config-pillar">Casino</h2>
+
+                <details id="settings-section-jackpot" class="config-section">
+                    <summary>Jackpot</summary>
+                    <p class="muted mb-2">
+                        Jackpot pool tuning. The pool grows from loss tributes and
+                        trade fees and pays out on a small chance per casino-game win.
+                        Use the eligibility gates below (RTP cap, winner cooldown,
+                        activity window) to keep the pool from being swept by
+                        high-RTP games or low-activity edge cases. Set
+                        <code>JACKPOT_WIN_PCT</code> to <code>0</code> to disable
+                        jackpot wins entirely; set <code>JACKPOT_RTP_MAX_PCT</code>
+                        to a value below a game's canonical RTP to disable jackpots
+                        just for that game.
+                    </p>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="JACKPOT_LOSS_TRIBUTE_PCT">
+                            <label>
+                                Loss tribute
+                                <span class="config-hint">% of every lost casino stake routed to the pool. Default 10.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['JACKPOT_LOSS_TRIBUTE_PCT']}"
+                                       placeholder="10"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_WIN_PCT">
+                            <label>
+                                Win chance
+                                <span class="config-hint">Per casino-game win; decimals allowed. 0 disables jackpots. Default 1.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50" step="0.01"
+                                       th:value="${overview.config['JACKPOT_WIN_PCT']}"
+                                       placeholder="1"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row config-row-wide" data-key="JACKPOT_WHEEL_SEGMENTS">
+                            <label>Payout wheel segments</label>
+                            <p class="muted config-explainer">
+                                Each segment is a wedge of the spinning wheel that's
+                                spun when a player wins the jackpot. <strong>Weight</strong>
+                                is how often it's picked (positive integer; relative,
+                                not %). <strong>Payout %</strong> is how much of the pool
+                                the winner takes when the wheel lands there.
+                                Default <code>80:1,10:5,5:10,4:20,1:50</code> — most
+                                wins give a small pity prize, a rare 1-in-100 spin
+                                pays out half the pool. For a flat fixed-percent
+                                payout, set a single segment (e.g. <code>1:30</code>
+                                for "always 30% of the pool").
+                            </p>
+                            <div class="jackpot-wheel-editor"
+                                 th:attr="data-current=${overview.config['JACKPOT_WHEEL_SEGMENTS']}">
+                                <div class="jackpot-wheel-editor-rows"></div>
+                                <div class="jackpot-wheel-editor-actions">
+                                    <button type="button" class="btn btn-sm jackpot-wheel-add"
+                                            th:disabled="${!isOwner}">+ Add segment</button>
+                                    <span class="muted jackpot-wheel-ev"></span>
+                                </div>
+                                <p class="jackpot-wheel-error error-text" hidden></p>
+                            </div>
+                            <button type="button" class="btn jackpot-wheel-save" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_RTP_MAX_PCT">
+                            <label>
+                                Max eligible game RTP
+                                <span class="config-hint">
+                                    Caps which games can pay the jackpot. 0 disables the gate;
+                                    recommended 95 to exclude blackjack / coinflip / baccarat / roulette.
+                                </span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="100"
+                                       th:value="${overview.config['JACKPOT_RTP_MAX_PCT']}"
+                                       placeholder="0"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_WINNER_COOLDOWN_DAYS">
+                            <label>
+                                Winner cooldown
+                                <span class="config-hint">Days a recent winner is ineligible. 0 disables. Recommended 14.</span>
+                            </label>
+                            <input type="number" min="0" max="365"
+                                   th:value="${overview.config['JACKPOT_WINNER_COOLDOWN_DAYS']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_ACTIVITY_WINDOW_DAYS">
+                            <label>
+                                Activity window
+                                <span class="config-hint">Trailing-day window for the eligibility check. 0 disables the gate. Recommended 7.</span>
+                            </label>
+                            <input type="number" min="0" max="90"
+                                   th:value="${overview.config['JACKPOT_ACTIVITY_WINDOW_DAYS']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_ACTIVITY_MIN_DAYS">
+                            <label>
+                                Activity minimum
+                                <span class="config-hint">Distinct active days required within the window. Default 1. Ignored when window is 0.</span>
+                            </label>
+                            <input type="number" min="1" max="90"
+                                   th:value="${overview.config['JACKPOT_ACTIVITY_MIN_DAYS']}"
+                                   placeholder="1"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="JACKPOT_STAKE_ANCHOR">
+                            <label>
+                                Stake anchor
+                                <span class="config-hint">Reference stake for jackpot probability scaling. Default 500.</span>
+                            </label>
+                            <input type="number" min="1"
+                                   th:value="${overview.config['JACKPOT_STAKE_ANCHOR']}"
+                                   placeholder="500"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-autoclicker" class="config-section">
+                    <summary>Anti-autoclicker</summary>
+                    <p class="muted config-section-lead">
+                        Suspected autoclickers (same screen pixel clicked repeatedly with no cursor
+                        motion between bets) get a per-(user, guild) streak that ramps the house
+                        edge by 2.5 percentage points per consecutive bot-like click, capped per
+                        game by the values below. The cap is the forced-loss probability applied on
+                        top of the fair game; the suspect's effective RTP becomes
+                        <code>(1 − cap/100) × fair RTP</code>. Default cap is <strong>30 %</strong>;
+                        <strong>0 disables</strong> that game's gate. Legitimate play never trips the
+                        detector, and Discord call paths are unaffected (no mouse signal).
+                    </p>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="COINFLIP_BOT_EDGE_MAX_PCT">
+                            <label>
+                                Coinflip
+                                <span class="config-hint">Fair RTP 100 %.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['COINFLIP_BOT_EDGE_MAX_PCT']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="DICE_BOT_EDGE_MAX_PCT">
+                            <label>
+                                Dice
+                                <span class="config-hint">Fair RTP ≈ 83 %.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['DICE_BOT_EDGE_MAX_PCT']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="SLOTS_BOT_EDGE_MAX_PCT">
+                            <label>
+                                Slots
+                                <span class="config-hint">Fair RTP ≈ 89 %.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['SLOTS_BOT_EDGE_MAX_PCT']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="PLINKO_BOT_EDGE_MAX_PCT">
+                            <label>
+                                Plinko
+                                <span class="config-hint">Fair RTP ≈ 89 %.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['PLINKO_BOT_EDGE_MAX_PCT']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT">
+                            <label>
+                                Wheel of Fortune
+                                <span class="config-hint">Fair RTP ≈ 88 %.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="50"
+                                       th:value="${overview.config['WHEEL_OF_FORTUNE_BOT_EDGE_MAX_PCT']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="CASINO_MODLOG_CHANNEL_ID">
+                            <label>
+                                Casino mod-log channel
+                                <span class="config-hint">Where anti-autoclicker session embeds post. Falls back to the system channel.</span>
+                            </label>
+                            <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                    name=null,
+                                    id=null,
+                                    channels=${overview.textChannels},
+                                    selectedValue=${overview.config['CASINO_MODLOG_CHANNEL_ID']},
+                                    placeholder='— system channel —',
+                                    emptyLabel='— system channel —',
+                                    required=false,
+                                    valuePrefix='#',
+                                    valueField='id',
+                                    disabled=${!isOwner})}"></div>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-create-channel">
+                            <div class="config-create-channel-text">
+                                <strong>Create a private mod-log channel</strong>
+                                <p class="muted">
+                                    Creates a channel only TobyBot and server admins can see —
+                                    @everyone is denied <code>VIEW_CHANNEL</code>; admins keep
+                                    access via Discord's built-in Administrator-permission rule.
+                                    Auto-sets the dropdown above. Bot needs the Manage Channels
+                                    permission.
+                                </p>
+                            </div>
+                            <form class="config-create-admin-channel-form"
+                                  data-target-config="CASINO_MODLOG_CHANNEL_ID"
+                                  data-default-name="casino-modlog">
+                                <label class="config-create-channel-field">
+                                    <span>Channel name</span>
+                                    <input type="text" name="name" value="casino-modlog"
+                                           maxlength="90" th:disabled="${!isOwner}">
+                                </label>
+                                <label class="config-create-channel-field">
+                                    <span>Category</span>
+                                    <select name="parentCategoryId" th:disabled="${!isOwner}">
+                                        <option value="">&mdash; top-level &mdash;</option>
+                                        <option th:each="cat : ${overview.categories}"
+                                                th:value="${cat.id}"
+                                                th:text="${cat.name}"></option>
+                                    </select>
+                                </label>
+                                <label class="config-create-channel-field">
+                                    <span>or new category name</span>
+                                    <input type="text" name="newCategoryName"
+                                           maxlength="100" placeholder="(blank = use existing)"
+                                           th:disabled="${!isOwner}">
+                                </label>
+                                <button type="submit" class="btn config-create-channel-btn"
+                                        th:disabled="${!isOwner}">Create</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-poker" class="config-section">
+                    <summary>Poker</summary>
+                    <div class="config-grid">
+                        <div class="config-group">
+                            <h4>Table rules</h4>
+                            <div class="config-row" data-key="POKER_RAKE_PCT">
+                                <label>Poker rake (% of every settled pot routed to jackpot; default 5)</label>
+                                <span class="config-input-group">
+                                    <input type="number" min="0" max="20" step="1"
+                                           th:value="${overview.config['POKER_RAKE_PCT']}"
+                                           placeholder="5"
+                                           th:disabled="${!isOwner}">
+                                    <span class="config-suffix">%</span>
+                                </span>
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_MAX_SEATS">
+                                <label>Max seats per table (2-9; default 6)</label>
+                                <input type="number" min="2" max="9"
+                                       th:value="${overview.config['POKER_MAX_SEATS']}"
+                                       placeholder="6"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_SHOT_CLOCK_SECONDS">
+                                <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
+                                <input type="number" min="0" max="600"
+                                       th:value="${overview.config['POKER_SHOT_CLOCK_SECONDS']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <h4>Blinds &amp; buy-ins</h4>
+                            <div class="config-row" data-key="POKER_SMALL_BLIND">
+                                <label>Small blind (chips posted by SB seat each hand; default 5)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['POKER_SMALL_BLIND']}"
+                                       placeholder="5"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_BIG_BLIND">
+                                <label>Big blind (chips posted by BB seat each hand; default 10)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['POKER_BIG_BLIND']}"
+                                       placeholder="10"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_SMALL_BET">
+                                <label>Small bet (fixed-limit bet pre-flop &amp; flop; default 10)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['POKER_SMALL_BET']}"
+                                       placeholder="10"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_BIG_BET">
+                                <label>Big bet (fixed-limit bet on turn &amp; river; default 20)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['POKER_BIG_BET']}"
+                                       placeholder="20"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_MIN_BUY_IN">
+                                <label>Minimum buy-in per seat (chips; default 100)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['POKER_MIN_BUY_IN']}"
+                                       placeholder="100"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="POKER_MAX_BUY_IN">
+                                <label>Maximum buy-in per seat (chips; 0 = unlimited; default 5000)</label>
+                                <input type="number" min="0"
+                                       th:value="${overview.config['POKER_MAX_BUY_IN']}"
+                                       placeholder="5000"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-blackjack" class="config-section">
+                    <summary>Blackjack</summary>
+                    <div class="config-grid">
+                        <div class="config-group">
+                            <h4>Table rules</h4>
+                            <div class="config-row" data-key="BLACKJACK_RAKE_PCT">
+                                <label>Blackjack rake (% of multi-table losers' pool routed to jackpot; default 5)</label>
+                                <span class="config-input-group">
+                                    <input type="number" min="0" max="20" step="1"
+                                           th:value="${overview.config['BLACKJACK_RAKE_PCT']}"
+                                           placeholder="5"
+                                           th:disabled="${!isOwner}">
+                                    <span class="config-suffix">%</span>
+                                </span>
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_MAX_SEATS">
+                                <label>Max seats per multi table (2-7; default 5)</label>
+                                <input type="number" min="2" max="7"
+                                       th:value="${overview.config['BLACKJACK_MAX_SEATS']}"
+                                       placeholder="5"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_SHOT_CLOCK_SECONDS">
+                                <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
+                                <input type="number" min="0" max="600"
+                                       th:value="${overview.config['BLACKJACK_SHOT_CLOCK_SECONDS']}"
+                                       placeholder="30"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_DEALER_HITS_SOFT_17">
+                                <label>Dealer rule on soft 17</label>
+                                <select th:disabled="${!isOwner}">
+                                    <option value="false"
+                                            th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == null or overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'false'}">
+                                        Stand on soft 17 (S17, default — better for the player)
+                                    </option>
+                                    <option value="true"
+                                            th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'true'}">
+                                        Hit soft 17 (H17 — slightly worse for the player)
+                                    </option>
+                                </select>
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_NUM">
+                                <label>Natural-blackjack payout numerator (e.g. 3 for 3:2; default 3)</label>
+                                <input type="number" min="1" max="10"
+                                       th:value="${overview.config['BLACKJACK_BJ_PAYOUT_NUM']}"
+                                       placeholder="3"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_DEN">
+                                <label>Natural-blackjack payout denominator (e.g. 2 for 3:2; default 2)</label>
+                                <input type="number" min="1" max="10"
+                                       th:value="${overview.config['BLACKJACK_BJ_PAYOUT_DEN']}"
+                                       placeholder="2"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <h4>Stakes per hand</h4>
+                            <div class="config-row" data-key="BLACKJACK_MIN_ANTE">
+                                <label>Minimum stake per hand (applies to solo &amp; multi; default 10)</label>
+                                <input type="number" min="1"
+                                       th:value="${overview.config['BLACKJACK_MIN_ANTE']}"
+                                       placeholder="10"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                            <div class="config-row" data-key="BLACKJACK_MAX_ANTE">
+                                <label>Maximum stake per hand (applies to solo &amp; multi; 0 = unlimited; default 500)</label>
+                                <input type="number" min="0"
+                                       th:value="${overview.config['BLACKJACK_MAX_ANTE']}"
+                                       placeholder="500"
+                                       th:disabled="${!isOwner}">
+                                <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-stakes" class="config-section">
+                    <summary>Game stake limits</summary>
+                    <p class="muted config-section-lead">
+                        Stake bounds for every simple casino game. Set any maximum to
+                        <code>0</code> to remove the cap. Blackjack ante limits live
+                        in the <strong>Blackjack</strong> section; poker blinds and
+                        buy-ins live in the <strong>Poker</strong> section.
+                    </p>
+
+                    <!--
+                        Bulk "apply to all games" form. Fans out one PATCH per
+                        affected (game × min|max) key under the hood, reusing
+                        the same `/moderation/{guildId}/config` endpoint as the
+                        per-row saves. Leaving either field blank skips that
+                        side, so admins can bulk-set just minimums without
+                        clobbering maximums (or vice versa). Wired in
+                        settings.js — see `.settings-stakes-bulk-form` handler.
+                    -->
+                    <form class="settings-stakes-bulk" th:if="${isOwner}">
+                        <div class="settings-stakes-bulk-text">
+                            <strong>Set every game at once</strong>
+                            <p class="muted">
+                                Applies the chosen value to every row in the table below.
+                                Leave a field blank to skip it. Saves run in parallel —
+                                you'll get a single toast with the result.
+                            </p>
+                        </div>
+                        <div class="settings-stakes-bulk-fields">
+                            <label class="settings-stakes-bulk-field">
+                                <span>All minimums</span>
+                                <input type="number" min="0" name="bulkMin"
+                                       placeholder="(skip)" inputmode="numeric">
+                            </label>
+                            <label class="settings-stakes-bulk-field">
+                                <span>All maximums</span>
+                                <input type="number" min="0" name="bulkMax"
+                                       placeholder="(skip)" inputmode="numeric">
+                            </label>
+                            <button type="submit" class="btn">Apply to all games</button>
+                        </div>
                     </form>
-                </div>
-            </div>
-        </details>
 
-        <details class="config-section">
-            <summary>Poker</summary>
-            <div class="config-grid">
-                <div class="config-group">
-                    <h4>Table rules</h4>
-                    <div class="config-row" data-key="POKER_RAKE_PCT">
-                        <label>Poker rake (% of every settled pot routed to jackpot; default 5)</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="20" step="1"
-                                   th:value="${overview.config['POKER_RAKE_PCT']}"
-                                   placeholder="5"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    <!--
+                        Stake limits live in one wide table — same per-row save
+                        wiring as the rest of the page (`.config-row[data-key]`
+                        with `.save-config` button), just packed two-up per game
+                        instead of stacked vertically. Each min/max cell carries
+                        its own `.config-row` so the existing search filter,
+                        save handler, and aria semantics all keep working.
+                    -->
+                    <div class="settings-stakes-wrap">
+                        <table class="settings-stakes-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Game</th>
+                                    <th scope="col">Minimum stake</th>
+                                    <th scope="col">Maximum stake</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Dice</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DICE_MIN_STAKE">
+                                            <label class="sr-only">Dice minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['DICE_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DICE_MAX_STAKE">
+                                            <label class="sr-only">Dice maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['DICE_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Coinflip</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="COINFLIP_MIN_STAKE">
+                                            <label class="sr-only">Coinflip minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['COINFLIP_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="COINFLIP_MAX_STAKE">
+                                            <label class="sr-only">Coinflip maximum stake (0 = unlimited; default 1000)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['COINFLIP_MAX_STAKE']}"
+                                                   placeholder="1000"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Slots</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="SLOTS_MIN_STAKE">
+                                            <label class="sr-only">Slots minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['SLOTS_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="SLOTS_MAX_STAKE">
+                                            <label class="sr-only">Slots maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['SLOTS_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Highlow</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HIGHLOW_MIN_STAKE">
+                                            <label class="sr-only">Highlow minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['HIGHLOW_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HIGHLOW_MAX_STAKE">
+                                            <label class="sr-only">Highlow maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['HIGHLOW_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Baccarat</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="BACCARAT_MIN_STAKE">
+                                            <label class="sr-only">Baccarat minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['BACCARAT_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="BACCARAT_MAX_STAKE">
+                                            <label class="sr-only">Baccarat maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['BACCARAT_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Keno</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="KENO_MIN_STAKE">
+                                            <label class="sr-only">Keno minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['KENO_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="KENO_MAX_STAKE">
+                                            <label class="sr-only">Keno maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['KENO_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Scratch</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="SCRATCH_MIN_STAKE">
+                                            <label class="sr-only">Scratch minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['SCRATCH_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="SCRATCH_MAX_STAKE">
+                                            <label class="sr-only">Scratch maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['SCRATCH_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Roulette</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="ROULETTE_MIN_STAKE">
+                                            <label class="sr-only">Roulette minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['ROULETTE_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="ROULETTE_MAX_STAKE">
+                                            <label class="sr-only">Roulette maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['ROULETTE_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Plinko</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="PLINKO_MIN_STAKE">
+                                            <label class="sr-only">Plinko minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['PLINKO_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="PLINKO_MAX_STAKE">
+                                            <label class="sr-only">Plinko maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['PLINKO_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Horse Racing</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HORSE_RACING_MIN_STAKE">
+                                            <label class="sr-only">Horse Racing minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['HORSE_RACING_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HORSE_RACING_MAX_STAKE">
+                                            <label class="sr-only">Horse Racing maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['HORSE_RACING_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Wheel of Fortune</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="WHEEL_OF_FORTUNE_MIN_STAKE">
+                                            <label class="sr-only">Wheel of Fortune minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['WHEEL_OF_FORTUNE_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="WHEEL_OF_FORTUNE_MAX_STAKE">
+                                            <label class="sr-only">Wheel of Fortune maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['WHEEL_OF_FORTUNE_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Casino Hold'em</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HOLDEM_MIN_STAKE">
+                                            <label class="sr-only">Casino Hold'em minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['HOLDEM_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="HOLDEM_MAX_STAKE">
+                                            <label class="sr-only">Casino Hold'em maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['HOLDEM_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Duel</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DUEL_MIN_STAKE">
+                                            <label class="sr-only">Duel minimum stake (default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['DUEL_MIN_STAKE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DUEL_MAX_STAKE">
+                                            <label class="sr-only">Duel maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['DUEL_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Rock-Paper-Scissors</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="RPS_MIN_STAKE">
+                                            <label class="sr-only">Rock-Paper-Scissors minimum stake (0 = free play allowed; default 0)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['RPS_MIN_STAKE']}"
+                                                   placeholder="0"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="RPS_MAX_STAKE">
+                                            <label class="sr-only">Rock-Paper-Scissors maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['RPS_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Tic-Tac-Toe</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="TICTACTOE_MIN_STAKE">
+                                            <label class="sr-only">Tic-Tac-Toe minimum stake (0 = free play allowed; default 0)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['TICTACTOE_MIN_STAKE']}"
+                                                   placeholder="0"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="TICTACTOE_MAX_STAKE">
+                                            <label class="sr-only">Tic-Tac-Toe maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['TICTACTOE_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Connect 4</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="CONNECT4_MIN_STAKE">
+                                            <label class="sr-only">Connect 4 minimum stake (0 = free play allowed; default 0)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['CONNECT4_MIN_STAKE']}"
+                                                   placeholder="0"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="CONNECT4_MAX_STAKE">
+                                            <label class="sr-only">Connect 4 maximum stake (0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['CONNECT4_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="config-row" data-key="POKER_MAX_SEATS">
-                        <label>Max seats per table (2-9; default 6)</label>
-                        <input type="number" min="2" max="9"
-                               th:value="${overview.config['POKER_MAX_SEATS']}"
-                               placeholder="6"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_SHOT_CLOCK_SECONDS">
-                        <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
-                        <input type="number" min="0" max="600"
-                               th:value="${overview.config['POKER_SHOT_CLOCK_SECONDS']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Blinds &amp; buy-ins</h4>
-                    <div class="config-row" data-key="POKER_SMALL_BLIND">
-                        <label>Small blind (chips posted by SB seat each hand; default 5)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['POKER_SMALL_BLIND']}"
-                               placeholder="5"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_BIG_BLIND">
-                        <label>Big blind (chips posted by BB seat each hand; default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['POKER_BIG_BLIND']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_SMALL_BET">
-                        <label>Small bet (fixed-limit bet pre-flop &amp; flop; default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['POKER_SMALL_BET']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_BIG_BET">
-                        <label>Big bet (fixed-limit bet on turn &amp; river; default 20)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['POKER_BIG_BET']}"
-                               placeholder="20"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_MIN_BUY_IN">
-                        <label>Minimum buy-in per seat (chips; default 100)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['POKER_MIN_BUY_IN']}"
-                               placeholder="100"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="POKER_MAX_BUY_IN">
-                        <label>Maximum buy-in per seat (chips; 0 = unlimited; default 5000)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['POKER_MAX_BUY_IN']}"
-                               placeholder="5000"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
+                </details>
             </div>
-        </details>
-
-        <details class="config-section">
-            <summary>Blackjack</summary>
-            <div class="config-grid">
-                <div class="config-group">
-                    <h4>Table rules</h4>
-                    <div class="config-row" data-key="BLACKJACK_RAKE_PCT">
-                        <label>Blackjack rake (% of multi-table losers' pool routed to jackpot; default 5)</label>
-                        <span class="config-input-group">
-                            <input type="number" min="0" max="20" step="1"
-                                   th:value="${overview.config['BLACKJACK_RAKE_PCT']}"
-                                   placeholder="5"
-                                   th:disabled="${!isOwner}">
-                            <span class="config-suffix">%</span>
-                        </span>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_MAX_SEATS">
-                        <label>Max seats per multi table (2-7; default 5)</label>
-                        <input type="number" min="2" max="7"
-                               th:value="${overview.config['BLACKJACK_MAX_SEATS']}"
-                               placeholder="5"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_SHOT_CLOCK_SECONDS">
-                        <label>Decision deadline per actor (seconds; 0 disables; default 30)</label>
-                        <input type="number" min="0" max="600"
-                               th:value="${overview.config['BLACKJACK_SHOT_CLOCK_SECONDS']}"
-                               placeholder="30"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_DEALER_HITS_SOFT_17">
-                        <label>Dealer rule on soft 17</label>
-                        <select th:disabled="${!isOwner}">
-                            <option value="false"
-                                    th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == null or overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'false'}">
-                                Stand on soft 17 (S17, default — better for the player)
-                            </option>
-                            <option value="true"
-                                    th:selected="${overview.config['BLACKJACK_DEALER_HITS_SOFT_17'] == 'true'}">
-                                Hit soft 17 (H17 — slightly worse for the player)
-                            </option>
-                        </select>
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_NUM">
-                        <label>Natural-blackjack payout numerator (e.g. 3 for 3:2; default 3)</label>
-                        <input type="number" min="1" max="10"
-                               th:value="${overview.config['BLACKJACK_BJ_PAYOUT_NUM']}"
-                               placeholder="3"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_BJ_PAYOUT_DEN">
-                        <label>Natural-blackjack payout denominator (e.g. 2 for 3:2; default 2)</label>
-                        <input type="number" min="1" max="10"
-                               th:value="${overview.config['BLACKJACK_BJ_PAYOUT_DEN']}"
-                               placeholder="2"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Stakes per hand</h4>
-                    <div class="config-row" data-key="BLACKJACK_MIN_ANTE">
-                        <label>Minimum stake per hand (applies to solo &amp; multi; default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['BLACKJACK_MIN_ANTE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BLACKJACK_MAX_ANTE">
-                        <label>Maximum stake per hand (applies to solo &amp; multi; 0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['BLACKJACK_MAX_ANTE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-            </div>
-        </details>
-
-        <details class="config-section">
-            <summary>Game stake limits</summary>
-            <p class="muted mb-2">
-                Stake bounds for every simple casino game. Set any maximum to
-                <code>0</code> to remove the cap. Blackjack ante limits live
-                in the <strong>Blackjack</strong> section; poker blinds and
-                buy-ins live in the <strong>Poker</strong> section.
-            </p>
-            <div class="config-grid">
-                <div class="config-group">
-                    <h4>Dice</h4>
-                    <div class="config-row" data-key="DICE_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['DICE_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="DICE_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['DICE_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Coinflip</h4>
-                    <div class="config-row" data-key="COINFLIP_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['COINFLIP_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="COINFLIP_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 1000)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['COINFLIP_MAX_STAKE']}"
-                               placeholder="1000"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Slots</h4>
-                    <div class="config-row" data-key="SLOTS_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['SLOTS_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="SLOTS_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['SLOTS_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Highlow</h4>
-                    <div class="config-row" data-key="HIGHLOW_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['HIGHLOW_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="HIGHLOW_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['HIGHLOW_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Baccarat</h4>
-                    <div class="config-row" data-key="BACCARAT_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['BACCARAT_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="BACCARAT_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['BACCARAT_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Keno</h4>
-                    <div class="config-row" data-key="KENO_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['KENO_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="KENO_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['KENO_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Scratch</h4>
-                    <div class="config-row" data-key="SCRATCH_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['SCRATCH_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="SCRATCH_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['SCRATCH_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Roulette</h4>
-                    <div class="config-row" data-key="ROULETTE_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['ROULETTE_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="ROULETTE_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['ROULETTE_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Plinko</h4>
-                    <div class="config-row" data-key="PLINKO_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['PLINKO_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="PLINKO_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['PLINKO_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Horse Racing</h4>
-                    <div class="config-row" data-key="HORSE_RACING_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['HORSE_RACING_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="HORSE_RACING_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['HORSE_RACING_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Wheel of Fortune</h4>
-                    <div class="config-row" data-key="WHEEL_OF_FORTUNE_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['WHEEL_OF_FORTUNE_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="WHEEL_OF_FORTUNE_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['WHEEL_OF_FORTUNE_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Casino Hold'em</h4>
-                    <div class="config-row" data-key="HOLDEM_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['HOLDEM_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="HOLDEM_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['HOLDEM_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Duel</h4>
-                    <div class="config-row" data-key="DUEL_MIN_STAKE">
-                        <label>Minimum stake (default 10)</label>
-                        <input type="number" min="1"
-                               th:value="${overview.config['DUEL_MIN_STAKE']}"
-                               placeholder="10"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="DUEL_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['DUEL_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Rock-Paper-Scissors</h4>
-                    <div class="config-row" data-key="RPS_MIN_STAKE">
-                        <label>Minimum stake (0 = free play allowed; default 0)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['RPS_MIN_STAKE']}"
-                               placeholder="0"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="RPS_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['RPS_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Tic-Tac-Toe</h4>
-                    <div class="config-row" data-key="TICTACTOE_MIN_STAKE">
-                        <label>Minimum stake (0 = free play allowed; default 0)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['TICTACTOE_MIN_STAKE']}"
-                               placeholder="0"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="TICTACTOE_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['TICTACTOE_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-                <div class="config-group">
-                    <h4>Connect 4</h4>
-                    <div class="config-row" data-key="CONNECT4_MIN_STAKE">
-                        <label>Minimum stake (0 = free play allowed; default 0)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['CONNECT4_MIN_STAKE']}"
-                               placeholder="0"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                    <div class="config-row" data-key="CONNECT4_MAX_STAKE">
-                        <label>Maximum stake (0 = unlimited; default 500)</label>
-                        <input type="number" min="0"
-                               th:value="${overview.config['CONNECT4_MAX_STAKE']}"
-                               placeholder="500"
-                               th:disabled="${!isOwner}">
-                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                    </div>
-                </div>
-            </div>
-        </details>
+        </div>
     </section>
 </main>
 

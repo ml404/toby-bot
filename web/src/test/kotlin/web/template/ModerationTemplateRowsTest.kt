@@ -162,22 +162,23 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
-    fun `game stake limits card sub-groups every game with an h4 heading`() {
-        // The card is too long without sub-headings — admins scan by game.
-        // Asserting on a sample of headings so a flatten regression is
-        // obvious without making the test enumerate every group.
-        // Blackjack and Poker headings now live in their dedicated game
-        // sections under "Stakes per hand" / "Blinds & buy-ins"
-        // subgroups, so this card only carries the simple games.
-        val headings = listOf(
-            "<h4>Dice</h4>",
-            "<h4>Coinflip</h4>",
-            "<h4>Duel</h4>",
+    fun `game stake limits table labels every game row with its name`() {
+        // Stake limits live in a table so each game's min + max sit side by
+        // side instead of stacked. Admins still scan by game — the row
+        // header replaces the old h4 sub-grouping. Sample three games
+        // (a simple one, a chance game, and Duel) so a flatten regression
+        // or accidentally-dropped row trips a single assertion.
+        // Blackjack and Poker rows live in their dedicated game sections
+        // under "Stakes per hand" / "Blinds & buy-ins" subgroups.
+        val rowHeaders = listOf(
+            "<th scope=\"row\">Dice</th>",
+            "<th scope=\"row\">Coinflip</th>",
+            "<th scope=\"row\">Duel</th>",
         )
-        for (h in headings) {
+        for (h in rowHeaders) {
             assertTrue(
                 settingsHtml.contains(h),
-                "expected $h sub-heading inside the Game stake limits card"
+                "expected $h row inside the Game stake limits table"
             )
         }
     }
