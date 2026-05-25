@@ -3,6 +3,7 @@ package bot.toby.command.commands.economy
 import bot.toby.command.CommandTest
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
+import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.DefaultCommandContext
 import bot.toby.economy.TobyCoinChartRenderer
 import database.dto.economy.TobyCoinMarketDto
@@ -14,9 +15,11 @@ import database.service.economy.TobyCoinMarketService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
@@ -107,6 +110,40 @@ internal class TobyCoinCommandTest : CommandTest {
 
         verify(exactly = 0) { tradeService.buy(any(), any(), any()) }
         verify(exactly = 0) { tradeService.sell(any(), any(), any()) }
+    }
+
+    /**
+     * Regression guard for the format-string crash that committed the
+     * trade to the DB but threw on the way to building the reply:
+     * UnknownFormatConversionException because the composed message
+     * contained literal `%)` (from the "1%)" breakdown text) before
+     * being passed to String.format.
+     */
+    @Test
+    fun `buy outcome with fee renders without throwing`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { event.subcommandName } returns "buy"
+        every { event.getOption("amount") } returns intOpt(5L)
+        every { tradeService.buy(discordId, guildId, 5L) } returns TradeOutcome.Ok(
+            amount = 5L,
+            transactedCredits = 1010L,
+            newCoins = 5L,
+            newCredits = 8990L,
+            newPrice = 100.20,
+            fee = 10L,
+        )
+        val sent = slot<String>()
+
+        command.handle(DefaultCommandContext(event), user, 5)
+
+        verify(exactly = 1) { tradeService.buy(discordId, guildId, 5L) }
+        // Capture from the existing common-mock stub so we can assert
+        // the composed message reaches the hook intact.
+        verify(exactly = 1) { event.hook.sendMessage(capture(sent)) }
+        // Both the fee breakdown (with the literal "1%)") and the
+        // formatted price land in the same message, intact.
+        assertTrue(sent.captured.contains("fee, 1%)")) { "missing fee breakdown: '${sent.captured}'" }
+        assertTrue(sent.captured.contains("New price: 100.20")) { "missing formatted price: '${sent.captured}'" }
     }
 
     @Test
