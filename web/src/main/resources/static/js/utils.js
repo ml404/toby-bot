@@ -36,6 +36,9 @@
 
     // --- Dice roller ---
     const MAX_VISIBLE_DICE = 24;
+    // The canonical TTRPG set. Anything outside this falls back to the
+    // rounded-square die-num.svg template (covers d2, d7, d100, etc.).
+    const STD_POLYHEDRALS = new Set([4, 8, 10, 12, 20]);
 
     function makeDie(sides, value) {
         if (sides === 6 && value >= 1 && value <= 6) {
@@ -47,13 +50,19 @@
             return img;
         }
         // Numbered die: shared SVG body with the value overlaid via CSS so
-        // we don't have to refetch & rewrite the SVG per roll.
+        // we don't have to refetch & rewrite the SVG per roll. Polyhedrals
+        // get a shape-specific SVG; other sides fall back to a rounded square.
         const wrap = document.createElement('span');
         wrap.className = 'die die-num';
         wrap.setAttribute('role', 'img');
         wrap.setAttribute('aria-label', 'Die showing ' + value);
         const face = document.createElement('img');
-        face.src = '/images/utils/die-num.svg';
+        if (STD_POLYHEDRALS.has(sides)) {
+            face.src = '/images/utils/d' + sides + '.svg';
+            wrap.classList.add('die-poly', 'die-d' + sides);
+        } else {
+            face.src = '/images/utils/die-num.svg';
+        }
         face.alt = '';
         face.decoding = 'async';
         face.className = 'die-num-face';
@@ -70,6 +79,53 @@
         return wrap;
     }
 
+    function rollAndRender(sides, count, modifier) {
+        if (!Number.isFinite(count) || count < 1 || count > 100) {
+            toast('Count must be between 1 and 100.', 'error');
+            return;
+        }
+        if (!Number.isFinite(sides) || sides < 2 || sides > 1000) {
+            toast('Sides must be between 2 and 1000.', 'error');
+            return;
+        }
+        const rolls = [];
+        let total = 0;
+        for (let i = 0; i < count; i++) {
+            const r = randInt(sides);
+            rolls.push(r);
+            total += r;
+        }
+        const grand = total + modifier;
+        const label = count + 'd' + sides + (modifier ? (modifier > 0 ? ' + ' + modifier : ' - ' + Math.abs(modifier)) : '');
+
+        const tray = stage('dice');
+        tray.innerHTML = '';
+        const visible = Math.min(rolls.length, MAX_VISIBLE_DICE);
+        for (let i = 0; i < visible; i++) {
+            const die = makeDie(sides, rolls[i]);
+            if (!reducedMotion) {
+                die.classList.add('rolling');
+                die.style.animationDelay = (i * 40) + 'ms';
+                die.addEventListener('animationend', function onEnd() {
+                    die.removeEventListener('animationend', onEnd);
+                    die.classList.remove('rolling');
+                    die.classList.add('settled');
+                }, { once: true });
+            }
+            tray.appendChild(die);
+        }
+        if (rolls.length > MAX_VISIBLE_DICE) {
+            const more = document.createElement('span');
+            more.className = 'die-more';
+            more.textContent = '+' + (rolls.length - MAX_VISIBLE_DICE) + ' more';
+            tray.appendChild(more);
+        }
+
+        output('dice').textContent =
+            label + '\nRolls: [' + rolls.join(', ') + ']\nSum: ' + total +
+            (modifier ? '\nWith modifier: ' + grand : '');
+    }
+
     const diceForm = document.querySelector('[data-form="dice"]');
     if (diceForm) {
         diceForm.addEventListener('submit', e => {
@@ -77,50 +133,20 @@
             const count = parseInt(diceForm.elements.count.value, 10);
             const sides = parseInt(diceForm.elements.sides.value, 10);
             const modifier = parseInt(diceForm.elements.modifier.value, 10) || 0;
-            if (!Number.isFinite(count) || count < 1 || count > 100) {
-                toast('Count must be between 1 and 100.', 'error');
-                return;
-            }
-            if (!Number.isFinite(sides) || sides < 2 || sides > 1000) {
-                toast('Sides must be between 2 and 1000.', 'error');
-                return;
-            }
-            const rolls = [];
-            let total = 0;
-            for (let i = 0; i < count; i++) {
-                const r = randInt(sides);
-                rolls.push(r);
-                total += r;
-            }
-            const grand = total + modifier;
-            const label = count + 'd' + sides + (modifier ? (modifier > 0 ? ' + ' + modifier : ' - ' + Math.abs(modifier)) : '');
+            rollAndRender(sides, count, modifier);
+        });
+    }
 
-            const tray = stage('dice');
-            tray.innerHTML = '';
-            const visible = Math.min(rolls.length, MAX_VISIBLE_DICE);
-            for (let i = 0; i < visible; i++) {
-                const die = makeDie(sides, rolls[i]);
-                if (!reducedMotion) {
-                    die.classList.add('rolling');
-                    die.style.animationDelay = (i * 40) + 'ms';
-                    die.addEventListener('animationend', function onEnd() {
-                        die.removeEventListener('animationend', onEnd);
-                        die.classList.remove('rolling');
-                        die.classList.add('settled');
-                    }, { once: true });
-                }
-                tray.appendChild(die);
-            }
-            if (rolls.length > MAX_VISIBLE_DICE) {
-                const more = document.createElement('span');
-                more.className = 'die-more';
-                more.textContent = '+' + (rolls.length - MAX_VISIBLE_DICE) + ' more';
-                tray.appendChild(more);
-            }
-
-            output('dice').textContent =
-                label + '\nRolls: [' + rolls.join(', ') + ']\nSum: ' + total +
-                (modifier ? '\nWith modifier: ' + grand : '');
+    const diceQuick = stage('dice-quick');
+    if (diceQuick) {
+        const modInput = diceQuick.querySelector('[name="quickModifier"]');
+        diceQuick.querySelector('.dice-quick-grid').addEventListener('click', e => {
+            const btn = e.target.closest('button[data-quick-sides]');
+            if (!btn) return;
+            const sides = parseInt(btn.dataset.quickSides, 10);
+            const count = parseInt(btn.dataset.quickCount, 10);
+            const modifier = parseInt(modInput && modInput.value, 10) || 0;
+            rollAndRender(sides, count, modifier);
         });
     }
 
