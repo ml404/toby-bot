@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Polyhedral dice shapes + quick-pick grid on /utils",
+    "summary": "Two related upgrades to the `/utils` dice card, shipped together since they share `makeDie` / `rollAndRender`: ### 1. Polyhedral dice shapes Every standard TTRPG die now renders as its actual silhouette instead of falling back to a generic rounded square: d4 → triangle (tetrahedron face) d6 → unchanged (pip patterns from PR #588) d8 → diamond / rhombus d10 → kite (pentagonal trapezohedron) d12 → pentagon d20 → hexagon Non-standard sides (d2, d7, d100, anything outside `{4,…",
+    "emoji": "✨",
+    "prNumber": 595
+  },
+  {
+    "date": "May 2026",
     "title": "Lift remaining engine dirs into casino/ and pvp/ parents",
     "summary": "Completes the common-module consolidation started in #592. The pre-existing top-level engine directories (`common/blackjack/`, `common/poker/`, `common/connect4/`, `common/rps/`, `common/tictactoe/`) moved under `common/casino/<game>/` and `common/pvp/<game>/` so the parallel paths now match the database service/persistence/dto layouts and the discord-bot game/button layouts.",
     "emoji": "♠️",
