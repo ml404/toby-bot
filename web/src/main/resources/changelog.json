@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Stop commands from getting stuck thinking without acknowledging",
+    "summary": "Tobybot occasionally showed the \"Bot is thinking...\" spinner forever (or \"interaction failed\") after a slash command or button click — visually indistinguishable from the bot being offline. You called out `/tobycoin buy` and the \"Click to Reroll\" button on `/roll` as reproducers; both turned out to be symptoms of separate bugs in the same area. ### Root causes & fixes **1. Manager pre-dispatch DB work ate the 3-second ack window.** `DefaultCommandManager.handle` ran `confi…",
+    "emoji": "🎰",
+    "prNumber": 596
+  },
+  {
+    "date": "May 2026",
     "title": "Polyhedral dice shapes + quick-pick grid on /utils",
     "summary": "Two related upgrades to the `/utils` dice card, shipped together since they share `makeDie` / `rollAndRender`: ### 1. Polyhedral dice shapes Every standard TTRPG die now renders as its actual silhouette instead of falling back to a generic rounded square: d4 → triangle (tetrahedron face) d6 → unchanged (pip patterns from PR #588) d8 → diamond / rhombus d10 → kite (pentagonal trapezohedron) d12 → pentagon d20 → hexagon Non-standard sides (d2, d7, d100, anything outside `{4,…",
     "emoji": "✨",
