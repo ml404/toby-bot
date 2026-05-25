@@ -1,11 +1,13 @@
-package common.poker
+package common.casino.poker
 
 import common.card.Card
 import common.card.Deck
-import common.poker.PokerTable.Phase
-import common.poker.PokerTable.SeatStatus
+import common.casino.poker.PokerTable.Phase
+import common.casino.poker.PokerTable.SeatStatus
 import java.time.Instant
 import kotlin.random.Random
+import common.casino.poker.HandEvaluator
+import common.casino.poker.PokerTable
 
 /**
  * Pure state-machine over [PokerTable]. Mutates the table in place but

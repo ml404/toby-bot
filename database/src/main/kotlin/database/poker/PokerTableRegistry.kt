@@ -1,6 +1,6 @@
 package database.poker
 
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration

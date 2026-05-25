@@ -1,9 +1,13 @@
 package web.service
 
-import common.blackjack.*
 import common.card.Card
 import database.blackjack.BlackjackTableRegistry
 import org.springframework.stereotype.Service
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.canSplit
+import common.casino.blackjack.isSoft
 
 /**
  * Read-only projection of [BlackjackTable] for the web UI. Crucially,

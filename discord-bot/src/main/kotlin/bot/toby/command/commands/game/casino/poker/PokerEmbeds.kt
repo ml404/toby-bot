@@ -2,8 +2,8 @@ package bot.toby.command.commands.game.casino.poker
 
 import database.dto.casino.poker.PokerHandLogDto
 import common.card.Card
-import common.poker.PokerTable
-import common.poker.PokerTable.Phase
+import common.casino.poker.PokerTable
+import common.casino.poker.PokerTable.Phase
 import database.service.casino.poker.PokerService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed

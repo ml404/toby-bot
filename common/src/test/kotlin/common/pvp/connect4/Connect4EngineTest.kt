@@ -1,10 +1,11 @@
-package common.connect4
+package common.pvp.connect4
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.pvp.connect4.Connect4Engine
 
 /**
  * Truth table for [Connect4Engine]. Pure-function unit tests — no

@@ -1,13 +1,13 @@
 package database.service.casino.blackjack
 
 import common.events.casino.blackjack.BlackjackNaturalEvent
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import common.blackjack.bestTotal
-import common.blackjack.canSplit
-import common.blackjack.isBlackjack
-import common.blackjack.isBust
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.canSplit
+import common.casino.blackjack.isBlackjack
+import common.casino.blackjack.isBust
 import database.dto.casino.blackjack.BlackjackHandLogDto
 import database.dto.guild.ConfigDto
 import database.persistence.casino.blackjack.BlackjackHandLogPersistence
@@ -35,6 +35,10 @@ import database.service.casino.TopUpResult
 import database.service.guild.cfgLong
 import database.service.guild.cfgLongMax
 import database.service.user.lockUsersInAscendingOrder
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.canSplit
+import common.casino.blackjack.isBlackjack
+import common.casino.blackjack.isBust
 
 /**
  * Atomic play path for both `/blackjack solo` and `/blackjack` multi

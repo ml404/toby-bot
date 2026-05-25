@@ -1,6 +1,6 @@
 package database.poker
 
-import common.poker.PokerTable
+import common.casino.poker.PokerTable
 import common.testing.DeterministicScheduler
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

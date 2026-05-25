@@ -1,9 +1,9 @@
 package database.service
 
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import common.blackjack.bestTotal
+import common.casino.blackjack.bestTotal
 import common.card.Card
 import common.card.Deck
 import common.card.Rank
@@ -28,6 +28,7 @@ import database.service.economy.JackpotHelper
 import database.service.economy.JackpotService
 import database.service.user.UserService
 import common.events.casino.blackjack.BlackjackNaturalEvent
+import common.casino.blackjack.bestTotal
 
 class BlackjackServiceTest {
 

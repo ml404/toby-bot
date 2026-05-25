@@ -1,6 +1,6 @@
 package database.tictactoe
 
-import common.tictactoe.TicTacToeEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

@@ -4,6 +4,7 @@ import bot.toby.modal.modals.setconfig.SetConfigFieldValidator.FieldSpec
 import database.dto.guild.ConfigDto.Configurations
 import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
+import common.casino.blackjack.Blackjack
 
 /**
  * `/setconfig blackjack_table` — seat count + the natural-blackjack

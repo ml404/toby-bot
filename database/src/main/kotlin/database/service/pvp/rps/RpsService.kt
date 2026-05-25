@@ -1,7 +1,7 @@
 package database.service.pvp.rps
 
 import common.events.pvp.rps.RpsResolvedEvent
-import common.rps.RpsEngine
+import common.pvp.rps.RpsEngine
 import database.dto.guild.ConfigDto
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationEventPublisher

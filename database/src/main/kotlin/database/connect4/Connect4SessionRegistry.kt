@@ -1,6 +1,6 @@
 package database.connect4
 
-import common.connect4.Connect4Engine
+import common.pvp.connect4.Connect4Engine
 import database.boardgame.TurnBasedBoardSessionRegistry
 import database.configuration.RegistryScheduler
 import database.pvp.PvpSessionRegistry

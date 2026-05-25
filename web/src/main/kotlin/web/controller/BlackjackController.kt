@@ -1,7 +1,7 @@
 package web.controller
 
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.service.casino.blackjack.BlackjackService
 import database.service.casino.blackjack.BlackjackService.MultiActionOutcome

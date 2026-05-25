@@ -8,10 +8,10 @@ import database.dto.casino.poker.PokerHandPotDto
 import database.dto.user.UserDto
 import database.persistence.casino.poker.PokerHandLogPersistence
 import database.persistence.casino.poker.PokerHandPotPersistence
-import common.poker.HandEvaluator
-import common.poker.PokerEngine
-import common.poker.PokerEngine.PokerAction
-import common.poker.PokerTable
+import common.casino.poker.HandEvaluator
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerEngine.PokerAction
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import jakarta.annotation.PostConstruct
 import org.springframework.beans.factory.annotation.Autowired

@@ -1,8 +1,8 @@
 package web.service
 
 import common.card.Card
-import common.poker.CasinoHoldem
-import common.poker.CasinoHoldemTable
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
 import org.springframework.stereotype.Service
 

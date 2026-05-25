@@ -1,6 +1,6 @@
 package database.tictactoe
 
-import common.tictactoe.TicTacToeEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import database.boardgame.TurnBasedBoardSessionRegistry
 import database.configuration.RegistryScheduler
 import database.pvp.PvpSessionRegistry

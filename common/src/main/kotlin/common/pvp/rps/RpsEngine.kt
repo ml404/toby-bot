@@ -1,4 +1,4 @@
-package common.rps
+package common.pvp.rps
 
 /**
  * Pure logic for Rock-Paper-Scissors outcomes. No JDA / Spring / DB —

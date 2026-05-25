@@ -1,4 +1,4 @@
-package common.poker
+package common.casino.casinoholdem
 
 import common.card.Card
 import common.card.Deck
@@ -9,6 +9,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.poker.HandEvaluator
 
 class CasinoHoldemTest {
 

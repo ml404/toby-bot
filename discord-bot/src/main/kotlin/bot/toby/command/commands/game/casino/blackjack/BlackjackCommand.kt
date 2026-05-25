@@ -3,10 +3,10 @@ package bot.toby.command.commands.game.casino.blackjack
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.CommandContext
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
-import common.blackjack.canSplit
+import common.casino.blackjack.canSplit
 import database.dto.user.UserDto
 import database.service.casino.blackjack.BlackjackService
 import database.service.casino.blackjack.BlackjackService.MultiCreateOutcome
@@ -26,6 +26,7 @@ import bot.toby.command.commands.game.casino.blackjack.BlackjackEmbeds
 import bot.toby.command.commands.game.pvp.GameCommand
 import bot.toby.command.commands.game.WagerCommandEmbeds
 import bot.toby.command.commands.game.WagerCommandFailure
+import common.casino.blackjack.canSplit
 
 /**
  * `/blackjack solo|create|join|start|leave|tables|peek` — classic

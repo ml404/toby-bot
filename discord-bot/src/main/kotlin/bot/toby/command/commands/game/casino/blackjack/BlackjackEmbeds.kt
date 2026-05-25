@@ -1,9 +1,9 @@
 package bot.toby.command.commands.game.casino.blackjack
 
-import common.blackjack.Blackjack
-import common.blackjack.BlackjackTable
-import common.blackjack.bestTotal
-import common.blackjack.isSoft
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.BlackjackTable
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.isSoft
 import common.card.Card
 import database.dto.casino.blackjack.BlackjackHandLogDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -13,6 +13,8 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import bot.toby.command.commands.game.WagerCommandColors
 import bot.toby.command.commands.game.WagerCommandEmbeds
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.isSoft
 
 /**
  * Shared embed/component plumbing for the Discord `/blackjack` flow.

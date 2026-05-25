@@ -1,7 +1,8 @@
-package common.rps
+package common.pvp.rps
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import common.pvp.rps.RpsEngine
 
 /**
  * Truth table for [RpsEngine.resolve]. Pure-function unit tests — no

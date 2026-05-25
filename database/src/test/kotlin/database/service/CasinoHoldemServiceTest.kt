@@ -4,10 +4,10 @@ import common.card.Card
 import common.card.Rank
 import common.card.Suit
 import database.dto.user.UserDto
-import common.poker.CasinoHoldem
-import common.poker.CasinoHoldemTable
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
-import common.poker.HandEvaluator
+import common.casino.poker.HandEvaluator
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot

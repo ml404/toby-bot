@@ -2,7 +2,7 @@ package bot.toby.button.buttons.pvp.tictactoe
 
 import bot.toby.command.commands.game.pvp.PvpEmbeds
 import bot.toby.command.commands.game.pvp.tictactoe.TicTacToeEmbeds
-import common.tictactoe.TicTacToeEngine
+import common.pvp.tictactoe.TicTacToeEngine
 import core.button.Button
 import core.button.ButtonContext
 import database.boardgame.TurnBasedBoardWagerService

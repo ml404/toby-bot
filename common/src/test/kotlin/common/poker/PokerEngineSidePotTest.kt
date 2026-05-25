@@ -3,14 +3,16 @@ package common.poker
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.poker.PokerTable.Phase
-import common.poker.PokerTable.SeatStatus
+import common.casino.poker.PokerTable.Phase
+import common.casino.poker.PokerTable.SeatStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.random.Random
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerTable
 
 /**
  * Multi-tier side-pot resolution. Drives [PokerEngine.resolveHand]

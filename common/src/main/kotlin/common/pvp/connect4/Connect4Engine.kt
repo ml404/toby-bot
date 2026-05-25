@@ -1,4 +1,4 @@
-package common.connect4
+package common.pvp.connect4
 
 /**
  * Pure logic for 7×6 Connect 4 outcomes. No JDA / Spring / DB —

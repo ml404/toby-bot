@@ -1,6 +1,6 @@
 package database.blackjack
 
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.BlackjackTable
 import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration

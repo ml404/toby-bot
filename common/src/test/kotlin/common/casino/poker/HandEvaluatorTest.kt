@@ -1,12 +1,13 @@
-package common.poker
+package common.casino.poker
 
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.poker.HandEvaluator.Category
+import common.casino.poker.HandEvaluator.Category
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import common.casino.poker.HandEvaluator
 
 class HandEvaluatorTest {
 

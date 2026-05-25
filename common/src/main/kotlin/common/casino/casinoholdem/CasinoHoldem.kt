@@ -1,9 +1,10 @@
-package common.poker
+package common.casino.casinoholdem
 
 import common.card.Card
 import common.card.Deck
 import common.card.Rank
 import kotlin.random.Random
+import common.casino.poker.HandEvaluator
 
 /**
  * Pure-logic Casino Hold'em — the standard casino table variant of

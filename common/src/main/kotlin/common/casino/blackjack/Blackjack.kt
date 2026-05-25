@@ -1,8 +1,12 @@
-package common.blackjack
+package common.casino.blackjack
 
 import common.card.Card
 import common.card.Deck
 import kotlin.random.Random
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.isBlackjack
+import common.casino.blackjack.isBust
+import common.casino.blackjack.isSoft
 
 /**
  * Pure-logic blackjack primitives. No Spring, no DB, no JDA — just the

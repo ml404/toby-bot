@@ -1,5 +1,6 @@
 package web.catalog
 
+import common.casino.blackjack.Blackjack
 /**
  * Single source of truth for the games listed on the homepage. Adding,
  * removing, or renaming a game here updates every count and label

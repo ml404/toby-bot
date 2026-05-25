@@ -1,4 +1,4 @@
-package common.blackjack
+package common.casino.blackjack
 
 import common.card.Card
 import common.card.Deck
@@ -9,6 +9,11 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.random.Random
+import common.casino.blackjack.Blackjack
+import common.casino.blackjack.bestTotal
+import common.casino.blackjack.blackjackValues
+import common.casino.blackjack.isBlackjack
+import common.casino.blackjack.isBust
 
 class BlackjackTest {
 

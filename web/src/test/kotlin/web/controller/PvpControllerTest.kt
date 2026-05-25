@@ -386,10 +386,10 @@ class PvpControllerTest {
     fun `rpsPick by one side fans pick to other but does not resolve`() {
         val session = rpsSession(PvpSessionRegistry.Session.State.LIVE)
         every { rpsSessionRegistry.get(1L) } returns session
-        every { pvpWebService.parseRpsChoice("ROCK") } returns common.rps.RpsEngine.Choice.ROCK
-        every { rpsSessionRegistry.recordPick(1L, discordId, common.rps.RpsEngine.Choice.ROCK) } returns
+        every { pvpWebService.parseRpsChoice("ROCK") } returns common.pvp.rps.RpsEngine.Choice.ROCK
+        every { rpsSessionRegistry.recordPick(1L, discordId, common.pvp.rps.RpsEngine.Choice.ROCK) } returns
             rpsSession(PvpSessionRegistry.Session.State.LIVE).also {
-                it.picks[discordId] = common.rps.RpsEngine.Choice.ROCK
+                it.picks[discordId] = common.pvp.rps.RpsEngine.Choice.ROCK
             }
 
         val response = controller.rpsPick(guildId, 1L, RpsPickRequest(choice = "ROCK"), user)

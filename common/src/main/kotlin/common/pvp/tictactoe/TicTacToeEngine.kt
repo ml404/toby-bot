@@ -1,4 +1,4 @@
-package common.tictactoe
+package common.pvp.tictactoe
 
 /**
  * Pure logic for 3×3 Tic-Tac-Toe outcomes. No JDA / Spring / DB —

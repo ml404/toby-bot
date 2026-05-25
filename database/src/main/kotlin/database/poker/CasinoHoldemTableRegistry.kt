@@ -1,7 +1,7 @@
 package database.poker
 
-import common.poker.CasinoHoldem
-import common.poker.CasinoHoldemTable
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldemTable
 import database.configuration.RegistryScheduler
 import org.springframework.stereotype.Component
 import java.time.Duration

@@ -3,10 +3,10 @@ package web.service
 import common.card.Card
 import common.card.Rank
 import common.card.Suit
-import common.poker.CasinoHoldem
-import common.poker.CasinoHoldemTable
+import common.casino.casinoholdem.CasinoHoldem
+import common.casino.casinoholdem.CasinoHoldemTable
 import database.poker.CasinoHoldemTableRegistry
-import common.poker.HandEvaluator
+import common.casino.poker.HandEvaluator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull

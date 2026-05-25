@@ -1,8 +1,8 @@
 package web.service
 
 import common.card.Card
-import common.poker.PokerEngine
-import common.poker.PokerTable
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import common.card.Rank
 import common.card.Suit

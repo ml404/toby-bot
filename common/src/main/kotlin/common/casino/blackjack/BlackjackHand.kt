@@ -1,4 +1,4 @@
-package common.blackjack
+package common.casino.blackjack
 
 import common.card.Card
 import common.card.Rank

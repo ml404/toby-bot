@@ -7,8 +7,8 @@ import bot.toby.button.ButtonTest.Companion.mockHook
 import bot.toby.button.DefaultButtonContext
 import bot.toby.command.commands.game.casino.poker.PokerEmbeds
 import database.dto.user.UserDto
-import common.poker.PokerEngine
-import common.poker.PokerTable
+import common.casino.poker.PokerEngine
+import common.casino.poker.PokerTable
 import database.poker.PokerTableRegistry
 import database.service.casino.poker.PokerService
 import database.service.casino.poker.PokerService.ActionOutcome

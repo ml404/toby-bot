@@ -1,8 +1,9 @@
-package common.blackjack
+package common.casino.blackjack
 
 import common.card.Card
 import common.card.Deck
 import java.time.Instant
+import common.casino.blackjack.Blackjack
 
 /**
  * Mutable state of a single blackjack table — used for both the SOLO
@@ -10,7 +11,7 @@ import java.time.Instant
  * inside a monitor on the table object (see [BlackjackTableRegistry.lockTable])
  * so concurrent button clicks serialise around the hand state.
  *
- * Like [common.poker.PokerTable], chips on each [Seat] are escrow:
+ * Like [common.casino.poker.PokerTable], chips on each [Seat] are escrow:
  * the player's `socialCredit` was debited at deal/buy-in time; nothing
  * else touches it until the hand resolves and the seat is paid out
  * (or evicted on idle).

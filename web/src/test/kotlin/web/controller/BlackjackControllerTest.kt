@@ -1,6 +1,6 @@
 package web.controller
 
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import database.service.casino.blackjack.BlackjackService
 import database.service.economy.JackpotGame
@@ -19,6 +19,7 @@ import web.casino.CasinoPageContext
 import web.casino.StakeBounds
 import web.service.BlackjackWebService
 import web.service.EconomyWebService
+import common.casino.blackjack.canSplit
 
 /**
  * Page-handler regression tests. The JSON endpoints (`/state`, `/deal`,

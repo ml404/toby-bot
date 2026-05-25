@@ -1,6 +1,6 @@
 package web.service
 
-import common.blackjack.BlackjackTable
+import common.casino.blackjack.BlackjackTable
 import database.blackjack.BlackjackTableRegistry
 import common.card.Card
 import common.card.Rank
