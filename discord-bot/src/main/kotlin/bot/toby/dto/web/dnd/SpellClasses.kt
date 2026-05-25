@@ -7,10 +7,13 @@ import java.lang.String.join
 data class Spell(
     val index: String?,
     val name: String?,
-    val desc: List<String?>,
-    val higherLevel: List<String?>,
+    // Lists below were non-nullable on the Kotlin side but Gson assigns
+    // null when the JSON field is missing — `{}` payloads or a 404 response
+    // crashed isValidReturnObject/toEmbed with NPE on the first .isEmpty().
+    val desc: List<String?>?,
+    val higherLevel: List<String?>?,
     val range: String?,
-    val components: List<String?>,
+    val components: List<String?>?,
     val material: String?,
     val ritual: Boolean?,
     val duration: String?,
@@ -22,16 +25,16 @@ data class Spell(
     val areaOfEffect: AreaOfEffect?,
     val school: ApiInfo?,
     val classes: List<ApiInfo>?,
-    val subclasses: List<ApiInfo?>,
+    val subclasses: List<ApiInfo?>?,
     val url: String?
 ): DnDResponse {
     override fun isValidReturnObject(): Boolean {
         return !(index.isNullOrEmpty() &&
                 name.isNullOrEmpty() &&
-                desc.isEmpty() &&
-                higherLevel.isEmpty() &&
+                desc.isNullOrEmpty() &&
+                higherLevel.isNullOrEmpty() &&
                 range.isNullOrEmpty() &&
-                components.isEmpty() &&
+                components.isNullOrEmpty() &&
                 material.isNullOrEmpty() &&
                 ritual == null &&
                 duration.isNullOrEmpty() &&
@@ -43,17 +46,17 @@ data class Spell(
                 areaOfEffect == null &&
                 school == null &&
                 classes.isNullOrEmpty() &&
-                subclasses.isEmpty() &&
+                subclasses.isNullOrEmpty() &&
                 url.isNullOrEmpty())
     }
 
     override fun toEmbed(): MessageEmbed {
         val embedBuilder = EmbedBuilder()
         name?.let { embedBuilder.setTitle(name) }
-        if (desc.isNotEmpty()) {
+        if (!desc.isNullOrEmpty()) {
             embedBuilder.setDescription(desc.transformListToString())
         }
-        if (higherLevel.isNotEmpty()) {
+        if (!higherLevel.isNullOrEmpty()) {
             embedBuilder.addField("Higher Level", higherLevel.transformListToString(), false)
         }
         range?.let {
@@ -67,7 +70,7 @@ data class Spell(
             }
             embedBuilder.addField("Range", meterValue, true)
         }
-        if (components.isNotEmpty()) {
+        if (!components.isNullOrEmpty()) {
             embedBuilder.addField("Components", join(", ", components), true)
         }
         duration?.let { embedBuilder.addField("Duration", duration, true) }
@@ -109,8 +112,7 @@ data class Spell(
             }
             embedBuilder.addField("Classes", classesInfo.toString(), true)
         }
-        val subclasses = subclasses
-        if (subclasses.isNotEmpty()) {
+        if (!subclasses.isNullOrEmpty()) {
             val subclassesInfo = StringBuilder()
             for (subclassInfo in subclasses) {
                 subclassesInfo.append(subclassInfo?.name).append("\n")

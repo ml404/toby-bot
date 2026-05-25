@@ -18,12 +18,11 @@ import org.junit.jupiter.api.TestFactory
  */
 internal class DnDResponseEmptyPayloadTest {
 
-    // Feature and Spell are excluded — running them against `{}` revealed
-    // pre-existing NPE bugs: Feature.prerequisites and Spell.desc/
-    // higherLevel/components/subclasses are declared non-nullable Lists in
-    // Kotlin, but Gson assigns null when the JSON field is missing, so the
-    // first `.isEmpty()` call in isValidReturnObject() crashes. Filed as a
-    // follow-up; this guard ships the coverage we can ship today.
+    // Includes Feature and Spell — they previously NPE'd here because
+    // their list fields (Feature.prerequisites, Spell.desc/higherLevel/
+    // components/subclasses) were declared non-nullable but Gson assigns
+    // null when the JSON field is missing. Fixed in the same commit
+    // that re-enables them in this matrix.
     @TestFactory
     fun `every JsonParser entry-point reports isValidReturnObject = false on empty {}`(): List<DynamicTest> {
         // Pair each parser with the name it should appear under in the
@@ -34,11 +33,13 @@ internal class DnDResponseEmptyPayloadTest {
             "DamageTypeInfo" to { JsonParser.parseJsonToDamageTypeInfo("{}") },
             "Equipment" to { JsonParser.parseJsonToEquipment("{}") },
             "EquipmentCategory" to { JsonParser.parseJsonToEquipmentCategory("{}") },
+            "Feature" to { JsonParser.parseJsonToFeature("{}") },
             "Language" to { JsonParser.parseJsonToLanguage("{}") },
             "MagicSchool" to { JsonParser.parseJsonToMagicSchool("{}") },
             "Proficiency" to { JsonParser.parseJsonToProficiency("{}") },
             "Rule" to { JsonParser.parseJsonToRule("{}") },
             "Skill" to { JsonParser.parseJsonToSkill("{}") },
+            "Spell" to { JsonParser.parseJSONToSpell("{}") },
             "Subclass" to { JsonParser.parseJsonToSubclass("{}") },
             "Subrace" to { JsonParser.parseJsonToSubrace("{}") },
             "Trait" to { JsonParser.parseJsonToTrait("{}") },
