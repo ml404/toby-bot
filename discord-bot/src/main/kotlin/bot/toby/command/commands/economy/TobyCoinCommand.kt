@@ -211,9 +211,13 @@ class TobyCoinCommand @Autowired constructor(
                 val sign = if (isBuy) "+" else "−"
                 " ($gross gross $sign ${outcome.fee} fee, 1%)"
             } else ""
-            ("$verb **${outcome.amount} TOBY** for ${outcome.transactedCredits} credits$breakdown. " +
-                    "New price: %.2f. You now hold ${outcome.newCoins} TOBY and ${outcome.newCredits} credits.")
-                .format(outcome.newPrice)
+            // Format the price up front so the message stays plain
+            // interpolation. Running String.format on the composed
+            // sentence used to choke on the literal `%)` inside `breakdown`
+            // (UnknownFormatConversionException: Conversion = ')').
+            val newPrice = "%.2f".format(outcome.newPrice)
+            "$verb **${outcome.amount} TOBY** for ${outcome.transactedCredits} credits$breakdown. " +
+                "New price: $newPrice. You now hold ${outcome.newCoins} TOBY and ${outcome.newCredits} credits."
         }
         is TradeOutcome.InsufficientCredits ->
             "You need ${outcome.needed} credits for this trade (price + 1% fee) but only have ${outcome.have}."
