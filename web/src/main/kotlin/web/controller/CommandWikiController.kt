@@ -67,7 +67,7 @@ class CommandWikiController(
         CategoryMeta("music", "Music", "🎵",
             "Play, queue, and control music in your server's voice channels.") { it.musicCommands },
         CategoryMeta("dnd", "D&D", "🎲",
-            "Roll dice, look up spells, and run tabletop sessions.") { it.dndCommands },
+            "Roll dice and look up D&D 5e content.") { it.dndCommands },
         CategoryMeta("moderation", "Moderation", "🛡️",
             "Ban, kick, mute, purge, and manage server permissions.") { it.moderationCommands },
         CategoryMeta("games", "Games", "🎮",
