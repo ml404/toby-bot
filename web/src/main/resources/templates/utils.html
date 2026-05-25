@@ -17,18 +17,58 @@
         <section class="util-card" data-util="dice">
             <h2>Dice roller</h2>
             <p class="muted">Equivalent to <code>/roll</code>.</p>
-            <form class="util-form" data-form="dice">
-                <label>Number of dice
-                    <input type="number" name="count" value="1" min="1" max="100" required>
+            <div class="dice-quick" data-stage="dice-quick">
+                <label class="dice-quick-mod">Modifier
+                    <input type="number" name="quickModifier" value="0" step="1">
                 </label>
-                <label>Sides
-                    <input type="number" name="sides" value="20" min="2" max="1000" required>
-                </label>
-                <label>Modifier
-                    <input type="number" name="modifier" value="0" step="1">
-                </label>
-                <button type="submit" class="btn">Roll</button>
-            </form>
+                <div class="dice-quick-grid" role="grid" aria-label="Quick roll">
+                    <button type="button" data-quick-sides="4"  data-quick-count="1">d4</button>
+                    <button type="button" data-quick-sides="4"  data-quick-count="2">2d4</button>
+                    <button type="button" data-quick-sides="4"  data-quick-count="3">3d4</button>
+                    <button type="button" data-quick-sides="4"  data-quick-count="4">4d4</button>
+                    <button type="button" data-quick-sides="4"  data-quick-count="5">5d4</button>
+                    <button type="button" data-quick-sides="6"  data-quick-count="1">d6</button>
+                    <button type="button" data-quick-sides="6"  data-quick-count="2">2d6</button>
+                    <button type="button" data-quick-sides="6"  data-quick-count="3">3d6</button>
+                    <button type="button" data-quick-sides="6"  data-quick-count="4">4d6</button>
+                    <button type="button" data-quick-sides="6"  data-quick-count="5">5d6</button>
+                    <button type="button" data-quick-sides="8"  data-quick-count="1">d8</button>
+                    <button type="button" data-quick-sides="8"  data-quick-count="2">2d8</button>
+                    <button type="button" data-quick-sides="8"  data-quick-count="3">3d8</button>
+                    <button type="button" data-quick-sides="8"  data-quick-count="4">4d8</button>
+                    <button type="button" data-quick-sides="8"  data-quick-count="5">5d8</button>
+                    <button type="button" data-quick-sides="10" data-quick-count="1">d10</button>
+                    <button type="button" data-quick-sides="10" data-quick-count="2">2d10</button>
+                    <button type="button" data-quick-sides="10" data-quick-count="3">3d10</button>
+                    <button type="button" data-quick-sides="10" data-quick-count="4">4d10</button>
+                    <button type="button" data-quick-sides="10" data-quick-count="5">5d10</button>
+                    <button type="button" data-quick-sides="12" data-quick-count="1">d12</button>
+                    <button type="button" data-quick-sides="12" data-quick-count="2">2d12</button>
+                    <button type="button" data-quick-sides="12" data-quick-count="3">3d12</button>
+                    <button type="button" data-quick-sides="12" data-quick-count="4">4d12</button>
+                    <button type="button" data-quick-sides="12" data-quick-count="5">5d12</button>
+                    <button type="button" data-quick-sides="20" data-quick-count="1">d20</button>
+                    <button type="button" data-quick-sides="20" data-quick-count="2">2d20</button>
+                    <button type="button" data-quick-sides="20" data-quick-count="3">3d20</button>
+                    <button type="button" data-quick-sides="20" data-quick-count="4">4d20</button>
+                    <button type="button" data-quick-sides="20" data-quick-count="5">5d20</button>
+                </div>
+            </div>
+            <details class="dice-custom">
+                <summary>Custom roll</summary>
+                <form class="util-form" data-form="dice">
+                    <label>Number of dice
+                        <input type="number" name="count" value="1" min="1" max="100" required>
+                    </label>
+                    <label>Sides
+                        <input type="number" name="sides" value="20" min="2" max="1000" required>
+                    </label>
+                    <label>Modifier
+                        <input type="number" name="modifier" value="0" step="1">
+                    </label>
+                    <button type="submit" class="btn">Roll</button>
+                </form>
+            </details>
             <div class="dice-tray" data-stage="dice" aria-hidden="true"></div>
             <pre class="util-output" data-output="dice" aria-live="polite"></pre>
         </section>

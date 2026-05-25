@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="Eight-sided die">
+  <defs>
+    <linearGradient id="df-8" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d6d8e0"/>
+    </linearGradient>
+  </defs>
+  <polygon points="50,6 94,50 50,94 6,50" fill="url(#df-8)"
+           stroke="#1a1a2e" stroke-width="2" stroke-linejoin="round"/>
+</svg>

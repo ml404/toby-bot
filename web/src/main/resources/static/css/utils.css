@@ -116,6 +116,14 @@
 .die-num-value-md { font-size: 1.5rem; }
 .die-num-value-sm { font-size: 1.1rem; }
 .die-num-value-xs { font-size: 0.85rem; }
+
+/* Shape-specific number positioning. The d4 triangle's centroid sits
+   ~1/6 below its bounding-box centre, so the number is nudged down and
+   the font shrunk a step since the inscribed circle is small. The d10
+   kite is mildly bottom-heavy. Diamond / pentagon / hexagon don't
+   need overrides — geometric centre matches visual centre. */
+.die.die-d4 .die-num-value { padding-top: 18%; font-size: 1.4rem; }
+.die.die-d10 .die-num-value { padding-top: 8%; }
 .dice-tray .die-more {
     padding: 4px 10px;
     border-radius: 999px;
@@ -144,6 +152,71 @@
     0%   { transform: scale(1.06); }
     100% { transform: scale(1);    }
 }
+
+/* ---- Dice quick-pick grid ---- */
+.dice-quick {
+    display: grid;
+    gap: 8px;
+    margin-bottom: var(--space-3);
+}
+.dice-quick-mod {
+    display: grid;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    max-width: 140px;
+}
+.dice-quick-mod input {
+    padding: 6px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+.dice-quick-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 6px;
+}
+.dice-quick-grid button {
+    min-height: 44px;
+    padding: 6px 4px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: 600 0.9rem/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    cursor: pointer;
+    transition: border-color var(--dur-fast) var(--ease-out),
+                color var(--dur-fast) var(--ease-out),
+                box-shadow var(--dur-fast) var(--ease-out);
+}
+.dice-quick-grid button:hover,
+.dice-quick-grid button:focus-visible {
+    border-color: var(--accent);
+    color: var(--accent-light);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+    outline: none;
+}
+.dice-quick-grid button:active {
+    transform: translateY(1px);
+}
+
+/* Custom-roll disclosure — keeps the form available but visually
+   subordinate to the grid. */
+.dice-custom {
+    margin-bottom: var(--space-3);
+}
+.dice-custom summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    padding: 4px 0;
+    list-style: revert;
+}
+.dice-custom summary:hover { color: var(--text); }
+.dice-custom[open] summary { margin-bottom: var(--space-2); }
 
 /* ---- Random chooser reel ----
    The window is 132px tall (three 44px rows). The strip translates
@@ -361,4 +434,6 @@
     .ball-stage { width: 132px; height: 132px; }
     .ball-window { width: 70px; height: 40px; font-size: 0.6rem; }
     .dice-tray .die { width: 44px; height: 44px; }
+    .dice-quick-grid { gap: 4px; }
+    .dice-quick-grid button { font-size: 0.8rem; padding: 6px 2px; }
 }
