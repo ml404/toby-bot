@@ -68,6 +68,8 @@ class WelcomeCommand @Autowired constructor(
         SubcommandData(SUB_SHOW, "Show current welcome / goodbye / auto-role configuration."),
     )
 
+    override val defersReply: Boolean = false
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val guild = event.guild ?: run {

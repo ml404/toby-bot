@@ -74,7 +74,8 @@ internal class EightBallCommandTest {
 
         command.handle(ctx, nonTomUser, deleteDelay = 0)
 
-        verify(exactly = 1) { event.deferReply() }
+        // Defer is owned by DefaultCommandManager now.
+        verify(exactly = 0) { event.deferReply() }
         // Shake edit fires immediately, reveal edit is queued after the delay —
         // both go through editOriginalEmbeds, so we expect 2 calls total.
         verify(exactly = 2) { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) }

@@ -45,7 +45,6 @@ class MemeCommand : FetchCommand {
     ) {
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
-        event.deferReply().queue()
 
         if (requestingUserDto?.memePermission != true) {
             logger.info("User ${event.member?.effectiveName} does not have meme permission")

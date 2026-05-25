@@ -14,10 +14,11 @@ class HelpCommand @Autowired constructor(private val commands: List<core.command
     companion object {
         private const val COMMAND = "command"
     }
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val args = ctx.event.options
         val event = ctx.event
-        event.deferReply(true).queue()
         // If no specific command is provided, direct users to the general wiki page
         if (args.isEmpty()) {
             val helpMessage =

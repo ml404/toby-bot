@@ -14,7 +14,6 @@ class EightBallCommand @Autowired constructor(private val userService: UserServi
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
         ask(event.hook, requestingUserDto, event.user.effectiveName, deleteDelay)
     }
 

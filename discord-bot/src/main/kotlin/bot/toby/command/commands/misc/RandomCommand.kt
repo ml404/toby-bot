@@ -12,7 +12,6 @@ class RandomCommand : MiscCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val rawList = event.getOption(LIST)?.asString
         val options = parseOptions(rawList)

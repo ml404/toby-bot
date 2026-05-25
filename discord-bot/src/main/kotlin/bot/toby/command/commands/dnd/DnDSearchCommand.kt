@@ -19,6 +19,8 @@ class DnDSearchCommand @Autowired constructor(
     private val dndHelper: DnDHelper
 ) : DnDCommand {
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val typeOptionMapping = event.getOption(TYPE)
@@ -27,7 +29,6 @@ class DnDSearchCommand @Autowired constructor(
         val query = event.getOption(QUERY)!!.asString
         val deleteDelay = deleteDelay
 
-        event.deferReply(true).queue()
         val hook = event.hook
 
         // Create and run coroutine scope

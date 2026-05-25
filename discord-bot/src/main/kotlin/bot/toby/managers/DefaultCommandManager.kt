@@ -11,13 +11,11 @@ import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.UserDtoHelper
 import common.logging.DiscordLogger
 import core.command.Command
-import core.command.CommandContext
 import core.managers.CommandManager
 import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
-import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.commands.build.CommandData
 import org.springframework.beans.factory.annotation.Autowired
@@ -32,7 +30,6 @@ class DefaultCommandManager @Autowired constructor(
     override val commands: List<Command>
 ) : CommandManager {
     override val slashCommands: MutableList<CommandData?> = ArrayList()
-    override val lastCommands: MutableMap<Guild, Pair<Command, CommandContext>> = HashMap()
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     init {
@@ -69,18 +66,17 @@ class DefaultCommandManager @Autowired constructor(
     override val economyCommands: List<Command> get() = commands.filterIsInstance<EconomyCommand>()
     override val gameCommands: List<Command> get() = commands.filterIsInstance<GameCommand>()
 
-    /**
-     * Drop the cached last-command entry for [guildId]. Called from
-     * the guild-leave cleanup path so the JDA [Guild] reference (and
-     * the associated [CommandContext]) don't pin a stale guild after
-     * the bot is gone.
-     */
-    override fun evictGuild(guildId: Long) {
-        lastCommands.keys.removeIf { it.idLong == guildId }
-    }
-
     override fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return
+        val invoke = event.name.lowercase(Locale.getDefault())
+        val cmd = getCommand(invoke)
+
+        // Defer first — the pre-dispatch DB lookups below can otherwise
+        // eat the 3-second Discord ack window when the DB is slow.
+        cmd?.takeIf { it.defersReply }?.let {
+            event.deferReply(it.ephemeral).queue()
+        }
+
         val deleteDelay = configService.getConfigByName(
             ConfigDto.Configurations.DELETE_DELAY.configValue,
             guildId
@@ -95,16 +91,11 @@ class DefaultCommandManager @Autowired constructor(
         }
 
         logger.setGuildAndMemberContext(event.guild, event.member)
-        val invoke = event.name.lowercase(Locale.getDefault())
-
-        // Get the command by name
-        val cmd = getCommand(invoke)
         logger.info("Processing command '${cmd?.name}' ...")
 
         cmd?.let {
             event.channel.sendTyping().queue()
             val ctx = DefaultCommandContext(event)
-            lastCommands[event.guild!!] = Pair(it, ctx)
             requestingUserDto?.let { userDto ->
                 // Award before dispatch so a throwing command still earns credit
                 // and so all user-initiated actions share the same hook point.

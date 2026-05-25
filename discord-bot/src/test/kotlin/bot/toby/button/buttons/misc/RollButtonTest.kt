@@ -61,8 +61,18 @@ class RollButtonTest : ButtonTest {
         // Invoke the handle method on the RollButton
         rollButton.handle(DefaultButtonContext(event), database.dto.user.UserDto(6L, 1L), 5)
 
-        // Verify interactions
+        // The button opts out of the manager's ephemeral auto-defer and
+        // defers itself (non-ephemeral) so the reroll lands as a public
+        // message.
+        verify { event.deferReply() }
         verify { mockChannel.sendTyping().queue() }
         verify { rollCommand.handleDiceRoll(event, 1, 2, 3) }
+    }
+
+    @Test
+    fun `opts out of auto-defer so the reroll posts publicly`() {
+        // Regression guard: if this ever flips to true, the manager will
+        // pre-defer ephemerally and rerolls will only show to the clicker.
+        assert(!rollButton.defersReply) { "RollButton must defer itself (non-ephemeral)" }
     }
 }

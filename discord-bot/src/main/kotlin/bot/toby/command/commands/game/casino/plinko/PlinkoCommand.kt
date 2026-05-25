@@ -47,7 +47,6 @@ class PlinkoCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val guild = WagerCommandEmbeds.requireGuild(event, TITLE, deleteDelay) ?: return
         val riskName = WagerCommandEmbeds.requireOption(

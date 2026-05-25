@@ -29,6 +29,7 @@ class TipCommand : EconomyCommand {
     override val name: String = "tip"
     override val description: String =
         "Send another user some social credit. ${TipService.MIN_TIP}-${TipService.MAX_TIP} per tip."
+    override val defersReply: Boolean = false
 
     companion object {
         private const val OPT_USER = "user"

@@ -27,9 +27,10 @@ class AchievementsCommand @Autowired constructor(
         OptionData(OptionType.USER, OPT_USER, "Member to inspect (defaults to you)", false)
     )
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val guild = event.guild ?: run {
             event.hook.replyEphemeralAndDelete(
                 "This command can only be used in a server.",

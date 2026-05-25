@@ -20,7 +20,6 @@ class NowPlayingCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply().queue()
         if (requestingUserDto.musicPermission) {
             if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
             MusicPlayerHelper.nowPlaying(event, instance, deleteDelay)

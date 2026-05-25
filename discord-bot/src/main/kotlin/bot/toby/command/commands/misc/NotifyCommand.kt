@@ -37,9 +37,10 @@ class NotifyCommand @Autowired constructor(
             )
     )
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val guild = event.guild ?: run {
             event.hook.replyEphemeralAndDelete("This command can only be used in a server.", deleteDelay)
             return

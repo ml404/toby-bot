@@ -20,7 +20,6 @@ class StopCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply().queue()
         if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         MusicPlayerHelper.stopSong(event, instance.getMusicManager(event.guild!!), requestingUserDto.superUser, deleteDelay)
     }

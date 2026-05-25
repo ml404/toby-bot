@@ -111,7 +111,6 @@ class PokerCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val guild = event.guild ?: run {
             replyError(event, "This command can only be used in a server.", deleteDelay); return

@@ -49,7 +49,10 @@ class RollCommandTest : CommandTest {
 
         rollCommand.handle(ctx, userDto, deleteDelay)
 
-        verify(exactly = 1) { event.deferReply() }
+        // Defer is owned by DefaultCommandManager (Command.defersReply = true)
+        // — handleDiceRoll itself must not defer or it would error on the
+        // reroll-button path where RollButton has already deferred.
+        verify(exactly = 0) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
         verify(exactly = 1) {
             webhookMessageCreateAction.addComponents(any<ActionRow>())
@@ -62,7 +65,7 @@ class RollCommandTest : CommandTest {
 
         rollCommand.handleDiceRoll(event, 6, 1, 0)
 
-        verify(exactly = 1) { event.deferReply() }
+        verify(exactly = 0) { event.deferReply() }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any(), *anyVararg()) }
         verify(exactly = 1) {
             webhookMessageCreateAction.addComponents(any<ActionRow>())

@@ -111,4 +111,73 @@ class DefaultCommandManagerAwardTest {
             awardService.award(discordId, guildId, any(), "command:boom", any(), any())
         }
     }
+
+    @Test
+    fun `defer fires before pre-dispatch DB lookups`() {
+        // Regression guard: pre-dispatch DB calls used to run before any
+        // ack, eating the 3-second Discord window when the DB was slow.
+        // The manager now defers first based on Command.defersReply.
+        val command = mockk<Command>(relaxed = true) {
+            every { name } returns "ping"
+            every { defersReply } returns true
+            every { ephemeral } returns false
+            every { slashCommand } returns mockk(relaxed = true)
+            every { subCommands } returns emptyList()
+            every { optionData } returns emptyList()
+            every { handle(any(), any(), any()) } just Runs
+        }
+        val spy = spyk(manager)
+        every { spy.getCommand("ping") } returns command
+        val event = eventFor("ping")
+
+        spy.handle(event)
+
+        verifyOrder {
+            event.deferReply(false)
+            configService.getConfigByName(any(), any())
+            userDtoHelper.calculateUserDto(any(), any(), any())
+            command.handle(any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `defer is ephemeral when the command opts in`() {
+        val command = mockk<Command>(relaxed = true) {
+            every { name } returns "secret"
+            every { defersReply } returns true
+            every { ephemeral } returns true
+            every { slashCommand } returns mockk(relaxed = true)
+            every { subCommands } returns emptyList()
+            every { optionData } returns emptyList()
+            every { handle(any(), any(), any()) } just Runs
+        }
+        val spy = spyk(manager)
+        every { spy.getCommand("secret") } returns command
+        val event = eventFor("secret")
+
+        spy.handle(event)
+
+        verify(exactly = 1) { event.deferReply(true) }
+    }
+
+    @Test
+    fun `no auto-defer when command opts out (modal commands)`() {
+        // Commands that respond directly (e.g. event.replyModal) must opt
+        // out — a manager-side deferReply would block their reply.
+        val command = mockk<Command>(relaxed = true) {
+            every { name } returns "tip"
+            every { defersReply } returns false
+            every { slashCommand } returns mockk(relaxed = true)
+            every { subCommands } returns emptyList()
+            every { optionData } returns emptyList()
+            every { handle(any(), any(), any()) } just Runs
+        }
+        val spy = spyk(manager)
+        every { spy.getCommand("tip") } returns command
+        val event = eventFor("tip")
+
+        spy.handle(event)
+
+        verify(exactly = 0) { event.deferReply(any<Boolean>()) }
+    }
 }

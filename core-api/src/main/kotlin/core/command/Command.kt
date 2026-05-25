@@ -19,6 +19,12 @@ interface Command : Loggable, Named {
     override val name: String
     val description: String
 
+    // When true, the manager defers the reply before any pre-dispatch DB
+    // work so the 3-second Discord ack window can't expire on slow lookups.
+    // Commands that respond directly (e.g. replyModal) opt out.
+    val defersReply: Boolean get() = true
+    val ephemeral: Boolean get() = false
+
     fun getErrorMessage(serverOwner: String?): String {
         return "You do not have adequate permissions to use this command, if you believe this is a mistake talk to $serverOwner"
     }

@@ -3,7 +3,6 @@ package bot.toby.handler
 import bot.toby.notify.AntiAutoclickNotifier
 import bot.toby.voice.VoiceCompanyTracker
 import common.logging.DiscordLogger
-import core.managers.CommandManager
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
@@ -25,7 +24,6 @@ import web.service.MusicSseService
  */
 @Service
 class GuildLeaveCleanupHandler(
-    private val commandManager: CommandManager,
     private val pokerTableRegistry: PokerTableRegistry,
     private val blackjackTableRegistry: BlackjackTableRegistry,
     private val casinoHoldemTableRegistry: CasinoHoldemTableRegistry,
@@ -40,7 +38,6 @@ class GuildLeaveCleanupHandler(
     override fun onGuildLeave(event: GuildLeaveEvent) {
         val guildId = event.guild.idLong
         logger.info { "Guild $guildId left — evicting per-guild caches" }
-        runCatching { commandManager.evictGuild(guildId) }
         runCatching { pokerTableRegistry.evictGuild(guildId) }
         runCatching { blackjackTableRegistry.evictGuild(guildId) }
         runCatching { casinoHoldemTableRegistry.evictGuild(guildId) }

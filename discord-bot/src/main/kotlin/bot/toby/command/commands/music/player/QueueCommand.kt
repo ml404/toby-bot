@@ -11,6 +11,8 @@ import kotlin.math.min
 
 @Component
 class QueueCommand : MusicCommand {
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -22,7 +24,6 @@ class QueueCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val queue = instance.getMusicManager(ctx.guild).scheduler.queue
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay)

@@ -20,9 +20,10 @@ class AdjustUserCommand @Autowired constructor(
     private val userDtoHelper: UserDtoHelper
 ) : ModerationCommand {
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val member = ctx.member
         val guild = event.guild!!
 

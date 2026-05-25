@@ -71,7 +71,8 @@ internal class TicTacToeCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
-        verify(exactly = 1) { event.deferReply() }
+        // Defer is owned by DefaultCommandManager now.
+        verify(exactly = 0) { event.deferReply() }
         verify(exactly = 1) { ticTacToeService.startMatch(1L, 2L, 100L, 50L) }
         verify(exactly = 1) { registry.register(100L, 1L, 2L, 50L, any(), any()) }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }

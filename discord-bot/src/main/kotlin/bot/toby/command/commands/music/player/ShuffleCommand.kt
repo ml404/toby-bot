@@ -23,7 +23,6 @@ class ShuffleCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply().queue()
         if (requestingUserDto.musicPermission) {
             if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
             val guild = event.guild!!

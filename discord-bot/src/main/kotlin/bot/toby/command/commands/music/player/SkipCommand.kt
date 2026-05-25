@@ -14,6 +14,8 @@ class SkipCommand : MusicCommand {
     companion object {
         private const val SKIP = "skip"
     }
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -25,7 +27,6 @@ class SkipCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply(true).queue()
         if (MusicCommand.isInvalidChannelStateForCommand(ctx, deleteDelay)) return
         val tracksToSkip = event.getOption(SKIP)?.asInt?: 1
         MusicPlayerHelper.skipTracks(event, instance, tracksToSkip, requestingUserDto.superUser, deleteDelay)

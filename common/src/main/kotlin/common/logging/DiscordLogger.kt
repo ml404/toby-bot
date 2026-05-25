@@ -91,6 +91,10 @@ class DiscordLogger(clazz: Class<*>) {
         logger.error(buildLogMessage(message)) // Log the constructed message
     }
 
+    fun error(message: String, throwable: Throwable) {
+        logger.error(buildLogMessage(message), throwable)
+    }
+
     // Optional: Lambda-based logging
     fun info(message: () -> String) {
         logger.info(buildLogMessage(message())) // Log the constructed message

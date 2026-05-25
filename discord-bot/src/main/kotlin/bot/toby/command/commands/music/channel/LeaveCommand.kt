@@ -31,7 +31,6 @@ class LeaveCommand(
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply().queue()
 
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay)
