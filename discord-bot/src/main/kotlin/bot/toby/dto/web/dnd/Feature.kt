@@ -10,7 +10,10 @@ data class Feature(
     val classInfo: ApiInfo?,
     val name: String?,
     val level: Int?,
-    val prerequisites: List<String?>,
+    // Nullable because Gson leaves the field as null when the API omits it
+    // (most level-1 features have no prerequisites); declaring it as a
+    // non-nullable List was a lie that NPE'd in isValidReturnObject/toEmbed.
+    val prerequisites: List<String?>?,
     val desc: List<String>?,
     val url: String?
 ) : DnDResponse {
@@ -19,7 +22,7 @@ data class Feature(
                 classInfo == null &&
                 name.isNullOrEmpty() &&
                 level == null &&
-                prerequisites.isEmpty() &&
+                prerequisites.isNullOrEmpty() &&
                 desc.isNullOrEmpty() &&
                 url.isNullOrEmpty())
 
@@ -31,7 +34,7 @@ data class Feature(
         }
         classInfo?.let { embedBuilder.addField("Class", it.name, true) }
         level?.let { embedBuilder.addField("Level", it.toString(), true) }
-        if (prerequisites.isNotEmpty()) {
+        if (!prerequisites.isNullOrEmpty()) {
             embedBuilder.addField("Prerequisites", prerequisites.transformListToString(), false)
         }
         embedBuilder.setColor(0x42f5a7)
