@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Follow-up coverage for voice, modals, web utilities, and DTOs",
+    "summary": "Picks up the four P1 follow-up areas from PR #597's analysis. **One source bug surfaced and is documented but not fixed in this PR** — flagged below. All new test files only; no production source changes. | Area | Files | Tests added | | --- | ---: | ---: | | discord-bot/voice (lifecycle + tracker) | 2 | 13 | | discord-bot/modal (excuse / poll / tip) | 3 | 19 | | web (HomeStats / ModerationAuthorizer / UtilsWebService / UtilsController / DndLookupController) | 5 | 22 | | d…",
+    "emoji": "✨",
+    "prNumber": 598
+  },
+  {
+    "date": "May 2026",
     "title": "/buy committed then threw UnknownFormatConversionException",
     "summary": "After #596 landed, `/tobycoin buy` started showing the \"Something went wrong running that command\" message — but the buy transaction was still landing in the DB (coins added, credit deducted, price moved). That looked like data corruption but wasn't: the writes succeed, then the reply builder throws, and the new listener safety-net surfaces the generic error. Real exception from the production logs (`tobybotlogs1779691184979.txt`): ``` java.util.UnknownFormatConversionExce…",
     "emoji": "💰",
