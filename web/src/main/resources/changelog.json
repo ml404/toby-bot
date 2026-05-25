@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Lift remaining engine dirs into casino/ and pvp/ parents",
+    "summary": "Completes the common-module consolidation started in #592. The pre-existing top-level engine directories (`common/blackjack/`, `common/poker/`, `common/connect4/`, `common/rps/`, `common/tictactoe/`) moved under `common/casino/<game>/` and `common/pvp/<game>/` so the parallel paths now match the database service/persistence/dto layouts and the discord-bot game/button layouts.",
+    "emoji": "♠️",
+    "prNumber": 594
+  },
+  {
+    "date": "May 2026",
     "title": "Polish /8ball /random /roll /meme to mirror the web utility page",
     "summary": "Mirrors the `/utils` web polish (PR #588) into the four Discord slash commands that back it. Each command now uses a rich embed instead of plain text, has a colour/visual identity, and (where it makes sense) an in-place button to re-roll the last action without re-typing the inputs. ### Per command **`/8ball`** — Defers, edits original with a \"🎱 Shaking…\" embed, then schedules a second edit 1.2 s later with the answer embed + an **Ask again** button. Tom's punishment bran…",
     "emoji": "🐉",
