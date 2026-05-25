@@ -222,11 +222,14 @@ class CommandManagerTest {
                 }
             }
             every { deferReply().queue() } just Runs
+            every { deferReply(any<Boolean>()).queue() } just Runs
             every { hook } returns mockHook
         }
 
         val command = mockk<Command> {
             every { name } returns "8ball"
+            every { defersReply } returns true
+            every { ephemeral } returns false
             every { handle(any(), any(), any()) } just Runs
         }
         every { configService.getConfigByName(any(), any()) } returns ConfigDto("test", "1")
