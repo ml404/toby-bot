@@ -17,7 +17,8 @@ import org.junit.jupiter.api.Test
 /**
  * Guards the exception safety net so a button handler that throws after
  * the manager's auto-defer does not leave the user staring at a hanging
- * "Bot is thinking…" spinner.
+ * "Bot is thinking…" spinner, and the bot-author short-circuit that
+ * prevents the bot from reacting to its own button presses.
  */
 class ButtonEventListenerTest {
 
@@ -30,9 +31,12 @@ class ButtonEventListenerTest {
         listener = ButtonEventListener(buttonManager, Dispatchers.Unconfined)
     }
 
-    private fun event(acknowledged: Boolean): ButtonInteractionEvent {
+    private fun event(
+        acknowledged: Boolean = true,
+        isBot: Boolean = false,
+    ): ButtonInteractionEvent {
         val user: User = mockk(relaxed = true) {
-            every { isBot } returns false
+            every { this@mockk.isBot } returns isBot
         }
         val hook: InteractionHook = mockk(relaxed = true)
         val event: ButtonInteractionEvent = mockk(relaxed = true)
@@ -80,5 +84,14 @@ class ButtonEventListenerTest {
 
         verify(exactly = 0) { event.hook.editOriginal(any<String>()) }
         verify(exactly = 1) { buttonManager.handle(event) }
+    }
+
+    @Test
+    fun `bot button presses are ignored - never delegate to manager`() {
+        val event = event(isBot = true)
+
+        listener.onButtonInteraction(event)
+
+        verify(exactly = 0) { buttonManager.handle(any()) }
     }
 }

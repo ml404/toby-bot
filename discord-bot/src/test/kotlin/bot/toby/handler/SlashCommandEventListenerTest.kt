@@ -1,5 +1,6 @@
 package bot.toby.handler
 
+import common.leveling.XpAmounts
 import core.managers.CommandManager
 import database.service.leveling.XpAwardService
 import io.mockk.Runs
@@ -21,7 +22,8 @@ import org.junit.jupiter.api.Test
 /**
  * Guards the exception safety net added so a handler that throws after
  * deferReply() does not leave the user staring at "Bot is thinking…"
- * forever (which looks like the bot is offline).
+ * forever (which looks like the bot is offline), the bot-author
+ * short-circuit, and the per-command XP grant.
  */
 class SlashCommandEventListenerTest {
 
@@ -38,17 +40,24 @@ class SlashCommandEventListenerTest {
         listener = SlashCommandEventListener(commandManager, xpAwardService, Dispatchers.Unconfined)
     }
 
-    private fun event(acknowledged: Boolean): SlashCommandInteractionEvent {
-        val guild: Guild = mockk(relaxed = true) {
-            every { idLong } returns 7L
+    private fun event(
+        acknowledged: Boolean = true,
+        isBot: Boolean = false,
+        guildId: Long? = 7L,
+        channelId: Long = 99L,
+        userId: Long = 100L,
+        commandName: String = "boom",
+    ): SlashCommandInteractionEvent {
+        val guild = guildId?.let {
+            mockk<Guild>(relaxed = true) { every { idLong } returns it }
         }
         val member: Member = mockk(relaxed = true)
         val user: User = mockk(relaxed = true) {
-            every { isBot } returns false
-            every { idLong } returns 100L
+            every { this@mockk.isBot } returns isBot
+            every { idLong } returns userId
         }
         val channel: MessageChannelUnion = mockk(relaxed = true) {
-            every { idLong } returns 99L
+            every { idLong } returns channelId
         }
         val hook: InteractionHook = mockk(relaxed = true)
         val event: SlashCommandInteractionEvent = mockk(relaxed = true)
@@ -57,7 +66,7 @@ class SlashCommandEventListenerTest {
         every { event.user } returns user
         every { event.channel } returns channel
         every { event.hook } returns hook
-        every { event.name } returns "boom"
+        every { event.name } returns commandName
         every { event.isAcknowledged } returns acknowledged
         return event
     }
@@ -99,5 +108,52 @@ class SlashCommandEventListenerTest {
 
         verify(exactly = 0) { event.hook.editOriginal(any<String>()) }
         verify(exactly = 1) { commandManager.handle(event) }
+    }
+
+    @Test
+    fun `slash command from a bot user is ignored - never delegate to manager and never award XP`() {
+        val event = event(isBot = true)
+
+        listener.onSlashCommandInteraction(event)
+
+        verify(exactly = 0) { commandManager.handle(any()) }
+        verify(exactly = 0) {
+            xpAwardService.award(any(), any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `successful guild slash command awards COMMAND_XP keyed by guildId and channelId`() {
+        val event = event(guildId = 42L, channelId = 7L, commandName = "ping", userId = 100L)
+        every { commandManager.handle(event) } just Runs
+
+        listener.onSlashCommandInteraction(event)
+
+        // Optional `countsAgainstDailyCap` + `at` parameters take Kotlin
+        // defaults at the call site; let MockK match them with `any()`.
+        verify(exactly = 1) {
+            xpAwardService.award(
+                discordId = 100L,
+                guildId = 42L,
+                amount = XpAmounts.COMMAND_XP,
+                reason = "slash-command:ping",
+                channelId = 7L,
+                countsAgainstDailyCap = any(),
+                at = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `slash command from a DM (no guild) does not award XP`() {
+        val event = event(guildId = null)
+        every { commandManager.handle(event) } just Runs
+
+        listener.onSlashCommandInteraction(event)
+
+        verify(exactly = 1) { commandManager.handle(event) }
+        verify(exactly = 0) {
+            xpAwardService.award(any(), any(), any(), any(), any(), any(), any())
+        }
     }
 }
