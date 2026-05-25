@@ -30,7 +30,6 @@ class JoinCommand(
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val self = ctx.selfMember ?: return
         val memberVoiceState = doJoinChannelValidation(ctx, deleteDelay) ?: return

@@ -20,7 +20,6 @@ class LevelCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
         val target: Member? = event.getOption(USER)?.asMember ?: event.member
         if (target == null) {
             event.hook.replyEphemeralAndDelete("Could not resolve a member.", deleteDelay)

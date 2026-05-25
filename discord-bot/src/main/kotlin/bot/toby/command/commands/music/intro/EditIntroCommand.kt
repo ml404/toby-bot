@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component
 @Component
 class EditIntroCommand : MusicCommand {
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -24,7 +26,6 @@ class EditIntroCommand : MusicCommand {
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply(true).queue()
 
         // Fetch the user's intros
         val introList = requestingUserDto.musicDtos

@@ -16,8 +16,14 @@ class RollButton @Autowired constructor(private val commandManager: CommandManag
     override val description: String
         get() = "Button used to roll dice"
 
+    // Defer here (non-ephemeral) so reroll results land as a public
+    // message. The manager's default ephemeral auto-defer would have
+    // hidden them.
+    override val defersReply: Boolean get() = false
+
     override fun handle(ctx: ButtonContext, requestingUserDto: database.dto.user.UserDto, deleteDelay: Int) {
         val event = ctx.event
+        event.deferReply().queue()
         val componentId = event.componentId
 
         val (commandName, options) = componentId.split(":").takeIf { it.size == 2 } ?: return
@@ -33,7 +39,7 @@ class RollButton @Autowired constructor(private val commandManager: CommandManag
                     optionArray[0],
                     optionArray[1],
                     optionArray[2]
-                ).queue { invokeDeleteOnMessageResponse(deleteDelay) }
+                ).queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
     }

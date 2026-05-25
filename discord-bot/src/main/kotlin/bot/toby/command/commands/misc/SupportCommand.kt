@@ -9,9 +9,10 @@ import org.springframework.stereotype.Component
 
 @Component
 class SupportCommand : MiscCommand {
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
 
         val embed = EmbedBuilder()
             .setTitle("Support TobyBot")

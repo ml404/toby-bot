@@ -20,9 +20,10 @@ class DailyCommand @Autowired constructor(
     override val description: String =
         "Claim today's daily reward. Keep claiming on consecutive days to grow your streak."
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val guild = event.guild ?: run {
             event.hook.replyEphemeralEmbedAndDelete(
                 errorEmbed("This command can only be used in a server."),

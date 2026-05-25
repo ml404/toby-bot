@@ -50,7 +50,6 @@ import bot.toby.button.buttons.misc.MemeButton
 import bot.toby.button.buttons.music.PausePlayButton
 import bot.toby.button.buttons.casino.poker.PokerActionButton
 import bot.toby.button.buttons.misc.RandomButton
-import bot.toby.button.buttons.misc.ResendLastRequestButton
 import bot.toby.button.buttons.misc.RollButton
 import bot.toby.button.buttons.pvp.rps.RpsButton
 import bot.toby.button.buttons.music.StopButton
@@ -111,7 +110,6 @@ class ButtonManagerTest {
             PausePlayButton::class.java,
             PokerActionButton::class.java,
             RandomButton::class.java,
-            ResendLastRequestButton::class.java,
             RollButton::class.java,
             RpsButton::class.java,
             StopButton::class.java,

@@ -41,6 +41,8 @@ class TeamCommand : MiscCommand {
         SubcommandData(SUB_CLEANUP, "Delete the temporary 'Team N' voice channels this command created."),
     )
 
+    override val defersReply: Boolean = false
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         if (event.guild == null) {

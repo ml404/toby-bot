@@ -96,7 +96,10 @@ class AchievementsCommandTest {
     fun `defers reply as ephemeral`() {
         every { achievementService.listFor(any(), any()) } returns emptyList()
         runCommand()
-        verify(exactly = 1) { event.deferReply(true) }
+        // Defer is owned by DefaultCommandManager now — the command exposes
+        // its preference via Command.ephemeral.
+        verify(exactly = 0) { event.deferReply(true) }
+        assert(command.ephemeral) { "AchievementsCommand should request an ephemeral defer" }
     }
 
     // ---------- header / summary ----------

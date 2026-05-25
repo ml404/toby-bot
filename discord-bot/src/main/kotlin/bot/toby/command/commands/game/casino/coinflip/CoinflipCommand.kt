@@ -49,7 +49,6 @@ class CoinflipCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val guild = WagerCommandEmbeds.requireGuild(event, TITLE, deleteDelay) ?: return
         val side = parseSide(event.getOption(OPT_SIDE)?.asString) ?: run {

@@ -64,7 +64,8 @@ internal class ProfileCommandTest : CommandTest {
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
 
-        verify(exactly = 1) { event.deferReply() }
+        // Defer is owned by DefaultCommandManager now.
+        verify(exactly = 0) { event.deferReply() }
         verify(exactly = 1) { aggregator.build(guild, member) }
         verify(exactly = 1) { renderer.renderPng(any()) }
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>()) }

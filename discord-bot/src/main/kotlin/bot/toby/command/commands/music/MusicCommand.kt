@@ -30,7 +30,6 @@ interface MusicCommand : Command {
         deleteDelay: Int
     ): Boolean {
         val event = ctx.event
-        event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay)
             return false

@@ -12,6 +12,8 @@ import org.springframework.stereotype.Component
 @Component
 class PollCommand : ModerationCommand {
 
+    override val defersReply: Boolean = false
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         ctx.event.replyModal(buildModal()).queue()
     }

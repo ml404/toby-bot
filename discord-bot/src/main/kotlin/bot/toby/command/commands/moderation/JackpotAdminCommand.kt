@@ -58,6 +58,8 @@ class JackpotAdminCommand @Autowired constructor(
         ),
     )
 
+    override val defersReply: Boolean = false
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
 

@@ -17,7 +17,6 @@ class UnbanCommand : ModerationCommand {
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val guild = event.guild!!
         val member = ctx.member ?: return

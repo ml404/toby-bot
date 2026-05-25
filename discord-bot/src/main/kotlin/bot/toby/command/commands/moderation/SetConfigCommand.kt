@@ -62,6 +62,7 @@ class SetConfigCommand @Autowired constructor(
     override val name = "setconfig"
     override val description =
         "Guild-owner-only configuration. Use `/setconfig <category>` to open the matching form."
+    override val defersReply: Boolean = false
 
     override val subCommands: List<SubcommandData> = listOf(
         SubcommandData(SUB_GENERAL, "Audio + auto-delete + move/leaderboard channels"),

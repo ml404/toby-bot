@@ -26,6 +26,8 @@ class SetIntroCommand @Autowired constructor(
     private val introHelper: IntroHelper
 ) : MusicCommand {
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         handleMusicCommand(ctx, PlayerManager.instance, requestingUserDto, deleteDelay)
     }
@@ -37,7 +39,6 @@ class SetIntroCommand @Autowired constructor(
         deleteDelay: Int
     ) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val introVolume = introHelper.calculateIntroVolume(event)
         val attachmentOption = event.getOption(ATTACHMENT)
         val linkOption = event.getOption(LINK)?.asString.orEmpty()

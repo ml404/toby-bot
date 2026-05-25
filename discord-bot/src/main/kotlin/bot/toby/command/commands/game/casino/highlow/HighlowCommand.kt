@@ -46,7 +46,6 @@ class HighlowCommand @Autowired constructor(
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().queue()
 
         if (event.guild == null) {
             replyError(event, "This command can only be used in a server.", deleteDelay); return

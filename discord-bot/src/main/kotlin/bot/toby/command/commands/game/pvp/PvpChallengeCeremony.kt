@@ -51,7 +51,6 @@ object PvpChallengeCeremony {
         pendingTimeoutEmbed: (initiatorDiscordId: Long, opponentDiscordId: Long) -> MessageEmbed,
     ) {
         val event = ctx.event
-        event.deferReply().queue()
 
         val guild = event.guild ?: run {
             replyError(event, "This command can only be used in a server.", deleteDelay); return

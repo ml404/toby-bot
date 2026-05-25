@@ -32,24 +32,27 @@ class RollCommand @Autowired constructor(
         handleDiceRoll(event, diceValue, diceToRoll, modifier).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
 
+    // Defers are owned by the caller: the manager auto-defers the slash
+    // command, and RollButton defers the button click. Double-deferring
+    // here would error and demote button reroll results to ephemeral.
     fun handleDiceRoll(
         event: IReplyCallback,
         diceValue: Int,
         diceToRoll: Int,
         modifier: Int
     ): WebhookMessageCreateAction<Message> {
-        event.deferReply().queue()
         val rolls = dndHelper.rollDiceList(diceValue, diceToRoll)
         val rollEmbed = RollEmbeds.resultEmbed(
             diceValue, diceToRoll, modifier, rolls, event.user.effectiveName,
         )
+        val reroll = Button.primary("$name:$diceValue, $diceToRoll, $modifier", "Click to Reroll")
         val rollD20 = Button.primary("$name:20, 1, 0", "Roll D20")
         val rollD10 = Button.primary("$name:10, 1, 0", "Roll D10")
         val rollD6 = Button.primary("$name:6, 1, 0", "Roll D6")
         val rollD4 = Button.primary("$name:4, 1, 0", "Roll D4")
         return event.hook
             .sendMessageEmbeds(rollEmbed)
-            .addComponents(ActionRow.of(Button.primary("resend_last_request", "Click to Reroll"), rollD20, rollD10, rollD6, rollD4))
+            .addComponents(ActionRow.of(reroll, rollD20, rollD10, rollD6, rollD4))
     }
 
     override val name: String

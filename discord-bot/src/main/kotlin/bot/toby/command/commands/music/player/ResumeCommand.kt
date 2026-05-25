@@ -22,7 +22,6 @@ class ResumeCommand : MusicCommand {
     ) {
         ctx.event.hook.deleteAfter(deleteDelay)
         val event = ctx.event
-        event.deferReply().queue()
         if (!requestingUserDto.musicPermission) {
             sendErrorMessage(event, deleteDelay)
             return

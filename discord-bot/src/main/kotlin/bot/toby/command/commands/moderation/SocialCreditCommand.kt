@@ -25,9 +25,10 @@ class SocialCreditCommand @Autowired constructor(
         private const val SOCIAL_CREDIT = "credit"
     }
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply(true).queue()
         val member = ctx.member
         val guild = event.guild ?: return
         if (!guild.isLoaded) guild.loadMembers()

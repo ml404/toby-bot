@@ -20,9 +20,10 @@ class PurgeCommand : ModerationCommand {
         private const val MAX_COUNT = 100L
     }
 
+    override val ephemeral: Boolean = true
+
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
-        event.deferReply().setEphemeral(true).queue()
 
         val guild = event.guild!!
         val member = ctx.member ?: return
