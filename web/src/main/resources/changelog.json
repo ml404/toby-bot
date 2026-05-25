@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Update D&D category blurb to remove tabletop-sessions copy",
+    "summary": "The D&D category blurb on the commands wiki page still read \"Roll dice, look up spells, and run tabletop sessions.\" but the tabletop-session features (`/campaign`, `/initiative`, `/character`, etc.) were removed when DnD Beyond shipped their official Discord bot. Replace the blurb with copy that matches what the category actually contains today (`/roll` and `/dnd` SRD lookups): \"Roll dice and look up D&D 5e content.\"",
+    "emoji": "✨",
+    "prNumber": 600
+  },
+  {
+    "date": "May 2026",
     "title": "Follow-up coverage for voice, modals, web utilities, and DTOs",
     "summary": "Picks up the four P1 follow-up areas from PR #597's analysis. **One source bug surfaced and is documented but not fixed in this PR** — flagged below. All new test files only; no production source changes. | Area | Files | Tests added | | --- | ---: | ---: | | discord-bot/voice (lifecycle + tracker) | 2 | 13 | | discord-bot/modal (excuse / poll / tip) | 3 | 19 | | web (HomeStats / ModerationAuthorizer / UtilsWebService / UtilsController / DndLookupController) | 5 | 22 | | d…",
     "emoji": "✨",
