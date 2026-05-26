@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Resolve winner names, drop ghost thinking, share resolution overlay",
+    "summary": "PvP polish across Discord and the web, addressing four reported issues: **TicTacToe / Connect 4 / RPS win embeds tagged the winner as a raw `<@id>` mention** when the Discord client couldn't resolve the user. The title now uses a JDA-resolved display name (with a `Player NNNN` fallback) while the description keeps the mention so the winner still gets pinged. **`/connect4` (and `/tictactoe`, `/rps`) button clicks left a ghost \"Toby is thinking…\" on every move.** Added a `de…",
+    "emoji": "🔨",
+    "prNumber": 601
+  },
+  {
+    "date": "May 2026",
     "title": "Update D&D category blurb to remove tabletop-sessions copy",
     "summary": "The D&D category blurb on the commands wiki page still read \"Roll dice, look up spells, and run tabletop sessions.\" but the tabletop-session features (`/campaign`, `/initiative`, `/character`, etc.) were removed when DnD Beyond shipped their official Discord bot. Replace the blurb with copy that matches what the category actually contains today (`/roll` and `/dnd` SRD lookups): \"Roll dice and look up D&D 5e content.\"",
     "emoji": "✨",
