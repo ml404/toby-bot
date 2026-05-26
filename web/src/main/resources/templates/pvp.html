@@ -44,13 +44,14 @@
     <section id="pvp-panel-duel" class="pvp-panel" role="tabpanel" aria-labelledby="pvp-tab-duel">
         <section class="duel-card">
             <h2>Challenge someone</h2>
-            <form id="duel-challenge" autocomplete="off">
+            <form id="duel-challenge" autocomplete="off"
+                  onsubmit="event.preventDefault();return false;">
                 <label for="duel-opponent">Opponent</label>
                 <div th:replace="~{fragments/userPicker :: userPicker(
                         name='opponentDiscordId',
                         id='duel-opponent',
                         members=${members},
-                        selectedId=null,
+                        selectedId=${preselectedOpponentId},
                         placeholder='Pick an opponent…',
                         emptyLabel=null,
                         required=true,
@@ -62,7 +63,9 @@
 
                 <label for="duel-stake">Stake (credits)</label>
                 <input id="duel-stake" name="stake" type="number"
-                       th:attr="min=${minStake}, max=${maxStake}" th:value="${minStake}" step="1" required>
+                       th:attr="min=${minStake}, max=${maxStake}"
+                       th:value="${preselectedStake != null ? preselectedStake : minStake}"
+                       step="1" required>
 
                 <div class="duel-form-actions">
                     <button type="submit" id="duel-send" class="btn-primary">Send challenge</button>
@@ -136,13 +139,14 @@
              th:attr="data-min-stake=${rpsMinStake}, data-max-stake=${rpsMaxStake}" hidden>
         <section class="pvp-card">
             <h2>✊ Challenge someone</h2>
-            <form id="rps-challenge" autocomplete="off">
+            <form id="rps-challenge" autocomplete="off"
+                  onsubmit="event.preventDefault();return false;">
                 <label for="rps-opponent">Opponent</label>
                 <div th:replace="~{fragments/userPicker :: userPicker(
                         name='opponentDiscordId',
                         id='rps-opponent',
                         members=${members},
-                        selectedId=null,
+                        selectedId=${preselectedOpponentId},
                         placeholder='Pick an opponent…',
                         emptyLabel=null,
                         required=true,
@@ -151,7 +155,9 @@
 
                 <label for="rps-stake">Stake (credits)</label>
                 <input id="rps-stake" name="stake" type="number"
-                       th:attr="min=${rpsMinStake}, max=${rpsMaxStake}" th:value="${rpsMinStake}" step="1" required>
+                       th:attr="min=${rpsMinStake}, max=${rpsMaxStake}"
+                       th:value="${preselectedStake != null ? preselectedStake : rpsMinStake}"
+                       step="1" required>
 
                 <div class="pvp-form-actions">
                     <button type="submit" id="rps-send" class="btn-primary">Send challenge</button>
@@ -183,13 +189,14 @@
              th:attr="data-min-stake=${tttMinStake}, data-max-stake=${tttMaxStake}" hidden>
         <section class="pvp-card">
             <h2>⭕ Challenge someone</h2>
-            <form id="tictactoe-challenge" autocomplete="off">
+            <form id="tictactoe-challenge" autocomplete="off"
+                  onsubmit="event.preventDefault();return false;">
                 <label for="tictactoe-opponent">Opponent</label>
                 <div th:replace="~{fragments/userPicker :: userPicker(
                         name='opponentDiscordId',
                         id='tictactoe-opponent',
                         members=${members},
-                        selectedId=null,
+                        selectedId=${preselectedOpponentId},
                         placeholder='Pick an opponent…',
                         emptyLabel=null,
                         required=true,
@@ -198,7 +205,9 @@
 
                 <label for="tictactoe-stake">Stake (credits)</label>
                 <input id="tictactoe-stake" name="stake" type="number"
-                       th:attr="min=${tttMinStake}, max=${tttMaxStake}" th:value="${tttMinStake}" step="1" required>
+                       th:attr="min=${tttMinStake}, max=${tttMaxStake}"
+                       th:value="${preselectedStake != null ? preselectedStake : tttMinStake}"
+                       step="1" required>
 
                 <div class="pvp-form-actions">
                     <button type="submit" id="tictactoe-send" class="btn-primary">Send challenge</button>
@@ -230,13 +239,14 @@
              th:attr="data-min-stake=${c4MinStake}, data-max-stake=${c4MaxStake}" hidden>
         <section class="pvp-card">
             <h2>🔴 Challenge someone</h2>
-            <form id="connect4-challenge" autocomplete="off">
+            <form id="connect4-challenge" autocomplete="off"
+                  onsubmit="event.preventDefault();return false;">
                 <label for="connect4-opponent">Opponent</label>
                 <div th:replace="~{fragments/userPicker :: userPicker(
                         name='opponentDiscordId',
                         id='connect4-opponent',
                         members=${members},
-                        selectedId=null,
+                        selectedId=${preselectedOpponentId},
                         placeholder='Pick an opponent…',
                         emptyLabel=null,
                         required=true,
@@ -245,7 +255,9 @@
 
                 <label for="connect4-stake">Stake (credits)</label>
                 <input id="connect4-stake" name="stake" type="number"
-                       th:attr="min=${c4MinStake}, max=${c4MaxStake}" th:value="${c4MinStake}" step="1" required>
+                       th:attr="min=${c4MinStake}, max=${c4MaxStake}"
+                       th:value="${preselectedStake != null ? preselectedStake : c4MinStake}"
+                       step="1" required>
 
                 <div class="pvp-form-actions">
                     <button type="submit" id="connect4-send" class="btn-primary">Send challenge</button>

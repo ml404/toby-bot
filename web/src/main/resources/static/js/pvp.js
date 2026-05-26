@@ -1,14 +1,13 @@
 // /pvp — unified PvP page. Tab strip switches between Duel, RPS,
-// TicTacToe, Connect 4 (the last three are placeholders until their
-// controller endpoints land). Duel: challenge form posts to
-// /pvp/{guildId}/duel/challenge; the inbox panel polls
-// /pvp/{guildId}/duel/pending every 5 seconds and posts to /accept or
-// /decline via the shared CSRF-aware fetch wrapper.
+// TicTacToe, Connect 4 — all four are SSE-driven and share the same
+// result-overlay animation (`playPvpResolution`). The duel-shaped
+// pending/outgoing/accept-decline flow drives all four; per-game
+// boards live in `initRpsPanel` and `initBoardGamePanel`.
 //
-// UMD-style export: `playDuelResolution`, `makeFigure`, and `formatExpiry`
-// are pulled out for unit testing (see casino-jackpot-wheel.js for the
-// same pattern). Page-init code only runs when a real `document` with
-// the pvp page DOM is present.
+// UMD-style export: `playDuelResolution`, `playPvpResolution`,
+// `makeFigure`, and `formatExpiry` are pulled out for unit testing
+// (see casino-jackpot-wheel.js for the same pattern). Page-init code
+// only runs when a real `document` with the pvp page DOM is present.
 (function (root) {
     'use strict';
 
@@ -52,7 +51,33 @@
             : 'expires in ' + minutes + 'm';
     }
 
-    function playDuelResolution(row, resp, opts) {
+    // Per-flair flash glyph and aria-label for the result overlay. Duel
+    // is the original art (gunfire bang); the other PvP games reuse the
+    // same arena chrome with a game-appropriate icon so RPS/TTT/C4
+    // outcomes land with the same weight.
+    const FLAIR = {
+        duel: { flash: '💥', label: 'Duel result' },
+        rps: { flash: '✊', label: 'Rock-Paper-Scissors result' },
+        tictactoe: { flash: '❌', label: 'Tic-Tac-Toe result' },
+        connect4: { flash: '🔴', label: 'Connect 4 result' },
+    };
+
+    /**
+     * Render a head-to-head result as a full-screen overlay with both
+     * participants' avatars + names, a winner/loser highlight, and a
+     * credits pill on WIN outcomes. Used by every PvP game's resolution
+     * path (duel, rps, tictactoe, connect4). Draw / refund outcomes
+     * skip the flash + pill and show a refund line instead.
+     *
+     * `spec` shape:
+     *   - initiator: { discordId, name, avatarUrl }
+     *   - opponent:  { discordId, name, avatarUrl }
+     *   - winnerDiscordId: string | null  (null on DRAW / REFUND)
+     *   - verdict: 'WIN' | 'DRAW' | 'REFUND'
+     *   - pot, lossTribute (numeric; ignored on non-WIN)
+     *   - flair: 'duel' | 'rps' | 'tictactoe' | 'connect4'
+     */
+    function playPvpResolution(spec, opts) {
         opts = opts || {};
         const doc = opts.doc || (root && root.document);
         const win = opts.window || root;
@@ -60,54 +85,72 @@
         const autoDismissMs = opts.autoDismissMs == null ? 6000 : opts.autoDismissMs;
         const fadeOutMs = opts.fadeOutMs == null ? 200 : opts.fadeOutMs;
 
-        const initiatorName = row.dataset.initiatorName || 'Challenger';
-        const initiatorAvatar = row.dataset.initiatorAvatar || null;
-        const opponentName = row.dataset.opponentName || 'You';
-        const opponentAvatar = row.dataset.opponentAvatar || null;
-        const winnerId = resp.winnerDiscordId;
-        const initiatorWon = winnerId === row.dataset.initiatorDiscordId;
-        const winnerName = initiatorWon ? initiatorName : opponentName;
+        const flair = FLAIR[spec.flair] || FLAIR.duel;
+        const verdict = spec.verdict || (spec.winnerDiscordId ? 'WIN' : 'DRAW');
+        const isWin = verdict === 'WIN';
+
+        const initiator = spec.initiator || {};
+        const opponent = spec.opponent || {};
+        const initiatorName = initiator.name || 'Challenger';
+        const opponentName = opponent.name || 'Opponent';
+        const initiatorWon = isWin && String(spec.winnerDiscordId) === String(initiator.discordId);
+        const winnerName = !isWin
+            ? null
+            : (initiatorWon ? initiatorName : opponentName);
 
         const reduceMotion = !!(win && win.matchMedia &&
             win.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
         const overlay = doc.createElement('div');
-        overlay.className = 'duel-resolution-overlay';
+        // Keep the `duel-*` class names — the existing CSS already
+        // styles the overlay chrome; we add a per-game modifier for
+        // flair-specific colour tweaks (e.g. `is-rps`).
+        overlay.className = 'duel-resolution-overlay is-' + (spec.flair || 'duel');
         if (reduceMotion) overlay.classList.add('is-reduced');
+        if (!isWin) overlay.classList.add('is-draw');
         overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-label', 'Duel result');
+        overlay.setAttribute('aria-label', flair.label);
 
         const arena = doc.createElement('div');
         arena.className = 'duel-arena';
 
-        const left = makeFigure(initiatorName, initiatorAvatar, 'left', doc);
-        const right = makeFigure(opponentName, opponentAvatar, 'right', doc);
-        if (initiatorWon) left.classList.add('is-winner'); else left.classList.add('is-loser');
-        if (initiatorWon) right.classList.add('is-loser'); else right.classList.add('is-winner');
+        const left = makeFigure(initiatorName, initiator.avatarUrl, 'left', doc);
+        const right = makeFigure(opponentName, opponent.avatarUrl, 'right', doc);
+        if (isWin) {
+            if (initiatorWon) { left.classList.add('is-winner'); right.classList.add('is-loser'); }
+            else              { right.classList.add('is-winner'); left.classList.add('is-loser'); }
+        }
 
         const flash = doc.createElement('div');
         flash.className = 'duel-flash';
-        // Position the bang near the winner's muzzle, not centred between
-        // the two figures — CSS reads `from-left` / `from-right` and
-        // sets a translateX offset toward that side.
         flash.classList.add(initiatorWon ? 'from-left' : 'from-right');
-        flash.textContent = '💥';
+        flash.textContent = flair.flash;
+        if (!isWin) flash.style.opacity = '0'; // no flash on draws
 
         arena.appendChild(left);
         arena.appendChild(flash);
         arena.appendChild(right);
         overlay.appendChild(arena);
 
-        const pill = doc.createElement('div');
-        pill.className = 'duel-credits-pill';
-        pill.textContent = '+' + resp.pot + ' credits';
-        if (initiatorWon) pill.classList.add('flies-left'); else pill.classList.add('flies-right');
-        overlay.appendChild(pill);
+        if (isWin) {
+            const pill = doc.createElement('div');
+            pill.className = 'duel-credits-pill';
+            pill.textContent = '+' + (spec.pot || 0) + ' credits';
+            pill.classList.add(initiatorWon ? 'flies-left' : 'flies-right');
+            overlay.appendChild(pill);
+        }
 
         const resultLine = doc.createElement('div');
         resultLine.className = 'duel-result-line';
-        resultLine.textContent = 'Winner: ' + winnerName + ' took ' + resp.pot +
-            ' credits (' + resp.lossTribute + ' to jackpot)';
+        if (isWin) {
+            const tribute = spec.lossTribute || 0;
+            resultLine.textContent = 'Winner: ' + winnerName + ' took ' + (spec.pot || 0) +
+                ' credits' + (tribute ? ' (' + tribute + ' to jackpot)' : '');
+        } else if (verdict === 'DRAW') {
+            resultLine.textContent = 'Draw — stakes refunded.';
+        } else {
+            resultLine.textContent = 'Refund — no winner.';
+        }
         overlay.appendChild(resultLine);
 
         const hint = doc.createElement('div');
@@ -123,7 +166,6 @@
             clearTimeout(autoDismiss);
             doc.removeEventListener('keydown', onKey);
             overlay.classList.add('is-dismissing');
-            // Brief fade-out so it doesn't pop off.
             setTimeout(function () {
                 if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                 onDismiss();
@@ -136,6 +178,29 @@
 
         doc.body.appendChild(overlay);
         return { overlay: overlay, dismiss: dismiss };
+    }
+
+    // Back-compat wrapper used by the duel `/accept` flow and the duel
+    // preview button. Translates the legacy `(row, resp, opts)` shape
+    // into the general `playPvpResolution(spec, opts)`.
+    function playDuelResolution(row, resp, opts) {
+        return playPvpResolution({
+            initiator: {
+                discordId: row.dataset.initiatorDiscordId,
+                name: row.dataset.initiatorName || 'Challenger',
+                avatarUrl: row.dataset.initiatorAvatar || null,
+            },
+            opponent: {
+                discordId: row.dataset.opponentDiscordId,
+                name: row.dataset.opponentName || 'You',
+                avatarUrl: row.dataset.opponentAvatar || null,
+            },
+            winnerDiscordId: resp.winnerDiscordId,
+            verdict: 'WIN',
+            pot: resp.pot,
+            lossTribute: resp.lossTribute,
+            flair: 'duel',
+        }, opts);
     }
 
     // Build the same offscreen-row + fake-resp shape the live accept
@@ -171,6 +236,7 @@
 
     const api = {
         playDuelResolution: playDuelResolution,
+        playPvpResolution: playPvpResolution,
         makeFigure: makeFigure,
         formatExpiry: formatExpiry,
         playFromResolution: playFromResolution,
@@ -190,9 +256,9 @@
     if (!guildId) return;
     const ttlSeconds = parseInt(main.dataset.ttlSeconds, 10) || 0;
 
-    // Tab strip — Duel + three placeholder tabs (RPS/TTT/C4 land in a
-    // follow-up PR). One panel visible at a time; chips drive `hidden`
-    // on the panels and `aria-selected` on the tabs.
+    // Tab strip — Duel / RPS / TicTacToe / Connect 4. One panel visible
+    // at a time; chips drive `hidden` on the panels and `aria-selected`
+    // on the tabs.
     const tabs = Array.prototype.slice.call(document.querySelectorAll('.pvp-tab'));
     const panels = Array.prototype.slice.call(document.querySelectorAll('.pvp-panel'));
     function activateTab(slug) {
@@ -749,20 +815,7 @@
         }
 
         function renderResolution(boardEl, outcome) {
-            boardEl.innerHTML = '';
-            const verdict = document.createElement('h3');
-            verdict.className = 'pvp-board-verdict';
-            const winnerName = outcome.winnerDiscordId === activeSnapshot.participants.initiator.discordId
-                ? activeSnapshot.participants.initiator.name
-                : (activeSnapshot.participants.opponent && activeSnapshot.participants.opponent.name) || 'Opponent';
-            if (outcome.verdict === 'WIN') {
-                verdict.textContent = winnerName + ' wins — pot ' + outcome.pot;
-            } else if (outcome.verdict === 'DRAW') {
-                verdict.textContent = 'Draw — both picked ' + (outcome.initiatorChoice || '?').toLowerCase();
-            } else {
-                verdict.textContent = 'Refund — neither picked';
-            }
-            boardEl.appendChild(verdict);
+            playOutcomeOverlay(outcome, activeSnapshot, 'rps');
         }
 
         // ── Mutations ──
@@ -1015,22 +1068,7 @@
         }
 
         function renderBoardOutcome(boardEl, outcome, snapshot) {
-            boardEl.innerHTML = '';
-            const verdict = document.createElement('h3');
-            verdict.className = 'pvp-board-verdict';
-            if (outcome.verdict === 'WIN') {
-                const initiator = snapshot && snapshot.participants && snapshot.participants.initiator;
-                const opponent = snapshot && snapshot.participants && snapshot.participants.opponent;
-                const winnerName = (initiator && outcome.winnerDiscordId === initiator.discordId)
-                    ? initiator.name
-                    : (opponent && opponent.name) || 'Opponent';
-                verdict.textContent = winnerName + ' wins — pot ' + outcome.pot;
-            } else if (outcome.verdict === 'DRAW') {
-                verdict.textContent = 'Draw — stakes refunded';
-            } else {
-                verdict.textContent = 'Refund';
-            }
-            boardEl.appendChild(verdict);
+            playOutcomeOverlay(outcome, snapshot, slug);
         }
 
         form.addEventListener('submit', function (e) {
@@ -1078,6 +1116,32 @@
                     document.dispatchEvent(new CustomEvent('pvp.sse.' + name, { detail: detail }));
                 });
             });
+    }
+
+    // Translate a per-game `outcome` + session-view `snapshot` into the
+    // shared `playPvpResolution` overlay. Pulls initiator / opponent
+    // identity from the active session snapshot (already carries names
+    // and avatars from `PvpWebService.PvpParticipant`).
+    function playOutcomeOverlay(outcome, snapshot, flair) {
+        if (!outcome || !snapshot || !snapshot.participants) return;
+        const participants = snapshot.participants;
+        playPvpResolution({
+            initiator: {
+                discordId: participants.initiator && participants.initiator.discordId,
+                name: participants.initiator && participants.initiator.name,
+                avatarUrl: participants.initiator && participants.initiator.avatarUrl,
+            },
+            opponent: {
+                discordId: participants.opponent && participants.opponent.discordId,
+                name: participants.opponent && participants.opponent.name,
+                avatarUrl: participants.opponent && participants.opponent.avatarUrl,
+            },
+            winnerDiscordId: outcome.winnerDiscordId,
+            verdict: outcome.verdict || (outcome.winnerDiscordId ? 'WIN' : 'DRAW'),
+            pot: outcome.pot,
+            lossTribute: outcome.lossTribute,
+            flair: flair,
+        });
     }
 
     function renderTicTacToeBoard(boardEl, view, ctx) {

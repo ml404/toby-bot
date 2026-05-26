@@ -37,6 +37,10 @@ class TicTacToeButton @Autowired constructor(
     override val name: String get() = TicTacToeEmbeds.BUTTON_NAME
     override val description: String get() = "Routes /tictactoe accept/decline + place + forfeit clicks."
 
+    // Every action edits the original board message — ack with deferEdit
+    // so the per-move click doesn't show a hanging "thinking" indicator.
+    override val defersEdit: Boolean = true
+
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val parsed = TicTacToeEmbeds.parseButtonId(event.componentId) ?: run {
@@ -195,7 +199,10 @@ class TicTacToeButton @Autowired constructor(
             winnerDiscordId = winnerDiscordId,
         )
         val embed: MessageEmbed = when (outcome) {
-            is TurnBasedBoardWagerService.ResolveOutcome.Win -> TicTacToeEmbeds.winEmbed(session, outcome, forfeit)
+            is TurnBasedBoardWagerService.ResolveOutcome.Win -> TicTacToeEmbeds.winEmbed(
+                session, outcome, forfeit,
+                winnerName = PvpEmbeds.winnerDisplayName(event.jda, session.guildId, outcome.winnerDiscordId),
+            )
             is TurnBasedBoardWagerService.ResolveOutcome.Draw -> TicTacToeEmbeds.drawEmbed(session, outcome)
             TurnBasedBoardWagerService.ResolveOutcome.Unknown -> PvpEmbeds.acceptErrorEmbed(
                 "Couldn't resolve the match — both players' profiles must exist."

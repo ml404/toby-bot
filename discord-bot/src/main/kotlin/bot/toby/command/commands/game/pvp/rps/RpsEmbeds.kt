@@ -119,8 +119,8 @@ object RpsEmbeds {
         .setColor(0x5B8DEF)
         .build()
 
-    fun winEmbed(outcome: RpsService.ResolveOutcome.Win): MessageEmbed = EmbedBuilder()
-        .setTitle("🏆 Rock-Paper-Scissors — <@${outcome.winnerDiscordId}> wins!")
+    fun winEmbed(outcome: RpsService.ResolveOutcome.Win, winnerName: String): MessageEmbed = EmbedBuilder()
+        .setTitle("🏆 Rock-Paper-Scissors — $winnerName wins!")
         .setDescription(
             "<@${outcome.winnerDiscordId}> picked **${prettyChoice(outcome.winnerChoice)}**" +
                 ", <@${outcome.loserDiscordId}> picked **${prettyChoice(outcome.loserChoice)}**." +

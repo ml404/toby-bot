@@ -31,6 +31,10 @@ class DuelButton @Autowired constructor(
     override val name: String get() = DuelEmbeds.BUTTON_NAME
     override val description: String get() = "Resolves a /duel offer in the opponent's chosen direction."
 
+    // Duel button edits the source offer message — ack with deferEdit so no
+    // "Toby is thinking…" indicator hangs while we resolve the offer.
+    override val defersEdit: Boolean = true
+
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val parsed = DuelEmbeds.parseButtonId(event.componentId) ?: run {
