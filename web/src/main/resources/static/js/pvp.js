@@ -1097,7 +1097,13 @@
     // re-broadcast each named SSE event as a DOM CustomEvent so multiple
     // panels (initRpsPanel + the two initBoardGamePanel calls) can each
     // attach listeners without needing direct EventSource access.
-    let sharedStreamOpened = false;
+    //
+    // Declared with `var` (not `let`) so the hoisted binding is
+    // `undefined` instead of in the temporal dead zone — `ensureSharedStream`
+    // is reached via `initBoardGamePanel` *before* this line is evaluated
+    // and a TDZ ReferenceError here would abort the entire IIFE (and with
+    // it every form submit handler the page needs).
+    var sharedStreamOpened = false;
     function ensureSharedStream() {
         if (sharedStreamOpened) return;
         sharedStreamOpened = true;
