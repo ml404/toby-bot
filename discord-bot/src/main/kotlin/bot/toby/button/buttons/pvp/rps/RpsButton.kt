@@ -35,6 +35,10 @@ class RpsButton @Autowired constructor(
     override val name: String get() = RpsEmbeds.BUTTON_NAME
     override val description: String get() = "Routes /rps accept/decline + pick + forfeit clicks."
 
+    // Every action edits the original board message — ack with deferEdit
+    // so the per-move click doesn't show a hanging "thinking" indicator.
+    override val defersEdit: Boolean = true
+
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         val parsed = RpsEmbeds.parseButtonId(event.componentId) ?: run {
@@ -185,7 +189,10 @@ class RpsButton @Autowired constructor(
             opponentChoice = session.picks[session.opponentDiscordId],
         )
         val embed: MessageEmbed = when (outcome) {
-            is RpsService.ResolveOutcome.Win -> RpsEmbeds.winEmbed(outcome)
+            is RpsService.ResolveOutcome.Win -> RpsEmbeds.winEmbed(
+                outcome,
+                winnerName = PvpEmbeds.winnerDisplayName(event.jda, session.guildId, outcome.winnerDiscordId),
+            )
             is RpsService.ResolveOutcome.Draw -> RpsEmbeds.drawEmbed(
                 outcome, session.initiatorDiscordId, session.opponentDiscordId,
             )

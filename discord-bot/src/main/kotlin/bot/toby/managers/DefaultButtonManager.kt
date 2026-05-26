@@ -31,10 +31,11 @@ class DefaultButtonManager @Autowired constructor(
 
         val btn = getButton(event.componentId.lowercase()) ?: return
 
-        if (btn.defersReply) {
-            event.deferReply(true).queue()
+        when {
+            btn.defersEdit -> event.deferEdit().queue()
+            btn.defersReply -> event.deferReply(true).queue()
         }
-        event.channel.sendTyping().queue()
+        if (!btn.defersEdit) event.channel.sendTyping().queue()
         val ctx = DefaultButtonContext(event)
         btn.handle(ctx, requestingUserDto, deleteDelay)
     }

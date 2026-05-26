@@ -45,9 +45,11 @@ import web.util.displayName
  * Discord command uses and the same in-memory [PendingDuelRegistry]
  * so a duel offered in Discord can be accepted via the web inbox and
  * vice versa. Rock-paper-scissors plays end-to-end on the web via
- * `/pvp/{guildId}/rps/...`; tic-tac-toe and connect 4 tabs render in
- * the unified page but are placeholders until their controller
- * endpoints land in a follow-up PR.
+ * `/pvp/{guildId}/rps/...`, tic-tac-toe via `/pvp/{guildId}/tictactoe/...`,
+ * and connect 4 via `/pvp/{guildId}/connect4/...`.
+ *
+ * Deep-links from the Discord side accept `?opponentDiscordId=&stake=`
+ * to pre-fill every game's challenge form — see [page].
  *
  * Old `/duel/...` URLs are kept alive via [DuelRedirectController]
  * which 301/308s every former route into the new `/pvp/...` space.
@@ -123,6 +125,11 @@ class PvpController(
         // Tab wins if both are present.
         @RequestParam(required = false) tab: String?,
         @RequestParam(required = false) game: String?,
+        // Deep-link pre-fill from Discord-side notifications: surfaces
+        // the opponent + stake the user just challenged so every game's
+        // form lands ready to send instead of forcing a re-pick.
+        @RequestParam(required = false) opponentDiscordId: String?,
+        @RequestParam(required = false) stake: Long?,
         model: Model,
         ra: RedirectAttributes,
     ): String = WebGuildAccess.requireMemberForPage(
@@ -170,6 +177,16 @@ class PvpController(
         // when both arrive together. Either way, pvp.js reads
         // `data-initial-tab` and flips to the matching tab on load.
         model.addAttribute("initialTab", sanitizeTabSlug(tab) ?: sanitizeTabSlug(game) ?: "")
+        // Pre-fill every game's opponent picker + stake input from the
+        // deep-link query params. We only honour the opponent id if it's
+        // actually a member of this guild (so a stale link can't pre-fill
+        // a non-member id that would just bounce on /challenge).
+        val preselectedOpponentId = opponentDiscordId
+            ?.toLongOrNull()
+            ?.takeIf { it != discordId && economyWebService.isMember(it, guildId) }
+            ?.toString()
+        model.addAttribute("preselectedOpponentId", preselectedOpponentId)
+        model.addAttribute("preselectedStake", stake?.takeIf { it >= 0 })
         model.addAttribute("username", user.displayName())
         "pvp"
     }

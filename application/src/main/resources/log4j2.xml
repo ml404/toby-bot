@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="WARN">
+<Configuration status="WARN" packages="web.configuration">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
+            <!--
+              Drop log events whose throwable chain is a "Broken pipe"
+              IOException. These come from SSE heartbeats landing on
+              connections Heroku's router closed at its 55s idle
+              timeout — KeyedSseRegistry handles the failure, the log
+              noise is just Tomcat's wrapper surfacing the IOException.
+            -->
+            <BrokenPipeLogFilter/>
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg %n"/>
         </Console>
     </Appenders>

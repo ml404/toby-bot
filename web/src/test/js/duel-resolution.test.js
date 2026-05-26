@@ -398,3 +398,73 @@ describe('playFromResolution', () => {
     });
 });
 
+describe('page-init regression: full DOM bootstrap', () => {
+    // Regression for a TDZ bug where `sharedStreamOpened` was declared
+    // with `let` *after* `initBoardGamePanel` invoked `ensureSharedStream`.
+    // The temporal dead zone aborted the IIFE on real pages, so the
+    // challenge forms never got their submit handlers attached — the
+    // page silently fell back to a native GET form submit and no game
+    // state ever started. We re-evaluate the IIFE in the live jsdom
+    // window after staging the four PvP panels and assert it completes
+    // without throwing *and* wires the challenge forms.
+
+    const fs = require('fs');
+    const path = require('path');
+    const pvpSource = fs.readFileSync(
+        path.resolve(__dirname, '../../main/resources/static/js/pvp.js'),
+        'utf8',
+    );
+
+    function setupPvpDom() {
+        document.body.innerHTML = `
+            <main id="main" data-guild-id="1" data-ttl-seconds="60"></main>
+            <div class="pvp-tabs">
+                <button class="pvp-tab is-active" data-pvp-tab="duel"></button>
+                <button class="pvp-tab" data-pvp-tab="rps"></button>
+                <button class="pvp-tab" data-pvp-tab="tictactoe"></button>
+                <button class="pvp-tab" data-pvp-tab="connect4"></button>
+            </div>
+            ${['duel', 'rps', 'tictactoe', 'connect4'].map(function (slug) {
+                return '<section class="pvp-panel" id="pvp-panel-' + slug + '" hidden>' +
+                    '<form id="' + slug + '-challenge"><select id="' + slug + '-opponent"></select>' +
+                    '<input id="' + slug + '-stake" type="number" value="1"></form>' +
+                    '<section id="' + slug + '-active-section" hidden>' +
+                        '<div id="' + slug + '-active"></div>' +
+                    '</section>' +
+                    '<div id="' + slug + '-pending-list"></div>' +
+                    '<div id="' + slug + '-outgoing-list"></div>' +
+                '</section>';
+            }).join('')}
+        `;
+        // Stub EventSource so ensureSharedStream / ensureStream don't try
+        // to open a real connection in the jsdom env.
+        window.EventSource = function () { this.addEventListener = function () {}; };
+    }
+
+    test('IIFE completes when every PvP panel is present (regression: no TDZ on sharedStreamOpened)', () => {
+        setupPvpDom();
+        expect(() => {
+            // Re-evaluate the IIFE against the live document. The
+            // module-level `require` at the top of the test file also
+            // ran the IIFE, but against an empty body — the page-init
+            // exits early without #main and never reaches the bug.
+            (new Function('window', 'document', pvpSource))(window, document);
+        }).not.toThrow();
+    });
+
+    test('submit handlers are wired so the form does not fall back to native GET submit', () => {
+        setupPvpDom();
+        (new Function('window', 'document', pvpSource))(window, document);
+        // Each form must have a JS submit handler that calls preventDefault.
+        // If the IIFE crashed mid-bootstrap (as it did with the TDZ bug),
+        // the `submit` event would propagate to the form's default action
+        // and the browser would GET-navigate the page away.
+        ['rps', 'tictactoe', 'connect4'].forEach(function (slug) {
+            const form = document.getElementById(slug + '-challenge');
+            expect(form).not.toBeNull();
+            const evt = new Event('submit', { cancelable: true, bubbles: true });
+            form.dispatchEvent(evt);
+            expect(evt.defaultPrevented).toBe(true);
+        });
+    });
+});

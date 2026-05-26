@@ -2,6 +2,7 @@ package bot.toby.command.commands.game.pvp
 
 import database.service.pvp.PvpWagerService
 import net.dv8tion.jda.api.EmbedBuilder
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -73,6 +74,19 @@ object PvpEmbeds {
         Button.success(acceptButtonId, "Accept"),
         Button.danger(declineButtonId, "Decline"),
     )
+
+    /**
+     * Resolve a Discord id into a display-friendly name for use in embed
+     * titles. JDA's mention syntax (`<@id>`) only renders to a name when
+     * the receiving client has the user cached, so for titles (which
+     * Discord shows in embed metadata, not the description body) we
+     * prefer the resolved name. Falls back to `Player NNNN` matching the
+     * web `MemberLookupHelper.fallbackName` shape.
+     */
+    fun winnerDisplayName(jda: JDA, guildId: Long, winnerId: Long): String =
+        jda.getGuildById(guildId)?.getMemberById(winnerId)?.effectiveName
+            ?: runCatching { jda.retrieveUserById(winnerId).complete()?.effectiveName }.getOrNull()
+            ?: "Player ${winnerId.toString().takeLast(4)}"
 
     /** Per-game text rendering of a [PvpWagerService.StartOutcome] rejection. */
     fun describeStartOutcome(outcome: PvpWagerService.StartOutcome): String = when (outcome) {

@@ -132,15 +132,16 @@ object Connect4Embeds {
         session: Connect4SessionRegistry.Session,
         outcome: TurnBasedBoardWagerService.ResolveOutcome.Win,
         forfeit: Boolean,
+        winnerName: String,
     ): MessageEmbed {
         val winnerMark = session.markFor(outcome.winnerDiscordId)
         val verb = if (forfeit) "wins by forfeit" else "wins"
         val markLabel = winnerMark?.let { " (${prettyMark(it)})" } ?: ""
         val board = renderBoard(session.board, winningLine = session.winningLine)
         return EmbedBuilder()
-            .setTitle("🏆 Connect 4 — <@${outcome.winnerDiscordId}>$markLabel $verb!")
+            .setTitle("🏆 Connect 4 — $winnerName$markLabel $verb!")
             .setDescription(
-                board +
+                "<@${outcome.winnerDiscordId}>\n" + board +
                     if (outcome.pot > 0) {
                         "\n\nPot: **${outcome.pot}** credits → " +
                             "winner takes **${outcome.pot - outcome.lossTribute}** " +
