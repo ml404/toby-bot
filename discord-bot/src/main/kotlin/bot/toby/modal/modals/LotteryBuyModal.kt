@@ -23,11 +23,23 @@ class LotteryBuyModal(
         }
 
         when (val r = jackpotLotteryService.buyTickets(guildId, userId, count)) {
-            is BuyOutcome.Ok -> event.hook.sendMessage(
-                "Bought **$count** ticket(s). You now hold **${r.ticketCount}** tickets " +
-                    "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
-                    "Your balance: **${r.newBalance}** credits."
-            ).setEphemeral(true).queue()
+            is BuyOutcome.Ok -> event.hook.sendMessage(buildString {
+                append("Bought **$count** ticket(s). ")
+                if (r.bonusAwarded > 0) {
+                    append("🎁 Plus **${r.bonusAwarded}** bonus ticket(s)! ")
+                }
+                append(
+                    "You now hold **${r.ticketCount}** tickets " +
+                        "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
+                        "Your balance: **${r.newBalance}** credits."
+                )
+                r.milestoneBonuses.forEach { m ->
+                    append(
+                        "\n🚀 Milestone reached at **${m.threshold}** tickets sold → " +
+                            "**+${m.creditsAdded}** credits drawn into the prize pool!"
+                    )
+                }
+            }).setEphemeral(true).queue()
 
             BuyOutcome.NoOpenLottery ->
                 event.hook.sendMessage("No lottery is open right now.").setEphemeral(true).queue()

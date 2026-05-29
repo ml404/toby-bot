@@ -90,6 +90,58 @@ class LotteryBuyModalTest {
     }
 
     @Test
+    fun `surfaces bonus tickets awarded on a bulk buy`() {
+        val mapping = mockk<ModalMapping> { every { asString } returns "5" }
+        every { event.getValue("count") } returns mapping
+        every { jackpotLotteryService.buyTickets(100L, 42L, 5) } returns BuyOutcome.Ok(
+            ticketCount = 10, totalSpent = 250L, newBalance = 750L, newPool = 2_000L,
+            bonusAwarded = 2,
+        )
+
+        modal.handle(ctx, 0)
+
+        val msg = messageSlot.captured
+        assertTrue(msg.contains("bonus"), "expected message to mention bonus tickets: $msg")
+        assertTrue(msg.contains("2"), "expected message to mention the bonus count: $msg")
+    }
+
+    @Test
+    fun `omits bonus mention when no bonus was awarded`() {
+        val mapping = mockk<ModalMapping> { every { asString } returns "1" }
+        every { event.getValue("count") } returns mapping
+        every { jackpotLotteryService.buyTickets(100L, 42L, 1) } returns BuyOutcome.Ok(
+            ticketCount = 1, totalSpent = 50L, newBalance = 950L, newPool = 1_000L,
+            bonusAwarded = 0,
+        )
+
+        modal.handle(ctx, 0)
+
+        assertTrue(!messageSlot.captured.contains("bonus"), "did not expect a bonus mention: ${messageSlot.captured}")
+    }
+
+    @Test
+    fun `surfaces milestone jackpot draws triggered by the purchase`() {
+        val mapping = mockk<ModalMapping> { every { asString } returns "5" }
+        every { event.getValue("count") } returns mapping
+        every { jackpotLotteryService.buyTickets(100L, 42L, 5) } returns BuyOutcome.Ok(
+            ticketCount = 10, totalSpent = 250L, newBalance = 750L, newPool = 2_000L,
+            milestoneBonuses = listOf(
+                BuyOutcome.MilestoneBonus(threshold = 50L, creditsAdded = 500L),
+                BuyOutcome.MilestoneBonus(threshold = 100L, creditsAdded = 750L),
+            ),
+        )
+
+        modal.handle(ctx, 0)
+
+        val msg = messageSlot.captured
+        assertTrue(msg.contains("Milestone"), "expected message to mention milestone: $msg")
+        assertTrue(msg.contains("50"), "expected first milestone threshold: $msg")
+        assertTrue(msg.contains("500"), "expected first milestone credits: $msg")
+        assertTrue(msg.contains("100"), "expected second milestone threshold: $msg")
+        assertTrue(msg.contains("750"), "expected second milestone credits: $msg")
+    }
+
+    @Test
     fun `replies with error on NoOpenLottery`() {
         val mapping = mockk<ModalMapping> { every { asString } returns "1" }
         every { event.getValue("count") } returns mapping
