@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Include bonus tickets in the lottery embed held-ticket total",
+    "summary": "## Problem",
+    "emoji": "🎟️",
+    "prNumber": 604
+  },
+  {
+    "date": "May 2026",
     "title": "Surface lottery bonus tickets and milestone jackpot draws in embed buy",
     "summary": "## Problem",
     "emoji": "🎟️",
