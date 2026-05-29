@@ -25,8 +25,8 @@ class LotteryBuyModal(
         when (val r = jackpotLotteryService.buyTickets(guildId, userId, count)) {
             is BuyOutcome.Ok -> event.hook.sendMessage(buildString {
                 append("Bought **$count** ticket(s). ")
-                if (r.bonusAwarded > 0) {
-                    append("🎁 Plus **${r.bonusAwarded}** bonus ticket(s)! ")
+                if (r.bonusTicketsGranted > 0) {
+                    append("🎁 Plus **${r.bonusTicketsGranted}** bonus ticket(s) from bulk-buy! ")
                 }
                 append(
                     "You now hold **${r.ticketCount}** tickets " +

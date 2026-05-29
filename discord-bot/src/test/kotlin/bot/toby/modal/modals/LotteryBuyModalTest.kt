@@ -95,7 +95,7 @@ class LotteryBuyModalTest {
         every { event.getValue("count") } returns mapping
         every { jackpotLotteryService.buyTickets(100L, 42L, 5) } returns BuyOutcome.Ok(
             ticketCount = 10, totalSpent = 250L, newBalance = 750L, newPool = 2_000L,
-            bonusAwarded = 2,
+            bonusTicketsGranted = 2L,
         )
 
         modal.handle(ctx, 0)
@@ -111,7 +111,7 @@ class LotteryBuyModalTest {
         every { event.getValue("count") } returns mapping
         every { jackpotLotteryService.buyTickets(100L, 42L, 1) } returns BuyOutcome.Ok(
             ticketCount = 1, totalSpent = 50L, newBalance = 950L, newPool = 1_000L,
-            bonusAwarded = 0,
+            bonusTicketsGranted = 0L,
         )
 
         modal.handle(ctx, 0)
