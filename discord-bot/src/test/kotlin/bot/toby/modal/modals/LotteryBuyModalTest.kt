@@ -126,8 +126,8 @@ class LotteryBuyModalTest {
         every { jackpotLotteryService.buyTickets(100L, 42L, 5) } returns BuyOutcome.Ok(
             ticketCount = 10, totalSpent = 250L, newBalance = 750L, newPool = 2_000L,
             milestoneBonuses = listOf(
-                BuyOutcome.MilestoneBonus(threshold = 50L, creditsAdded = 500L),
-                BuyOutcome.MilestoneBonus(threshold = 100L, creditsAdded = 750L),
+                JackpotLotteryService.MilestoneBonus(threshold = 50L, creditsAdded = 500L),
+                JackpotLotteryService.MilestoneBonus(threshold = 100L, creditsAdded = 750L),
             ),
         )
 
