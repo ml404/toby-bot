@@ -29,7 +29,12 @@ class LotteryBuyModal(
                     append("🎁 Plus **${r.bonusTicketsGranted}** bonus ticket(s) from bulk-buy! ")
                 }
                 append(
-                    "You now hold **${r.ticketCount}** tickets " +
+                    if (r.totalBonusTickets > 0) {
+                        "You now hold **${r.ticketCount + r.totalBonusTickets}** tickets " +
+                            "(**${r.ticketCount}** paid + **${r.totalBonusTickets}** bonus) "
+                    } else {
+                        "You now hold **${r.ticketCount}** tickets "
+                    } +
                         "(spent ${r.totalSpent} credits total). Prize pool: **${r.newPool}** credits. " +
                         "Your balance: **${r.newBalance}** credits."
                 )

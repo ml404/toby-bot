@@ -106,6 +106,42 @@ class LotteryBuyModalTest {
     }
 
     @Test
+    fun `held total includes bonus tickets with a paid plus bonus breakdown`() {
+        // Mirrors the reported scenario: bought 25 paid, holds 10 bonus too,
+        // so the "you now hold" total must read 35, not the paid 25.
+        val mapping = mockk<ModalMapping> { every { asString } returns "25" }
+        every { event.getValue("count") } returns mapping
+        every { jackpotLotteryService.buyTickets(100L, 42L, 25) } returns BuyOutcome.Ok(
+            ticketCount = 25, totalSpent = 1_250L, newBalance = 8_750L, newPool = 5_000L,
+            bonusTicketsGranted = 10L, totalBonusTickets = 10L,
+        )
+
+        modal.handle(ctx, 0)
+
+        val msg = messageSlot.captured
+        assertTrue(msg.contains("hold **35** tickets"), "expected combined held total of 35: $msg")
+        assertTrue(msg.contains("**25** paid"), "expected paid breakdown: $msg")
+        assertTrue(msg.contains("**10** bonus"), "expected bonus breakdown: $msg")
+    }
+
+    @Test
+    fun `held total has no breakdown when the user holds no bonus tickets`() {
+        val mapping = mockk<ModalMapping> { every { asString } returns "3" }
+        every { event.getValue("count") } returns mapping
+        every { jackpotLotteryService.buyTickets(100L, 42L, 3) } returns BuyOutcome.Ok(
+            ticketCount = 3, totalSpent = 150L, newBalance = 850L, newPool = 1_000L,
+            totalBonusTickets = 0L,
+        )
+
+        modal.handle(ctx, 0)
+
+        val msg = messageSlot.captured
+        assertTrue(msg.contains("hold **3** tickets"), "expected plain held total of 3: $msg")
+        assertTrue(!msg.contains("paid +"), "did not expect a paid/bonus breakdown: $msg")
+        assertTrue(!msg.contains("bonus"), "did not expect a bonus mention: $msg")
+    }
+
+    @Test
     fun `omits bonus mention when no bonus was awarded`() {
         val mapping = mockk<ModalMapping> { every { asString } returns "1" }
         every { event.getValue("count") } returns mapping
