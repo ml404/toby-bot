@@ -1,6 +1,13 @@
 [
   {
     "date": "May 2026",
+    "title": "Surface lottery bonus tickets and milestone jackpot draws in embed buy",
+    "summary": "## Problem",
+    "emoji": "🎟️",
+    "prNumber": 603
+  },
+  {
+    "date": "May 2026",
     "title": "Resolve winner names, drop ghost thinking, share resolution overlay",
     "summary": "PvP polish across Discord and the web, addressing four reported issues: **TicTacToe / Connect 4 / RPS win embeds tagged the winner as a raw `<@id>` mention** when the Discord client couldn't resolve the user. The title now uses a JDA-resolved display name (with a `Player NNNN` fallback) while the description keeps the mention so the winner still gets pinged. **`/connect4` (and `/tictactoe`, `/rps`) button clicks left a ghost \"Toby is thinking…\" on every move.** Added a `de…",
     "emoji": "🔨",
