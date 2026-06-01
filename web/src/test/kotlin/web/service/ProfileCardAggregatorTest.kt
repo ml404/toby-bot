@@ -2,19 +2,25 @@ package web.service
 
 import database.dto.guild.AchievementDto
 import database.dto.guild.TitleDto
+import database.dto.social.LoginStreakDto
 import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.guild.TitleService
+import database.service.social.LoginStreakService
 import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Unit tests for [ProfileCardAggregator]. The aggregator combines
@@ -36,6 +42,7 @@ class ProfileCardAggregatorTest {
     private lateinit var userService: UserService
     private lateinit var titleService: TitleService
     private lateinit var achievementService: AchievementService
+    private lateinit var loginStreakService: LoginStreakService
     private lateinit var guild: Guild
     private lateinit var member: Member
     private lateinit var aggregator: ProfileCardAggregator
@@ -45,7 +52,9 @@ class ProfileCardAggregatorTest {
         userService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         achievementService = mockk(relaxed = true)
-        aggregator = ProfileCardAggregator(userService, titleService, achievementService)
+        loginStreakService = mockk(relaxed = true)
+        every { loginStreakService.get(discordId, guildId) } returns null
+        aggregator = ProfileCardAggregator(userService, titleService, achievementService, loginStreakService)
 
         guild = mockk(relaxed = true)
         member = mockk(relaxed = true)
@@ -135,6 +144,48 @@ class ProfileCardAggregatorTest {
         assertEquals(2, data.level)
         assertEquals(255L, data.totalXp)
         assertEquals(0L, data.xpIntoLevel)
+    }
+
+    @Test
+    fun `build marks the streak active when the last claim was today or yesterday`() {
+        every { userService.getUserById(discordId, guildId) } returns userDto()
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+        val today = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC)
+        every { loginStreakService.get(discordId, guildId) } returns LoginStreakDto(
+            discordId = discordId, guildId = guildId,
+            currentStreak = 6, longestStreak = 9, lastClaimDate = today, totalClaims = 20L
+        )
+
+        val data = aggregator.build(guild, member)
+        assertEquals(6, data.streakDays)
+        assertTrue(data.streakActive)
+    }
+
+    @Test
+    fun `build marks the streak inactive when the last claim has lapsed`() {
+        every { userService.getUserById(discordId, guildId) } returns userDto()
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+        val staleDate = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC).minusDays(3)
+        every { loginStreakService.get(discordId, guildId) } returns LoginStreakDto(
+            discordId = discordId, guildId = guildId,
+            currentStreak = 9, longestStreak = 9, lastClaimDate = staleDate, totalClaims = 30L
+        )
+
+        val data = aggregator.build(guild, member)
+        // The stale count is still forwarded, but the renderer hides it.
+        assertEquals(9, data.streakDays)
+        assertFalse(data.streakActive)
+    }
+
+    @Test
+    fun `build yields no streak when the user has never claimed`() {
+        every { userService.getUserById(discordId, guildId) } returns userDto()
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+        every { loginStreakService.get(discordId, guildId) } returns null
+
+        val data = aggregator.build(guild, member)
+        assertEquals(0, data.streakDays)
+        assertFalse(data.streakActive)
     }
 
     // ---- helpers ----

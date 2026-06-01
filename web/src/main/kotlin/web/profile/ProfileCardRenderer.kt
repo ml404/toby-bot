@@ -65,6 +65,7 @@ class ProfileCardRenderer {
             drawBackground(g)
             val tier = tierFor(data.level)
             drawAvatar(g, data.avatarUrl)
+            drawStreakBadge(g, data)
             drawHeader(g, data, tier)
             drawProgressBar(g, data, tier)
             drawBalanceAndTitle(g, data)
@@ -117,6 +118,34 @@ class ProfileCardRenderer {
         g.drawOval(AVATAR_X, AVATAR_Y, AVATAR_SIZE, AVATAR_SIZE)
         // Mark unused to keep the linter quiet without changing semantics.
         @Suppress("UNUSED_VARIABLE") val unused = cx + cy
+    }
+
+    /**
+     * Flame streak badge, centred under the avatar in the otherwise-empty
+     * left column. Drawn only for a live streak — a lapsed streak's stale
+     * count would mislead on a shareable card (the aggregator gates
+     * [ProfileCardData.streakActive] on a today/yesterday last-claim).
+     */
+    private fun drawStreakBadge(g: Graphics2D, data: ProfileCardData) {
+        if (data.streakDays <= 0 || !data.streakActive) return
+        val text = "🔥 ${data.streakDays}-day streak"
+        g.font = boldFont.deriveFont(15f)
+        val fm = g.fontMetrics
+        val padX = 14
+        val padY = 7
+        val w = fm.stringWidth(text) + padX * 2
+        val h = fm.height + padY
+        val cx = AVATAR_X + AVATAR_SIZE / 2
+        val x = cx - w / 2
+        val y = AVATAR_Y + AVATAR_SIZE + 16
+        g.paint = GradientPaint(
+            x.toFloat(), y.toFloat(), STREAK_FROM,
+            (x + w).toFloat(), (y + h).toFloat(), STREAK_TO
+        )
+        g.fill(RoundRectangle2D.Float(x.toFloat(), y.toFloat(), w.toFloat(), h.toFloat(), 16f, 16f))
+        // Dark text reads clearly on the bright orange pill.
+        g.color = Color(0x1A, 0x1A, 0x2E)
+        g.drawString(text, x + padX, y + h - padY)
     }
 
     private fun drawHeader(g: Graphics2D, data: ProfileCardData, tier: Tier) {
@@ -324,5 +353,10 @@ class ProfileCardRenderer {
 
         private val BG_TOP = Color(0x2B, 0x2D, 0x31)
         private val BG_BOTTOM = Color(0x1E, 0x1F, 0x22)
+
+        // Flame-streak pill gradient — mirrors the web card's
+        // `--streak-from` / `--streak-to` in profile.css.
+        private val STREAK_FROM = Color(0xFF, 0x6A, 0x3D)
+        private val STREAK_TO = Color(0xFF, 0xB1, 0x3D)
     }
 }

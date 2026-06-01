@@ -3,11 +3,15 @@ package web.service
 import common.leveling.LevelCurve
 import database.service.guild.AchievementService
 import database.service.guild.TitleService
+import database.service.social.LoginStreakService
 import database.service.user.UserService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import org.springframework.stereotype.Service
 import web.profile.ProfileCardData
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Builds the [ProfileCardData] snapshot consumed by both surfaces that
@@ -42,6 +46,7 @@ class ProfileCardAggregator(
     private val userService: UserService,
     private val titleService: TitleService,
     private val achievementService: AchievementService,
+    private val loginStreakService: LoginStreakService,
 ) {
     fun build(guild: Guild, member: Member): ProfileCardData {
         val discordId = member.idLong
@@ -68,6 +73,16 @@ class ProfileCardAggregator(
                 )
             }
 
+        // Day boundaries match DefaultLoginStreakService (UTC). The streak is
+        // "active" only when the last claim was today or yesterday; an older
+        // last-claim leaves a stale count that the next claim resets, so the
+        // card treats it as inactive and hides the badge.
+        val streakRow = loginStreakService.get(discordId, guildId)
+        val today = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC)
+        val lastClaim = streakRow?.lastClaimDate
+        val streakActive = lastClaim != null &&
+            (lastClaim == today || lastClaim == today.minusDays(1))
+
         return ProfileCardData(
             avatarUrl = member.effectiveAvatarUrl,
             displayName = member.effectiveName,
@@ -79,6 +94,8 @@ class ProfileCardAggregator(
             socialCredit = user?.socialCredit ?: 0L,
             equippedTitle = equippedTitle,
             recentAchievements = recent,
+            streakDays = streakRow?.currentStreak ?: 0,
+            streakActive = streakActive,
         )
     }
 

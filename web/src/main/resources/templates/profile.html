@@ -89,7 +89,8 @@
                  th:classappend="${(profile.streak.streakActive ? ' is-lit' : '') + (profile.streak.status == 'LAPSED' ? ' is-lapsed' : '')}"
                  th:attr="data-guild-id=${profile.guildId},
                           data-claimed-today=${profile.streak.claimedToday},
-                          data-streak=${profile.streak.currentStreak}">
+                          data-streak=${profile.streak.currentStreak},
+                          data-status=${profile.streak.status}">
             <h2>Daily streak</h2>
             <div class="profile-streak-hero">
                 <div class="profile-streak-flame" aria-hidden="true">
@@ -118,10 +119,20 @@
                     <span class="profile-streak-day-dot" th:text="${i == 7} ? '★' : ''"></span>
                 </li>
             </ol>
+            <p class="muted profile-streak-milestone"
+               th:if="${profile.streak.streakActive and profile.streak.currentStreak > 0}"
+               th:with="daysToMilestone=${7 - ((profile.streak.currentStreak - 1) % 7 + 1)}"
+               th:text="${daysToMilestone == 0
+                           ? '🎉 7-day milestone reached!'
+                           : (daysToMilestone + (daysToMilestone == 1 ? ' day' : ' days') + ' to your next milestone')}">
+                3 days to your next milestone
+            </p>
             <p class="profile-streak-meta profile-streak-alert"
-               th:if="${profile.streak.status == 'AT_RISK'}"
-               th:text="'⚠ Claim today to keep your ' + ${profile.streak.currentStreak} + '-day streak alive!'">
-                ⚠ Claim today to keep your streak alive!
+               th:if="${profile.streak.status == 'AT_RISK'}">
+                <span th:text="'⚠ Claim today to keep your ' + ${profile.streak.currentStreak} + '-day streak alive!'">
+                    ⚠ Claim today to keep your streak alive!
+                </span>
+                <span class="profile-streak-countdown" hidden></span>
             </p>
             <p class="profile-streak-meta profile-streak-alert"
                th:if="${profile.streak.status == 'LAPSED'}"
