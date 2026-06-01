@@ -16,6 +16,29 @@
         });
     }
 
+    // Surface the reward the claim actually granted — xpGranted /
+    // creditsGranted / newBest come back on the response and were
+    // previously thrown away, leaving the user with no feedback.
+    function showReward(card, resp) {
+        const el = card.querySelector('.profile-streak-claimed-reward');
+        if (!el) return;
+        const parts = [];
+        if (resp.xpGranted > 0) parts.push('+' + resp.xpGranted + ' XP');
+        if (resp.creditsGranted > 0) parts.push('+' + resp.creditsGranted + ' credits');
+        let text = parts.length ? '🎉 Claimed ' + parts.join(' · ') : '🎉 Claimed!';
+        if (resp.newBest) text += ' · 🔥 New personal best!';
+        el.textContent = text;
+        el.hidden = false;
+        el.classList.add('is-shown');
+    }
+
+    function bumpTotal(card) {
+        const total = card.querySelector('.profile-streak-total');
+        if (!total) return;
+        const n = parseInt(total.textContent, 10);
+        if (!isNaN(n)) total.textContent = String(n + 1);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const card = document.querySelector('.profile-streak-card');
         if (!card) return;
@@ -37,16 +60,28 @@
                         button.textContent = originalLabel;
                         return;
                     }
+                    const alreadyClaimed = resp.status === 'already_claimed';
                     const nums = card.querySelectorAll('.profile-streak-num');
                     if (nums.length >= 2) {
                         nums[0].textContent = String(resp.currentStreak);
                         nums[1].textContent = String(resp.longestStreak);
                     }
                     updateWeek(card, resp.currentStreak);
-                    card.classList.toggle('is-lit', resp.currentStreak > 0);
+                    card.classList.add('is-lit');
+                    card.classList.remove('is-lapsed');
                     card.setAttribute('data-streak', String(resp.currentStreak));
-                    button.textContent = '✓ Claimed today';
                     card.setAttribute('data-claimed-today', 'true');
+                    button.textContent = '✓ Claimed today';
+
+                    // The "at risk", "lapsed" and next-reward preview lines
+                    // describe the pre-claim state — drop them now it's claimed.
+                    card.querySelectorAll('.profile-streak-alert, .profile-streak-preview')
+                        .forEach(function (n) { n.remove(); });
+
+                    if (!alreadyClaimed) {
+                        bumpTotal(card);
+                        showReward(card, resp);
+                    }
                 })
                 .catch(function () {
                     button.disabled = false;

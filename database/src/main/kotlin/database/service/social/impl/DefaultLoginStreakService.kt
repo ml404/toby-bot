@@ -130,6 +130,14 @@ class DefaultLoginStreakService(
         )
     }
 
+    override fun previewReward(guildId: Long, streak: Int): LoginStreakService.RewardPreview {
+        val effective = streak.coerceAtLeast(1)
+        return LoginStreakService.RewardPreview(
+            xp = resolveXpReward(guildId, effective),
+            credits = resolveCreditReward(guildId, effective)
+        )
+    }
+
     private fun resolveXpReward(guildId: Long, streak: Int): Long {
         val base = configLong(guildId, ConfigDto.Configurations.STREAK_BASE_REWARD_XP, DEFAULT_BASE_XP)
         val perDay = configLong(guildId, ConfigDto.Configurations.STREAK_PER_DAY_BONUS_XP, DEFAULT_PER_DAY_BONUS_XP)

@@ -70,6 +70,8 @@ class ProfileWebServiceEngagementTest {
         every { userService.getUserById(discordId, guildId) } returns
             UserDto(discordId, guildId).apply { socialCredit = 100L; xp = 0L }
         every { titleService.listOwned(discordId) } returns emptyList()
+        every { loginStreakService.previewReward(any(), any()) } returns
+            LoginStreakService.RewardPreview(0L, 0L)
     }
 
     @Test
@@ -112,6 +114,67 @@ class ProfileWebServiceEngagementTest {
         assertEquals(0, view.streak.longestStreak)
         assertEquals(null, view.streak.lastClaimDate)
         assertFalse(view.streak.claimedToday)
+        assertEquals(0L, view.streak.totalClaims)
+        assertEquals("NEW", view.streak.status)
+        assertFalse(view.streak.streakActive)
+    }
+
+    @Test
+    fun `claimed-today streak is CLAIMED, active, and previews tomorrow's reward at streak + 1`() {
+        val today = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC)
+        every { loginStreakService.get(discordId, guildId) } returns LoginStreakDto(
+            discordId = discordId, guildId = guildId,
+            currentStreak = 5, longestStreak = 12, lastClaimDate = today, totalClaims = 30L
+        )
+        // A claimed-today user's next claim is tomorrow → streak 6.
+        every { loginStreakService.previewReward(guildId, 6) } returns
+            LoginStreakService.RewardPreview(75L, 50L)
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals("CLAIMED", view.streak.status)
+        assertTrue(view.streak.streakActive)
+        assertEquals(30L, view.streak.totalClaims)
+        assertEquals(75L, view.streak.nextRewardXp)
+        assertEquals(50L, view.streak.nextRewardCredits)
+    }
+
+    @Test
+    fun `streak last claimed yesterday is AT_RISK and previews the continuing claim`() {
+        val yesterday = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC).minusDays(1)
+        every { loginStreakService.get(discordId, guildId) } returns LoginStreakDto(
+            discordId = discordId, guildId = guildId,
+            currentStreak = 4, longestStreak = 9, lastClaimDate = yesterday, totalClaims = 11L
+        )
+        // Claiming today continues the streak → streak 5.
+        every { loginStreakService.previewReward(guildId, 5) } returns
+            LoginStreakService.RewardPreview(70L, 45L)
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals("AT_RISK", view.streak.status)
+        assertTrue(view.streak.streakActive)
+        assertEquals(70L, view.streak.nextRewardXp)
+        assertEquals(45L, view.streak.nextRewardCredits)
+    }
+
+    @Test
+    fun `streak last claimed days ago is LAPSED, inactive, and previews a reset to streak 1`() {
+        val staleDate = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC).minusDays(3)
+        every { loginStreakService.get(discordId, guildId) } returns LoginStreakDto(
+            discordId = discordId, guildId = guildId,
+            currentStreak = 9, longestStreak = 9, lastClaimDate = staleDate, totalClaims = 20L
+        )
+        // The stale count won't continue — the next claim restarts at 1.
+        every { loginStreakService.previewReward(guildId, 1) } returns
+            LoginStreakService.RewardPreview(50L, 25L)
+        every { achievementService.listFor(discordId, guildId) } returns emptyList()
+
+        val view = service.getProfile(discordId, guildId)!!
+        assertEquals("LAPSED", view.streak.status)
+        assertFalse(view.streak.streakActive)
+        assertEquals(50L, view.streak.nextRewardXp)
+        assertEquals(25L, view.streak.nextRewardCredits)
     }
 
     @Test

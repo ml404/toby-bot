@@ -86,7 +86,7 @@
         </section>
 
         <section class="profile-card profile-streak-card"
-                 th:classappend="${profile.streak.currentStreak > 0} ? ' is-lit' : ''"
+                 th:classappend="${(profile.streak.streakActive ? ' is-lit' : '') + (profile.streak.status == 'LAPSED' ? ' is-lapsed' : '')}"
                  th:attr="data-guild-id=${profile.guildId},
                           data-claimed-today=${profile.streak.claimedToday},
                           data-streak=${profile.streak.currentStreak}">
@@ -99,30 +99,59 @@
                 </div>
                 <div class="profile-streak-hero-meta">
                     <span class="profile-streak-hero-label">day streak</span>
-                    <span class="profile-streak-best">
-                        Best <strong class="profile-streak-num" th:text="${profile.streak.longestStreak}">0</strong>
-                    </span>
+                    <div class="profile-streak-stats">
+                        <span class="profile-streak-stat-chip">
+                            Best <strong class="profile-streak-num" th:text="${profile.streak.longestStreak}">0</strong>
+                        </span>
+                        <span class="profile-streak-stat-chip">
+                            Claimed <strong class="profile-streak-total"
+                                            th:text="${profile.streak.totalClaims}">0</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
             <ol class="profile-streak-week" aria-label="Progress through the 7-day cycle">
                 <li th:each="i : ${#numbers.sequence(1, 7)}"
                     class="profile-streak-day"
-                    th:classappend="${(i &lt;= (profile.streak.currentStreak == 0 ? 0 : ((profile.streak.currentStreak - 1) % 7) + 1) ? ' is-filled' : '') + (i == 7 ? ' is-milestone' : '')}"
+                    th:classappend="${(profile.streak.streakActive and i &lt;= (profile.streak.currentStreak == 0 ? 0 : ((profile.streak.currentStreak - 1) % 7) + 1) ? ' is-filled' : '') + (i == 7 ? ' is-milestone' : '')}"
                     th:attr="data-day=${i}">
                     <span class="profile-streak-day-dot" th:text="${i == 7} ? '★' : ''"></span>
                 </li>
             </ol>
-            <p class="muted profile-streak-meta"
-               th:if="${profile.streak.lastClaimDate != null}"
-               th:text="'Last claim: ' + ${profile.streak.lastClaimDate}">Last claim: —</p>
-            <p class="muted profile-streak-meta"
-               th:if="${viewerIsOwner and profile.streak.lastClaimDate == null}">
-                You haven't claimed yet — run <code>/daily</code> in Discord or hit the button below.
+            <p class="profile-streak-meta profile-streak-alert"
+               th:if="${profile.streak.status == 'AT_RISK'}"
+               th:text="'⚠ Claim today to keep your ' + ${profile.streak.currentStreak} + '-day streak alive!'">
+                ⚠ Claim today to keep your streak alive!
+            </p>
+            <p class="profile-streak-meta profile-streak-alert"
+               th:if="${profile.streak.status == 'LAPSED'}"
+               th:text="'Your ' + ${profile.streak.currentStreak} + '-day streak lapsed — claim to start a new one.'">
+                Your streak lapsed.
             </p>
             <p class="muted profile-streak-meta"
-               th:if="${!viewerIsOwner and profile.streak.lastClaimDate == null}">
+               th:if="${profile.streak.status == 'CLAIMED'}">
+                Claimed today — come back tomorrow to keep it going.
+            </p>
+            <p class="muted profile-streak-meta"
+               th:if="${profile.streak.status == 'NEW' and viewerIsOwner}">
+                Start your streak — run <code>/daily</code> in Discord or hit the button below.
+            </p>
+            <p class="muted profile-streak-meta"
+               th:if="${profile.streak.status == 'NEW' and !viewerIsOwner}">
                 Hasn't claimed yet.
             </p>
+            <p class="profile-streak-preview"
+               th:if="${viewerIsOwner and (profile.streak.nextRewardXp > 0 or profile.streak.nextRewardCredits > 0)}">
+                <span class="muted"
+                      th:text="${profile.streak.claimedToday} ? 'Tomorrow' : 'Claim now'">Claim now</span>
+                <span class="profile-streak-reward-pill"
+                      th:if="${profile.streak.nextRewardXp > 0}"
+                      th:text="'+' + ${profile.streak.nextRewardXp} + ' XP'">+0 XP</span>
+                <span class="profile-streak-reward-pill"
+                      th:if="${profile.streak.nextRewardCredits > 0}"
+                      th:text="'+' + ${profile.streak.nextRewardCredits} + ' credits'">+0 credits</span>
+            </p>
+            <p class="profile-streak-claimed-reward" hidden aria-live="polite"></p>
             <button th:if="${viewerIsOwner}" type="button" class="btn profile-streak-claim"
                     th:disabled="${profile.streak.claimedToday}"
                     th:text="${profile.streak.claimedToday} ? '✓ Claimed today' : 'Claim daily reward'">

@@ -83,6 +83,42 @@ class ProfileStreakCardTemplateTest {
     }
 
     @Test
+    fun `streak card surfaces lifetime claims, status nudges, and the next-reward preview`() {
+        assertTrue(
+            html.contains("class=\"profile-streak-total\""),
+            "profile.html must render the lifetime `total_claims` count " +
+                "(`.profile-streak-total`) — it is persisted but was previously unused.",
+        )
+        assertTrue(
+            html.contains("profile.streak.status == 'AT_RISK'") &&
+                html.contains("profile.streak.status == 'LAPSED'"),
+            "the card must branch on the derived streak status so it can nudge " +
+                "an at-risk streak and flag a lapsed one, instead of a flat last-claim date.",
+        )
+        assertTrue(
+            html.contains("profile.streak.nextRewardXp") &&
+                html.contains("class=\"profile-streak-reward-pill\""),
+            "the card must preview the next claim's reward (`nextRewardXp` in " +
+                "`.profile-streak-reward-pill`) so the claim is motivated, not blind.",
+        )
+    }
+
+    @Test
+    fun `claim JS surfaces the reward the API returns and is wired to the feedback slot`() {
+        val js = resource("static/js/profile.js")
+        assertTrue(
+            js.contains("xpGranted") && js.contains("creditsGranted") && js.contains("newBest"),
+            "profile.js must read xpGranted / creditsGranted / newBest off the claim " +
+                "response — they ship in the payload and were previously discarded.",
+        )
+        assertTrue(
+            html.contains("class=\"profile-streak-claimed-reward\""),
+            "profile.html must include the `.profile-streak-claimed-reward` slot the " +
+                "claim handler reveals with the earned reward.",
+        )
+    }
+
+    @Test
     fun `profile css styles the streak card so it is not plain`() {
         // The bug this redesign fixed: the markup existed but no CSS did,
         // so the card rendered unstyled. Pin that the styling is present.
@@ -91,6 +127,10 @@ class ProfileStreakCardTemplateTest {
             ".profile-streak-week",
             ".profile-streak-day",
             ".profile-streak-claim",
+            ".profile-streak-stat-chip",
+            ".profile-streak-reward-pill",
+            ".profile-streak-claimed-reward",
+            ".profile-streak-card.is-lapsed",
         ).forEach { selector ->
             assertTrue(
                 css.contains(selector),
