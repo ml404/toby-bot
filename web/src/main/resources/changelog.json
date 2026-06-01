@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Redesign the daily streak card on the profile page",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 606
+  },
+  {
+    "date": "June 2026",
     "title": "Monthly board posts last-month snapshot, not current standings",
     "summary": "## Problem",
     "emoji": "🔨",
