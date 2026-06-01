@@ -197,8 +197,10 @@ class MonthlyLeaderboardJobTest {
         member(2L, "FratLayton")
         member(3L, "Alice")
         // FratLayton's prior snapshot was 1880 → delta = -1880, no voice → should be filtered out.
+        // Alice started the month at 0 → delta = 100 → positive activity, should appear.
         every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
-            MonthlyCreditSnapshotDto(discordId = 2L, guildId = guildId, socialCredit = 1880L)
+            MonthlyCreditSnapshotDto(discordId = 2L, guildId = guildId, socialCredit = 1880L),
+            MonthlyCreditSnapshotDto(discordId = 3L, guildId = guildId, socialCredit = 0L)
         )
         every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
         every { configService.getConfigByName(any(), guildId.toString()) } returns null
@@ -235,6 +237,38 @@ class MonthlyLeaderboardJobTest {
 
         val description = embedSlot.captured.description ?: ""
         assertTrue(description.startsWith("No activity recorded"), "Expected no-activity message, got: $description")
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard does not count full balance as earnings when no prior snapshot exists`() {
+        // Regression: with no prior-month snapshot, the board must NOT treat a
+        // user's entire current balance as "earned last month" — doing so ranks
+        // everyone by their lifetime total and turns the board into a current-
+        // standings list instead of a last-month snapshot. A missing baseline
+        // means 0 last-month credits (matches the web leaderboards), so a user
+        // with credits but no baseline and no voice is filtered out entirely.
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 5000L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+        val description = embedSlot.captured.description ?: ""
+        assertTrue(
+            description.startsWith("No activity recorded"),
+            "Expected no-activity message (baseline absent → 0 delta), got: $description"
+        )
+        assertFalse(
+            description.contains("5000"),
+            "Lifetime balance must not be reported as last-month earnings, got: $description"
+        )
     }
 
     @Test
