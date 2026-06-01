@@ -394,3 +394,183 @@
 .profile-achievement-unlocked-at {
     font-variant-numeric: tabular-nums;
 }
+
+/* ----- Daily streak card ----- */
+.profile-streak-card {
+    --streak-from: #ff6a3d;
+    --streak-to: #ffb13d;
+    --streak-glow: rgba(255, 122, 61, 0.28);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.profile-streak-card.is-lit {
+    border-color: rgba(255, 122, 61, 0.35);
+    background:
+        radial-gradient(120% 80% at 100% 0%, var(--streak-glow) 0%, transparent 55%),
+        var(--bg-elevated);
+}
+
+.profile-streak-hero {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+}
+.profile-streak-flame {
+    position: relative;
+    flex-shrink: 0;
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--border) 0%, var(--bg) 100%);
+    box-shadow:
+        0 0 0 4px var(--bg-elevated),
+        0 0 0 5px var(--border-strong);
+    transition: box-shadow var(--dur-base) var(--ease-out);
+}
+.profile-streak-card.is-lit .profile-streak-flame {
+    background: linear-gradient(135deg, var(--streak-from) 0%, var(--streak-to) 100%);
+    box-shadow:
+        0 0 0 4px var(--bg-elevated),
+        0 0 0 5px rgba(255, 122, 61, 0.45),
+        0 6px 22px var(--streak-glow);
+}
+.profile-streak-flame-icon {
+    position: absolute;
+    top: -6px;
+    right: -2px;
+    font-size: 1.35rem;
+    filter: grayscale(0.85) opacity(0.5);
+    transition: filter var(--dur-base) var(--ease-out);
+}
+.profile-streak-card.is-lit .profile-streak-flame-icon {
+    filter: none;
+    animation: streak-flicker 2.4s ease-in-out infinite;
+}
+.profile-streak-flame-count {
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.profile-streak-card.is-lit .profile-streak-flame-count {
+    color: #1a1a2e;
+}
+
+.profile-streak-hero-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+.profile-streak-hero-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text);
+}
+.profile-streak-best {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.profile-streak-best strong {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.profile-streak-week {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+.profile-streak-day {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+}
+.profile-streak-day-dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    font-size: 0.6rem;
+    line-height: 1;
+    color: var(--text-dim);
+    transition: background var(--dur-base) var(--ease-out),
+                border-color var(--dur-base) var(--ease-out),
+                box-shadow var(--dur-base) var(--ease-out);
+}
+.profile-streak-day.is-milestone .profile-streak-day-dot {
+    width: 22px;
+    height: 22px;
+    font-size: 0.7rem;
+}
+.profile-streak-day.is-filled .profile-streak-day-dot {
+    background: linear-gradient(135deg, var(--streak-from) 0%, var(--streak-to) 100%);
+    border-color: transparent;
+    color: #1a1a2e;
+    box-shadow: 0 0 10px var(--streak-glow);
+}
+
+.profile-streak-meta {
+    font-size: 0.85rem;
+    margin: 0;
+}
+.profile-streak-meta code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    font-size: 0.8em;
+}
+
+.profile-streak-claim {
+    margin-top: auto;
+    align-self: flex-start;
+    background: linear-gradient(135deg, var(--streak-from) 0%, var(--streak-to) 100%);
+    border: 0;
+    color: #1a1a2e;
+    font-weight: 700;
+}
+.profile-streak-claim:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: 0 4px 16px var(--streak-glow);
+}
+.profile-streak-claim:disabled {
+    background: var(--border);
+    color: var(--text-muted);
+    cursor: default;
+    opacity: 1;
+}
+
+@keyframes streak-flicker {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    50%      { transform: scale(1.12) rotate(-3deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .profile-streak-card.is-lit .profile-streak-flame-icon { animation: none; }
+}
+
+@media (max-width: 480px) {
+    .profile-streak-flame {
+        width: 60px;
+        height: 60px;
+    }
+    .profile-streak-flame-count {
+        font-size: 1.45rem;
+    }
+}

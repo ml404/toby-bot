@@ -4,6 +4,18 @@
 (function () {
     'use strict';
 
+    // Fill the 7-day cycle dots based on the current streak. The cycle
+    // repeats every 7 days, so day 8 lights one dot again, etc. — mirrors
+    // the Thymeleaf-rendered initial state.
+    function updateWeek(card, currentStreak) {
+        const days = card.querySelectorAll('.profile-streak-day');
+        if (!days.length) return;
+        const filled = currentStreak <= 0 ? 0 : ((currentStreak - 1) % 7) + 1;
+        days.forEach(function (day, idx) {
+            day.classList.toggle('is-filled', idx + 1 <= filled);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const card = document.querySelector('.profile-streak-card');
         if (!card) return;
@@ -30,7 +42,10 @@
                         nums[0].textContent = String(resp.currentStreak);
                         nums[1].textContent = String(resp.longestStreak);
                     }
-                    button.textContent = 'Already claimed today';
+                    updateWeek(card, resp.currentStreak);
+                    card.classList.toggle('is-lit', resp.currentStreak > 0);
+                    card.setAttribute('data-streak', String(resp.currentStreak));
+                    button.textContent = '✓ Claimed today';
                     card.setAttribute('data-claimed-today', 'true');
                 })
                 .catch(function () {

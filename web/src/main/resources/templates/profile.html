@@ -86,25 +86,38 @@
         </section>
 
         <section class="profile-card profile-streak-card"
+                 th:classappend="${profile.streak.currentStreak > 0} ? ' is-lit' : ''"
                  th:attr="data-guild-id=${profile.guildId},
-                          data-claimed-today=${profile.streak.claimedToday}">
+                          data-claimed-today=${profile.streak.claimedToday},
+                          data-streak=${profile.streak.currentStreak}">
             <h2>Daily streak</h2>
-            <div class="profile-streak">
-                <div class="profile-streak-stat">
-                    <span class="profile-streak-num" th:text="${profile.streak.currentStreak}">0</span>
-                    <span class="muted">Current</span>
+            <div class="profile-streak-hero">
+                <div class="profile-streak-flame" aria-hidden="true">
+                    <span class="profile-streak-flame-icon">🔥</span>
+                    <span class="profile-streak-flame-count profile-streak-num"
+                          th:text="${profile.streak.currentStreak}">0</span>
                 </div>
-                <div class="profile-streak-stat">
-                    <span class="profile-streak-num" th:text="${profile.streak.longestStreak}">0</span>
-                    <span class="muted">Best</span>
+                <div class="profile-streak-hero-meta">
+                    <span class="profile-streak-hero-label">day streak</span>
+                    <span class="profile-streak-best">
+                        Best <strong class="profile-streak-num" th:text="${profile.streak.longestStreak}">0</strong>
+                    </span>
                 </div>
             </div>
+            <ol class="profile-streak-week" aria-label="Progress through the 7-day cycle">
+                <li th:each="i : ${#numbers.sequence(1, 7)}"
+                    class="profile-streak-day"
+                    th:classappend="${(i &lt;= (profile.streak.currentStreak == 0 ? 0 : ((profile.streak.currentStreak - 1) % 7) + 1) ? ' is-filled' : '') + (i == 7 ? ' is-milestone' : '')}"
+                    th:attr="data-day=${i}">
+                    <span class="profile-streak-day-dot" th:text="${i == 7} ? '★' : ''"></span>
+                </li>
+            </ol>
             <p class="muted profile-streak-meta"
                th:if="${profile.streak.lastClaimDate != null}"
                th:text="'Last claim: ' + ${profile.streak.lastClaimDate}">Last claim: —</p>
             <p class="muted profile-streak-meta"
                th:if="${viewerIsOwner and profile.streak.lastClaimDate == null}">
-                You haven't claimed yet — `/daily` in Discord or click the button below.
+                You haven't claimed yet — run <code>/daily</code> in Discord or hit the button below.
             </p>
             <p class="muted profile-streak-meta"
                th:if="${!viewerIsOwner and profile.streak.lastClaimDate == null}">
@@ -112,8 +125,8 @@
             </p>
             <button th:if="${viewerIsOwner}" type="button" class="btn profile-streak-claim"
                     th:disabled="${profile.streak.claimedToday}"
-                    th:text="${profile.streak.claimedToday} ? 'Already claimed today' : 'Claim daily'">
-                Claim daily
+                    th:text="${profile.streak.claimedToday} ? '✓ Claimed today' : 'Claim daily reward'">
+                Claim daily reward
             </button>
         </section>
 
