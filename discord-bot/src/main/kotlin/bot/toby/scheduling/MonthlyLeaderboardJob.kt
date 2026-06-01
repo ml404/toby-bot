@@ -78,7 +78,16 @@ class MonthlyLeaderboardJob @Autowired constructor(
             .map { dto ->
                 val current = dto.socialCredit ?: 0L
                 val baseline = priorSnapshots[dto.discordId]?.socialCredit
-                val rawDelta = if (baseline == null) current else current - baseline
+                // No prior-month snapshot means we have no starting point to
+                // measure last month's change against, so treat the delta as 0
+                // rather than counting the user's entire current balance as
+                // "earned last month". Counting the full balance ranks everyone
+                // by their lifetime total and turns the board into a current-
+                // standings list instead of a last-month snapshot. This mirrors
+                // ModerationWebService / LeaderboardWebService, which use the
+                // same 0L fallback; the thisMonthStart snapshot written below
+                // seeds the baseline so the next month's delta is correct.
+                val rawDelta = if (baseline == null) 0L else current - baseline
                 val ubi = ubiByUser[dto.discordId] ?: 0L
                 val creditsDelta = (rawDelta - ubi).coerceAtLeast(0L)
                 MonthlyRow(
