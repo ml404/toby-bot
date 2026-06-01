@@ -119,6 +119,43 @@ class ProfileStreakCardTemplateTest {
     }
 
     @Test
+    fun `card exposes status and the milestone + reset-countdown affordances`() {
+        assertTrue(
+            html.contains("data-status="),
+            "the card must expose `data-status` so profile.js can drive the at-risk " +
+                "reset countdown without re-deriving the state.",
+        )
+        assertTrue(
+            html.contains("class=\"profile-streak-countdown\""),
+            "the AT_RISK alert must include a `.profile-streak-countdown` slot for the " +
+                "live 'Resets in Xh Ym' timer.",
+        )
+        assertTrue(
+            html.contains("class=\"muted profile-streak-milestone\"") &&
+                html.contains("daysToMilestone"),
+            "the card must render the `.profile-streak-milestone` line so the 7-day " +
+                "tracker reads as a goal, not just decoration.",
+        )
+    }
+
+    @Test
+    fun `claim JS drives the countdown, milestone, and new-best celebration`() {
+        val js = resource("static/js/profile.js")
+        assertTrue(
+            js.contains("startCountdown") && js.contains("AT_RISK"),
+            "profile.js must start the reset countdown for an at-risk streak.",
+        )
+        assertTrue(
+            js.contains("updateMilestone"),
+            "profile.js must refresh the milestone line after an in-place claim.",
+        )
+        assertTrue(
+            js.contains("celebrate") && js.contains("is-celebrating"),
+            "profile.js must trigger the flame celebration when resp.newBest is set.",
+        )
+    }
+
+    @Test
     fun `profile css styles the streak card so it is not plain`() {
         // The bug this redesign fixed: the markup existed but no CSS did,
         // so the card rendered unstyled. Pin that the styling is present.
@@ -131,6 +168,9 @@ class ProfileStreakCardTemplateTest {
             ".profile-streak-reward-pill",
             ".profile-streak-claimed-reward",
             ".profile-streak-card.is-lapsed",
+            ".profile-streak-milestone",
+            ".profile-streak-countdown",
+            ".profile-streak-flame.is-celebrating",
         ).forEach { selector ->
             assertTrue(
                 css.contains(selector),

@@ -544,6 +544,12 @@
     box-shadow: 0 0 10px var(--streak-glow);
 }
 
+.profile-streak-milestone {
+    font-size: 0.8rem;
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+}
+
 .profile-streak-meta {
     font-size: 0.85rem;
     margin: 0;
@@ -562,6 +568,18 @@
 .profile-streak-card.is-lapsed .profile-streak-alert {
     color: var(--text-muted);
     font-weight: 400;
+}
+.profile-streak-countdown {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: var(--warn-soft);
+    color: var(--warn);
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
 }
 
 .profile-streak-preview {
@@ -622,8 +640,20 @@
     50%      { transform: scale(1.12) rotate(-3deg); }
 }
 
+/* One-shot celebration when a claim sets a new personal best. */
+.profile-streak-flame.is-celebrating {
+    animation: streak-celebrate 0.9s var(--ease-out);
+}
+@keyframes streak-celebrate {
+    0%   { transform: scale(1); box-shadow: 0 0 0 0 var(--streak-glow); }
+    30%  { transform: scale(1.28) rotate(-6deg); box-shadow: 0 0 26px 8px var(--streak-glow); }
+    60%  { transform: scale(0.94) rotate(3deg); }
+    100% { transform: scale(1); box-shadow: 0 6px 22px var(--streak-glow); }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .profile-streak-card.is-lit .profile-streak-flame-icon { animation: none; }
+    .profile-streak-flame.is-celebrating { animation: none; }
 }
 
 @media (max-width: 480px) {

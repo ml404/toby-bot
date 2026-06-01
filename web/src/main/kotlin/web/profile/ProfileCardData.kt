@@ -29,6 +29,15 @@ data class ProfileCardData(
      * Capped at 3 by the aggregator; the renderer trusts the cap.
      */
     val recentAchievements: List<AchievementSnapshot>,
+    /**
+     * Current daily-login streak length. The renderer draws the flame
+     * badge only when this is positive *and* [streakActive] is true — a
+     * lapsed streak's stale count would otherwise mislead on a static,
+     * shareable card.
+     */
+    val streakDays: Int = 0,
+    /** Whether the streak is still alive (claimed today or yesterday, UTC). */
+    val streakActive: Boolean = false,
 ) {
     data class TitleSnapshot(
         val label: String,

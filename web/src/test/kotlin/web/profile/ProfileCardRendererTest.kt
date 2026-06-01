@@ -91,6 +91,24 @@ class ProfileCardRendererTest {
     }
 
     @Test
+    fun `renders with an active streak badge`() {
+        val png = renderer.renderPng(sample(streakDays = 12, streakActive = true))
+        assertPngShape(png, 900, 400)
+    }
+
+    @Test
+    fun `renders with an inactive (lapsed) streak — badge suppressed`() {
+        val png = renderer.renderPng(sample(streakDays = 30, streakActive = false))
+        assertPngShape(png, 900, 400)
+    }
+
+    @Test
+    fun `renders with a large multi-digit streak without overflowing`() {
+        val png = renderer.renderPng(sample(streakDays = 365, streakActive = true))
+        assertPngShape(png, 900, 400)
+    }
+
+    @Test
     fun `renders gracefully when the avatar URL is unreachable`() {
         // The renderer catches ImageIO / network errors and substitutes a
         // grey disc. Asserts that the substitution path produces a valid
@@ -111,6 +129,8 @@ class ProfileCardRendererTest {
             ProfileCardData.AchievementSnapshot("🔥", "5-day streak", Instant.now()),
             ProfileCardData.AchievementSnapshot("🏆", "Big winner", Instant.now()),
         ),
+        streakDays: Int = 7,
+        streakActive: Boolean = true,
     ) = ProfileCardData(
         avatarUrl = avatarUrl,
         displayName = displayName,
@@ -122,6 +142,8 @@ class ProfileCardRendererTest {
         socialCredit = 8_400,
         equippedTitle = equippedTitle,
         recentAchievements = recentAchievements,
+        streakDays = streakDays,
+        streakActive = streakActive,
     )
 
     private fun assertPngShape(png: ByteArray, expectedWidth: Int, expectedHeight: Int) {

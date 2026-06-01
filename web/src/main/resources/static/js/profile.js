@@ -39,9 +39,63 @@
         if (!isNaN(n)) total.textContent = String(n + 1);
     }
 
+    // "N days to your next 7-day milestone" — mirrors the Thymeleaf
+    // calculation so the line stays correct after an in-place claim.
+    function updateMilestone(card, currentStreak) {
+        const el = card.querySelector('.profile-streak-milestone');
+        if (!el) return;
+        if (currentStreak <= 0) { el.hidden = true; return; }
+        const cycleDay = ((currentStreak - 1) % 7) + 1;
+        const left = 7 - cycleDay;
+        el.textContent = left === 0
+            ? '🎉 7-day milestone reached!'
+            : left + (left === 1 ? ' day' : ' days') + ' to your next milestone';
+        el.hidden = false;
+    }
+
+    // One-shot flame flourish on a new personal best.
+    function celebrate(card) {
+        const flame = card.querySelector('.profile-streak-flame');
+        if (!flame) return;
+        flame.classList.remove('is-celebrating');
+        // Force reflow so the animation re-triggers if best is beaten again.
+        void flame.offsetWidth;
+        flame.classList.add('is-celebrating');
+    }
+
+    // Live "Resets in 6h 12m" countdown for an at-risk streak — the streak
+    // breaks at the next UTC midnight (matching DefaultLoginStreakService),
+    // so turn the warning into real urgency. Returns the interval id.
+    function startCountdown(card) {
+        const el = card.querySelector('.profile-streak-countdown');
+        if (!el) return null;
+        function tick() {
+            const now = new Date();
+            const nextMidnight = Date.UTC(
+                now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0
+            );
+            const ms = nextMidnight - now.getTime();
+            if (ms <= 0) { el.textContent = 'Resets at midnight UTC'; return; }
+            const mins = Math.floor(ms / 60000);
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            el.textContent = h > 0
+                ? 'Resets in ' + h + 'h ' + m + 'm'
+                : (m > 0 ? 'Resets in ' + m + 'm' : 'Resets in <1m');
+            el.hidden = false;
+        }
+        tick();
+        return window.setInterval(tick, 30000);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const card = document.querySelector('.profile-streak-card');
         if (!card) return;
+
+        let countdownId = null;
+        if (card.getAttribute('data-status') === 'AT_RISK') {
+            countdownId = startCountdown(card);
+        }
 
         const guildId = card.getAttribute('data-guild-id');
         const button = card.querySelector('.profile-streak-claim');
@@ -67,20 +121,25 @@
                         nums[1].textContent = String(resp.longestStreak);
                     }
                     updateWeek(card, resp.currentStreak);
+                    updateMilestone(card, resp.currentStreak);
                     card.classList.add('is-lit');
                     card.classList.remove('is-lapsed');
                     card.setAttribute('data-streak', String(resp.currentStreak));
                     card.setAttribute('data-claimed-today', 'true');
+                    card.setAttribute('data-status', 'CLAIMED');
                     button.textContent = '✓ Claimed today';
 
                     // The "at risk", "lapsed" and next-reward preview lines
                     // describe the pre-claim state — drop them now it's claimed.
+                    // The reset countdown goes with them.
+                    if (countdownId) { window.clearInterval(countdownId); countdownId = null; }
                     card.querySelectorAll('.profile-streak-alert, .profile-streak-preview')
                         .forEach(function (n) { n.remove(); });
 
                     if (!alreadyClaimed) {
                         bumpTotal(card);
                         showReward(card, resp);
+                        if (resp.newBest) celebrate(card);
                     }
                 })
                 .catch(function () {
