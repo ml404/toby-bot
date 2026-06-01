@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Extend the daily streak: PNG card badge, reset countdown, milestones",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 608
+  },
+  {
+    "date": "June 2026",
     "title": "Surface richer daily-streak data on the profile card",
     "summary": "## Why",
     "emoji": "✨",
