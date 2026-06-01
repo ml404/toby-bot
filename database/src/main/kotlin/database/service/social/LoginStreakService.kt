@@ -23,6 +23,16 @@ interface LoginStreakService {
     fun get(discordId: Long, guildId: Long): LoginStreakDto?
 
     /**
+     * Preview the XP/credit reward a claim landing the user on [streak]
+     * would grant — without claiming. Mirrors the on-claim reward maths
+     * (same config keys, same base/per-day/cap formula) so the web profile
+     * can show "claim for +X" before the user commits. [streak] is the
+     * streak value *after* the hypothetical claim (e.g. a continuing claim
+     * on a 4-day streak previews `streak = 5`).
+     */
+    fun previewReward(guildId: Long, streak: Int): RewardPreview
+
+    /**
      * Users in [guildId] with an active streak (`current_streak > 0`)
      * that haven't claimed yet on [today]. Used by `StreakReminderJob`
      * to DM the at-risk cohort just before their streak resets at
@@ -32,6 +42,11 @@ interface LoginStreakService {
         guildId: Long,
         today: java.time.LocalDate
     ): List<LoginStreakDto>
+
+    data class RewardPreview(
+        val xp: Long,
+        val credits: Long
+    )
 
     sealed class ClaimResult {
         data class Granted(

@@ -197,6 +197,28 @@ class LoginStreakServiceTest {
         assertEquals(LocalDate.ofInstant(day2, java.time.ZoneOffset.UTC), row.lastClaimDate)
     }
 
+    @Test
+    fun `previewReward mirrors the on-claim reward maths without claiming`() {
+        // Defaults: XP base 50 +5/day cap 300; credits base 25 +5/day cap 200.
+        val day1Preview = service.previewReward(guildId, 1)
+        assertEquals(50L, day1Preview.xp, "streak-1 XP preview == base")
+        assertEquals(25L, day1Preview.credits, "streak-1 credit preview == base")
+
+        val day5Preview = service.previewReward(guildId, 5)
+        assertEquals(70L, day5Preview.xp, "streak-5 XP == 50 + 4*5")
+        assertEquals(45L, day5Preview.credits, "streak-5 credits == 25 + 4*5")
+
+        // Previewing must not write anything — no row, no event, no XP.
+        assertNull(persistence.get(discordId, guildId))
+        assertTrue(eventPublisher.streakEvents.isEmpty())
+        assertEquals(0L, userService.current(discordId, guildId)?.xp)
+    }
+
+    @Test
+    fun `previewReward clamps a non-positive streak to the streak-1 reward`() {
+        assertEquals(service.previewReward(guildId, 1), service.previewReward(guildId, 0))
+    }
+
     // ---------- Fakes ----------
 
     private class InMemoryLoginStreakPersistence : LoginStreakPersistence {
