@@ -1,5 +1,12 @@
 [
   {
+    "date": "June 2026",
+    "title": "Monthly board posts last-month snapshot, not current standings",
+    "summary": "## Problem",
+    "emoji": "🔨",
+    "prNumber": 605
+  },
+  {
     "date": "May 2026",
     "title": "Include bonus tickets in the lottery embed held-ticket total",
     "summary": "## Problem",
