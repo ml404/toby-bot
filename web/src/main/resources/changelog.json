@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Surface richer daily-streak data on the profile card",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 607
+  },
+  {
+    "date": "June 2026",
     "title": "Redesign the daily streak card on the profile page",
     "summary": "## Why",
     "emoji": "✨",
