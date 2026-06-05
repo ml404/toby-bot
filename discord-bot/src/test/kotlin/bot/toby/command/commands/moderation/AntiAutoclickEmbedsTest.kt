@@ -72,7 +72,7 @@ internal class AntiAutoclickEmbedsTest {
     }
 
     @Test
-    fun `activeEmbed Started field stays relative — the active embed is being live-edited`() {
+    fun `activeEmbed Started field stays relative - the active embed is being live-edited`() {
         val embed = AntiAutoclickEmbeds.activeEmbed(
             discordId = discordId,
             gameKey = gameKey,

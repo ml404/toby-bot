@@ -48,7 +48,7 @@ class BaccaratTest {
     // --- naturals ---
 
     @Test
-    fun `player natural eight stops the deal — neither side draws a third card`() {
+    fun `player natural eight stops the deal - neither side draws a third card`() {
         val deck = mockDeck(
             c(Rank.FIVE), c(Rank.THREE), // player → 8 natural
             c(Rank.TWO), c(Rank.FOUR),   // banker → 6
@@ -66,7 +66,7 @@ class BaccaratTest {
     }
 
     @Test
-    fun `banker natural nine stops the deal — player does not draw even on zero`() {
+    fun `banker natural nine stops the deal - player does not draw even on zero`() {
         val deck = mockDeck(
             c(Rank.FIVE), c(Rank.FIVE), // player → 0 (would otherwise draw)
             c(Rank.FOUR), c(Rank.FIVE), // banker → 9, natural

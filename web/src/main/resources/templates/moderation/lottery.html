@@ -50,6 +50,21 @@
                         </select>
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_HOUR">
+                        <label>
+                            Daily draw hour (UTC)
+                            <span class="config-hint">
+                                UTC hour (0&ndash;23) the daily cycle rolls (closes the prior
+                                draw, opens a fresh one). Default 0 (midnight UTC). A later hour
+                                simply delays the daily open/close to that hour.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="23"
+                               th:value="${overview.config['LOTTERY_DAILY_HOUR']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
                     <div class="config-row" data-key="LOTTERY_DAILY_MODE">
                         <label>
                             Game mode

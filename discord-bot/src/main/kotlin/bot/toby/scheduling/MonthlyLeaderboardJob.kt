@@ -18,8 +18,10 @@ import org.springframework.context.annotation.Profile
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import java.awt.Color
+import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 @Component
 @Profile("prod")
@@ -29,23 +31,44 @@ class MonthlyLeaderboardJob @Autowired constructor(
     private val voiceSessionService: VoiceSessionService,
     private val snapshotService: MonthlyCreditSnapshotService,
     private val configService: ConfigService,
-    private val ubiDailyService: UbiDailyService
+    private val ubiDailyService: UbiDailyService,
+    private val hourGate: GuildHourGate,
+    private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     companion object {
         const val TOP_N = 10
+
+        /** Fallback UTC hour when MONTHLY_LEADERBOARD_HOUR is unset or invalid. */
+        const val DEFAULT_LEADERBOARD_HOUR: Int = 12
     }
 
-    @Scheduled(cron = "0 0 12 1 * *", zone = "UTC")
+    /**
+     * Runs hourly on the 1st of the month; for each guild it posts when the
+     * current UTC hour matches that guild's `MONTHLY_LEADERBOARD_HOUR` config
+     * (default [DEFAULT_LEADERBOARD_HOUR] = 12:00 UTC). Spring's cron scheduler
+     * doesn't replay missed ticks, so this fires at most once per month per
+     * guild — the same guarantee as the original single-cron schedule.
+     */
+    @Scheduled(cron = "0 0 * 1 * *", zone = "UTC")
     fun postMonthlyLeaderboard() {
-        val today = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val now = ZonedDateTime.now(clock.withZone(ZoneOffset.UTC))
+        val today = now.toLocalDate().withDayOfMonth(1)
         val previousMonthStart = today.minusMonths(1)
-        logger.info { "Running monthly leaderboard job for month starting $previousMonthStart" }
+        logger.info {
+            "Running monthly leaderboard job for month starting $previousMonthStart (hour=${now.hour})"
+        }
 
         jda.guildCache.forEach { guild ->
-            runCatching { postForGuild(guild, today, previousMonthStart) }
-                .onFailure { logger.error("Monthly leaderboard failed for guild ${guild.idLong}: ${it.message}") }
+            runCatching {
+                val targetHour = hourGate.configuredHour(
+                    guild.idLong,
+                    ConfigDto.Configurations.MONTHLY_LEADERBOARD_HOUR,
+                    DEFAULT_LEADERBOARD_HOUR,
+                )
+                if (now.hour == targetHour) postForGuild(guild, today, previousMonthStart)
+            }.onFailure { logger.error("Monthly leaderboard failed for guild ${guild.idLong}: ${it.message}") }
         }
     }
 

@@ -178,7 +178,7 @@ class Connect4EngineTest {
     }
 
     @Test
-    fun `engine doesn't enforce turn order — caller is responsible`() {
+    fun `engine doesn't enforce turn order - caller is responsible`() {
         // Two RED moves in a row are accepted; the engine is intentionally
         // stateless about whose turn it is.
         val first = Connect4Engine.applyMove(Connect4Engine.empty(), 0, R) as Connect4Engine.MoveResult.Continued

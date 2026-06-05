@@ -153,7 +153,7 @@ class HorseRacingServiceTest {
     }
 
     @Test
-    fun `win never rolls the jackpot — HORSE_RACING carries the global eligibility carve-out`() {
+    fun `win never rolls the jackpot - HORSE_RACING carries the global eligibility carve-out`() {
         // Mirrors HighlowServiceTest's parity check. Even with a
         // forced-hit jackpot mock and a non-empty pool, a Horse Racing
         // win must surface jackpotPayout=0 and never touch the pool —

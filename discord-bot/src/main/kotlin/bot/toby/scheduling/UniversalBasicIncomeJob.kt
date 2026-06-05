@@ -17,13 +17,16 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 /**
- * Daily Universal Basic Income grant. At 00:00 UTC, every guild with a
- * positive `UBI_DAILY_AMOUNT` config grants that many credits to every
- * known user, bypassing the daily cap. The `ubi_daily` ledger makes
- * retries idempotent — if the bot restarts mid-run or the job fires
- * twice in a day, only one grant per (user, guild, date) lands.
+ * Daily Universal Basic Income grant. Runs hourly; for each guild with a
+ * positive `UBI_DAILY_AMOUNT` config, grants that many credits to every
+ * known user (bypassing the daily cap) when the current UTC hour matches the
+ * guild's `UBI_DAILY_HOUR` config (default [DEFAULT_UBI_HOUR] = 00:00 UTC).
+ * The `ubi_daily` ledger makes retries idempotent — if the bot restarts
+ * mid-run or the job fires twice in the matching hour, only one grant per
+ * (user, guild, UTC date) lands.
  */
 @Component
 @Profile("prod")
@@ -33,18 +36,26 @@ class UniversalBasicIncomeJob @Autowired constructor(
     private val configService: ConfigService,
     private val ubiDailyService: UbiDailyService,
     private val awardService: SocialCreditAwardService,
+    private val hourGate: GuildHourGate,
     private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "UTC")
+    @Scheduled(cron = "0 0 * * * *", zone = "UTC")
     fun runDaily() {
-        val today = LocalDate.now(clock.withZone(ZoneOffset.UTC))
-        logger.info { "Running UBI job for $today" }
+        val now = ZonedDateTime.now(clock.withZone(ZoneOffset.UTC))
+        val today = now.toLocalDate()
+        logger.info { "Running UBI job for $today (hour=${now.hour})" }
 
         jda.guildCache.forEach { guild ->
-            runCatching { grantForGuild(guild, today) }
-                .onFailure { logger.error("UBI grant failed for guild ${guild.idLong}: ${it.message}") }
+            runCatching {
+                val targetHour = hourGate.configuredHour(
+                    guild.idLong,
+                    ConfigDto.Configurations.UBI_DAILY_HOUR,
+                    DEFAULT_UBI_HOUR,
+                )
+                if (now.hour == targetHour) grantForGuild(guild, today)
+            }.onFailure { logger.error("UBI grant failed for guild ${guild.idLong}: ${it.message}") }
         }
     }
 
@@ -117,5 +128,8 @@ class UniversalBasicIncomeJob @Autowired constructor(
     companion object {
         // Fallback when UBI_PER_LEVEL_BONUS is unset or unparseable.
         const val DEFAULT_UBI_PER_LEVEL_BONUS: Long = 5L
+
+        // Fallback UTC hour when UBI_DAILY_HOUR is unset or invalid.
+        const val DEFAULT_UBI_HOUR: Int = 0
     }
 }

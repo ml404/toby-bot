@@ -197,7 +197,7 @@ class TobyCoinPriceTickJobAutoTradeTest {
     }
 
     @Test
-    fun `trade service throws — trigger still disabled`() {
+    fun `trade service throws - trigger still disabled`() {
         val marketService: TobyCoinMarketService = mockk(relaxed = true)
         val triggerService: UserPriceTriggerService = mockk(relaxed = true)
         val tradeService: EconomyTradeService = mockk(relaxed = true)

@@ -108,7 +108,7 @@ class TicTacToeEngineTest {
     }
 
     @Test
-    fun `engine doesn't enforce turn order — caller is responsible`() {
+    fun `engine doesn't enforce turn order - caller is responsible`() {
         // Two X moves in a row are accepted; the engine is intentionally
         // stateless about whose turn it is.
         val first = TicTacToeEngine.applyMove(TicTacToeEngine.empty(), 0, X)

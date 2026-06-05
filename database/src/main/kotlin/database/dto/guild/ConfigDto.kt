@@ -34,6 +34,11 @@ class ConfigDto(
         MOVE("DEFAULT_MOVE_CHANNEL"),
         DELETE_DELAY("DELETE_MESSAGE_DELAY"),
         LEADERBOARD_CHANNEL("LEADERBOARD_CHANNEL"),
+        // Per-guild UTC hour (0-23) at which MonthlyLeaderboardJob posts the
+        // monthly leaderboard on the 1st of the month. Defaults to 12 (noon
+        // UTC) when unset or invalid. The job runs hourly on the 1st and only
+        // acts on a guild when the current UTC hour matches this value.
+        MONTHLY_LEADERBOARD_HOUR("MONTHLY_LEADERBOARD_HOUR"),
         ACTIVITY_TRACKING("ACTIVITY_TRACKING"),
         ACTIVITY_TRACKING_NOTIFIED("ACTIVITY_TRACKING_NOTIFIED"),
         // Whole-number percentage (0-50) of every lost casino stake that
@@ -128,6 +133,13 @@ class ConfigDto(
         // has reached. Default 5. Set to 0 to disable the leveling perk
         // for UBI entirely.
         UBI_PER_LEVEL_BONUS("UBI_PER_LEVEL_BONUS"),
+
+        // Per-guild UTC hour (0-23) at which UniversalBasicIncomeJob grants
+        // the daily UBI. Defaults to 0 (midnight UTC) when unset or invalid.
+        // The job runs hourly and only grants for a guild when the current
+        // UTC hour matches; the per-user ubi_daily ledger (keyed by UTC date)
+        // keeps it once-per-day regardless of hour.
+        UBI_DAILY_HOUR("UBI_DAILY_HOUR"),
 
         // Optional Discord text-channel id where level-up announcements
         // post. When unset (default), announcements post in the channel
@@ -267,6 +279,14 @@ class ConfigDto(
         // ticket sale routes back to the jackpot.
         LOTTERY_DAILY_ENABLED("LOTTERY_DAILY_ENABLED"),
 
+        // Per-guild UTC hour (0-23) at which LotteryDailyJob rolls the daily
+        // cycle (closes the previous draw, opens a fresh one). Defaults to 0
+        // (midnight UTC) when unset or invalid. The job runs hourly and only
+        // rolls for a guild when the current UTC hour matches; the per-guild
+        // lottery_daily ledger (keyed by UTC date) keeps it once-per-day. A
+        // later hour simply delays the daily open/close to that hour.
+        LOTTERY_DAILY_HOUR("LOTTERY_DAILY_HOUR"),
+
         // Whole-number credits charged per match-numbers ticket. Default
         // 50. Range 1-1_000_000. Tickets debit `count × ticket_price`
         // from the buyer at submission time.
@@ -376,6 +396,13 @@ class ConfigDto(
         STREAK_BASE_REWARD_CREDIT("STREAK_BASE_REWARD_CREDIT"),
         STREAK_PER_DAY_BONUS_CREDIT("STREAK_PER_DAY_BONUS_CREDIT"),
         STREAK_MAX_REWARD_CREDIT("STREAK_MAX_REWARD_CREDIT"),
+
+        // Per-guild UTC hour (0-23) at which StreakReminderJob DMs/pushes the
+        // "don't lose your streak" nudge to at-risk users. Defaults to 18
+        // (18:00 UTC) when unset or invalid. The job runs hourly and only
+        // reminds a guild when the current UTC hour matches. Streaks still
+        // reset at midnight UTC, so values above ~22 leave little time to act.
+        STREAK_REMINDER_HOUR("STREAK_REMINDER_HOUR"),
 
         // Optional Discord text-channel id where achievement-unlock
         // shoutouts post in addition to the unlocker's DM. When unset,

@@ -74,7 +74,7 @@ class AchievementServiceTest {
     }
 
     @Test
-    fun `unlock is idempotent — second call no-ops and does not double-award`() {
+    fun `unlock is idempotent - second call no-ops and does not double-award`() {
         persistence.save(AchievementDto(code = "test_b", name = "B", description = "d", category = "c", xpReward = 10, creditReward = 0))
 
         service.unlock(discordId, guildId, "test_b")
@@ -196,7 +196,7 @@ class AchievementServiceTest {
     }
 
     @Test
-    fun `setProgress is a no-op once unlocked — streak-broke does not retract`() {
+    fun `setProgress is a no-op once unlocked - streak-broke does not retract`() {
         persistence.save(
             AchievementDto(code = "sp_idem", name = "I", description = "d", category = "c", xpReward = 10, threshold = 3)
         )

@@ -4,6 +4,7 @@ import bot.toby.notify.NotificationRouter
 import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
 import common.notification.PushPayload
+import database.dto.guild.ConfigDto
 import database.service.social.LoginStreakService
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.JDA
@@ -17,14 +18,19 @@ import java.awt.Color
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 /**
- * 18:00 UTC nudge for users with an active streak who haven't claimed
- * today. The streak resets at midnight UTC (the daily reset jobs run at
- * `0 0 0 * * *`), so firing six hours ahead leaves a usable window to
- * claim — the previous 23:00 slot landed one hour before the reset, in
- * the middle of the night for most timezones, and was effectively too
- * late to act on. Routed through [NotificationRouter], which checks
+ * Streak-reminder nudge for users with an active streak who haven't claimed
+ * today. Runs hourly and, for each guild, fires only when the current UTC
+ * hour matches that guild's [ConfigDto.Configurations.STREAK_REMINDER_HOUR]
+ * (default [DEFAULT_REMINDER_HOUR] = 18:00 UTC). The streak resets at
+ * midnight UTC (the daily reset jobs run at `0 0 0 * * *`), so the default
+ * fires six hours ahead — leaving a usable window to claim — and admins can
+ * shift it per server via the web moderation page. Values close to midnight
+ * leave little time to act.
+ *
+ * Routed through [NotificationRouter], which checks
  * [NotificationChannelKind.STREAK_REMINDER] opt-in — that kind defaults
  * to off, so existing servers stay quiet; users explicitly opt in via
  * `/notify set STREAK_REMINDER on` or the web preferences page.
@@ -39,21 +45,29 @@ class StreakReminderJob @Autowired constructor(
     private val jda: JDA,
     private val loginStreakService: LoginStreakService,
     private val notificationRouter: NotificationRouter,
+    private val hourGate: GuildHourGate,
     private val clock: Clock = Clock.systemUTC(),
     @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
-    @Scheduled(cron = "0 0 18 * * *", zone = "UTC")
+    @Scheduled(cron = "0 0 * * * *", zone = "UTC")
     fun runHourly() {
-        val today = LocalDate.now(clock.withZone(ZoneOffset.UTC))
-        logger.info { "Running streak-reminder job for $today" }
+        val now = ZonedDateTime.now(clock.withZone(ZoneOffset.UTC))
+        val today = now.toLocalDate()
+        logger.info { "Running streak-reminder job for $today (hour=${now.hour})" }
 
         jda.guildCache.forEach { guild ->
-            runCatching { remindForGuild(guild.idLong, today) }
-                .onFailure {
-                    logger.error("Streak reminder failed for guild ${guild.idLong}: ${it.message}")
-                }
+            runCatching {
+                val targetHour = hourGate.configuredHour(
+                    guild.idLong,
+                    ConfigDto.Configurations.STREAK_REMINDER_HOUR,
+                    DEFAULT_REMINDER_HOUR,
+                )
+                if (now.hour == targetHour) remindForGuild(guild.idLong, today)
+            }.onFailure {
+                logger.error("Streak reminder failed for guild ${guild.idLong}: ${it.message}")
+            }
         }
     }
 
@@ -95,5 +109,10 @@ class StreakReminderJob @Autowired constructor(
             dispatched++
         }
         logger.info { "Streak reminder for guild $guildId: at-risk=${due.size} (opt-in checked per user)" }
+    }
+
+    companion object {
+        // Fallback UTC hour when STREAK_REMINDER_HOUR is unset or invalid.
+        const val DEFAULT_REMINDER_HOUR: Int = 18
     }
 }

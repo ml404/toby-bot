@@ -226,7 +226,7 @@ class BlackjackServiceTest {
     }
 
     @Test
-    fun `dealSolo Dealt and applySoloAction HIT echo the post-deal wallet — never re-debit per HIT`() {
+    fun `dealSolo Dealt and applySoloAction HIT echo the post-deal wallet - never re-debit per HIT`() {
         // Regression for the UI bug "blackjack is taking the stake cost per
         // interaction (e.g. hit)". The wallet is debited once at deal time;
         // each subsequent HIT/STAND is a no-op on the wallet. The Dealt /
@@ -499,7 +499,7 @@ class BlackjackServiceTest {
     }
 
     @Test
-    fun `multi hand with all winners refunds stakes only — no losers means no bonus`() {
+    fun `multi hand with all winners refunds stakes only - no losers means no bonus`() {
         // Two-seat table where both players win against the dealer. With
         // no losers contributing to the pot, each winner just gets their
         // stake back; nothing rakes to the jackpot.

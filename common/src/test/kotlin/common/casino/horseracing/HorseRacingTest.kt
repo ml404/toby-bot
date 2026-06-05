@@ -187,7 +187,7 @@ class HorseRacingTest {
     }
 
     @Test
-    fun `payout ordering — favourites pay less than longshots across every bet type`() {
+    fun `payout ordering - favourites pay less than longshots across every bet type`() {
         // H1 favourite must pay strictly less than H6 longshot on every
         // bet type; the whole point of the field is to widen the payout
         // tail.

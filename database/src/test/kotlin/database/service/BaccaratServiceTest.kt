@@ -132,7 +132,7 @@ class BaccaratServiceTest {
     }
 
     @Test
-    fun `tied game pushes a Player side bet — stake is refunded`() {
+    fun `tied game pushes a Player side bet - stake is refunded`() {
         val user = userWithBalance(500L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
         every { baccarat.play(Baccarat.Side.PLAYER, any()) } returns handResult(

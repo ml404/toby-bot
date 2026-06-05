@@ -66,7 +66,7 @@ internal class MemeButtonTest {
     }
 
     @Test
-    fun `user without meme permission is silently ignored — no fetch fired`() {
+    fun `user without meme permission is silently ignored - no fetch fired`() {
         every { dto.memePermission } returns false
         every { event.componentId } returns "meme:reroll:memes:day:5"
 

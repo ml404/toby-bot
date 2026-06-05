@@ -136,7 +136,7 @@ class NotificationRouterDispatchTest {
     // ---------- enforcement: missing surfaces fail fast ----------
 
     @Test
-    fun `dispatch throws when a supported surface has no builder — the regression guard`() {
+    fun `dispatch throws when a supported surface has no builder - the regression guard`() {
         // ACHIEVEMENT_UNLOCK supports DM + CHANNEL + PUSH. Forgetting push
         // is exactly the bug that shipped achievement push broken.
         val err = assertThrows(IllegalStateException::class.java) {
@@ -284,7 +284,7 @@ class NotificationRouterDispatchTest {
     }
 
     @Test
-    fun `Surface enum stays exhaustive — dispatch's when expression covers every entry`() {
+    fun `Surface enum stays exhaustive - dispatch's when expression covers every entry`() {
         // If a fourth surface is added, dispatch's when{} won't compile.
         // This test pins today's set so the missing-surfaces detection
         // logic in dispatch is exhaustive by construction.
@@ -366,7 +366,7 @@ class NotificationRouterDispatchTest {
     }
 
     @Test
-    fun `multi-recipient dispatch enforces every supported surface — forgetting push for a many-winners cycle fails fast`() {
+    fun `multi-recipient dispatch enforces every supported surface - forgetting push for a many-winners cycle fails fast`() {
         // LOTTERY_DRAW_WITH_MY_TICKET supports CHANNEL + PUSH. Wiring
         // only channel ships the broadcast but silently drops every
         // opted-in winner's personal notification — exactly the bug
@@ -383,7 +383,7 @@ class NotificationRouterDispatchTest {
     }
 
     @Test
-    fun `multi-recipient dispatch handles an empty recipient list — channel broadcast still fires, push is a no-op`() {
+    fun `multi-recipient dispatch handles an empty recipient list - channel broadcast still fires, push is a no-op`() {
         // No winners (e.g. lottery cycle with NoTickets). The channel
         // post still announces the open draw; push fan-out is zero.
         router.dispatch(

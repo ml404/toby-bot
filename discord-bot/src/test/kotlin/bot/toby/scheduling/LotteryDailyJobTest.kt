@@ -29,11 +29,13 @@ class LotteryDailyJobTest {
     private lateinit var lotteryDailyService: LotteryDailyService
     private lateinit var jackpotLotteryService: JackpotLotteryService
     private lateinit var lotteryAnnouncer: LotteryAnnouncer
+    private lateinit var hourGate: GuildHourGate
     private lateinit var guild: Guild
     private lateinit var job: LotteryDailyJob
 
     private val guildId = 100L
     private val today: LocalDate = LocalDate.of(2026, 5, 1)
+    // Midnight UTC == the default LOTTERY_DAILY_HOUR (0), so the hour gate fires.
     private val clock: Clock = Clock.fixed(today.atStartOfDay().toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
 
     @BeforeEach
@@ -43,6 +45,8 @@ class LotteryDailyJobTest {
         lotteryDailyService = mockk(relaxed = true)
         jackpotLotteryService = mockk(relaxed = true)
         lotteryAnnouncer = mockk(relaxed = true)
+        // Relaxed configService → getConfigByName null → gate uses default hour 0.
+        hourGate = GuildHourGate(configService)
         guild = mockk(relaxed = true)
 
         val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true)
@@ -53,7 +57,16 @@ class LotteryDailyJobTest {
 
         job = LotteryDailyJob(
             jda, configService, lotteryDailyService, jackpotLotteryService,
-            lotteryAnnouncer, clock,
+            lotteryAnnouncer, hourGate, clock,
+        )
+    }
+
+    /** Build a job whose clock is fixed at [hour] UTC on [today]. */
+    private fun jobAtHour(hour: Int): LotteryDailyJob {
+        val c = Clock.fixed(today.atTime(hour, 0).toInstant(ZoneOffset.UTC), ZoneOffset.UTC)
+        return LotteryDailyJob(
+            jda, configService, lotteryDailyService, jackpotLotteryService,
+            lotteryAnnouncer, hourGate, c,
         )
     }
 
@@ -92,6 +105,20 @@ class LotteryDailyJobTest {
 
         verify(exactly = 0) { jackpotLotteryService.openMatchLottery(any(), any(), any(), any()) }
         verify(exactly = 0) { jackpotLotteryService.drawMatchLottery(any()) }
+        verify(exactly = 0) { lotteryDailyService.markRan(any(), any()) }
+    }
+
+    @Test
+    fun `runDaily skips a guild when the current UTC hour is not its lottery hour`() {
+        stubEnabled(true)
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+
+        // Default lottery hour is 0; running the hourly tick at 09:00 UTC
+        // should gate the guild out before any roll work.
+        jobAtHour(9).runDaily()
+
+        verify(exactly = 0) { lotteryDailyService.alreadyRan(any(), any()) }
+        verify(exactly = 0) { jackpotLotteryService.openMatchLottery(any(), any(), any(), any()) }
         verify(exactly = 0) { lotteryDailyService.markRan(any(), any()) }
     }
 
@@ -365,7 +392,7 @@ class LotteryDailyJobTest {
     }
 
     @Test
-    fun `runDaily handles WEIGHTED BelowMinBuyers — cancels, refunds, announces, marks ran`() {
+    fun `runDaily handles WEIGHTED BelowMinBuyers - cancels, refunds, announces, marks ran`() {
         stubEnabled(true)
         stubMode("WEIGHTED")
         every { lotteryDailyService.alreadyRan(guildId, today) } returns false

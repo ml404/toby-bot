@@ -121,7 +121,7 @@ class WebTipNotifierTest {
     }
 
     @Test
-    fun `on also pushes the recipient — regression guard for forgotten push surface`() {
+    fun `on also pushes the recipient - regression guard for forgotten push surface`() {
         // TIP_RECEIVED supports CHANNEL + PUSH. Dispatch enforcement now
         // requires both; this pins that the push surface fires alongside
         // the channel post for opted-in recipients.

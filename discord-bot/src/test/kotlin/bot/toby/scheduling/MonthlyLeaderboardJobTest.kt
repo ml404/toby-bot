@@ -26,6 +26,9 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 class MonthlyLeaderboardJobTest {
 
@@ -35,11 +38,20 @@ class MonthlyLeaderboardJobTest {
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var configService: ConfigService
     private lateinit var ubiDailyService: UbiDailyService
+    private lateinit var hourGate: GuildHourGate
     private lateinit var guild: Guild
     private lateinit var channel: TextChannel
     private lateinit var job: MonthlyLeaderboardJob
 
     private val guildId = 100L
+
+    // Keep the real calendar date (so the existing LocalDate.now(UTC)-based
+    // stubs stay correct) but fix the hour to 12:00 UTC — the default
+    // MONTHLY_LEADERBOARD_HOUR — so the per-guild hour gate fires.
+    private val clock: Clock = Clock.fixed(
+        LocalDate.now(ZoneOffset.UTC).atTime(12, 0).toInstant(ZoneOffset.UTC),
+        ZoneOffset.UTC,
+    )
 
     @BeforeEach
     fun setup() {
@@ -49,6 +61,8 @@ class MonthlyLeaderboardJobTest {
         snapshotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         ubiDailyService = mockk(relaxed = true)
+        // Relaxed configService → getConfigByName null → gate uses default hour 12.
+        hourGate = GuildHourGate(configService)
         guild = mockk(relaxed = true)
         channel = mockk(relaxed = true)
 
@@ -64,7 +78,20 @@ class MonthlyLeaderboardJobTest {
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
 
         job = MonthlyLeaderboardJob(
-            jda, userService, voiceSessionService, snapshotService, configService, ubiDailyService
+            jda, userService, voiceSessionService, snapshotService, configService,
+            ubiDailyService, hourGate, clock,
+        )
+    }
+
+    /** Build a job whose clock is fixed at [hour] UTC on the current date. */
+    private fun jobAtHour(hour: Int): MonthlyLeaderboardJob {
+        val c = Clock.fixed(
+            LocalDate.now(ZoneOffset.UTC).atTime(hour, 0).toInstant(ZoneOffset.UTC),
+            ZoneOffset.UTC,
+        )
+        return MonthlyLeaderboardJob(
+            jda, userService, voiceSessionService, snapshotService, configService,
+            ubiDailyService, hourGate, c,
         )
     }
 
@@ -76,6 +103,17 @@ class MonthlyLeaderboardJobTest {
         every { m.effectiveName } returns name
         every { guild.getMemberById(id) } returns m
         return m
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard skips a guild when the current UTC hour is not its hour`() {
+        // Default leaderboard hour is 12; running the hourly tick at 09:00 UTC
+        // should gate the guild out before any user/snapshot lookup.
+        jobAtHour(9).postMonthlyLeaderboard()
+
+        verify(exactly = 0) { userService.listGuildUsers(any()) }
+        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 0) { snapshotService.upsert(any()) }
     }
 
     @Test

@@ -155,7 +155,7 @@ class BaccaratControllerTest {
     }
 
     @Test
-    fun `tied game pushes Player side bet — push=true and stake refunded`() {
+    fun `tied game pushes Player side bet - push=true and stake refunded`() {
         every {
             baccaratService.play(discordId, guildId, 100L, Baccarat.Side.PLAYER, false)
         } returns PlayOutcome.Push(

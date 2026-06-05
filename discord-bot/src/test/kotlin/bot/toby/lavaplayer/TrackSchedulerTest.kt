@@ -499,7 +499,7 @@ class TrackSchedulerTest {
     }
 
     @Test
-    fun `intro-resume runs before loop branch — looping intro does not repeat`() {
+    fun `intro-resume runs before loop branch - looping intro does not repeat`() {
         scheduler.isLooping = true
         val current = mockTrack("Current")
         val clone = mockTrack("Clone")

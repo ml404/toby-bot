@@ -298,6 +298,21 @@
                                th:disabled="${!isOwner}">
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>
+                    <div class="config-row" data-key="STREAK_REMINDER_HOUR">
+                        <label>
+                            Streak reminder hour (UTC)
+                            <span class="config-hint">
+                                UTC hour (0&ndash;23) to DM/push the "don't lose your streak"
+                                nudge to opted-in users. Default 18. Streaks reset at midnight
+                                UTC, so values above ~22 leave little time to act.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="23"
+                               th:value="${overview.config['STREAK_REMINDER_HOUR']}"
+                               placeholder="18"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
                     <div class="config-row" data-key="ACHIEVEMENT_ANNOUNCE_CHANNEL">
                         <label>
                             Achievement shoutout channel

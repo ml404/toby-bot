@@ -87,7 +87,7 @@ class SetConfigStakesModalTest {
     }
 
     @Test
-    fun `duel modal has no bot-edge field — fills only MIN and MAX`() {
+    fun `duel modal has no bot-edge field - fills only MIN and MAX`() {
         every { event.modalId } returns SetConfigStakesModal.customIdFor(SetConfigStakesModal.Game.DUEL)
         stub(SetConfigStakesModal.FIELD_MIN_STAKE, "10")
         stub(SetConfigStakesModal.FIELD_MAX_STAKE, "1000")

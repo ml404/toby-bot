@@ -97,7 +97,7 @@ class ProfileCardRendererTest {
     }
 
     @Test
-    fun `renders with an inactive (lapsed) streak — badge suppressed`() {
+    fun `renders with an inactive (lapsed) streak - badge suppressed`() {
         val png = renderer.renderPng(sample(streakDays = 30, streakActive = false))
         assertPngShape(png, 900, 400)
     }

@@ -144,6 +144,20 @@
                                     disabled=${!isOwner})}"></div>
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
+                        <div class="config-row" data-key="MONTHLY_LEADERBOARD_HOUR">
+                            <label>
+                                Monthly leaderboard hour (UTC)
+                                <span class="config-hint">
+                                    UTC hour (0&ndash;23) to post the leaderboard on the 1st of
+                                    each month. Default 12 (noon UTC).
+                                </span>
+                            </label>
+                            <input type="number" min="0" max="23"
+                                   th:value="${overview.config['MONTHLY_LEADERBOARD_HOUR']}"
+                                   placeholder="12"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
                         <div class="config-create-channel">
                             <div class="config-create-channel-text">
                                 <strong>Create a read-only leaderboard channel</strong>
@@ -195,6 +209,20 @@
                             </label>
                             <input type="number" min="0" max="1000"
                                    th:value="${overview.config['UBI_DAILY_AMOUNT']}"
+                                   placeholder="0"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="UBI_DAILY_HOUR">
+                            <label>
+                                UBI grant hour (UTC)
+                                <span class="config-hint">
+                                    UTC hour (0&ndash;23) the daily UBI is granted. Default 0
+                                    (midnight UTC). Still once per UTC day regardless of hour.
+                                </span>
+                            </label>
+                            <input type="number" min="0" max="23"
+                                   th:value="${overview.config['UBI_DAILY_HOUR']}"
                                    placeholder="0"
                                    th:disabled="${!isOwner}">
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
