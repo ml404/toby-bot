@@ -1,26 +1,27 @@
 package bot.toby.command.commands.fetch
 
-import bot.toby.dto.web.RedditAPIDto
 import bot.toby.dto.web.RedditAPIDto.TimePeriod
-import com.google.gson.Gson
-import com.google.gson.JsonParser
 import core.command.CommandContext
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.entities.MessageEmbed
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
-import org.apache.http.client.HttpClient
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.io.IOException
-import java.io.InputStreamReader
-import kotlin.random.Random
 
 @Component
-class MemeCommand : FetchCommand {
+class MemeCommand @Autowired constructor(
+    private val fetcher: RedditMemeFetcher,
+    // Mirrors /dnd and /cube: the Reddit fetch runs on this dispatcher
+    // (tests pass Dispatchers.Unconfined so the launched work resolves
+    // synchronously).
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+) : FetchCommand {
+
     companion object {
         const val SUBREDDIT = "subreddit"
         const val TIME_PERIOD = "timeperiod"
@@ -28,25 +29,10 @@ class MemeCommand : FetchCommand {
     }
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        try {
-            logger.setGuildAndMemberContext(ctx.guild, ctx.member)
-            handle(ctx, HttpClients.createDefault(), requestingUserDto, deleteDelay)
-        } catch (e: IOException) {
-            logger.error("IOException occurred while handling command: $e")
-            throw RuntimeException(e)
-        }
-    }
-
-    fun handle(
-        ctx: CommandContext,
-        httpClient: HttpClient,
-        requestingUserDto: UserDto?,
-        deleteDelay: Int
-    ) {
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
-        if (requestingUserDto?.memePermission != true) {
+        if (requestingUserDto.memePermission != true) {
             logger.info("User ${event.member?.effectiveName} does not have meme permission")
             sendErrorMessage(event, deleteDelay)
             return
@@ -57,20 +43,39 @@ class MemeCommand : FetchCommand {
         val limit = event.getOption(LIMIT)?.asInt ?: 5
         logger.info { "Reddit API args - Subreddit: $subredditArg, Time Period: $timePeriod, Limit: $limit" }
 
-        fetch(event.hook, httpClient, subredditArg, timePeriod, limit, deleteDelay)
+        fetchAsync(event.hook, subredditArg, timePeriod, limit, deleteDelay)
     }
 
     /**
-     * Shared entry point so [bot.toby.button.buttons.MemeButton] can
-     * re-roll against the same subreddit/timeperiod/limit without
-     * re-parsing slash-command options. The caller must have already
-     * acknowledged the interaction (`deferReply()` for the slash
-     * command, `deferEdit()` for the button) so the hook is ready to
-     * edit the original message.
+     * Shared entry point so [bot.toby.button.buttons.misc.MemeButton] can
+     * re-roll against the same subreddit/timeperiod/limit without re-parsing
+     * slash-command options. The caller must have already acknowledged the
+     * interaction (`deferReply()` for the slash command, `deferEdit()` for
+     * the button) so the hook is ready to edit the original message.
+     *
+     * The fetch runs on [dispatcher] (mirroring the `/dnd` query handler) so
+     * the blocking network work never ties up the gateway or the CPU-bound
+     * default dispatcher; an unexpected failure still resolves the message
+     * with an error embed.
      */
-    fun fetch(
+    fun fetchAsync(
         hook: InteractionHook,
-        httpClient: HttpClient,
+        subreddit: String?,
+        timePeriod: String,
+        limit: Int,
+        deleteDelay: Int,
+    ) {
+        CoroutineScope(dispatcher).launch {
+            runCatching { fetch(hook, subreddit, timePeriod, limit, deleteDelay) }
+                .onFailure { e ->
+                    logger.error("Meme fetch failed for subreddit '$subreddit': $e")
+                    editError(hook, "Something went wrong fetching that meme. Try again in a moment.", deleteDelay)
+                }
+        }
+    }
+
+    private suspend fun fetch(
+        hook: InteractionHook,
         subreddit: String?,
         timePeriod: String,
         limit: Int,
@@ -84,16 +89,17 @@ class MemeCommand : FetchCommand {
             return
         }
 
-        val outcome = fetchRedditPost(subreddit, timePeriod, limit, httpClient)
-        when (outcome) {
-            is RedditOutcome.Embed -> {
+        when (val outcome = fetcher.fetch(subreddit, timePeriod, limit)) {
+            is RedditMemeFetcher.Result.Success -> {
                 logger.info("Successfully fetched meme from subreddit: $subreddit")
-                val edit = hook.editOriginalEmbeds(listOf(outcome.embed))
+                val edit = hook.editOriginalEmbeds(
+                    listOf(MemeEmbeds.resultEmbed(outcome.title, outcome.url, outcome.author, subreddit ?: "?")),
+                )
                 val row = subreddit?.let { MemeEmbeds.rerollRow(it, timePeriod, limit) }
                 if (row != null) edit.setComponents(row)
                 edit.queue { scheduleDelete(hook, deleteDelay) }
             }
-            is RedditOutcome.Error -> {
+            is RedditMemeFetcher.Result.Error -> {
                 logger.warn("Failed to fetch meme from subreddit: $subreddit — ${outcome.message}")
                 editError(hook, outcome.message, deleteDelay)
             }
@@ -113,60 +119,6 @@ class MemeCommand : FetchCommand {
                 java.util.concurrent.TimeUnit.SECONDS,
             )
         }
-    }
-
-    private sealed interface RedditOutcome {
-        data class Embed(val embed: MessageEmbed) : RedditOutcome
-        data class Error(val message: String) : RedditOutcome
-    }
-
-    private fun fetchRedditPost(
-        subreddit: String?,
-        timePeriod: String,
-        limit: Int,
-        httpClient: HttpClient,
-    ): RedditOutcome {
-        val gson = Gson()
-        val redditApiUrl = String.format(RedditAPIDto.REDDIT_PREFIX, subreddit, limit, timePeriod)
-        val request = HttpGet(redditApiUrl)
-        logger.info("Fetching Reddit post from URL: $redditApiUrl")
-        val response = httpClient.execute(request)
-        if (response.statusLine.statusCode != 200) {
-            logger.error("Error response from Reddit API: ${response.statusLine.statusCode}")
-            return RedditOutcome.Error("Failed to fetch meme. Please try again later.")
-        }
-
-        val jsonResponse = JsonParser.parseReader(InputStreamReader(response.entity.content)).asJsonObject
-        EntityUtils.consume(response.entity)
-
-        val children = jsonResponse.getAsJsonObject("data").getAsJsonArray("children")
-        if (children.size() == 0) {
-            logger.info("No memes found in subreddit: $subreddit")
-            return RedditOutcome.Error("No memes found in r/${subreddit ?: "?"}.")
-        }
-
-        val meme = children[Random.nextInt(children.size())].asJsonObject.getAsJsonObject("data")
-        val redditAPIDto = gson.fromJson(meme.toString(), RedditAPIDto::class.java)
-
-        if (redditAPIDto.isNsfw == true) {
-            logger.warn("NSFW meme detected from subreddit: $subreddit")
-            return RedditOutcome.Error(
-                "I pulled back a NSFW post — either the subreddit's flagged or Reddit picked a bad one. Skipped."
-            )
-        }
-        if (redditAPIDto.video == true) {
-            logger.warn("Video meme detected from subreddit: $subreddit")
-            return RedditOutcome.Error("I pulled back a video, whoops. Try again maybe? Or not, up to you.")
-        }
-
-        val title = meme["title"].asString
-        val url = meme["url"].asString
-        val author = meme["author"].asString
-        logger.info("Meme fetched successfully - Title: $title, Author: $author, URL: $url")
-
-        return RedditOutcome.Embed(
-            MemeEmbeds.resultEmbed(title, url, author, subreddit ?: "?"),
-        )
     }
 
     override val name: String get() = "meme"

@@ -5,7 +5,6 @@ import bot.toby.command.commands.fetch.MemeEmbeds
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.user.UserDto
-import org.apache.http.impl.client.HttpClients
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -30,9 +29,8 @@ class MemeButton @Autowired constructor(
         event.deferEdit().queue()
         val args = MemeEmbeds.decodeReroll(event.componentId) ?: return
         if (requestingUserDto.memePermission != true) return
-        memeCommand.fetch(
+        memeCommand.fetchAsync(
             hook = event.hook,
-            httpClient = HttpClients.createDefault(),
             subreddit = args.subreddit,
             timePeriod = args.timePeriod,
             limit = args.limit,
