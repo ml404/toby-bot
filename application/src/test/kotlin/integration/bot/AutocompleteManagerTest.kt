@@ -4,6 +4,7 @@ import app.Application
 import bot.configuration.TestAppConfig
 import bot.configuration.TestBotConfig
 import bot.configuration.TestManagerConfig
+import bot.toby.autocomplete.autocompletes.CubeAutoComplete
 import bot.toby.autocomplete.autocompletes.DnDAutoComplete
 import bot.toby.autocomplete.autocompletes.HelpAutoComplete
 import bot.toby.managers.DefaultAutoCompleteManager
@@ -52,9 +53,10 @@ internal class AutocompleteManagerTest {
     fun testAllHandlers() {
         val availableHandlers: List<Class<out AutocompleteHandler>> = listOf(
             HelpAutoComplete::class.java,
-            DnDAutoComplete::class.java
+            DnDAutoComplete::class.java,
+            CubeAutoComplete::class.java
         )
-        assertEquals(2, autocompleteManager.handlers.size)
+        assertEquals(3, autocompleteManager.handlers.size)
         assertTrue(availableHandlers.containsAll(autocompleteManager.handlers.map { it.javaClass }.toList()))
     }
 

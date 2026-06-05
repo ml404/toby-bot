@@ -72,14 +72,19 @@
             </div>
 
             <div data-source-panel="list" hidden>
-                <label class="cube-listlabel">Your card list
-                    <textarea name="list" rows="8" spellcheck="false"
+                <div class="cube-listlabel" id="cube-list-label">Your card list
+                    <span class="cube-hint">— type a card to get name suggestions</span>
+                </div>
+                <div class="cube-list-wrap">
+                    <textarea name="list" rows="8" spellcheck="false" aria-labelledby="cube-list-label"
+                              aria-autocomplete="list" aria-controls="cube-card-suggest"
                               placeholder="One card per line:&#10;1 Lightning Bolt&#10;Sol Ring&#10;10 Forest"></textarea>
-                </label>
+                    <ul class="cube-card-suggest" id="cube-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                </div>
                 <div class="cube-saved" th:if="${loggedIn}">
-                    <select data-saved-lists aria-label="Saved lists">
-                        <option value="">No saved lists yet</option>
-                    </select>
+                    <input type="text" class="cube-saved-input" data-saved-lists list="cube-saved-options"
+                           autocomplete="off" placeholder="Find a saved cube…" aria-label="Saved cubes">
+                    <datalist id="cube-saved-options" data-saved-options></datalist>
                     <button type="button" class="btn btn-secondary" data-save-list>Save</button>
                     <button type="button" class="btn btn-secondary" data-delete-list>Delete</button>
                     <span class="cube-saved-status muted" data-saved-status aria-live="polite"></span>
