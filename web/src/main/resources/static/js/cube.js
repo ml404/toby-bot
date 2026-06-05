@@ -335,6 +335,11 @@
         return LISTS_API + '?name=' + encodeURIComponent(name);
     }
 
+    /** Joins the page origin with a server-returned relative share path. */
+    function absoluteUrl(origin, path) {
+        return (origin || '') + path;
+    }
+
     /** Renders the "couldn't find these names" warning after a list lookup. */
     function renderNotFound(el, names) {
         if (!el) return;
@@ -457,6 +462,59 @@
             fetch(deleteListUrl(name), { method: 'DELETE' })
                 .then(function () { setStatus(status, 'Deleted “' + name + '”.'); input.value = ''; return reload(); })
                 .catch(function () { setStatus(status, 'Couldn\'t delete. Try again.'); });
+        });
+    }
+
+    /**
+     * Publishes the current list as a public, immutable snapshot (logged-in
+     * only) and shows the resulting `/cube/c/<token>` link, copying it to the
+     * clipboard. The Share controls only exist in the DOM for a logged-in user.
+     */
+    function wireShare(doc) {
+        const textarea = doc.querySelector('textarea[name="list"]');
+        const shareBtn = doc.querySelector('[data-share-list]');
+        if (!textarea || !shareBtn) return;
+        const result = doc.querySelector('[data-share-result]');
+        const urlInput = doc.querySelector('[data-share-url]');
+        const copyBtn = doc.querySelector('[data-share-copy]');
+        const status = doc.querySelector('[data-saved-status]');
+        const nameInput = doc.querySelector('[data-saved-lists]');
+
+        function copy(text) {
+            if (root.navigator && root.navigator.clipboard) {
+                root.navigator.clipboard.writeText(text).then(
+                    function () { setStatus(status, 'Share link copied to clipboard.'); },
+                    function () { /* clipboard blocked — the field is selectable */ }
+                );
+            }
+        }
+
+        shareBtn.addEventListener('click', function () {
+            const text = (textarea.value || '').trim();
+            if (!text) { setStatus(status, 'Nothing to share — paste a list first.'); return; }
+            const name = ((nameInput && nameInput.value) || '').trim();
+            setStatus(status, 'Creating link…');
+            fetch('/cube/api/share', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name, cards: text }),
+            }).then(function (r) {
+                if (r.status === 401) { setStatus(status, 'Log in to create a share link.'); return null; }
+                if (!r.ok) { setStatus(status, 'Couldn\'t create a link. Try again.'); return null; }
+                return r.json();
+            }).then(function (json) {
+                if (!json) return;
+                const full = absoluteUrl(root.location && root.location.origin, json.url);
+                if (urlInput) urlInput.value = full;
+                if (result) result.hidden = false;
+                setStatus(status, 'Share link ready.');
+                copy(full);
+            }).catch(function () { setStatus(status, 'Couldn\'t create a link. Try again.'); });
+        });
+
+        if (copyBtn && urlInput) copyBtn.addEventListener('click', function () {
+            urlInput.select();
+            copy(urlInput.value);
         });
     }
 
@@ -833,7 +891,10 @@
         wireTabs(doc);
         wireSource(doc);
         wireSavedLists(doc);
+        wireShare(doc);
         wireCardAutocomplete(doc);
+        // A shared cube arrives pre-loaded in the list box — show that source.
+        if (doc.querySelector('[data-shared-banner]')) setSource(doc, 'list');
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
@@ -853,6 +914,7 @@
         tabIdFromHash: tabIdFromHash,
         zoomPosition: zoomPosition,
         deleteListUrl: deleteListUrl,
+        absoluteUrl: absoluteUrl,
         scryfallAutocompleteUrl: scryfallAutocompleteUrl,
         currentLineInfo: currentLineInfo,
         splitQuantityPrefix: splitQuantityPrefix,

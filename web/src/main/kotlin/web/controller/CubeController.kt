@@ -1,6 +1,7 @@
 package web.controller
 
 import database.service.user.CubeListService
+import database.service.user.SharedCubeService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -34,13 +36,16 @@ import web.util.displayName
  * Saving a list is account-bound: the `/api/lists` endpoints require a
  * logged-in Discord user and persist per-user via [CubeListService], so a
  * saved cube follows the user across devices (unlike the rest of the page,
- * which is anonymous).
+ * which is anonymous). A logged-in user can also publish an immutable
+ * shareable snapshot via [SharedCubeService]; anyone can open it at
+ * `/cube/c/{token}` (no login).
  */
 @Controller
 @RequestMapping("/cube")
 class CubeController(
     private val cubeWebService: CubeWebService,
     private val cubeLists: CubeListService,
+    private val sharedCubes: SharedCubeService,
 ) {
 
     @GetMapping
@@ -51,6 +56,25 @@ class CubeController(
         model.addAttribute("username", user.displayName())
         // Drives the saved-lists UI: only logged-in users can save/load.
         model.addAttribute("loggedIn", user != null)
+        return "cube"
+    }
+
+    /** Opens a shared cube: same page, with the list pre-loaded. */
+    @GetMapping("/c/{token}")
+    fun sharedPage(
+        @PathVariable token: String,
+        @AuthenticationPrincipal user: OAuth2User?,
+        model: Model,
+    ): String {
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("loggedIn", user != null)
+        val shared = sharedCubes.get(token)
+        if (shared != null) {
+            model.addAttribute("sharedName", shared.name)
+            model.addAttribute("sharedCards", shared.cards)
+        } else {
+            model.addAttribute("sharedMissing", true)
+        }
         return "cube"
     }
 
@@ -168,11 +192,30 @@ class CubeController(
         return ResponseEntity.noContent().build()
     }
 
+    // --- Share links (logged-in user mints a public, immutable snapshot) ---
+
+    @PostMapping("/api/share", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun share(
+        @RequestBody request: ShareCubeRequest,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<ShareCubeResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (request.cards.isBlank()) return ResponseEntity.badRequest().build()
+        val name = request.name.trim().ifEmpty { "Shared cube" }.take(MAX_NAME_LENGTH)
+        val row = sharedCubes.create(discordId, name, request.cards)
+        return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/cube/c/${row.token}", name = row.name))
+    }
+
     private companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_LISTS_PER_USER = 50
     }
 }
+
+data class ShareCubeRequest(val name: String = "", val cards: String = "")
+
+data class ShareCubeResponse(val token: String, val url: String, val name: String)
 
 data class CubeListPreviewRequest(val list: String = "", val packSize: Int = 15)
 

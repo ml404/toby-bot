@@ -231,6 +231,17 @@ describe('deleteListUrl', () => {
     });
 });
 
+describe('absoluteUrl', () => {
+    test('joins the page origin with the relative share path', () => {
+        expect(Cube.absoluteUrl('https://toby-bot.co.uk', '/cube/c/abc123'))
+            .toBe('https://toby-bot.co.uk/cube/c/abc123');
+    });
+
+    test('tolerates a missing origin', () => {
+        expect(Cube.absoluteUrl(null, '/cube/c/abc123')).toBe('/cube/c/abc123');
+    });
+});
+
 describe('card-name autocomplete helpers', () => {
     test('scryfallAutocompleteUrl encodes the partial query', () => {
         expect(Cube.scryfallAutocompleteUrl('lightn')).toBe('https://api.scryfall.com/cards/autocomplete?q=lightn');
