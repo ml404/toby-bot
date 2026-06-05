@@ -1,7 +1,9 @@
 package web.controller
 
 import database.dto.user.CubeListDto
+import database.dto.user.SharedCubeDto
 import database.service.user.CubeListService
+import database.service.user.SharedCubeService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -28,6 +30,7 @@ class CubeControllerTest {
 
     private lateinit var service: CubeWebService
     private lateinit var cubeLists: CubeListService
+    private lateinit var sharedCubes: SharedCubeService
     private lateinit var controller: CubeController
 
     private fun loggedIn() = mockk<OAuth2User> {
@@ -40,7 +43,8 @@ class CubeControllerTest {
     fun setup() {
         service = mockk()
         cubeLists = mockk(relaxed = true)
-        controller = CubeController(service, cubeLists)
+        sharedCubes = mockk(relaxed = true)
+        controller = CubeController(service, cubeLists, sharedCubes)
     }
 
     @Test
@@ -279,5 +283,57 @@ class CubeControllerTest {
     fun `deleteList rejects an anonymous user with 401`() {
         assertEquals(HttpStatus.UNAUTHORIZED, controller.deleteList("My Cube", anon()).statusCode)
         verify(exactly = 0) { cubeLists.delete(any(), any()) }
+    }
+
+    // --- share links ----------------------------------------------------
+
+    @Test
+    fun `share mints a snapshot and returns its token and url`() {
+        every { sharedCubes.create(discordId, "My Cube", "Bolt\nForest", any()) } returns
+            SharedCubeDto("tok123", discordId, "My Cube", "Bolt\nForest", Instant.EPOCH)
+
+        val response = controller.share(ShareCubeRequest("My Cube", "Bolt\nForest"), loggedIn())
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("tok123", response.body!!.token)
+        assertEquals("/cube/c/tok123", response.body!!.url)
+    }
+
+    @Test
+    fun `share defaults a blank name and rejects blank cards`() {
+        every { sharedCubes.create(discordId, "Shared cube", "Bolt", any()) } returns
+            SharedCubeDto("t", discordId, "Shared cube", "Bolt", Instant.EPOCH)
+
+        assertEquals(HttpStatus.OK, controller.share(ShareCubeRequest("   ", "Bolt"), loggedIn()).statusCode)
+        verify(exactly = 1) { sharedCubes.create(discordId, "Shared cube", "Bolt", any()) }
+
+        assertEquals(HttpStatus.BAD_REQUEST, controller.share(ShareCubeRequest("Name", "  "), loggedIn()).statusCode)
+    }
+
+    @Test
+    fun `share rejects an anonymous user with 401`() {
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.share(ShareCubeRequest("X", "Bolt"), anon()).statusCode)
+        verify(exactly = 0) { sharedCubes.create(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `sharedPage pre-loads the cube into the model when the token resolves`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("tok123") } returns SharedCubeDto("tok123", discordId, "My Cube", "Bolt\nForest", Instant.EPOCH)
+
+        assertEquals("cube", controller.sharedPage("tok123", loggedIn(), model))
+
+        verify { model.addAttribute("sharedName", "My Cube") }
+        verify { model.addAttribute("sharedCards", "Bolt\nForest") }
+    }
+
+    @Test
+    fun `sharedPage flags a missing token`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("nope") } returns null
+
+        assertEquals("cube", controller.sharedPage("nope", null, model))
+
+        verify { model.addAttribute("sharedMissing", true) }
     }
 }

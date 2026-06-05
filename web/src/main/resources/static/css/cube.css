@@ -348,6 +348,54 @@
     margin-top: var(--space-3);
 }
 
+/* Share link result + the "loaded a shared cube" banner. */
+.cube-share-result {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.cube-share-result[hidden] {
+    display: none;
+}
+
+.cube-share-result label {
+    display: grid;
+    gap: 4px;
+    flex: 1 1 280px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.cube-share-result input {
+    padding: 6px 10px;
+    background: var(--bg-input);
+    color: var(--text);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+
+.cube-shared-banner {
+    margin: 0 0 var(--space-3);
+    padding: 8px 12px;
+    background: var(--mtg-gold-soft);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+}
+
+.cube-shared-missing {
+    margin: 0 0 var(--space-3);
+    padding: 8px 12px;
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+}
+
 /* --- Panels & forms ------------------------------------------------- */
 
 .cube-panel {

@@ -21,10 +21,11 @@ class WebSecurityConfig {
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
                     "/dnd", "/dnd/**",
-                    // The cube tool's page and its anonymous lookups are public;
-                    // the saved-lists API (/cube/api/lists) is deliberately NOT
-                    // listed here so it falls through to anyRequest().authenticated().
-                    "/cube", "/cube/api/asfan", "/cube/api/preview", "/cube/api/generate",
+                    // The cube tool's page, its anonymous lookups, and opening a
+                    // shared cube (/cube/c/**) are public; the saved-lists and
+                    // share-create APIs are deliberately NOT listed here so they
+                    // fall through to anyRequest().authenticated().
+                    "/cube", "/cube/c/**", "/cube/api/asfan", "/cube/api/preview", "/cube/api/generate",
                     "/sitemap.xml", "/robots.txt",
                     // Service worker for web push must be reachable
                     // unauthenticated — the browser registers it on

@@ -72,12 +72,18 @@
             </div>
 
             <div data-source-panel="list" hidden>
+                <p class="cube-shared-banner" th:if="${sharedName}" data-shared-banner
+                   th:text="'📥 Loaded shared cube: ' + ${sharedName}">Loaded shared cube</p>
+                <p class="cube-shared-missing" th:if="${sharedMissing}">
+                    That shared cube link wasn't found — it may have been mistyped.
+                </p>
                 <div class="cube-listlabel" id="cube-list-label">Your card list
                     <span class="cube-hint">— type a card to get name suggestions</span>
                 </div>
                 <div class="cube-list-wrap">
                     <textarea name="list" rows="8" spellcheck="false" aria-labelledby="cube-list-label"
                               aria-autocomplete="list" aria-controls="cube-card-suggest"
+                              th:text="${sharedCards}"
                               placeholder="One card per line:&#10;1 Lightning Bolt&#10;Sol Ring&#10;10 Forest"></textarea>
                     <ul class="cube-card-suggest" id="cube-card-suggest" data-card-suggest role="listbox" hidden></ul>
                 </div>
@@ -87,11 +93,18 @@
                     <datalist id="cube-saved-options" data-saved-options></datalist>
                     <button type="button" class="btn btn-secondary" data-save-list>Save</button>
                     <button type="button" class="btn btn-secondary" data-delete-list>Delete</button>
+                    <button type="button" class="btn btn-secondary" data-share-list>Share</button>
                     <span class="cube-saved-status muted" data-saved-status aria-live="polite"></span>
                 </div>
                 <p class="cube-saved-login muted" th:unless="${loggedIn}">
-                    <a href="/oauth2/authorization/discord">Log in with Discord</a> to save lists to your account.
+                    <a href="/oauth2/authorization/discord">Log in with Discord</a> to save &amp; share lists.
                 </p>
+                <div class="cube-share-result" data-share-result hidden>
+                    <label>Share link
+                        <input type="text" data-share-url readonly aria-label="Share link">
+                    </label>
+                    <button type="button" class="btn btn-secondary" data-share-copy>Copy</button>
+                </div>
             </div>
         </section>
 
