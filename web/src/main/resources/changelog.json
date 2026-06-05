@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Skip deck-export section headers when parsing a cube list",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 629
+  },
+  {
+    "date": "June 2026",
     "title": "Move /meme Reddit fetching onto ktor + coroutines",
     "summary": "## Why",
     "emoji": "✨",
