@@ -41,6 +41,41 @@ class CardListParserTest {
     }
 
     @Test
+    fun `strips a trailing finish marker even without a set tag`() {
+        assertEquals(CardListParser.Entry("Sol Ring", 1), CardListParser.parse("Sol Ring *F*").single())
+        assertEquals(CardListParser.Entry("Lightning Bolt", 4), CardListParser.parse("4 Lightning Bolt (2X2) 117 *F*").single())
+    }
+
+    @Test
+    fun `skips exporter section headers`() {
+        val entries = CardListParser.parse(
+            """
+            Deck
+            4 Lightning Bolt (2X2) 117
+            1 Sol Ring (C21) 263
+
+            Sideboard
+            2 Shock
+            Commander
+            Companion
+            """.trimIndent()
+        )
+        assertEquals(listOf("Lightning Bolt", "Sol Ring", "Shock"), entries.map { it.name })
+        assertEquals(listOf(4, 1, 2), entries.map { it.count })
+    }
+
+    @Test
+    fun `section-header words still parse as cards when given a quantity`() {
+        // "1 Commander" is a (hypothetical) card line, not a header.
+        assertEquals(CardListParser.Entry("Commander", 1), CardListParser.parse("1 Commander").single())
+    }
+
+    @Test
+    fun `header matching is case-insensitive`() {
+        assertTrue(CardListParser.parse("SIDEBOARD\ndeck\nCommander").isEmpty())
+    }
+
+    @Test
     fun `caps an absurd quantity`() {
         assertEquals(CardListParser.MAX_PER_NAME, CardListParser.parse("99999 Forest").single().count)
     }
