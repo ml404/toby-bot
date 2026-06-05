@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Guard pack generation against an Int-overflow OOM (web DoS)",
+    "summary": "Another from the deeper audit — a more serious one: an **OOM / DoS** in pack generation reachable from the web.",
+    "emoji": "✨",
+    "prNumber": 622
+  },
+  {
+    "date": "June 2026",
     "title": "Classify modal land-back cards by their front face (as-fan fix)",
     "summary": "From the \"any other latent bugs?\" audit — a real as-fan miscount.",
     "emoji": "✨",
