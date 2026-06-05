@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Richer cube preview cards: mana cost, DFC backs, copy counts",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 630
+  },
+  {
+    "date": "June 2026",
     "title": "Skip deck-export section headers when parsing a cube list",
     "summary": "## Why",
     "emoji": "✨",
