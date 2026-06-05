@@ -45,41 +45,78 @@ class CubeWebService {
         if (packSize <= 0) return CubeResult.error("Pack size must be at least 1.")
         return when (val pool = fetchPool(query)) {
             is CubeResult.Failure -> CubeResult.error(pool.error)
+            is CubeResult.Success -> CubeResult.ok(buildPreview(query.trim(), pool.value, packSize, emptyList()))
+        }
+    }
+
+    /**
+     * Like [preview] but the pool is the user's own pasted card list,
+     * resolved against Scryfall, rather than a search query.
+     */
+    fun previewList(list: String, packSize: Int): CubeResult<PreviewData> {
+        if (packSize <= 0) return CubeResult.error("Pack size must be at least 1.")
+        return when (val resolved = resolveList(list)) {
+            is CubeResult.Failure -> CubeResult.error(resolved.error)
             is CubeResult.Success -> CubeResult.ok(
-                PreviewData(
-                    query = query.trim(),
-                    poolSize = pool.value.size,
-                    packSize = packSize,
-                    groups = groups(pool.value, packSize),
-                )
+                buildPreview("your list", resolved.value.cards, packSize, resolved.value.notFound)
             )
         }
     }
 
-    /** Draws a cube from Scryfall and deals balanced packs. */
-    fun generate(query: String, packCount: Int, packSize: Int, balanced: Boolean): CubeResult<GenerateData> {
-        return when (val pool = fetchPool(query)) {
+    /** Draws a cube from a Scryfall query and deals balanced packs. */
+    fun generate(query: String, packCount: Int, packSize: Int, balanced: Boolean): CubeResult<GenerateData> =
+        when (val pool = fetchPool(query)) {
             is CubeResult.Failure -> CubeResult.error(pool.error)
-            is CubeResult.Success -> {
-                val cards = pool.value.map { it.card }
-                val viewByName = pool.value.associate { it.card.name to it.toView() }
-                when (val packs = PackGenerator(Random.Default).generate(cards, packCount, packSize, balanced)) {
-                    is PackGenerator.Result.Failure -> CubeResult.error(packs.reason)
-                    is PackGenerator.Result.Success -> CubeResult.ok(
-                        GenerateData(
-                            query = query.trim(),
-                            poolSize = pool.value.size,
-                            packCount = packCount,
-                            packSize = packSize,
-                            balanced = balanced,
-                            packs = packs.value.packs.map { pack ->
-                                pack.map { viewByName[it.name] ?: CardView(it.name, null, null, it.typeLine, it.manaValue) }
-                            },
-                            distribution = distribution(packs.value.cards, packSize),
-                        )
-                    )
-                }
-            }
+            is CubeResult.Success -> buildGenerate(query.trim(), pool.value, packCount, packSize, balanced, emptyList())
+        }
+
+    /** Like [generate] but deals from the user's own pasted card list. */
+    fun generateList(list: String, packCount: Int, packSize: Int, balanced: Boolean): CubeResult<GenerateData> =
+        when (val resolved = resolveList(list)) {
+            is CubeResult.Failure -> CubeResult.error(resolved.error)
+            is CubeResult.Success ->
+                buildGenerate("your list", resolved.value.cards, packCount, packSize, balanced, resolved.value.notFound)
+        }
+
+    private fun buildPreview(
+        label: String,
+        pool: List<ScryfallCard>,
+        packSize: Int,
+        notFound: List<String>,
+    ): PreviewData = PreviewData(
+        query = label,
+        poolSize = pool.size,
+        packSize = packSize,
+        groups = groups(pool, packSize),
+        notFound = notFound,
+    )
+
+    private fun buildGenerate(
+        label: String,
+        pool: List<ScryfallCard>,
+        packCount: Int,
+        packSize: Int,
+        balanced: Boolean,
+        notFound: List<String>,
+    ): CubeResult<GenerateData> {
+        val cards = pool.map { it.card }
+        val viewByName = pool.associate { it.card.name to it.toView() }
+        return when (val packs = PackGenerator(Random.Default).generate(cards, packCount, packSize, balanced)) {
+            is PackGenerator.Result.Failure -> CubeResult.error(packs.reason)
+            is PackGenerator.Result.Success -> CubeResult.ok(
+                GenerateData(
+                    query = label,
+                    poolSize = pool.size,
+                    packCount = packCount,
+                    packSize = packSize,
+                    balanced = balanced,
+                    packs = packs.value.packs.map { pack ->
+                        pack.map { viewByName[it.name] ?: CardView(it.name, null, null, it.typeLine, it.manaValue) }
+                    },
+                    distribution = distribution(packs.value.cards, packSize),
+                    notFound = notFound,
+                )
+            )
         }
     }
 
@@ -212,10 +249,89 @@ class CubeWebService {
         return "$SEARCH_ENDPOINT?q=$encoded&unique=cards"
     }
 
+    /**
+     * Parses a pasted decklist into (name, count) entries. Accepts one card
+     * per line, with an optional leading quantity (`3 Forest`, `3x Forest`)
+     * and an optional trailing set/collector tag (`Bolt (2X2) 117`). Blank
+     * lines and `#` / `//` comments are ignored.
+     */
+    fun parseList(text: String): List<ListEntry> =
+        text.lineSequence().mapNotNull { raw ->
+            var line = raw.trim()
+            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) return@mapNotNull null
+            var count = 1
+            QUANTITY_PREFIX.find(line)?.let { m ->
+                count = m.groupValues[1].toIntOrNull()?.coerceIn(1, MAX_PER_NAME) ?: 1
+                line = line.substring(m.range.last + 1).trim()
+            }
+            line = line.replace(SET_SUFFIX, "").trim()
+            if (line.isEmpty()) null else ListEntry(line, count)
+        }.toList()
+
+    /**
+     * Resolves a pasted list into a card pool by looking the names up via
+     * Scryfall's `/cards/collection` endpoint (batched, ≤75 per request).
+     * Quantities expand the pool (`3 Forest` → three Forests); names that
+     * don't resolve are reported in [ResolvedPool.notFound].
+     */
+    private fun resolveList(text: String): CubeResult<ResolvedPool> {
+        val entries = parseList(text)
+        if (entries.isEmpty()) return CubeResult.error("Paste at least one card name, one per line.")
+
+        val resolved = HashMap<String, ScryfallCard>()
+        for (chunk in entries.map { it.name }.distinct().chunked(COLLECTION_BATCH)) {
+            when (val batch = fetchCollection(chunk)) {
+                is CubeResult.Failure -> return CubeResult.error(batch.error)
+                is CubeResult.Success -> batch.value.forEach { resolved[it.card.name.lowercase()] = it }
+            }
+        }
+
+        val pool = mutableListOf<ScryfallCard>()
+        val notFound = mutableListOf<String>()
+        for (entry in entries) {
+            val card = resolved[entry.name.lowercase()]
+            if (card == null) notFound.add(entry.name) else repeat(entry.count) { pool.add(card) }
+        }
+        if (pool.isEmpty()) return CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
+        return CubeResult.ok(ResolvedPool(pool.take(MAX_CARDS), notFound.distinct()))
+    }
+
+    /** One `/cards/collection` POST for up to 75 names. */
+    private fun fetchCollection(names: List<String>): CubeResult<List<ScryfallCard>> {
+        val identifiers = names.joinToString(",") { """{"name":${jackson.writeValueAsString(it)}}""" }
+        val body = """{"identifiers":[$identifiers]}"""
+        return try {
+            val response = http.send(
+                HttpRequest.newBuilder(URI.create(COLLECTION_ENDPOINT))
+                    .header("User-Agent", "tobybot-web/1.0")
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(body))
+                    .build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            if (response.statusCode() != 200) {
+                return CubeResult.error("Scryfall returned ${response.statusCode()} resolving your list.")
+            }
+            CubeResult.ok(parseScryfall(jackson.readTree(response.body())))
+        } catch (e: IOException) {
+            CubeResult.error("Could not reach Scryfall: ${e.message}")
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CubeResult.error("Request interrupted.")
+        }
+    }
+
     private companion object {
         const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
+        const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         const val MAX_CARDS = 750
         const val MAX_PAGES = 10
+        const val COLLECTION_BATCH = 75
+        const val MAX_PER_NAME = 100
+        val QUANTITY_PREFIX = Regex("^(\\d+)[xX]?\\s+")
+        val SET_SUFFIX = Regex("\\s+\\([^)]*\\).*$")
     }
 }
 
@@ -258,11 +374,18 @@ data class CategoryGroup(
     val cards: List<CardView>,
 )
 
+/** One parsed decklist line: a card name and how many copies to include. */
+data class ListEntry(val name: String, val count: Int)
+
+/** A resolved custom list: the card pool plus any names Scryfall didn't know. */
+data class ResolvedPool(val cards: List<ScryfallCard>, val notFound: List<String>)
+
 data class PreviewData(
     val query: String,
     val poolSize: Int,
     val packSize: Int,
     val groups: List<CategoryGroup>,
+    val notFound: List<String> = emptyList(),
 )
 
 data class GenerateData(
@@ -273,4 +396,5 @@ data class GenerateData(
     val balanced: Boolean,
     val packs: List<List<CardView>>,
     val distribution: List<CategoryAsFan>,
+    val notFound: List<String> = emptyList(),
 )

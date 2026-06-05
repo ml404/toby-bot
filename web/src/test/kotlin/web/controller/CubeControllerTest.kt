@@ -1,5 +1,7 @@
 package web.controller
 
+import database.dto.user.CubeListDto
+import database.service.user.CubeListService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -18,16 +20,27 @@ import web.service.CubeResult
 import web.service.CubeWebService
 import web.service.GenerateData
 import web.service.PreviewData
+import java.time.Instant
 
 class CubeControllerTest {
 
+    private val discordId = 100L
+
     private lateinit var service: CubeWebService
+    private lateinit var cubeLists: CubeListService
     private lateinit var controller: CubeController
+
+    private fun loggedIn() = mockk<OAuth2User> {
+        every { getAttribute<String>("id") } returns discordId.toString()
+        every { getAttribute<String>("username") } returns "matt"
+    }
+    private fun anon() = mockk<OAuth2User> { every { getAttribute<String>("id") } returns null }
 
     @BeforeEach
     fun setup() {
         service = mockk()
-        controller = CubeController(service)
+        cubeLists = mockk(relaxed = true)
+        controller = CubeController(service, cubeLists)
     }
 
     @Test
@@ -138,10 +151,133 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `previewList resolves a pasted list and surfaces unresolved names`() {
+        val data = PreviewData(
+            query = "your list", poolSize = 2, packSize = 15,
+            groups = listOf(CategoryGroup("Red", 2, 2.0, listOf(CardView("Bolt", null, null, "Instant", 1.0)))),
+            notFound = listOf("Definitely Not A Card"),
+        )
+        every { service.previewList("3 Bolt\nDefinitely Not A Card", 15) } returns CubeResult.ok(data)
+
+        val response = controller.previewList(CubeListPreviewRequest("3 Bolt\nDefinitely Not A Card", 15))
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals(listOf("Definitely Not A Card"), response.body!!.notFound)
+        assertEquals(1, response.body!!.groups.size)
+    }
+
+    @Test
+    fun `generateList deals from a pasted list and surfaces unresolved names`() {
+        val data = GenerateData(
+            query = "your list", poolSize = 60, packCount = 4, packSize = 15, balanced = true,
+            packs = listOf(listOf(CardView("Bolt", null, null, "Instant", 1.0))),
+            distribution = listOf(CategoryAsFan("Red", 60, 15.0)),
+            notFound = listOf("Mystery Card"),
+        )
+        every { service.generateList("60 Bolt\nMystery Card", 4, 15, true) } returns CubeResult.ok(data)
+
+        val response = controller.generateList(CubeListGenerateRequest("60 Bolt\nMystery Card", 4, 15, true))
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals(listOf("Mystery Card"), response.body!!.notFound)
+        assertEquals(1, response.body!!.packs.size)
+    }
+
+    @Test
+    fun `previewList returns 400 when the list resolves to nothing`() {
+        every { service.previewList(any(), any()) } returns CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
+        val response = controller.previewList(CubeListPreviewRequest("asdf\nqwer", 15))
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+    }
+
+    @Test
     fun `generate forwards the raw params to the service`() {
         every { service.generate("set:vow", 8, 15, false) } returns
             CubeResult.error("whatever")
         controller.generate("set:vow", 8, 15, false)
         verify(exactly = 1) { service.generate("set:vow", 8, 15, false) }
+    }
+
+    // --- saved lists (account-bound) -----------------------------------
+
+    @Test
+    fun `page flags whether the user is logged in`() {
+        val model = mockk<Model>(relaxed = true)
+        controller.page(loggedIn(), model)
+        verify { model.addAttribute("loggedIn", true) }
+
+        val anonModel = mockk<Model>(relaxed = true)
+        controller.page(null, anonModel)
+        verify { anonModel.addAttribute("loggedIn", false) }
+    }
+
+    @Test
+    fun `savedLists returns the user's lists`() {
+        every { cubeLists.listForUser(discordId) } returns listOf(
+            CubeListDto(discordId, "My Cube", "Bolt\nForest", Instant.EPOCH, Instant.EPOCH),
+        )
+        val response = controller.savedLists(loggedIn())
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals(listOf("My Cube"), response.body!!.map { it.name })
+        assertEquals("Bolt\nForest", response.body!!.first().cards)
+    }
+
+    @Test
+    fun `savedLists rejects an anonymous user with 401`() {
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.savedLists(anon()).statusCode)
+        verify(exactly = 0) { cubeLists.listForUser(any()) }
+    }
+
+    @Test
+    fun `saveList upserts and returns the saved list`() {
+        every { cubeLists.get(discordId, "My Cube") } returns null
+        every { cubeLists.listForUser(discordId) } returns emptyList()
+        every { cubeLists.save(discordId, "My Cube", "Bolt\nForest", any()) } returns
+            CubeListDto(discordId, "My Cube", "Bolt\nForest", Instant.EPOCH, Instant.EPOCH)
+
+        val response = controller.saveList(SaveCubeListRequest("My Cube", "Bolt\nForest"), loggedIn())
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("My Cube", response.body!!.name)
+        verify(exactly = 1) { cubeLists.save(discordId, "My Cube", "Bolt\nForest", any()) }
+    }
+
+    @Test
+    fun `saveList rejects a blank name or empty cards`() {
+        assertEquals(HttpStatus.BAD_REQUEST, controller.saveList(SaveCubeListRequest("  ", "Bolt"), loggedIn()).statusCode)
+        assertEquals(HttpStatus.BAD_REQUEST, controller.saveList(SaveCubeListRequest("Name", "  "), loggedIn()).statusCode)
+        verify(exactly = 0) { cubeLists.save(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `saveList rejects an anonymous user with 401`() {
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.saveList(SaveCubeListRequest("X", "Bolt"), anon()).statusCode)
+    }
+
+    @Test
+    fun `saveList refuses a new list once the per-user cap is hit`() {
+        every { cubeLists.get(discordId, "New") } returns null
+        every { cubeLists.listForUser(discordId) } returns (1..50).map {
+            CubeListDto(discordId, "cube$it", "Bolt", Instant.EPOCH, Instant.EPOCH)
+        }
+        val response = controller.saveList(SaveCubeListRequest("New", "Bolt"), loggedIn())
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        verify(exactly = 0) { cubeLists.save(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `deleteList removes the named list for the user`() {
+        val response = controller.deleteList("My Cube", loggedIn())
+        assertEquals(HttpStatus.NO_CONTENT, response.statusCode)
+        verify(exactly = 1) { cubeLists.delete(discordId, "My Cube") }
+    }
+
+    @Test
+    fun `deleteList rejects an anonymous user with 401`() {
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.deleteList("My Cube", anon()).statusCode)
+        verify(exactly = 0) { cubeLists.delete(any(), any()) }
     }
 }

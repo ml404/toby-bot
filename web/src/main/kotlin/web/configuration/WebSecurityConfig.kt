@@ -21,7 +21,10 @@ class WebSecurityConfig {
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
                     "/dnd", "/dnd/**",
-                    "/cube", "/cube/**",
+                    // The cube tool's page and its anonymous lookups are public;
+                    // the saved-lists API (/cube/api/lists) is deliberately NOT
+                    // listed here so it falls through to anyRequest().authenticated().
+                    "/cube", "/cube/api/asfan", "/cube/api/preview", "/cube/api/generate",
                     "/sitemap.xml", "/robots.txt",
                     // Service worker for web push must be reachable
                     // unauthenticated — the browser registers it on
@@ -67,6 +70,12 @@ class WebSecurityConfig {
                 csrf.ignoringRequestMatchers(
                     "/v3/api-docs/**", "/swagger-ui/**",
                     "/api/engagement/**",
+                    // The cube tool's write endpoints: the anonymous custom-list
+                    // preview/generate POSTs are stateless read-only lookups, and
+                    // the saved-lists PUT/DELETE operate only on the authenticated
+                    // user's own rows (discord id from the session) — same per-user
+                    // ownership rationale as the engagement API below.
+                    "/cube/api/**",
                     // Push subscription lifecycle (subscribe / unsubscribe)
                     // is called from the same authenticated dashboard JS
                     // and protected by the same OAuth2 session + per-user

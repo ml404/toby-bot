@@ -11,23 +11,17 @@
             <p class="cube-eyebrow">Magic: The Gathering</p>
             <h1>Cube workshop</h1>
             <p class="cube-lede">
-                Turn any pile of cards into a balanced draft. Pick the tool below, tell it which
-                cards you're using, and it does the maths and the shuffling for you.
+                Turn any pile of cards into a balanced draft. Tell it which cards you're using —
+                a Scryfall search or your own list — then preview the balance or deal the packs.
             </p>
 
             <ol class="cube-steps" aria-label="How it works">
-                <li class="cube-step">
-                    <span class="cube-step-num">1</span>
-                    <span class="cube-step-text"><strong>Describe your cube</strong> with a Scryfall search.</span>
-                </li>
-                <li class="cube-step">
-                    <span class="cube-step-num">2</span>
-                    <span class="cube-step-text"><strong>Preview</strong> to check it's balanced.</span>
-                </li>
-                <li class="cube-step">
-                    <span class="cube-step-num">3</span>
-                    <span class="cube-step-text"><strong>Generate</strong> randomised draft packs.</span>
-                </li>
+                <li class="cube-step"><span class="cube-step-num">1</span>
+                    <span class="cube-step-text"><strong>Choose your cards</strong> (search or paste a list).</span></li>
+                <li class="cube-step"><span class="cube-step-num">2</span>
+                    <span class="cube-step-text"><strong>Preview</strong> to check it's balanced.</span></li>
+                <li class="cube-step"><span class="cube-step-num">3</span>
+                    <span class="cube-step-text"><strong>Generate</strong> randomised draft packs.</span></li>
             </ol>
 
             <details class="cube-explainer">
@@ -35,27 +29,68 @@
                 <div class="cube-explainer-body">
                     <p><strong>What's a "cube"?</strong> A custom pool of Magic cards you draft from
                         instead of sealed boosters.</p>
-                    <p><strong>What's a "Scryfall search"?</strong> A way to describe a set of cards in
-                        words. You type it into the <em>query</em> box. For example:</p>
+                    <p><strong>Two ways to define one:</strong></p>
                     <ul>
-                        <li><code>set:vow</code> — every card in the set <em>Crimson Vow</em></li>
-                        <li><code>t:dragon</code> — every Dragon</li>
-                        <li><code>c:r t:instant</code> — red instants</li>
-                        <li><code>cube:vintage</code> — Wizards' official Vintage Cube list</li>
+                        <li><strong>Scryfall search</strong> — describe a set of cards, e.g.
+                            <code>set:vow</code>, <code>t:dragon</code>, <code>cube:vintage</code>.</li>
+                        <li><strong>My card list</strong> — paste your own decklist, one card per line
+                            (an optional count works too, like <code>10 Forest</code>).</li>
                     </ul>
-                    <p>Not sure what to type? Click an <strong>example</strong> button under any query box.
-                        Full syntax lives on
-                        <a href="https://scryfall.com/docs/syntax" target="_blank" rel="noopener">Scryfall</a>.</p>
                     <p><strong>What's "as-fan"?</strong> The average number of a given kind of card you
-                        open per pack — so you can see your draft isn't, say, flooded with lands or
-                        starved of removal.</p>
+                        open per pack — so you can see your draft isn't flooded with lands or starved
+                        of removal.</p>
                 </div>
             </details>
         </div>
     </header>
 
     <div class="cube-shell">
-        <p class="cube-tabs-hint" id="cube-tabs-hint">Choose a tool:</p>
+        <!-- Shared card source, used by Preview and Generate -->
+        <section class="cube-source-card">
+            <div class="cube-source-head">
+                <h2>Your cube</h2>
+                <span class="cube-source-note">Used by Preview &amp; Generate</span>
+            </div>
+            <div class="cube-source-toggle segmented" role="group" aria-label="Card source">
+                <button type="button" class="cube-source-btn" data-source-tab="search" aria-selected="true">
+                    Scryfall search
+                </button>
+                <button type="button" class="cube-source-btn" data-source-tab="list" aria-selected="false">
+                    My card list
+                </button>
+            </div>
+
+            <div data-source-panel="search">
+                <label class="cube-query">Scryfall search
+                    <input type="text" name="query" placeholder="e.g. cube:vintage" autocomplete="off">
+                </label>
+                <span class="cube-inline-examples">Examples:
+                    <button type="button" class="cube-chip" data-example="cube:vintage">cube:vintage</button>
+                    <button type="button" class="cube-chip" data-example="set:vow">set:vow</button>
+                    <button type="button" class="cube-chip" data-example="t:dragon">t:dragon</button>
+                </span>
+            </div>
+
+            <div data-source-panel="list" hidden>
+                <label class="cube-listlabel">Your card list
+                    <textarea name="list" rows="8" spellcheck="false"
+                              placeholder="One card per line:&#10;1 Lightning Bolt&#10;Sol Ring&#10;10 Forest"></textarea>
+                </label>
+                <div class="cube-saved" th:if="${loggedIn}">
+                    <select data-saved-lists aria-label="Saved lists">
+                        <option value="">No saved lists yet</option>
+                    </select>
+                    <button type="button" class="btn btn-secondary" data-save-list>Save</button>
+                    <button type="button" class="btn btn-secondary" data-delete-list>Delete</button>
+                    <span class="cube-saved-status muted" data-saved-status aria-live="polite"></span>
+                </div>
+                <p class="cube-saved-login muted" th:unless="${loggedIn}">
+                    <a href="/oauth2/authorization/discord">Log in with Discord</a> to save lists to your account.
+                </p>
+            </div>
+        </section>
+
+        <p class="cube-tabs-hint" id="cube-tabs-hint">Then pick a tool:</p>
         <div class="cube-tabs segmented" role="tablist" aria-label="Cube tools" aria-describedby="cube-tabs-hint">
             <button type="button" id="tab-generate" class="cube-tab" role="tab"
                     data-tab="generate" aria-controls="panel-generate" aria-selected="true">
@@ -81,19 +116,10 @@
         <section id="panel-generate" class="cube-panel" role="tabpanel" aria-labelledby="tab-generate"
                  data-panel="generate">
             <p class="cube-panel-intro">
-                Draws cards at random and deals them into evenly-sized, balanced booster packs —
-                ready to print or share.
+                Draws cards at random from <strong>your cube</strong> above and deals them into
+                evenly-sized, balanced booster packs.
             </p>
             <form class="cube-form" data-form="generate" autocomplete="off">
-                <label class="cube-query">Which cards? <span class="cube-req">(required)</span>
-                    <input type="text" name="query" placeholder="e.g. cube:vintage" required>
-                    <small class="cube-hint">A Scryfall search describing your card pool.</small>
-                    <span class="cube-inline-examples">Examples:
-                        <button type="button" class="cube-chip" data-example="cube:vintage">cube:vintage</button>
-                        <button type="button" class="cube-chip" data-example="set:vow">set:vow</button>
-                        <button type="button" class="cube-chip" data-example="t:dragon">t:dragon</button>
-                    </span>
-                </label>
                 <label>How many packs?
                     <input type="number" name="packs" min="1" max="90" value="24" required>
                     <small class="cube-hint">8 players × 3 packs = 24.</small>
@@ -104,13 +130,14 @@
                 </label>
                 <label class="cube-checkbox">
                     <input type="checkbox" name="balanced" checked>
-                    Spread colours &amp; lands evenly across packs
+                    Spread colours &amp; lands evenly
                 </label>
                 <button type="submit" class="btn cube-submit">Generate packs</button>
             </form>
             <p class="cube-status" data-status="generate" aria-live="polite"></p>
-            <p class="cube-empty" data-empty="generate">Fill in a query and hit <strong>Generate packs</strong> to deal a draft.</p>
+            <p class="cube-empty" data-empty="generate">Choose your cards above, then hit <strong>Generate packs</strong>.</p>
             <div class="cube-generate-summary" data-summary="generate" hidden></div>
+            <p class="cube-notfound" data-notfound="generate" hidden></p>
             <div class="cube-result-actions" data-actions="generate" hidden>
                 <button type="button" class="btn btn-secondary" data-download="generate">⬇ Download pack list (.txt)</button>
             </div>
@@ -125,19 +152,10 @@
         <section id="panel-preview" class="cube-panel" role="tabpanel" aria-labelledby="tab-preview"
                  data-panel="preview" hidden>
             <p class="cube-panel-intro">
-                Lists the actual cards in your pool, grouped by colour and land, with how many of
-                each kind you'd open per pack — so you can see exactly what's in the cube.
+                Lists every card in <strong>your cube</strong>, grouped by colour and land, with how
+                many of each kind you'd open per pack.
             </p>
             <form class="cube-form" data-form="preview" autocomplete="off">
-                <label class="cube-query">Which cards? <span class="cube-req">(required)</span>
-                    <input type="text" name="query" placeholder="e.g. set:vow" required>
-                    <small class="cube-hint">A Scryfall search describing your card pool.</small>
-                    <span class="cube-inline-examples">Examples:
-                        <button type="button" class="cube-chip" data-example="set:vow">set:vow</button>
-                        <button type="button" class="cube-chip" data-example="cube:vintage">cube:vintage</button>
-                        <button type="button" class="cube-chip" data-example="c:r t:instant">c:r t:instant</button>
-                    </span>
-                </label>
                 <label>Cards per pack
                     <input type="number" name="packSize" min="1" max="30" value="15" required>
                     <small class="cube-hint">Standard boosters hold 15.</small>
@@ -145,7 +163,8 @@
                 <button type="submit" class="btn cube-submit">Preview balance</button>
             </form>
             <p class="cube-status" data-status="preview" aria-live="polite"></p>
-            <p class="cube-empty" data-empty="preview">Enter a query and hit <strong>Preview balance</strong> to list the cards.</p>
+            <p class="cube-empty" data-empty="preview">Choose your cards above, then hit <strong>Preview balance</strong>.</p>
+            <p class="cube-notfound" data-notfound="preview" hidden></p>
             <div class="cube-groups" data-result="preview" hidden></div>
         </section>
 

@@ -312,10 +312,158 @@
         return fetch(url).then(function (r) { return r.json(); });
     }
 
+    function postJson(url, body) {
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        }).then(function (r) { return r.json(); });
+    }
+
     /** Disables the form's submit button while a request is in flight. */
     function withBusy(form, busy) {
         const btn = form.querySelector('button[type="submit"]');
         if (btn) btn.disabled = busy;
+    }
+
+    // --- Saved lists (account-bound; persisted server-side) ------------
+
+    const LISTS_API = '/cube/api/lists';
+
+    /** DELETE URL for a saved list, with the name safely encoded. */
+    function deleteListUrl(name) {
+        return LISTS_API + '?name=' + encodeURIComponent(name);
+    }
+
+    /** Renders the "couldn't find these names" warning after a list lookup. */
+    function renderNotFound(el, names) {
+        if (!el) return;
+        if (!names || !names.length) {
+            el.hidden = true;
+            el.textContent = '';
+            return;
+        }
+        el.textContent = 'Couldn’t find ' + names.length + ' card' + (names.length > 1 ? 's' : '') +
+            ': ' + names.join(', ');
+        el.hidden = false;
+    }
+
+    // --- Card source (Scryfall search vs pasted list) ------------------
+
+    /** Which source is active and its value. */
+    function activeSource(doc) {
+        const listTab = doc.querySelector('[data-source-tab="list"]');
+        if (listTab && listTab.getAttribute('aria-selected') === 'true') {
+            const ta = doc.querySelector('[data-source-panel="list"] textarea[name="list"]');
+            return { mode: 'list', list: ((ta && ta.value) || '').trim() };
+        }
+        const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
+        return { mode: 'search', query: ((input && input.value) || '').trim() };
+    }
+
+    function setSource(doc, mode) {
+        doc.querySelectorAll('[data-source-tab]').forEach(function (b) {
+            b.setAttribute('aria-selected', b.getAttribute('data-source-tab') === mode ? 'true' : 'false');
+        });
+        doc.querySelectorAll('[data-source-panel]').forEach(function (p) {
+            p.hidden = p.getAttribute('data-source-panel') !== mode;
+        });
+    }
+
+    function wireSource(doc) {
+        doc.querySelectorAll('[data-source-tab]').forEach(function (btn) {
+            btn.addEventListener('click', function () { setSource(doc, btn.getAttribute('data-source-tab')); });
+        });
+    }
+
+    /** Repopulates every saved-list <select> from the cached {name: cards} map. */
+    function fillSavedSelects(doc, cache) {
+        const names = Object.keys(cache).sort();
+        doc.querySelectorAll('[data-saved-lists]').forEach(function (sel) {
+            const keep = sel.value;
+            sel.replaceChildren();
+            const ph = document.createElement('option');
+            ph.value = '';
+            ph.textContent = names.length ? 'Load a saved list…' : 'No saved lists yet';
+            sel.appendChild(ph);
+            names.forEach(function (name) {
+                const opt = document.createElement('option');
+                opt.value = name;
+                opt.textContent = name;
+                sel.appendChild(opt);
+            });
+            if (cache[keep] != null) sel.value = keep;
+        });
+    }
+
+    /**
+     * Account-bound saved lists: the cube list is persisted server-side
+     * against the logged-in Discord user via the `/cube/api/lists` endpoints,
+     * so it follows them across devices. The controls only exist in the DOM
+     * when the page rendered for a logged-in user (see cube.html), so this is
+     * a no-op for anonymous visitors.
+     */
+    function wireSavedLists(doc) {
+        const textarea = doc.querySelector('textarea[name="list"]');
+        const sel = doc.querySelector('[data-saved-lists]');
+        if (!textarea || !sel) return;
+        const saveBtn = doc.querySelector('[data-save-list]');
+        const delBtn = doc.querySelector('[data-delete-list]');
+        const status = doc.querySelector('[data-saved-status]');
+        let cache = {};
+
+        function reload() {
+            return getJson(LISTS_API)
+                .then(function (rows) {
+                    cache = {};
+                    (rows || []).forEach(function (row) { cache[row.name] = row.cards; });
+                    fillSavedSelects(doc, cache);
+                })
+                .catch(function () { /* leave the selects as-is on a transient error */ });
+        }
+
+        reload();
+
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+            const text = (textarea.value || '').trim();
+            if (!text) { setStatus(status, 'Nothing to save — paste a list first.'); return; }
+            // Default the prompt to the currently-loaded list's name so editing
+            // and re-saving overwrites it in one step (Enter), while typing a
+            // new name saves a separate copy.
+            const suggested = (sel && sel.value) || '';
+            const name = root.prompt ? root.prompt('Name this cube list (same name overwrites):', suggested) : null;
+            if (!name || !name.trim()) return;
+            setStatus(status, 'Saving…');
+            fetch(LISTS_API, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name.trim(), cards: text }),
+            }).then(function (r) {
+                if (r.status === 409) { setStatus(status, 'You\'ve hit the saved-list limit (50).'); return null; }
+                if (!r.ok) { setStatus(status, 'Couldn\'t save. Are you still logged in?'); return null; }
+                return r.json();
+            }).then(function (saved) {
+                if (!saved) return;
+                setStatus(status, 'Saved “' + saved.name + '”.');
+                reload().then(function () { if (sel) sel.value = saved.name; });
+            }).catch(function () { setStatus(status, 'Couldn\'t save. Try again.'); });
+        });
+
+        if (sel) sel.addEventListener('change', function () {
+            if (!sel.value || cache[sel.value] == null) return;
+            textarea.value = cache[sel.value];
+            setSource(doc, 'list');
+            setStatus(status, 'Loaded “' + sel.value + '”.');
+        });
+
+        if (delBtn) delBtn.addEventListener('click', function () {
+            if (!sel || !sel.value) return;
+            const name = sel.value;
+            setStatus(status, 'Deleting…');
+            fetch(deleteListUrl(name), { method: 'DELETE' })
+                .then(function () { setStatus(status, 'Deleted “' + name + '”.'); return reload(); })
+                .catch(function () { setStatus(status, 'Couldn\'t delete. Try again.'); });
+        });
     }
 
     function wireAsFan(doc) {
@@ -345,29 +493,45 @@
         });
     }
 
+    /** Validates the active source; returns an error string or null. */
+    function sourceError(src) {
+        if (src.mode === 'list') return src.list ? null : 'Paste a card list first (under "Your cube").';
+        return src.query ? null : 'Enter a Scryfall search first (under "Your cube").';
+    }
+
+    function sourceLabel(src) {
+        return src.mode === 'list' ? 'Your list' : src.query;
+    }
+
     function wirePreview(doc) {
         const form = q(doc, '[data-form="preview"]');
         if (!form) return;
         const status = statusFor(doc, 'preview');
         const empty = emptyFor(doc, 'preview');
         const groups = q(doc, '[data-result="preview"]');
+        const notFound = q(doc, '[data-notfound="preview"]');
         form.addEventListener('submit', function (e) {
             e.preventDefault();
-            const data = new FormData(form);
-            const params = { query: (data.get('query') || '').toString().trim(), packSize: data.get('packSize') };
-            if (!params.query) return;
-            setStatus(status, 'Fetching cards from Scryfall…');
-            hide(groups);
+            const packSize = new FormData(form).get('packSize');
+            const src = activeSource(doc);
+            const err = sourceError(src);
+            if (err) { setStatus(status, err); return; }
+            setStatus(status, src.mode === 'list' ? 'Resolving your list…' : 'Fetching cards from Scryfall…');
+            hide(groups); hide(notFound);
             withBusy(form, true);
-            getJson(previewUrl(params))
+            const request = src.mode === 'list'
+                ? postJson('/cube/api/preview', { list: src.list, packSize: Number(packSize) })
+                : getJson(previewUrl({ query: src.query, packSize: packSize }));
+            request
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'No results.'); return; }
-                    setStatus(status, params.query + ' → ' + json.poolSize + ' cards');
+                    setStatus(status, sourceLabel(src) + ' → ' + json.poolSize + ' cards');
                     hide(empty);
                     renderGroups(groups, json.groups);
                     show(groups);
+                    renderNotFound(notFound, json.notFound);
                 })
-                .catch(function () { setStatus(status, 'Something went wrong reaching Scryfall.'); })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); });
         });
     }
@@ -382,6 +546,7 @@
         const breakdown = q(doc, '[data-breakdown="generate"]');
         const dist = q(doc, '[data-dist="generate"]');
         const result = q(doc, '[data-result="generate"]');
+        const notFound = q(doc, '[data-notfound="generate"]');
         const downloadBtn = q(doc, '[data-download="generate"]');
         let lastPacks = [];
 
@@ -401,17 +566,19 @@
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const data = new FormData(form);
-            const params = {
-                query: (data.get('query') || '').toString().trim(),
-                packs: data.get('packs'),
-                packSize: data.get('packSize'),
-                balanced: form.querySelector('[name="balanced"]').checked,
-            };
-            if (!params.query) return;
-            setStatus(status, 'Drawing cards and dealing packs…');
-            hide(summary); hide(actions); hide(breakdown); hide(result);
+            const packs = data.get('packs');
+            const packSize = data.get('packSize');
+            const balanced = form.querySelector('[name="balanced"]').checked;
+            const src = activeSource(doc);
+            const err = sourceError(src);
+            if (err) { setStatus(status, err); return; }
+            setStatus(status, src.mode === 'list' ? 'Resolving your list and dealing packs…' : 'Drawing cards and dealing packs…');
+            hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
             withBusy(form, true);
-            getJson(generateUrl(params))
+            const request = src.mode === 'list'
+                ? postJson('/cube/api/generate', { list: src.list, packs: Number(packs), packSize: Number(packSize), balanced: balanced })
+                : getJson(generateUrl({ query: src.query, packs: packs, packSize: packSize, balanced: balanced }));
+            request
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'Could not build packs.'); return; }
                     setStatus(status, '');
@@ -425,6 +592,7 @@
                     show(actions);
                     renderDistribution(dist, json.distribution);
                     show(breakdown);
+                    renderNotFound(notFound, json.notFound);
                 })
                 .catch(function () { setStatus(status, 'Something went wrong building packs.'); })
                 .then(function () { withBusy(form, false); });
@@ -562,6 +730,8 @@
 
     function wire(doc) {
         wireTabs(doc);
+        wireSource(doc);
+        wireSavedLists(doc);
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
@@ -580,6 +750,7 @@
         cardStatline: cardStatline,
         tabIdFromHash: tabIdFromHash,
         zoomPosition: zoomPosition,
+        deleteListUrl: deleteListUrl,
         packsToText: packsToText,
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,
