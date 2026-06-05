@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Classify modal land-back cards by their front face (as-fan fix)",
+    "summary": "From the \"any other latent bugs?\" audit — a real as-fan miscount.",
+    "emoji": "✨",
+    "prNumber": 621
+  },
+  {
+    "date": "June 2026",
     "title": "Resolve full double-faced names by requesting Scryfall by front face",
     "summary": "Fixes the screenshot bug: a cube whose list contains the **full** double-faced names (`Archangel Avacyn // Avacyn, the Purifier`, `Fire // Ice`, `Huntmaster of the Fells // Ravager of the Fells`, …) reported all 9 as \"Couldn't find\".",
     "emoji": "✨",
