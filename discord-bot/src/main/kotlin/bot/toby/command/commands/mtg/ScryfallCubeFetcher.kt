@@ -103,7 +103,10 @@ class ScryfallCubeFetcher {
     fun fetchByNames(names: List<String>): Result = fetchByNames(names, HttpClients.createDefault())
 
     fun fetchByNames(names: List<String>, httpClient: HttpClient): Result {
-        val unique = names.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        // Cap distinct lookups: a draft can't use more than DEFAULT_MAX_CARDS,
+        // so resolving more would just spam Scryfall (one POST per 75 names)
+        // and block the bot thread on the inter-batch delays.
+        val unique = names.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(DEFAULT_MAX_CARDS)
         if (unique.isEmpty()) return Result.Failure("That cube has no card names in it.")
 
         val cards = mutableListOf<CubeCard>()

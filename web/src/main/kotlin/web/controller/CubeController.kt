@@ -169,7 +169,9 @@ class CubeController(
     ): ResponseEntity<SavedCubeList> {
         val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
         val name = request.name.trim()
-        if (name.isEmpty() || name.length > MAX_NAME_LENGTH || request.cards.isBlank()) {
+        if (name.isEmpty() || name.length > MAX_NAME_LENGTH ||
+            request.cards.isBlank() || request.cards.length > MAX_CARDS_LENGTH
+        ) {
             return ResponseEntity.badRequest().build()
         }
         // Cap how many cubes one account can hoard; overwriting an existing
@@ -201,7 +203,9 @@ class CubeController(
         @AuthenticationPrincipal user: OAuth2User?,
     ): ResponseEntity<ShareCubeResponse> {
         val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
-        if (request.cards.isBlank()) return ResponseEntity.badRequest().build()
+        if (request.cards.isBlank() || request.cards.length > MAX_CARDS_LENGTH) {
+            return ResponseEntity.badRequest().build()
+        }
         val name = request.name.trim().ifEmpty { "Shared cube" }.take(MAX_NAME_LENGTH)
         val row = sharedCubes.create(discordId, name, request.cards)
         return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/cube/c/${row.token}", name = row.name))
@@ -210,6 +214,10 @@ class CubeController(
     private companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_LISTS_PER_USER = 50
+
+        // Generous ceiling on stored list text — comfortably fits a 750-card
+        // cube with set tags, while bounding what an account can persist.
+        const val MAX_CARDS_LENGTH = 100_000
     }
 }
 
