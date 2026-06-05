@@ -4,6 +4,7 @@ import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import io.ktor.client.*
 import io.ktor.client.engine.okhttp.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
@@ -21,6 +22,9 @@ class AppConfig {
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true })
             }
+            // No global timeout (callers opt in per request, e.g. the cube
+            // fetcher) — installing the plugin just enables that capability.
+            install(HttpTimeout)
         }
     }
 

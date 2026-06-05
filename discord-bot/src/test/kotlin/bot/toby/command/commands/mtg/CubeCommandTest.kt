@@ -9,12 +9,15 @@ import common.mtg.CubeCard
 import common.mtg.MtgColor
 import database.dto.user.CubeListDto
 import database.service.user.CubeListService
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
@@ -36,7 +39,8 @@ class CubeCommandTest : CommandTest {
         setUpCommonMocks()
         fetcher = mockk()
         cubeListService = mockk(relaxed = true)
-        command = CubeCommand(fetcher, cubeListService)
+        // Unconfined so the launched IO coroutine resolves synchronously in tests.
+        command = CubeCommand(fetcher, cubeListService, Dispatchers.Unconfined)
         every { requestingUserDto.discordId } returns 100L
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
@@ -94,12 +98,12 @@ class CubeCommandTest : CommandTest {
         every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
         every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        every { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(50))
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(50))
 
         run()
 
         assertEquals("Cube preview", slot.captured.title)
-        verify(exactly = 1) { fetcher.fetch(any(), any()) }
+        coVerify(exactly = 1) { fetcher.fetch(any(), any()) }
     }
 
     @Test
@@ -109,7 +113,7 @@ class CubeCommandTest : CommandTest {
         every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
         every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:zzz")
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        every { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Failure("No cards matched.")
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Failure("No cards matched.")
 
         run()
 
@@ -127,7 +131,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(2)
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(3)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns boolOpt(true)
-        every { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(20))
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(20))
 
         run()
 
@@ -144,7 +148,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(24)
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(15)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
-        every { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(5))
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(5))
 
         run()
 
@@ -161,11 +165,40 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACKS) } returns null
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
-        every { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Failure("Scryfall returned HTTP 500.")
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Failure("Scryfall returned HTTP 500.")
 
         run()
 
         assertEquals("Couldn't build that cube", slot.captured.title)
+    }
+
+    @Test
+    fun `preview surfaces the capped-pool note when the query overflows`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("t:creature")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(50), capped = true)
+
+        run()
+
+        assertTrue(slot.captured.description!!.contains("only the first 750"), "note was: ${slot.captured.description}")
+    }
+
+    @Test
+    fun `an unexpected failure resolves the interaction with an error embed`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } throws RuntimeException("scryfall exploded")
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Something went wrong"))
     }
 
     // --- saved cubes ---------------------------------------------------
@@ -184,7 +217,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(3)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
         every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "3 Bolt\nForest")
-        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Bolt", setOf(MtgColor.RED)), CubeCard("Forest", isLand = true)),
         )
 
@@ -208,7 +241,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
         // The user pasted only the front face; Scryfall returns the full name.
         every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Archangel Avacyn")
-        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
         )
 
@@ -233,7 +266,7 @@ class CubeCommandTest : CommandTest {
         every { cubeListService.get(100L, "My Cube") } returns
             savedCube("My Cube", "Archangel Avacyn // Avacyn, the Purifier")
         val requested = slot<List<String>>()
-        every { fetcher.fetchByNames(capture(requested)) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(capture(requested)) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
         )
 
@@ -256,7 +289,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
         every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Avacyn, the Purifier")
-        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
         )
 
@@ -277,7 +310,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
         every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Bolt\nNonexistent Card")
-        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Bolt", setOf(MtgColor.RED))),
         )
 
@@ -297,7 +330,7 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_QUERY) } returns null
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
         every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Bolt\nForest")
-        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
             listOf(CubeCard("Bolt", setOf(MtgColor.RED)), CubeCard("Forest", isLand = true)),
         )
 
@@ -322,7 +355,7 @@ class CubeCommandTest : CommandTest {
         run()
 
         assertEquals("Couldn't build that cube", slot.captured.title)
-        verify(exactly = 0) { fetcher.fetchByNames(any()) }
+        coVerify(exactly = 0) { fetcher.fetchByNames(any()) }
     }
 
     @Test
