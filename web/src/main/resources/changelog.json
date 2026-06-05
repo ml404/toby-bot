@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Bound oversized cube inputs (Scryfall lookups + stored text)",
+    "summary": "A second audit pass — three unbounded-input issues that could exhaust resources or get us rate-limited.",
+    "emoji": "✨",
+    "prNumber": 624
+  },
+  {
+    "date": "June 2026",
     "title": "Surface dropped cards: Discord \"couldn't find\" + web pool-cap note",
     "summary": "The remaining transparency items from the audit (\"do all\").",
     "emoji": "✨",
