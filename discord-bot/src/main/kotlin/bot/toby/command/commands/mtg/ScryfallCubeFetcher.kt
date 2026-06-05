@@ -1,0 +1,123 @@
+package bot.toby.command.commands.mtg
+
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
+import common.logging.DiscordLogger
+import common.mtg.CubeCard
+import common.mtg.MtgColor
+import org.apache.http.client.HttpClient
+import org.apache.http.client.methods.HttpGet
+import org.apache.http.impl.client.HttpClients
+import org.apache.http.util.EntityUtils
+import org.springframework.stereotype.Component
+import java.io.InputStreamReader
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
+
+/**
+ * Pulls a cube's card pool from the public Scryfall search API
+ * (`/cards/search`). A "cube" here is just whatever a Scryfall query
+ * matches — e.g. `set:vow`, `is:commander`, `t:dragon`, or a curated
+ * `cube:<name>` — so a user defines their pool with the same search
+ * syntax they'd use on scryfall.com.
+ *
+ * Mirrors the HTTP/JSON approach of [bot.toby.command.commands.fetch.MemeCommand]:
+ * an injectable Apache [HttpClient] (so tests stub the transport) and
+ * Gson tree parsing. The card → [CubeCard] mapping is split into
+ * [parseCard] so it can be unit-tested without any network.
+ */
+@Component
+class ScryfallCubeFetcher {
+
+    private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+
+    sealed interface Result {
+        data class Success(val cards: List<CubeCard>) : Result
+        data class Failure(val message: String) : Result
+    }
+
+    /**
+     * Fetches up to [maxCards] cards matching [query], following Scryfall's
+     * pagination. Creates a default HTTP client; the overload taking a
+     * client is the test seam.
+     */
+    fun fetch(query: String, maxCards: Int = DEFAULT_MAX_CARDS): Result =
+        fetch(query, maxCards, HttpClients.createDefault())
+
+    fun fetch(query: String, maxCards: Int, httpClient: HttpClient): Result {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return Result.Failure("Give me a Scryfall search query (e.g. `set:vow`).")
+
+        val cards = mutableListOf<CubeCard>()
+        var url: String? = searchUrl(trimmed)
+        var page = 0
+
+        try {
+            while (url != null && cards.size < maxCards && page < MAX_PAGES) {
+                if (page > 0) Thread.sleep(SCRYFALL_DELAY_MS) // be polite to the API
+                val response = httpClient.execute(HttpGet(url))
+                val status = response.statusLine.statusCode
+                if (status == 404) {
+                    EntityUtils.consume(response.entity)
+                    return Result.Failure("No cards matched `$trimmed`.")
+                }
+                if (status != 200) {
+                    EntityUtils.consume(response.entity)
+                    return Result.Failure("Scryfall returned HTTP $status. Try again later.")
+                }
+                val root = JsonParser.parseReader(InputStreamReader(response.entity.content)).asJsonObject
+                EntityUtils.consume(response.entity)
+
+                root.getAsJsonArray("data")?.forEach { element ->
+                    parseCard(element.asJsonObject)?.let(cards::add)
+                }
+
+                url = if (root.get("has_more")?.asBoolean == true) root.get("next_page")?.asString else null
+                page++
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            return Result.Failure("Lookup interrupted.")
+        } catch (e: Exception) {
+            logger.error("Scryfall fetch failed for query '$trimmed': $e")
+            return Result.Failure("Couldn't reach Scryfall: ${e.message}")
+        }
+
+        if (cards.isEmpty()) return Result.Failure("No usable cards matched `$trimmed`.")
+        return Result.Success(cards.take(maxCards))
+    }
+
+    /**
+     * Maps a single Scryfall card object to a [CubeCard]. Returns null for
+     * entries without a name (which we can't meaningfully draft). Colour
+     * comes from `color_identity` — the cube-sorting convention — and land
+     * status from the type line.
+     */
+    fun parseCard(card: JsonObject): CubeCard? {
+        val name = card.get("name")?.asString?.takeIf { it.isNotBlank() } ?: return null
+        val identity = card.getAsJsonArray("color_identity")
+            ?.map { it.asString }
+            ?: emptyList()
+        val typeLine = card.get("type_line")?.asString ?: ""
+        val manaValue = card.get("cmc")?.asDouble ?: 0.0
+        return CubeCard(
+            name = name,
+            colors = MtgColor.parse(identity),
+            isLand = typeLine.contains("Land", ignoreCase = true),
+            typeLine = typeLine,
+            manaValue = manaValue,
+        )
+    }
+
+    private fun searchUrl(query: String): String {
+        val encoded = URLEncoder.encode(query, StandardCharsets.UTF_8)
+        return "$SEARCH_ENDPOINT?q=$encoded&unique=cards"
+    }
+
+    companion object {
+        private const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
+        const val DEFAULT_MAX_CARDS = 750
+        private const val MAX_PAGES = 10
+        private const val SCRYFALL_DELAY_MS = 100L
+    }
+}

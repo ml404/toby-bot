@@ -77,7 +77,9 @@ class CommandWikiController(
         CategoryMeta("misc", "Miscellaneous", "🧰",
             "Polls, intros, achievements, and assorted small utilities.") { it.miscCommands },
         CategoryMeta("fetch", "Fetch", "🌐",
-            "Pull memes, news, and quick lookups from the web.") { it.fetchCommands }
+            "Pull memes, news, and quick lookups from the web.") { it.fetchCommands },
+        CategoryMeta("mtg", "Magic: The Gathering", "🃏",
+            "Build draft cubes and crunch as-fan from Scryfall.") { it.mtgCommands }
     )
 
     private fun toView(command: Command): CommandView {

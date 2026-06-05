@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - MTG Cube workshop', '/css/cube.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container">
+    <h1 class="mb-3">MTG Cube workshop</h1>
+    <p class="muted mb-5">
+        Build randomised draft packs and crunch
+        <a href="https://magic.wizards.com/en/news/making-magic/nuts-and-bolts-key-concepts-2015-08-31"
+           target="_blank" rel="noopener">as-fan</a>
+        for a Magic: The Gathering cube. Define your pool with a
+        <a href="https://scryfall.com/docs/syntax" target="_blank" rel="noopener">Scryfall search</a>
+        (e.g. <code>cube:vintage</code>, <code>set:vow</code>, <code>t:dragon</code>). Same tools the
+        <code>/cube</code> Discord command uses, no login required.
+    </p>
+
+    <!-- As-fan calculator -->
+    <section class="cube-card">
+        <h2>As-fan calculator</h2>
+        <p class="muted">Expected copies of a card type you open per booster: <code>(type ÷ cube size) × pack size</code>.</p>
+        <form class="cube-form" data-form="asfan" autocomplete="off">
+            <label>Cards of that type
+                <input type="number" name="total" min="0" value="60" required>
+            </label>
+            <label>Cube size
+                <input type="number" name="cubeSize" min="1" value="540" required>
+            </label>
+            <label>Pack size
+                <input type="number" name="packSize" min="1" max="30" value="15" required>
+            </label>
+            <button type="submit" class="btn">Calculate</button>
+        </form>
+        <p class="cube-status muted" data-status="asfan" aria-live="polite"></p>
+        <p class="cube-asfan-result" data-result="asfan" hidden></p>
+    </section>
+
+    <!-- Preview -->
+    <section class="cube-card">
+        <h2>Cube preview</h2>
+        <p class="muted">See the colour / colourless / land as-fan of everything a query matches.</p>
+        <form class="cube-form" data-form="preview" autocomplete="off">
+            <label class="cube-query">Scryfall query
+                <input type="text" name="query" placeholder="e.g. set:vow" required>
+            </label>
+            <label>Pack size
+                <input type="number" name="packSize" min="1" max="30" value="15" required>
+            </label>
+            <button type="submit" class="btn">Preview</button>
+        </form>
+        <p class="cube-status muted" data-status="preview" aria-live="polite"></p>
+        <table class="cube-table" data-result="preview" hidden>
+            <thead><tr><th>Category</th><th>Count</th><th>As-fan / pack</th></tr></thead>
+            <tbody></tbody>
+        </table>
+    </section>
+
+    <!-- Generate -->
+    <section class="cube-card">
+        <h2>Generate packs</h2>
+        <p class="muted">Randomly draw cards from the pool and deal evenly-sized, as-fan-balanced packs.</p>
+        <form class="cube-form" data-form="generate" autocomplete="off">
+            <label class="cube-query">Scryfall query
+                <input type="text" name="query" placeholder="e.g. cube:vintage" required>
+            </label>
+            <label>Packs
+                <input type="number" name="packs" min="1" max="90" value="24" required>
+            </label>
+            <label>Pack size
+                <input type="number" name="packSize" min="1" max="30" value="15" required>
+            </label>
+            <label class="cube-checkbox">
+                <input type="checkbox" name="balanced" checked>
+                Balance as-fan across packs
+            </label>
+            <button type="submit" class="btn">Generate</button>
+        </form>
+        <p class="cube-status muted" data-status="generate" aria-live="polite"></p>
+        <div class="cube-generate-summary" data-summary="generate" hidden></div>
+        <div class="cube-packs" data-result="generate" hidden></div>
+    </section>
+</main>
+
+<script th:src="@{/js/cube.js}"></script>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

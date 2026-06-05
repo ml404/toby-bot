@@ -21,6 +21,7 @@ class WebSecurityConfig {
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
                     "/dnd", "/dnd/**",
+                    "/cube", "/cube/**",
                     "/sitemap.xml", "/robots.txt",
                     // Service worker for web push must be reachable
                     // unauthenticated — the browser registers it on

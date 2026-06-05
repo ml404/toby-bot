@@ -1,0 +1,121 @@
+.cube-card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-4);
+    max-width: 860px;
+    margin-bottom: var(--space-4);
+}
+
+.cube-card h2 {
+    margin-top: 0;
+}
+
+.cube-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin-bottom: var(--space-3);
+}
+
+.cube-form label {
+    display: grid;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.cube-form .cube-query {
+    flex: 1 1 260px;
+}
+
+.cube-form input[type="text"],
+.cube-form input[type="number"] {
+    padding: 6px 10px;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font: inherit;
+}
+
+.cube-form .cube-checkbox {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    grid-auto-flow: column;
+}
+
+.cube-form .btn {
+    height: fit-content;
+}
+
+.cube-status:empty {
+    display: none;
+}
+
+.cube-asfan-result {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.cube-table {
+    width: 100%;
+    max-width: 480px;
+    border-collapse: collapse;
+}
+
+.cube-table th,
+.cube-table td {
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cube-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.cube-generate-summary {
+    margin-bottom: var(--space-3);
+    color: var(--text);
+}
+
+.cube-packs {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.cube-pack {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-3);
+}
+
+.cube-pack h3 {
+    margin: 0 0 6px;
+    font-size: 0.95rem;
+}
+
+.cube-pack ul {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+    .cube-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cube-form .btn {
+        align-self: start;
+    }
+}
