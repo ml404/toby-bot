@@ -148,7 +148,7 @@ class HighlowServiceTest {
     }
 
     @Test
-    fun `win never rolls the jackpot — HIGHLOW carries the global eligibility carve-out`() {
+    fun `win never rolls the jackpot - HIGHLOW carries the global eligibility carve-out`() {
         // Even with a forced-hit RNG and a non-empty pool, a HighLow win
         // must surface jackpotPayout=0 and never touch the pool.
         // `JackpotGame.HIGHLOW.eligibleForJackpot = false` short-circuits

@@ -139,7 +139,7 @@ class WebDuelOfferNotifierTest {
     }
 
     @Test
-    fun `on also pushes the opponent — regression guard for forgotten push surface`() {
+    fun `on also pushes the opponent - regression guard for forgotten push surface`() {
         notifier.on(event())
         verify(exactly = 1) {
             router.sendPush(opponentId, guildId, NotificationChannelKind.DUEL_OFFER, any())

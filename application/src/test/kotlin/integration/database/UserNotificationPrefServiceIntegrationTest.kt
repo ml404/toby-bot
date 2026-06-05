@@ -165,7 +165,7 @@ class UserNotificationPrefServiceIntegrationTest {
     }
 
     @Test
-    fun `prefs are scoped per-guild — setting in one guild doesn't bleed to another`() {
+    fun `prefs are scoped per-guild - setting in one guild doesn't bleed to another`() {
         service.setPref(discordId, guildId, NotificationChannelKind.STREAK_REMINDER, Surface.DM, optIn = true)
 
         // Same user, different guild: still on the default.

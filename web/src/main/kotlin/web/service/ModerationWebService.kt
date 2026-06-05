@@ -1198,6 +1198,18 @@ class ModerationWebService(
                 if (n < 0L) return "Value must be zero or positive."
                 n.toString()
             }
+            // Per-guild UTC hour (0-23) at which each daily cron job runs.
+            // The job runs hourly and only acts on the guild when the current
+            // UTC hour matches. Streaks/economy still reset at midnight UTC.
+            ConfigDto.Configurations.STREAK_REMINDER_HOUR,
+            ConfigDto.Configurations.UBI_DAILY_HOUR,
+            ConfigDto.Configurations.LOTTERY_DAILY_HOUR,
+            ConfigDto.Configurations.MONTHLY_LEADERBOARD_HOUR -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (0-23)."
+                if (n !in 0..23) return "Hour must be between 0 and 23 (UTC)."
+                n.toString()
+            }
             ConfigDto.Configurations.INSTALL_MODE,
             ConfigDto.Configurations.INSTALLED_AT ->
                 return "Install-wizard sentinel — managed by /install in Discord."

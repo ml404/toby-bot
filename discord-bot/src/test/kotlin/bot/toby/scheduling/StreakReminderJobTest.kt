@@ -3,6 +3,7 @@ package bot.toby.scheduling
 import bot.toby.notify.NotificationRouter
 import common.notification.PushAdapter
 import common.notification.NotificationChannelKind
+import database.dto.guild.ConfigDto
 import database.dto.social.LoginStreakDto
 import database.service.guild.ConfigService
 import database.service.social.LoginStreakService
@@ -39,26 +40,32 @@ import java.time.ZoneOffset
 class StreakReminderJobTest {
 
     private val today: LocalDate = LocalDate.of(2026, 5, 1)
+    // Fixed at the default streak-reminder hour (18:00 UTC) so the per-guild
+    // hour gate fires for guilds that have no STREAK_REMINDER_HOUR override.
     private val clock: Clock = Clock.fixed(
-        today.atStartOfDay().toInstant(ZoneOffset.UTC),
+        today.atTime(18, 0).toInstant(ZoneOffset.UTC),
         ZoneOffset.UTC
     )
 
     private lateinit var jda: JDA
     private lateinit var loginStreakService: LoginStreakService
     private lateinit var notificationRouter: NotificationRouter
-    private lateinit var job: StreakReminderJob
+    private lateinit var configService: ConfigService
+    private lateinit var hourGate: GuildHourGate
 
     @BeforeEach
     fun setup() {
         jda = mockk(relaxed = true)
         loginStreakService = mockk(relaxed = true)
+        // Relaxed ConfigService returns null for getConfigByName, so the gate
+        // falls back to the default hour (18) unless a test stubs an override.
+        configService = mockk(relaxed = true)
+        hourGate = GuildHourGate(configService)
         // Spy on a real router so `dispatch` runs its missing-surface
         // enforcement and forwards to spied primitives we can verify.
         val prefService = mockk<UserNotificationPrefService>(relaxed = true) {
             every { isOptedIn(any(), any(), any(), any()) } returns true
         }
-        val configService = mockk<ConfigService>(relaxed = true)
         val pushAdapter = mockk<PushAdapter>(relaxed = true)
         notificationRouter = spyk(
             NotificationRouter(jda, prefService, configService, pushAdapter)
@@ -71,7 +78,11 @@ class StreakReminderJobTest {
     }
 
     /** Build the job with a JDA cache containing the supplied guild ids. */
-    private fun buildJob(vararg guildIds: Long): StreakReminderJob {
+    private fun buildJob(vararg guildIds: Long): StreakReminderJob =
+        buildJobWithClock(clock, *guildIds)
+
+    /** As [buildJob] but with an explicit clock, for hour-gate cases. */
+    private fun buildJobWithClock(clock: Clock, vararg guildIds: Long): StreakReminderJob {
         // Rename loop var so it doesn't shadow Guild.id when we stub it.
         val guilds = guildIds.map { gid ->
             val g = mockk<Guild>(relaxed = true)
@@ -82,7 +93,7 @@ class StreakReminderJobTest {
         val cache: SnowflakeCacheView<Guild> = mockk(relaxed = true)
         every { jda.guildCache } returns cache
         every { cache.iterator() } returns guilds.toMutableList().iterator()
-        return StreakReminderJob(jda, loginStreakService, notificationRouter, clock)
+        return StreakReminderJob(jda, loginStreakService, notificationRouter, hourGate, clock)
     }
 
     @Test
@@ -123,8 +134,8 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly uses today's UTC date — not the wall-clock local date`() {
-        // Cron is `0 0 23 * * *` in UTC. Job picks UTC date via the
+    fun `runHourly uses today's UTC date - not the wall-clock local date`() {
+        // Cron is `0 0 18 * * *` in UTC. Job picks UTC date via the
         // injected clock. Verify the LoginStreakService query receives
         // the fixed UTC date from the clock.
         every {
@@ -139,7 +150,7 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly isolates per-guild failures — one throwing guild doesn't kill the loop`() {
+    fun `runHourly isolates per-guild failures - one throwing guild doesn't kill the loop`() {
         every {
             loginStreakService.findActiveStreaksDueForReminder(100L, today)
         } throws RuntimeException("DB hiccup")
@@ -193,7 +204,7 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly also pushes every at-risk user — regression guard for forgotten push surface`() {
+    fun `runHourly also pushes every at-risk user - regression guard for forgotten push surface`() {
         // STREAK_REMINDER supports DM + PUSH. Before dispatch enforcement,
         // the job DM'd at-risk users but never pushed — opted-in browsers
         // got nothing. Dispatch now requires both, and this test pins
@@ -248,6 +259,66 @@ class StreakReminderJobTest {
         }
         verify(exactly = 1) {
             notificationRouter.sendDm(6L, 200L, NotificationChannelKind.STREAK_REMINDER, any())
+        }
+    }
+
+    @Test
+    fun `runHourly skips a guild when the current UTC hour is not its reminder hour`() {
+        // No config override → default reminder hour is 18. Run the hourly
+        // tick at 10:00 UTC: the gate should skip the guild entirely, so the
+        // at-risk query never runs and nothing is dispatched.
+        val offHourClock = Clock.fixed(
+            today.atTime(10, 0).toInstant(ZoneOffset.UTC),
+            ZoneOffset.UTC
+        )
+
+        buildJobWithClock(offHourClock, 100L).runHourly()
+
+        verify(exactly = 0) {
+            loginStreakService.findActiveStreaksDueForReminder(any(), any())
+        }
+        verify(exactly = 0) {
+            notificationRouter.sendDm(any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun `runHourly honours a per-guild STREAK_REMINDER_HOUR override`() {
+        // Guild 100 overrides its reminder hour to 20:00 UTC.
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.STREAK_REMINDER_HOUR.configValue,
+                "100"
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.STREAK_REMINDER_HOUR.configValue,
+            value = "20",
+            guildId = "100",
+        )
+        every {
+            loginStreakService.findActiveStreaksDueForReminder(100L, today)
+        } returns listOf(
+            LoginStreakDto(
+                discordId = 1L, guildId = 100L,
+                currentStreak = 5, longestStreak = 5,
+                lastClaimDate = today.minusDays(1), totalClaims = 5L,
+            )
+        )
+
+        // At the default 18:00 tick the override (20) does not match → skip.
+        buildJob(100L).runHourly()
+        verify(exactly = 0) {
+            notificationRouter.sendDm(any(), any(), any(), any())
+        }
+
+        // At the 20:00 tick the override matches → dispatch.
+        val twentyClock = Clock.fixed(
+            today.atTime(20, 0).toInstant(ZoneOffset.UTC),
+            ZoneOffset.UTC
+        )
+        buildJobWithClock(twentyClock, 100L).runHourly()
+        verify(exactly = 1) {
+            notificationRouter.sendDm(1L, 100L, NotificationChannelKind.STREAK_REMINDER, any())
         }
     }
 }

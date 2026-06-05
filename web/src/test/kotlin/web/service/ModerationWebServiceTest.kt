@@ -281,6 +281,28 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts per-guild cron HOUR keys in 0 to 23 and rejects others`() {
+        mockMember(ownerId, isOwner = true)
+        val keys = listOf(
+            ConfigDto.Configurations.STREAK_REMINDER_HOUR,
+            ConfigDto.Configurations.UBI_DAILY_HOUR,
+            ConfigDto.Configurations.LOTTERY_DAILY_HOUR,
+            ConfigDto.Configurations.MONTHLY_LEADERBOARD_HOUR,
+        )
+        for (key in keys) {
+            assertNull(service.updateConfig(ownerId, guildId, key, "0"), "expected $key to accept 0")
+            assertNull(service.updateConfig(ownerId, guildId, key, "12"), "expected $key to accept 12")
+            assertNull(service.updateConfig(ownerId, guildId, key, "23"), "expected $key to accept 23")
+            verify { configService.upsertConfig(key.configValue, "0", guildId.toString()) }
+            verify { configService.upsertConfig(key.configValue, "23", guildId.toString()) }
+
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "-1"), "expected $key to reject -1")
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "24"), "expected $key to reject 24")
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "wibble"), "expected $key to reject wibble")
+        }
+    }
+
+    @Test
     fun `updateConfig accepts POKER chip-amount keys when value is a positive long`() {
         mockMember(ownerId, isOwner = true)
         val keys = listOf(

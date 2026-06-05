@@ -170,7 +170,7 @@ class KenoTest {
     }
 
     @Test
-    fun `RTP smoke — 50k random hands stay in the published band`() {
+    fun `RTP smoke - 50k random hands stay in the published band`() {
         val rng = Random(2026)
         val stake = 1_000L
         val n = 50_000

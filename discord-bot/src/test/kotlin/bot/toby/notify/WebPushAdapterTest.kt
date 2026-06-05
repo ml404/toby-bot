@@ -96,7 +96,7 @@ class WebPushAdapterTest {
     }
 
     @Test
-    fun `5xx response neither marks nor prunes — will retry later`() {
+    fun `5xx response neither marks nor prunes - will retry later`() {
         every { subscriptions.listForUser(discordId) } returns listOf(sub("https://flake"))
         transport.statusFor = { 503 }
 

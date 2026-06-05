@@ -43,7 +43,7 @@ class AchievementSeederTest {
     }
 
     @Test
-    fun `seed is idempotent — running twice does not create duplicate rows`() {
+    fun `seed is idempotent - running twice does not create duplicate rows`() {
         val seeder = AchievementSeeder(persistence, specs = listOf(baseSpec))
 
         seeder.seed()

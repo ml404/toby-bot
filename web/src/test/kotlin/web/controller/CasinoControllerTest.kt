@@ -132,7 +132,7 @@ internal class CasinoControllerTest {
     }
 
     @Test
-    fun `does not redirect when game param is missing — picker is the index page`() {
+    fun `does not redirect when game param is missing - picker is the index page`() {
         setGuilds(777L)
 
         val result = controller.guildList(client, user, game = null, pick = false, request = request, model = model)

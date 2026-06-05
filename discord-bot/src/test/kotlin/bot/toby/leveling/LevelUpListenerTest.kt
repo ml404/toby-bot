@@ -166,7 +166,7 @@ class LevelUpListenerTest {
     }
 
     @Test
-    fun `onLevelUp also pushes the leveller — regression guard for forgotten push surface`() {
+    fun `onLevelUp also pushes the leveller - regression guard for forgotten push surface`() {
         // LEVEL_UP supports DM + CHANNEL + PUSH. Dispatch enforcement
         // requires all three; pin that the push surface fires.
         guildOnly()

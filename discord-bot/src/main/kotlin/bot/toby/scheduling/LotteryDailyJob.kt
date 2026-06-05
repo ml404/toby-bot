@@ -6,6 +6,7 @@ import database.service.guild.ConfigService
 import database.service.lottery.JackpotLotteryService
 import database.service.lottery.LotteryDailyService
 import database.service.lottery.LotteryHelper
+import database.dto.guild.ConfigDto
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.springframework.beans.factory.annotation.Autowired
@@ -15,9 +16,12 @@ import org.springframework.stereotype.Component
 import java.time.Clock
 import java.time.LocalDate
 import java.time.ZoneOffset
+import java.time.ZonedDateTime
 
 /**
- * Daily lottery auto-draw. Runs at 00:00 UTC.
+ * Daily lottery auto-draw. Runs hourly; for each guild it rolls the daily
+ * cycle when the current UTC hour matches that guild's `LOTTERY_DAILY_HOUR`
+ * config (default [DEFAULT_LOTTERY_HOUR] = 00:00 UTC).
  *
  * For each guild with `LOTTERY_DAILY_ENABLED=true`, dispatches on
  * `LOTTERY_DAILY_MODE`:
@@ -33,8 +37,9 @@ import java.time.ZoneOffset
  * announce channel.
  *
  * Idempotent via composite-key ledger ([LotteryDailyService]) — a
- * mid-cron restart skips guilds whose ledger already records today.
- * Per-guild error isolation via `runCatching`. Prod-profile only.
+ * mid-cron restart (or a second tick within the matching hour) skips
+ * guilds whose ledger already records today. Per-guild error isolation
+ * via `runCatching`. Prod-profile only.
  */
 @Component
 @Profile("prod")
@@ -44,20 +49,28 @@ class LotteryDailyJob @Autowired constructor(
     private val lotteryDailyService: LotteryDailyService,
     private val jackpotLotteryService: JackpotLotteryService,
     private val lotteryAnnouncer: LotteryAnnouncer,
+    private val hourGate: GuildHourGate,
     private val clock: Clock = Clock.systemUTC(),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
-    @Scheduled(cron = "0 0 0 * * *", zone = "UTC")
+    @Scheduled(cron = "0 0 * * * *", zone = "UTC")
     fun runDaily() {
-        val today = LocalDate.now(clock.withZone(ZoneOffset.UTC))
-        logger.info { "Running daily lottery job for $today" }
+        val now = ZonedDateTime.now(clock.withZone(ZoneOffset.UTC))
+        val today = now.toLocalDate()
+        logger.info { "Running daily lottery job for $today (hour=${now.hour})" }
 
         jda.guildCache.forEach { guild ->
-            runCatching { rollGuild(guild, today) }
-                .onFailure {
-                    logger.error("Daily lottery roll failed for guild ${guild.idLong}: ${it.message}")
-                }
+            runCatching {
+                val targetHour = hourGate.configuredHour(
+                    guild.idLong,
+                    ConfigDto.Configurations.LOTTERY_DAILY_HOUR,
+                    DEFAULT_LOTTERY_HOUR,
+                )
+                if (now.hour == targetHour) rollGuild(guild, today)
+            }.onFailure {
+                logger.error("Daily lottery roll failed for guild ${guild.idLong}: ${it.message}")
+            }
         }
     }
 
@@ -270,5 +283,8 @@ class LotteryDailyJob @Autowired constructor(
     companion object {
         /** A day. The daily draw opens for 24h and closes at the next tick. */
         private const val DURATION_HOURS: Long = 24L
+
+        /** Fallback UTC hour when LOTTERY_DAILY_HOUR is unset or invalid. */
+        const val DEFAULT_LOTTERY_HOUR: Int = 0
     }
 }

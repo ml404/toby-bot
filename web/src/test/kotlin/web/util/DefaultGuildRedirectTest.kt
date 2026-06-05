@@ -20,7 +20,7 @@ internal class DefaultGuildRedirectTest {
     }
 
     @Test
-    fun `empty guild list returns null (no mutual guilds — empty hero will render)`() {
+    fun `empty guild list returns null (no mutual guilds - empty hero will render)`() {
         assertNull(DefaultGuildRedirect.pick(emptyList(), cookieGuildId = 1L, pick = false))
         assertNull(DefaultGuildRedirect.pick(emptyList(), cookieGuildId = null, pick = false))
     }

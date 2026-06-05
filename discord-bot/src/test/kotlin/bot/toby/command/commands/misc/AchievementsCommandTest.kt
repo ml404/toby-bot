@@ -224,7 +224,7 @@ class AchievementsCommandTest {
     }
 
     @Test
-    fun `level_5 with threshold 5 and progress 3 renders accurate progress — regression for the wiring bug`() {
+    fun `level_5 with threshold 5 and progress 3 renders accurate progress - regression for the wiring bug`() {
         every { achievementService.listFor(any(), any()) } returns listOf(
             mkView(
                 code = "level_5", category = "level", name = "Getting Started",
@@ -244,7 +244,7 @@ class AchievementsCommandTest {
     // ---------- sorting within a category ----------
 
     @Test
-    fun `entries are sorted within a category — unlocked first newest-first then locked highest-progress-first`() {
+    fun `entries are sorted within a category - unlocked first newest-first then locked highest-progress-first`() {
         val older = Instant.parse("2024-01-01T00:00:00Z")
         val newer = Instant.parse("2024-06-01T00:00:00Z")
         every { achievementService.listFor(any(), any()) } returns listOf(
