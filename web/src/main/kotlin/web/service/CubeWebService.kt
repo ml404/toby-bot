@@ -277,7 +277,14 @@ class CubeWebService {
         // Look cards up by their front face: Scryfall's collection lookup
         // matches a single face, not the full "A // B" name. matchEntries
         // ties the full-name cards Scryfall returns back to the entries.
-        val requestNames = entries.map { MtgNames.requestName(it.name) }.filter { it.isNotEmpty() }.distinct()
+        // Cap how many distinct names we look up: the pool is capped at
+        // MAX_CARDS anyway, so resolving more would just hammer Scryfall (one
+        // POST per 75 names) and tie up the request thread for no benefit.
+        // Names past the cap fall through to notFound.
+        val requestNames = entries.map { MtgNames.requestName(it.name) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .take(MAX_CARDS)
         for (chunk in requestNames.chunked(COLLECTION_BATCH)) {
             when (val batch = fetchCollection(chunk)) {
                 is CubeResult.Failure -> return CubeResult.error(batch.error)

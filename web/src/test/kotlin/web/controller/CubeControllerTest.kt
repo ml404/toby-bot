@@ -271,6 +271,22 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `saveList rejects an oversized cards payload`() {
+        val huge = "x".repeat(100_001)
+        val response = controller.saveList(SaveCubeListRequest("My Cube", huge), loggedIn())
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        verify(exactly = 0) { cubeLists.save(any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `share rejects an oversized cards payload`() {
+        val huge = "x".repeat(100_001)
+        val response = controller.share(ShareCubeRequest("My Cube", huge), loggedIn())
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        verify(exactly = 0) { sharedCubes.create(any(), any(), any(), any()) }
+    }
+
+    @Test
     fun `saveList rejects an anonymous user with 401`() {
         assertEquals(HttpStatus.UNAUTHORIZED, controller.saveList(SaveCubeListRequest("X", "Bolt"), anon()).statusCode)
     }

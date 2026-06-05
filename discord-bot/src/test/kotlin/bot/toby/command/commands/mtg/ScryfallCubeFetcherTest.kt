@@ -154,6 +154,24 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `fetchByNames caps how many names it looks up`() {
+        // 800 distinct names → capped at 750 → ceil(750/75) = 10 batches,
+        // not ceil(800/75) = 11. Guards against spamming Scryfall. Each call
+        // gets a fresh (unconsumed) response stream.
+        val client = mockk<HttpClient>()
+        every { client.execute(any()) } answers {
+            mockk<HttpResponse>(relaxed = true) {
+                every { statusLine } returns mockk { every { statusCode } returns 200 }
+                every { entity } returns mockk(relaxed = true) {
+                    every { content } returns ByteArrayInputStream("""{"data":[]}""".toByteArray())
+                }
+            }
+        }
+        fetcher.fetchByNames((1..800).map { "Card $it" }, client)
+        io.mockk.verify(exactly = 10) { client.execute(any()) }
+    }
+
+    @Test
     fun `fetchByNames fails when nothing resolves`() {
         val client = mockk<HttpClient>()
         stubResponse(client, 200, """{"data":[]}""")
