@@ -164,9 +164,9 @@ kover {
         }
         verify {
             rule {
-                minBound(82, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
+                minBound(83, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
                 minBound(79, CoverageUnit.INSTRUCTION, AggregationType.COVERED_PERCENTAGE)
-                minBound(63, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
+                minBound(64, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
             }
         }
     }
