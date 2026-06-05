@@ -551,6 +551,71 @@ button:disabled {
     }
 }
 
+/* Tap-to-enlarge lightbox — the mobile/touch counterpart to the hover
+   zoom. Full-screen, centred, dismissible. */
+.cube-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.82);
+}
+
+.cube-lightbox[hidden] {
+    display: none;
+}
+
+.cube-lightbox-close {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+.cube-lightbox-card {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    max-width: 100%;
+}
+
+.cube-lightbox-img {
+    max-height: 72vh;
+    max-width: 92vw;
+    width: auto;
+    height: auto;
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+}
+
+.cube-lightbox-stat {
+    padding: 4px 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: 999px;
+    color: var(--text);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.cube-lightbox-stat[hidden] {
+    display: none;
+}
+
 /* --- Generated packs ------------------------------------------------ */
 
 .cube-generate-summary {

@@ -224,6 +224,51 @@ describe('hover-to-enlarge', () => {
     });
 });
 
+describe('tap-to-enlarge (touch / no-hover devices)', () => {
+    const realMatchMedia = window.matchMedia;
+    afterEach(() => { window.matchMedia = realMatchMedia; });
+
+    function fakeHoverNone(matches) {
+        window.matchMedia = (query) => ({ matches: query === '(hover: none)' ? matches : false, media: query });
+    }
+
+    test('a tap opens the lightbox with the image, stat line and Scryfall link; Escape closes it', () => {
+        fakeHoverNone(true);
+        const card = document.createElement('a');
+        card.className = 'cube-card';
+        card.setAttribute('data-large', 'https://img/big.jpg');
+        card.setAttribute('data-statline', 'Instant · MV 1');
+        card.href = 'https://scryfall.com/x';
+        document.body.appendChild(card);
+
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        const modal = document.querySelector('.cube-lightbox');
+        expect(modal.hidden).toBe(false);
+        expect(modal.querySelector('.cube-lightbox-img').getAttribute('src')).toBe('https://img/big.jpg');
+        expect(modal.querySelector('.cube-lightbox-stat').textContent).toBe('Instant · MV 1');
+        expect(modal.querySelector('.cube-lightbox-link').getAttribute('href')).toBe('https://scryfall.com/x');
+
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(modal.hidden).toBe(true);
+
+        document.body.removeChild(card);
+    });
+
+    test('on a hover (desktop) device a card click is left alone — no lightbox', () => {
+        fakeHoverNone(false);
+        const card = document.createElement('a');
+        card.className = 'cube-card';
+        card.setAttribute('data-large', 'https://img/big.jpg');
+        card.href = '#stay'; // hash change avoids jsdom navigation noise
+        document.body.appendChild(card);
+
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(document.querySelector('.cube-lightbox').hidden).toBe(true);
+
+        document.body.removeChild(card);
+    });
+});
+
 describe('renderDistribution (the secondary balance bars)', () => {
     test('renders one colour-coded, length-scaled bar per category', () => {
         const container = document.createElement('div');
