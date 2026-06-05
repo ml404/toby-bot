@@ -224,6 +224,13 @@ describe('hover-to-enlarge', () => {
     });
 });
 
+describe('deleteListUrl', () => {
+    test('encodes the saved-list name into the delete query', () => {
+        expect(Cube.deleteListUrl('My Cube')).toBe('/cube/api/lists?name=My%20Cube');
+        expect(Cube.deleteListUrl('Pauper / Peasant')).toBe('/cube/api/lists?name=Pauper%20%2F%20Peasant');
+    });
+});
+
 describe('tap-to-enlarge (touch / no-hover devices)', () => {
     const realMatchMedia = window.matchMedia;
     afterEach(() => { window.matchMedia = realMatchMedia; });

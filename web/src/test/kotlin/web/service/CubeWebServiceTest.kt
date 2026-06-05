@@ -135,6 +135,53 @@ class CubeWebServiceTest {
         assertEquals(null, parsed.imageUrlLarge)
     }
 
+    // --- parseList (pasted decklist parsing) ---------------------------
+
+    @Test
+    fun `parseList reads one name per line, defaulting to a count of one`() {
+        val entries = service.parseList("Lightning Bolt\nForest")
+        assertEquals(listOf("Lightning Bolt", "Forest"), entries.map { it.name })
+        assertEquals(listOf(1, 1), entries.map { it.count })
+    }
+
+    @Test
+    fun `parseList honours leading quantities like 3 and 3x`() {
+        assertEquals(ListEntry("Forest", 3), service.parseList("3 Forest").single())
+        assertEquals(ListEntry("Island", 7), service.parseList("7x Island").single())
+        assertEquals(ListEntry("Plains", 2), service.parseList("2X Plains").single())
+    }
+
+    @Test
+    fun `parseList strips trailing set and collector tags`() {
+        assertEquals(ListEntry("Lightning Bolt", 1), service.parseList("1 Lightning Bolt (2X2) 117").single())
+        assertEquals(ListEntry("Sol Ring", 1), service.parseList("Sol Ring (CMR)").single())
+    }
+
+    @Test
+    fun `parseList ignores blank lines and comments`() {
+        val entries = service.parseList(
+            """
+            # My cube
+            1 Bolt
+
+            // sideboard
+            Shock
+            """.trimIndent()
+        )
+        assertEquals(listOf("Bolt", "Shock"), entries.map { it.name })
+    }
+
+    @Test
+    fun `parseList caps an absurd quantity`() {
+        // Guards the pool against "99999 Forest" blowing memory.
+        assertEquals(100, service.parseList("99999 Forest").single().count)
+    }
+
+    @Test
+    fun `parseList of blank input is empty`() {
+        assertTrue(service.parseList("   \n\n  ").isEmpty())
+    }
+
     // --- preview (pure validation branch) ------------------------------
 
     @Test
@@ -147,5 +194,17 @@ class CubeWebServiceTest {
     fun `preview rejects a blank query without hitting the network`() {
         val result = assertInstanceOf(CubeResult.Failure::class.java, service.preview("   ", 15))
         assertTrue(result.error.contains("Scryfall"))
+    }
+
+    @Test
+    fun `previewList rejects an empty list without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.previewList("\n  \n", 15))
+        assertTrue(result.error.contains("at least one card"))
+    }
+
+    @Test
+    fun `generateList rejects an empty list without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.generateList("# just a comment", 24, 15, true))
+        assertTrue(result.error.contains("at least one card"))
     }
 }
