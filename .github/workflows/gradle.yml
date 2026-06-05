@@ -48,23 +48,26 @@ jobs:
         # build.gradle (`kover { reports { verify { } } }`). It fails the
         # job if the aggregate line/branch coverage regresses below the pin.
         run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
-      - name: Print Kover line coverage
+      - name: Print Kover coverage
         # Informational summary on top of the koverVerify gate above.
-        # Parses the aggregate report's LINE counter (covered / (covered + missed) * 100).
+        # Prints line, instruction and branch percentages from the
+        # aggregate report (covered / (covered + missed) * 100).
         run: |
           report=build/reports/kover/report.xml
           if [ ! -f "$report" ]; then echo "Kover report not found at $report"; exit 0; fi
           python3 - <<'PY'
           import xml.etree.ElementTree as ET
           root = ET.parse('build/reports/kover/report.xml').getroot()
-          for c in root.findall('counter'):
-              if c.get('type') == 'LINE':
-                  covered = int(c.get('covered', 0))
-                  missed = int(c.get('missed', 0))
-                  total = covered + missed
-                  pct = (covered * 100.0 / total) if total else 0.0
-                  print(f"Line coverage: {pct:.2f}% ({covered}/{total})")
-                  break
+          wanted = {c.get('type'): c for c in root.findall('counter')}
+          for kind in ('LINE', 'INSTRUCTION', 'BRANCH'):
+              c = wanted.get(kind)
+              if c is None:
+                  continue
+              covered = int(c.get('covered', 0))
+              missed = int(c.get('missed', 0))
+              total = covered + missed
+              pct = (covered * 100.0 / total) if total else 0.0
+              print(f"{kind.capitalize()} coverage: {pct:.2f}% ({covered}/{total})")
           PY
       - name: Upload Kover HTML report
         uses: actions/upload-artifact@v4

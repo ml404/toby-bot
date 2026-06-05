@@ -130,19 +130,43 @@ kotlin {
     jvmToolchain(21)
 }
 
-// Coverage regression floor. `koverVerify` fails the build if the
-// aggregate report dips below these bounds, pinning coverage so it can
-// only ratchet upward. The floors sit a few points below the current
-// CI numbers (line ~82%, branch ~63%) to absorb routine refactors
-// without flaking; raise them as coverage climbs. Verification runs
-// against the aggregate report wired up in the `dependencies` block
-// below, and CI invokes `koverVerify` explicitly (see gradle.yml).
+// Coverage configuration: what counts, and the regression floor.
+//
+// filters/excludes — keep the metric focused on hand-written logic by
+// dropping code there's no value in unit-testing: JPA entities and other
+// data holders (`*Dto`, the `bot.toby.dto` web API response models),
+// Spring `@Configuration` beans, the `@SpringBootApplication` entry point,
+// and Kotlin's synthetic interface `$DefaultImpls` shims. These are wiring
+// and serialization, not behaviour.
+//
+// verify — `koverVerify` fails the build if the (filtered) aggregate report
+// dips below these bounds, pinning coverage so it can only ratchet upward.
+// The floors sit a few points below the current CI numbers to absorb
+// routine refactors without flaking; raise them as coverage climbs.
+// NOTE on branch: Kotlin emits a synthetic branch for nearly every
+// null-safe access (`?.`/`?:`/non-null params), so aggregate branch
+// coverage runs structurally lower than line/instruction — the branch
+// floor is set accordingly. Verification runs against the aggregate
+// report wired up in the `dependencies` block below, and CI invokes
+// `koverVerify` explicitly (see gradle.yml).
 kover {
     reports {
+        filters {
+            excludes {
+                annotatedBy(
+                    'jakarta.persistence.Entity',
+                    'org.springframework.context.annotation.Configuration',
+                    'org.springframework.boot.autoconfigure.SpringBootApplication',
+                )
+                classes('*Dto', '*Dto$*', '*$DefaultImpls')
+                packages('bot.toby.dto')
+            }
+        }
         verify {
             rule {
-                minBound(80, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
-                minBound(60, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
+                minBound(82, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
+                minBound(79, CoverageUnit.INSTRUCTION, AggregationType.COVERED_PERCENTAGE)
+                minBound(63, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
             }
         }
     }
