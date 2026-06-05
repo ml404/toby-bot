@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import web.service.CategoryAsFan
+import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.CubeWebService
 import web.util.displayName
@@ -55,7 +56,7 @@ class CubeController(
     ): ResponseEntity<CubePreviewResponse> =
         when (val result = cubeWebService.preview(query, packSize)) {
             is CubeResult.Success -> ResponseEntity.ok(
-                CubePreviewResponse(true, null, result.value.poolSize, result.value.distribution)
+                CubePreviewResponse(true, null, result.value.poolSize, result.value.groups)
             )
             is CubeResult.Failure -> ResponseEntity.badRequest().body(CubePreviewResponse(false, result.error, 0, emptyList()))
         }
@@ -92,7 +93,7 @@ data class CubePreviewResponse(
     val ok: Boolean,
     val error: String?,
     val poolSize: Int,
-    val distribution: List<CategoryAsFan>,
+    val groups: List<CategoryGroup>,
 )
 
 data class CubeGenerateResponse(

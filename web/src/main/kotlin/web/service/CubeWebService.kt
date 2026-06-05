@@ -50,7 +50,7 @@ class CubeWebService {
                     query = query.trim(),
                     poolSize = pool.value.size,
                     packSize = packSize,
-                    distribution = distribution(pool.value, packSize),
+                    groups = groups(pool.value, packSize),
                 )
             )
         }
@@ -87,6 +87,28 @@ class CubeWebService {
             .filter { counts[it] != null }
             .map { cat ->
                 CategoryAsFan(cat.displayName, counts.getValue(cat), asFans.getValue(cat))
+            }
+    }
+
+    /**
+     * Like [distribution] but carries the actual card names in each bucket
+     * (alphabetised) — so the preview can list the real cards, not just a
+     * count. Names dedupe to one entry each so a pool with duplicates
+     * doesn't repeat a card in the list.
+     */
+    fun groups(pool: List<CubeCard>, packSize: Int): List<CategoryGroup> {
+        val asFans = AsFan.distribution(pool, packSize)
+        val byCategory = pool.groupBy { it.category }
+        return CardCategory.entries
+            .filter { byCategory[it] != null }
+            .map { cat ->
+                val cards = byCategory.getValue(cat).map { it.name }.distinct().sorted()
+                CategoryGroup(
+                    category = cat.displayName,
+                    count = byCategory.getValue(cat).size,
+                    asFan = asFans.getValue(cat),
+                    cards = cards,
+                )
             }
     }
 
@@ -175,11 +197,19 @@ sealed interface CubeResult<out T> {
 
 data class CategoryAsFan(val category: String, val count: Int, val asFan: Double)
 
+/** A colour/land bucket plus the actual card names it contains. */
+data class CategoryGroup(
+    val category: String,
+    val count: Int,
+    val asFan: Double,
+    val cards: List<String>,
+)
+
 data class PreviewData(
     val query: String,
     val poolSize: Int,
     val packSize: Int,
-    val distribution: List<CategoryAsFan>,
+    val groups: List<CategoryGroup>,
 )
 
 data class GenerateData(

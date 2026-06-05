@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
 import web.service.CategoryAsFan
+import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.CubeWebService
 import web.service.GenerateData
@@ -64,10 +65,10 @@ class CubeControllerTest {
     }
 
     @Test
-    fun `preview returns 200 with the distribution on success`() {
+    fun `preview returns 200 with the card groups on success`() {
         val data = PreviewData(
             query = "set:vow", poolSize = 277, packSize = 15,
-            distribution = listOf(CategoryAsFan("White", 50, 2.7)),
+            groups = listOf(CategoryGroup("White", 50, 2.7, listOf("Sigarda's Splendor", "Sungold Sentinel"))),
         )
         every { service.preview("set:vow", 15) } returns CubeResult.ok(data)
 
@@ -76,7 +77,8 @@ class CubeControllerTest {
         assertEquals(HttpStatus.OK, response.statusCode)
         assertTrue(response.body!!.ok)
         assertEquals(277, response.body!!.poolSize)
-        assertEquals(1, response.body!!.distribution.size)
+        assertEquals(1, response.body!!.groups.size)
+        assertEquals(listOf("Sigarda's Splendor", "Sungold Sentinel"), response.body!!.groups.first().cards)
     }
 
     @Test

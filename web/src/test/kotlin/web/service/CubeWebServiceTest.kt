@@ -73,6 +73,27 @@ class CubeWebServiceTest {
         assertEquals(2.0, red.asFan, 1e-9)
     }
 
+    // --- groups (cards per category) -----------------------------------
+
+    @Test
+    fun `groups lists the actual card names per category, deduped and alphabetised`() {
+        val pool = listOf(
+            CubeCard("Shock", setOf(MtgColor.RED)),
+            CubeCard("Bolt", setOf(MtgColor.RED)),
+            CubeCard("Bolt", setOf(MtgColor.RED)), // duplicate
+            CubeCard("Swords", setOf(MtgColor.WHITE)),
+            CubeCard("Wastes", isLand = true),
+        )
+        val groups = service.groups(pool, packSize = 5)
+        assertEquals(listOf("White", "Red", "Land"), groups.map { it.category })
+
+        val red = groups.first { it.category == "Red" }
+        assertEquals(listOf("Bolt", "Shock"), red.cards) // deduped + sorted
+        assertEquals(3, red.count) // count still includes the duplicate
+        // 3 red / 5 pool × 5 = 3.0
+        assertEquals(3.0, red.asFan, 1e-9)
+    }
+
     // --- preview (pure validation branch) ------------------------------
 
     @Test
