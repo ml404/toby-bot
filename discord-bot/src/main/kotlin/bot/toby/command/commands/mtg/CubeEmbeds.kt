@@ -93,7 +93,10 @@ internal object CubeEmbeds {
     fun packsFile(packs: List<List<CubeCard>>): ByteArray = buildString {
         packs.forEachIndexed { i, pack ->
             appendLine("== Pack ${i + 1} (${pack.size} cards) ==")
-            pack.forEach { card -> appendLine("  ${card.name}") }
+            pack.forEach { card ->
+                val image = card.imageUrl?.let { " — $it" }.orEmpty()
+                appendLine("  ${card.name}$image")
+            }
             appendLine()
         }
     }.toByteArray(StandardCharsets.UTF_8)
