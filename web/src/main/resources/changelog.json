@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Per-guild configurable UTC hour for daily cron jobs",
+    "summary": "## Background",
+    "emoji": "🎟️",
+    "prNumber": 609
+  },
+  {
+    "date": "June 2026",
     "title": "Extend the daily streak: PNG card badge, reset countdown, milestones",
     "summary": "## Why",
     "emoji": "✨",
