@@ -6,6 +6,7 @@ import bot.toby.helpers.stringOption
 import common.mtg.AsFan
 import common.mtg.CardListParser
 import common.mtg.CubeCard
+import common.mtg.MtgNames
 import common.mtg.PackGenerator
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
@@ -74,9 +75,15 @@ class CubeCommand @Autowired constructor(
             return when (val res = fetcher.fetchByNames(entries.map { it.name })) {
                 is ScryfallCubeFetcher.Result.Failure -> PoolResult.Failed(res.message)
                 is ScryfallCubeFetcher.Result.Success -> {
-                    val byName = res.cards.associateBy { it.name.lowercase() }
+                    // Index by full name AND each face so a pasted front-face
+                    // name (e.g. "Archangel Avacyn") matches a transform card's
+                    // full name ("Archangel Avacyn // Avacyn, the Purifier").
+                    val byName = HashMap<String, CubeCard>()
+                    res.cards.forEach { card ->
+                        MtgNames.matchKeys(card.name).forEach { key -> byName.putIfAbsent(key, card) }
+                    }
                     val pool = entries.flatMap { entry ->
-                        byName[entry.name.lowercase()]?.let { card -> List(entry.count) { card } } ?: emptyList()
+                        byName[MtgNames.lookupKey(entry.name)]?.let { card -> List(entry.count) { card } } ?: emptyList()
                     }
                     if (pool.isEmpty()) PoolResult.Failed("None of `$saved`'s cards matched Scryfall.")
                     else PoolResult.Ready(pool, "saved cube \"$saved\"")

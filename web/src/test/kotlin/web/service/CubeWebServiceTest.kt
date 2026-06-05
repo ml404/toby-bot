@@ -207,4 +207,74 @@ class CubeWebServiceTest {
         val result = assertInstanceOf(CubeResult.Failure::class.java, service.generateList("# just a comment", 24, 15, true))
         assertTrue(result.error.contains("at least one card"))
     }
+
+    // --- matchEntries (pasted names ↔ fetched cards, incl. multi-faced) ---
+
+    private fun sc(name: String) = ScryfallCard(CubeCard(name), null, null)
+    private fun entry(name: String, count: Int = 1) = ListEntry(name, count)
+
+    private val avacyn = sc("Archangel Avacyn // Avacyn, the Purifier")
+
+    @Test
+    fun `matchEntries resolves a transform card by its front face`() {
+        val result = service.matchEntries(listOf(entry("Archangel Avacyn")), listOf(avacyn))
+        assertEquals(1, result.pool.size)
+        assertEquals("Archangel Avacyn // Avacyn, the Purifier", result.pool.first().card.name)
+        assertTrue(result.notFound.isEmpty())
+    }
+
+    @Test
+    fun `matchEntries resolves a transform card by its back face`() {
+        val result = service.matchEntries(listOf(entry("Avacyn, the Purifier")), listOf(avacyn))
+        assertEquals(1, result.pool.size)
+        assertTrue(result.notFound.isEmpty())
+    }
+
+    @Test
+    fun `matchEntries resolves a transform card by its full name`() {
+        val result = service.matchEntries(
+            listOf(entry("Archangel Avacyn // Avacyn, the Purifier")), listOf(avacyn),
+        )
+        assertEquals(1, result.pool.size)
+    }
+
+    @Test
+    fun `matchEntries matches case-insensitively and trims whitespace`() {
+        val result = service.matchEntries(listOf(entry("  archangel AVACYN ")), listOf(avacyn))
+        assertEquals(1, result.pool.size)
+        assertTrue(result.notFound.isEmpty())
+    }
+
+    @Test
+    fun `matchEntries expands quantities`() {
+        val result = service.matchEntries(listOf(entry("Forest", 10)), listOf(sc("Forest")))
+        assertEquals(10, result.pool.size)
+    }
+
+    @Test
+    fun `matchEntries reports names that don't resolve`() {
+        val result = service.matchEntries(
+            listOf(entry("Bolt"), entry("Definitely Not A Card")),
+            listOf(sc("Bolt")),
+        )
+        assertEquals(1, result.pool.size)
+        assertEquals(listOf("Definitely Not A Card"), result.notFound)
+    }
+
+    @Test
+    fun `matchEntries handles a mix of single and multi-faced cards`() {
+        val result = service.matchEntries(
+            listOf(entry("Petty Theft"), entry("Lightning Bolt"), entry("Bogus")),
+            listOf(sc("Brazen Borrower // Petty Theft"), sc("Lightning Bolt")),
+        )
+        assertEquals(setOf("Brazen Borrower // Petty Theft", "Lightning Bolt"), result.pool.map { it.card.name }.toSet())
+        assertEquals(listOf("Bogus"), result.notFound)
+    }
+
+    @Test
+    fun `matchEntries notFound is de-duplicated`() {
+        val result = service.matchEntries(listOf(entry("Ghost"), entry("Ghost")), emptyList())
+        assertTrue(result.pool.isEmpty())
+        assertEquals(listOf("Ghost"), result.notFound)
+    }
 }

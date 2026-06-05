@@ -197,6 +197,50 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
+    fun `a saved cube's front-face name resolves a transform card`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        // The user pasted only the front face; Scryfall returns the full name.
+        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Archangel Avacyn")
+        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
+        )
+
+        run()
+
+        // Resolved (not "none matched"): a pack is dealt and attached.
+        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
+        assertTrue(slot.captured.title!!.contains("Generated 1 packs of 1"))
+    }
+
+    @Test
+    fun `a saved cube's back-face name also resolves a transform card`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Avacyn, the Purifier")
+        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
+        )
+
+        run()
+
+        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
+        assertTrue(slot.captured.title!!.contains("Generated 1 packs of 1"))
+    }
+
+    @Test
     fun `preview from a saved cube shows its distribution`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
