@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Draft your saved cubes from the /cube Discord command",
+    "summary": "Follow-up to #614 (merged) — lets the Discord `/cube` command draft a cube you saved on the website.",
+    "emoji": "✨",
+    "prNumber": 615
+  },
+  {
+    "date": "June 2026",
     "title": "Draft from your own card list, saved to your account",
     "summary": "Two related additions to the `/cube` web tool.",
     "emoji": "✨",
