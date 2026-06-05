@@ -427,7 +427,11 @@
         if (saveBtn) saveBtn.addEventListener('click', function () {
             const text = (textarea.value || '').trim();
             if (!text) { setStatus(status, 'Nothing to save — paste a list first.'); return; }
-            const name = root.prompt ? root.prompt('Name this cube list:') : null;
+            // Default the prompt to the currently-loaded list's name so editing
+            // and re-saving overwrites it in one step (Enter), while typing a
+            // new name saves a separate copy.
+            const suggested = (sel && sel.value) || '';
+            const name = root.prompt ? root.prompt('Name this cube list (same name overwrites):', suggested) : null;
             if (!name || !name.trim()) return;
             setStatus(status, 'Saving…');
             fetch(LISTS_API, {
