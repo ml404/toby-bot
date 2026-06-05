@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Autocomplete saved cubes (Discord + web) and card names (web)",
+    "summary": "Adds autocomplete to the cube tooling — saved cubes (Discord + web) and card names (web).",
+    "emoji": "✨",
+    "prNumber": 616
+  },
+  {
+    "date": "June 2026",
     "title": "Draft your saved cubes from the /cube Discord command",
     "summary": "Follow-up to #614 (merged) — lets the Discord `/cube` command draft a cube you saved on the website.",
     "emoji": "✨",
