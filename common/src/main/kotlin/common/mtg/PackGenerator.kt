@@ -47,7 +47,12 @@ class PackGenerator(private val random: Random = Random.Default) {
     ): Result {
         if (packCount <= 0) return Result.Failure("Pack count must be at least 1 (was $packCount).")
         if (packSize <= 0) return Result.Failure("Pack size must be at least 1 (was $packSize).")
-        val needed = packCount * packSize
+        // Long multiply: packCount × packSize can overflow Int (e.g. a crafted
+        // web request with packs=2^30, packSize=4 wraps to 0 and would slip past
+        // this guard into a huge List(packCount) allocation — an OOM). With the
+        // pool check below, anything that passes has needed ≤ pool.size, so it
+        // safely fits back in an Int.
+        val needed = packCount.toLong() * packSize.toLong()
         if (pool.size < needed) {
             return Result.Failure(
                 "Not enough cards: need $needed ($packCount × $packSize) but the pool only has ${pool.size}."
@@ -55,7 +60,7 @@ class PackGenerator(private val random: Random = Random.Default) {
         }
 
         // Randomly select the exact number of cards we'll deal.
-        val selected = pool.shuffled(random).take(needed)
+        val selected = pool.shuffled(random).take(needed.toInt())
 
         // The stream we deal from. Balanced → cards grouped into contiguous
         // category blocks (still shuffled within each block, via the stable

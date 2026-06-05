@@ -12,6 +12,22 @@ class PackGeneratorTest {
         (1..size).map { CubeCard(name = "Card $it", colors = setOf(MtgColor.entries[it % 5])) }
 
     @Test
+    fun `a pack count that would overflow Int fails cleanly instead of OOMing`() {
+        // packCount × packSize as Int overflows: 2^30 × 4 wraps to 0, which
+        // used to slip past the pool check into List(2^30) (an OOM). Long maths
+        // must reject it as "not enough cards" — and return fast.
+        val result = PackGenerator(Random(1)).generate(pool(10), packCount = 1_073_741_824, packSize = 4)
+        val failure = assertInstanceOf(PackGenerator.Result.Failure::class.java, result)
+        assertTrue(failure.reason.contains("Not enough cards"))
+    }
+
+    @Test
+    fun `a near-Int-max pack size fails cleanly`() {
+        val result = PackGenerator(Random(1)).generate(pool(10), packCount = 5, packSize = Int.MAX_VALUE)
+        assertInstanceOf(PackGenerator.Result.Failure::class.java, result)
+    }
+
+    @Test
     fun `generates the requested number of packs each of the requested size`() {
         val result = PackGenerator(Random(1)).generate(pool(360), packCount = 24, packSize = 15)
         val success = assertInstanceOf(PackGenerator.Result.Success::class.java, result)
