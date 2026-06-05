@@ -355,10 +355,45 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the three subcommands with their options`() {
+    fun `lists the user's saved cubes with their card counts`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_SAVED
+        every { cubeListService.listForUser(100L) } returns listOf(
+            savedCube("Vintage", "3 Bolt\nForest"),
+            savedCube("Pauper", "Lightning Bolt"),
+        )
+
+        run()
+
+        verify(exactly = 1) { cubeListService.listForUser(100L) }
+        assertEquals("Your saved cubes", slot.captured.title)
+        val desc = slot.captured.description!!
+        assertTrue(desc.contains("Vintage"), "description was: $desc")
+        // 3 Bolt + 1 Forest counts copies, not lines.
+        assertTrue(desc.contains("4 cards"), "description was: $desc")
+        assertTrue(desc.contains("Pauper"))
+        assertTrue(desc.contains("1 card") && !desc.contains("1 cards"), "singular card count: $desc")
+    }
+
+    @Test
+    fun `saved with no saved cubes nudges the user to the website`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_SAVED
+        every { cubeListService.listForUser(100L) } returns emptyList()
+
+        run()
+
+        assertEquals("Your saved cubes", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("haven't saved any"))
+    }
+
+    @Test
+    fun `exposes the four subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate"), subs.keys)
+        assertEquals(setOf("asfan", "preview", "generate", "saved"), subs.keys)
 
         val asfan = subs.getValue("asfan").options
         assertEquals(OptionType.INTEGER, asfan.first { it.name == "total" }.type)
