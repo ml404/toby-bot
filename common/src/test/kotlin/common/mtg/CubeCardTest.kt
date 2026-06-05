@@ -1,9 +1,40 @@
 package common.mtg
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class CubeCardTest {
+
+    @Test
+    fun `isLandType recognises a plain land`() {
+        assertTrue(CubeCard.isLandType("Basic Land — Forest"))
+        assertTrue(CubeCard.isLandType("Land — Mountain Plains"))
+        assertTrue(CubeCard.isLandType("Legendary Land"))
+    }
+
+    @Test
+    fun `isLandType is false for non-lands`() {
+        assertFalse(CubeCard.isLandType("Instant"))
+        assertFalse(CubeCard.isLandType("Creature — Human Wizard"))
+        assertFalse(CubeCard.isLandType("Artifact"))
+    }
+
+    @Test
+    fun `isLandType judges a modal card by its front face, not the land back`() {
+        // Legion's Landing // Adanto, the First Fort — an enchantment you cast,
+        // not a land, even though the back face is a land.
+        assertFalse(CubeCard.isLandType("Legendary Enchantment // Legendary Land"))
+        // Search for Azcanta // Azcanta, the Sunken Ruin.
+        assertFalse(CubeCard.isLandType("Legendary Enchantment // Legendary Land — Island"))
+    }
+
+    @Test
+    fun `isLandType is true when the front face itself is a land`() {
+        // Westvale Abbey // Ormendahl, Profane Prince — a land you play.
+        assertTrue(CubeCard.isLandType("Land // Creature — Demon"))
+    }
 
     @Test
     fun `mono-coloured card maps to its colour bucket`() {

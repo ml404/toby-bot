@@ -128,6 +128,26 @@ class CubeWebServiceTest {
     }
 
     @Test
+    fun `parseScryfall buckets a modal land-back card by its front face, not as a land`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Legion's Landing // Adanto, the First Fort","color_identity":["W"],
+               "type_line":"Legendary Enchantment // Legendary Land","cmc":1.0}]}"""
+        )
+        val card = service.parseScryfall(root).first().card
+        assertEquals(false, card.isLand)
+        assertEquals(CardCategory.WHITE, card.category)
+    }
+
+    @Test
+    fun `parseScryfall keeps a front-face land as a land`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Westvale Abbey // Ormendahl, Profane Prince","color_identity":[],
+               "type_line":"Land // Creature — Demon","cmc":0.0}]}"""
+        )
+        assertEquals(CardCategory.LAND, service.parseScryfall(root).first().card.category)
+    }
+
+    @Test
     fun `parseScryfall yields null images when Scryfall has none`() {
         val root = mapper.readTree("""{"data":[{"name":"Imageless","color_identity":[],"type_line":"Token"}]}""")
         val parsed = service.parseScryfall(root).first()
