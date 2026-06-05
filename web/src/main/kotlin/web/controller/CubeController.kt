@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
+import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
 import web.service.CubeResult
@@ -102,6 +103,6 @@ data class CubeGenerateResponse(
     val poolSize: Int,
     val packCount: Int,
     val packSize: Int,
-    val packs: List<List<String>>,
+    val packs: List<List<CardView>>,
     val distribution: List<CategoryAsFan>,
 )

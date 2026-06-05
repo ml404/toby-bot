@@ -36,6 +36,19 @@
             ' of these in a ' + packSize + '-card pack.';
     }
 
+    /**
+     * The one-line "stat line" shown under the hover-zoom: the type line
+     * plus mana value (omitted for 0-cost cards like lands). e.g.
+     * "Instant · MV 1", or just "Basic Land — Forest".
+     */
+    function cardStatline(typeLine, manaValue) {
+        const parts = [];
+        if (typeLine) parts.push(typeLine);
+        const mv = Number(manaValue);
+        if (mv > 0) parts.push('MV ' + (Number.isInteger(mv) ? mv : mv));
+        return parts.join(' · ');
+    }
+
     /** Exact-name Scryfall search for a card, so the link opens that card. */
     function scryfallCardUrl(name) {
         return 'https://scryfall.com/search?q=' + encodeURIComponent('!"' + name + '"');
@@ -51,7 +64,7 @@
     function packsToText(packs) {
         return packs.map(function (pack, i) {
             return '== Pack ' + (i + 1) + ' (' + pack.length + ' cards) ==\n' +
-                pack.map(function (n) { return '  ' + n; }).join('\n');
+                pack.map(function (c) { return '  ' + c.name; }).join('\n');
         }).join('\n\n') + '\n';
     }
 
@@ -75,14 +88,39 @@
         return '/cube/api/generate?' + q.toString();
     }
 
-    /** A card name as a Scryfall link (opens in a new tab). */
-    function cardLink(name) {
+    /**
+     * A card as a thumbnail tile linking to its Scryfall page. Falls back
+     * to a captioned placeholder box when Scryfall has no image for it.
+     * Images lazy-load so a 500-card preview doesn't fetch everything at once.
+     */
+    function cardTile(card) {
         const a = document.createElement('a');
-        a.className = 'cube-card-link';
-        a.href = scryfallCardUrl(name);
+        a.className = 'cube-card';
+        a.href = scryfallCardUrl(card.name);
         a.target = '_blank';
         a.rel = 'noopener';
-        a.textContent = name;
+        a.title = card.name;
+        // The larger image + stat line drive the hover-to-enlarge preview.
+        if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
+        a.setAttribute('data-statline', cardStatline(card.typeLine, card.manaValue));
+        if (card.imageUrl) {
+            const img = document.createElement('img');
+            img.className = 'cube-card-img';
+            img.src = card.imageUrl;
+            img.alt = card.name;
+            img.setAttribute('loading', 'lazy');
+            img.setAttribute('width', '146');
+            img.setAttribute('height', '204');
+            a.appendChild(img);
+        } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'cube-card-img cube-card-img-empty';
+            a.appendChild(placeholder);
+        }
+        const name = document.createElement('span');
+        name.className = 'cube-card-name';
+        name.textContent = card.name;
+        a.appendChild(name);
         return a;
     }
 
@@ -152,14 +190,12 @@
             head.appendChild(value);
             block.appendChild(head);
 
-            const list = document.createElement('ul');
-            list.className = 'cube-card-list';
-            group.cards.forEach(function (name) {
-                const li = document.createElement('li');
-                li.appendChild(cardLink(name));
-                list.appendChild(li);
+            const grid = document.createElement('div');
+            grid.className = 'cube-card-grid';
+            group.cards.forEach(function (card) {
+                grid.appendChild(cardTile(card));
             });
-            block.appendChild(list);
+            block.appendChild(grid);
             container.appendChild(block);
         });
         return container;
@@ -177,14 +213,12 @@
             count.textContent = pack.length + ' cards';
             heading.appendChild(count);
             card.appendChild(heading);
-            const list = document.createElement('ul');
-            list.className = 'cube-card-list';
-            pack.forEach(function (name) {
-                const li = document.createElement('li');
-                li.appendChild(cardLink(name));
-                list.appendChild(li);
+            const grid = document.createElement('div');
+            grid.className = 'cube-card-grid';
+            pack.forEach(function (c) {
+                grid.appendChild(cardTile(c));
             });
-            card.appendChild(list);
+            card.appendChild(grid);
             container.appendChild(card);
         });
         return container;
@@ -192,6 +226,28 @@
 
     function setStatus(el, msg) {
         if (el) el.textContent = msg;
+    }
+
+    /** True on touch / no-hover devices, where tap-to-enlarge replaces hover. */
+    function prefersTap() {
+        return !!(root && root.matchMedia && root.matchMedia('(hover: none)').matches);
+    }
+
+    /**
+     * Where to put the hover-zoom image: offset from the cursor, flipped to
+     * the cursor's other side if it would overflow, and clamped inside the
+     * viewport with a small margin. Pure so it's unit-testable.
+     */
+    function zoomPosition(px, py, w, h, vw, vh) {
+        const OFFSET = 18;
+        const MARGIN = 8;
+        let left = px + OFFSET;
+        if (left + w > vw - MARGIN) left = px - OFFSET - w; // flip to the left
+        if (left < MARGIN) left = MARGIN;
+        let top = py - h / 2;
+        if (top + h > vh - MARGIN) top = vh - h - MARGIN;
+        if (top < MARGIN) top = MARGIN;
+        return { left: left, top: top };
     }
 
     function show(el) { if (el) el.hidden = false; }
@@ -375,12 +431,143 @@
         });
     }
 
+    /**
+     * Hover-to-enlarge: one shared floating image, shown while the pointer
+     * is over any card tile that carries a `data-large` URL, positioned
+     * next to the cursor. Event-delegated on the document so it covers
+     * tiles rendered after load. Hard-off on touch via CSS (`hover: none`).
+     */
+    function wireZoom(doc) {
+        if (!doc.body) return;
+        const overlay = doc.createElement('figure');
+        overlay.className = 'cube-zoom';
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        const overlayImg = doc.createElement('img');
+        overlayImg.className = 'cube-zoom-img';
+        overlayImg.alt = '';
+        const overlayStat = doc.createElement('figcaption');
+        overlayStat.className = 'cube-zoom-stat';
+        overlay.appendChild(overlayImg);
+        overlay.appendChild(overlayStat);
+        doc.body.appendChild(overlay);
+
+        const view = doc.defaultView || { innerWidth: 1024, innerHeight: 768 };
+
+        function place(e) {
+            const w = overlay.offsetWidth || 240;
+            const h = overlay.offsetHeight || 360;
+            const pos = zoomPosition(e.clientX, e.clientY, w, h, view.innerWidth, view.innerHeight);
+            overlay.style.left = pos.left + 'px';
+            overlay.style.top = pos.top + 'px';
+        }
+
+        function cardFrom(node) {
+            return node && node.closest ? node.closest('.cube-card[data-large]') : null;
+        }
+
+        doc.addEventListener('mouseover', function (e) {
+            const card = cardFrom(e.target);
+            if (!card) return;
+            overlayImg.src = card.getAttribute('data-large');
+            const stat = card.getAttribute('data-statline') || '';
+            overlayStat.textContent = stat;
+            overlayStat.hidden = stat === '';
+            overlay.hidden = false;
+            place(e);
+        });
+        doc.addEventListener('mousemove', function (e) {
+            if (!overlay.hidden) place(e);
+        });
+        doc.addEventListener('mouseout', function (e) {
+            const card = cardFrom(e.target);
+            if (!card) return;
+            // Ignore moves between the card's own children.
+            if (cardFrom(e.relatedTarget) === card) return;
+            overlay.hidden = true;
+            overlayImg.removeAttribute('src');
+        });
+    }
+
+    /**
+     * Tap-to-enlarge for touch / no-hover devices (the mobile counterpart
+     * to wireZoom). Tapping a card opens a centered lightbox with the
+     * full-size image, stat line, and a "View on Scryfall" link, instead
+     * of navigating straight off the page. Dismissed by the close button,
+     * a backdrop tap, or Escape. On hover devices taps fall through to the
+     * normal link.
+     */
+    function wireLightbox(doc) {
+        if (!doc.body) return;
+        const modal = doc.createElement('div');
+        modal.className = 'cube-lightbox';
+        modal.hidden = true;
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('aria-label', 'Card preview');
+
+        const closeBtn = doc.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'cube-lightbox-close';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.textContent = '✕';
+
+        const figure = doc.createElement('figure');
+        figure.className = 'cube-lightbox-card';
+        const img = doc.createElement('img');
+        img.className = 'cube-lightbox-img';
+        img.alt = '';
+        const stat = doc.createElement('figcaption');
+        stat.className = 'cube-lightbox-stat';
+        const link = doc.createElement('a');
+        link.className = 'btn btn-secondary cube-lightbox-link';
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = 'View on Scryfall ↗';
+        figure.appendChild(img);
+        figure.appendChild(stat);
+        figure.appendChild(link);
+        modal.appendChild(closeBtn);
+        modal.appendChild(figure);
+        doc.body.appendChild(modal);
+
+        function open(card) {
+            img.src = card.getAttribute('data-large');
+            const line = card.getAttribute('data-statline') || '';
+            stat.textContent = line;
+            stat.hidden = line === '';
+            link.href = card.getAttribute('href') || '#';
+            modal.hidden = false;
+        }
+        function close() {
+            modal.hidden = true;
+            img.removeAttribute('src');
+        }
+
+        doc.addEventListener('click', function (e) {
+            const card = e.target.closest && e.target.closest('.cube-card[data-large]');
+            if (card && prefersTap()) {
+                e.preventDefault();
+                open(card);
+            }
+        });
+        closeBtn.addEventListener('click', close);
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) close(); // backdrop, not the figure
+        });
+        doc.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !modal.hidden) close();
+        });
+    }
+
     function wire(doc) {
         wireTabs(doc);
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
         wireGenerate(doc);
+        wireZoom(doc);
+        wireLightbox(doc);
     }
 
     if (root && root.document) wire(root.document);
@@ -390,7 +577,9 @@
         asfanSentence: asfanSentence,
         categoryColor: categoryColor,
         scryfallCardUrl: scryfallCardUrl,
+        cardStatline: cardStatline,
         tabIdFromHash: tabIdFromHash,
+        zoomPosition: zoomPosition,
         packsToText: packsToText,
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,
