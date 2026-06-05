@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add shareable cube links (/cube/c/&lt;token&gt;)",
+    "summary": "Second of the two follow-ups (the first, #617, adds card image links to the Discord output). Per the choice of \"server-stored short link\".",
+    "emoji": "✨",
+    "prNumber": 618
+  },
+  {
+    "date": "June 2026",
     "title": "Show card image links in the /cube Discord pack list",
     "summary": "First of two follow-ups (the other, server-stored share links, is coming next). Per the choice of \"image links in the list\", the `/cube` Discord output now surfaces each card's image.",
     "emoji": "✨",
