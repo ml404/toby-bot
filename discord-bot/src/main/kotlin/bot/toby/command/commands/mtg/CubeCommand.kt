@@ -30,6 +30,9 @@ import kotlin.random.Random
  *  - `/cube generate` — fetch a pool, randomly draw enough cards, and deal
  *                       them into evenly-sized, as-fan-balanced packs;
  *                       the full pack lists come back as a text file.
+ *  - `/cube saved`    — list the cubes the user saved on the website, each
+ *                       with its card count, ready to feed back into the
+ *                       `saved` option of preview/generate.
  *
  * A "cube" is defined by a Scryfall search query (`set:vow`, `cube:vintage`,
  * `t:dragon`, …) — or, via the `saved` option, by one of the user's own
@@ -50,7 +53,8 @@ class CubeCommand @Autowired constructor(
             SUB_ASFAN -> handleAsFan(ctx, deleteDelay)
             SUB_PREVIEW -> handlePreview(ctx, requestingUserDto, deleteDelay)
             SUB_GENERATE -> handleGenerate(ctx, requestingUserDto)
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview or generate."), deleteDelay)
+            SUB_SAVED -> handleSaved(ctx, requestingUserDto, deleteDelay)
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate or saved."), deleteDelay)
         }
     }
 
@@ -175,6 +179,12 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Lists the cubes this user has saved on the website. */
+    private fun handleSaved(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+        val saved = cubeListService.listForUser(requestingUserDto.discordId)
+        reply(ctx, CubeEmbeds.savedCubesEmbed(saved), deleteDelay)
+    }
+
     private fun reply(ctx: CommandContext, embed: MessageEmbed, deleteDelay: Int) {
         ctx.event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -208,12 +218,14 @@ class CubeCommand @Autowired constructor(
                     .setMinValue(1).setMaxValue(MAX_PACK_SIZE.toLong()),
                 OptionData(OptionType.BOOLEAN, OPT_BALANCED, "Level colours/lands across packs (default true).", false),
             ),
+        SubcommandData(SUB_SAVED, "List the cubes you've saved on the website."),
     )
 
     companion object {
         const val SUB_ASFAN = "asfan"
         const val SUB_PREVIEW = "preview"
         const val SUB_GENERATE = "generate"
+        const val SUB_SAVED = "saved"
 
         const val OPT_TOTAL = "total"
         const val OPT_CUBE_SIZE = "cube-size"
