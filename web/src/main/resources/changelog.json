@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Show card image links in the /cube Discord pack list",
+    "summary": "First of two follow-ups (the other, server-stored share links, is coming next). Per the choice of \"image links in the list\", the `/cube` Discord output now surfaces each card's image.",
+    "emoji": "✨",
+    "prNumber": 617
+  },
+  {
+    "date": "June 2026",
     "title": "Autocomplete saved cubes (Discord + web) and card names (web)",
     "summary": "Adds autocomplete to the cube tooling — saved cubes (Discord + web) and card names (web).",
     "emoji": "✨",
