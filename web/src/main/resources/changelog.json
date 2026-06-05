@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Raise coverage to 85% line and pin a regression floor",
+    "summary": "## Goal",
+    "emoji": "🎟️",
+    "prNumber": 611
+  },
+  {
+    "date": "June 2026",
     "title": "Monthly board posts a frozen midnight-boundary snapshot of last month",
     "summary": "## Problem",
     "emoji": "🔨",
