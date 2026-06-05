@@ -69,6 +69,7 @@
                     <button type="button" class="cube-chip" data-example="set:vow">set:vow</button>
                     <button type="button" class="cube-chip" data-example="t:dragon">t:dragon</button>
                 </span>
+                <button type="button" class="cube-link-btn" data-copy-query>🔗 Copy a shareable link to this search</button>
             </div>
 
             <div data-source-panel="list" hidden>
@@ -86,6 +87,10 @@
                               th:text="${sharedCards}"
                               placeholder="One card per line:&#10;1 Lightning Bolt&#10;Sol Ring&#10;10 Forest"></textarea>
                     <ul class="cube-card-suggest" id="cube-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                </div>
+                <div class="cube-list-meta">
+                    <span class="cube-card-count" data-card-count aria-live="polite">0 cards</span>
+                    <button type="button" class="cube-link-btn" data-clear-list>Clear</button>
                 </div>
                 <div class="cube-saved" th:if="${loggedIn}">
                     <input type="text" class="cube-saved-input" data-saved-lists list="cube-saved-options"
@@ -152,7 +157,10 @@
                 </label>
                 <button type="submit" class="btn cube-submit">Generate packs</button>
             </form>
-            <p class="cube-status" data-status="generate" aria-live="polite"></p>
+            <div class="cube-statusline">
+                <span class="cube-spinner" data-spinner="generate" hidden aria-hidden="true"></span>
+                <p class="cube-status" data-status="generate" aria-live="polite"></p>
+            </div>
             <p class="cube-empty" data-empty="generate">Choose your cards above, then hit <strong>Generate packs</strong>.</p>
             <div class="cube-generate-summary" data-summary="generate" hidden></div>
             <p class="cube-notfound" data-notfound="generate" hidden></p>
@@ -180,7 +188,10 @@
                 </label>
                 <button type="submit" class="btn cube-submit">Preview balance</button>
             </form>
-            <p class="cube-status" data-status="preview" aria-live="polite"></p>
+            <div class="cube-statusline">
+                <span class="cube-spinner" data-spinner="preview" hidden aria-hidden="true"></span>
+                <p class="cube-status" data-status="preview" aria-live="polite"></p>
+            </div>
             <p class="cube-empty" data-empty="preview">Choose your cards above, then hit <strong>Preview balance</strong>.</p>
             <p class="cube-notfound" data-notfound="preview" hidden></p>
             <div class="cube-groups" data-result="preview" hidden></div>
