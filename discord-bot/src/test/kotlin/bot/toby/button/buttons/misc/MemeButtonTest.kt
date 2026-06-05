@@ -54,9 +54,8 @@ internal class MemeButtonTest {
 
         verify(exactly = 1) { event.deferEdit() }
         verify(exactly = 1) {
-            command.fetch(
+            command.fetchAsync(
                 hook = hook,
-                httpClient = any(),
                 subreddit = "memes",
                 timePeriod = "week",
                 limit = 25,
@@ -73,9 +72,8 @@ internal class MemeButtonTest {
         button.handle(ctx, dto, deleteDelay = 0)
 
         verify(exactly = 0) {
-            command.fetch(
+            command.fetchAsync(
                 hook = any(),
-                httpClient = any(),
                 subreddit = any(),
                 timePeriod = any(),
                 limit = any(),

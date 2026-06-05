@@ -5,10 +5,13 @@ import bot.toby.dto.web.RedditAPIDto
 import database.dto.user.UserDto
 import io.mockk.Runs
 import io.mockk.clearAllMocks
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import kotlinx.coroutines.Dispatchers
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
@@ -20,21 +23,15 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
-import org.apache.http.HttpEntity
-import org.apache.http.HttpResponse
-import org.apache.http.StatusLine
-import org.apache.http.client.HttpClient
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.io.ByteArrayInputStream
-import java.io.IOException
-import java.io.InputStream
 import java.util.Locale
 
 internal class MemeCommandTest {
 
+    private lateinit var fetcher: RedditMemeFetcher
     private lateinit var memeCommand: MemeCommand
 
     private val event: SlashCommandInteractionEvent = mockk(relaxed = true)
@@ -48,25 +45,11 @@ internal class MemeCommandTest {
 
     private val userDto: UserDto = mockk(relaxed = true)
 
-    private val jsonResponse: String = """{
-        "data": {
-            "children": [
-                {
-                    "data": {
-                        "title": "Sample Reddit Post",
-                        "url": "https://www.old.reddit.com/r/raimimemes/sample-post",
-                        "author": "sample_author",
-                        "over_18": false,
-                        "is_video": false
-                    }
-                }
-            ]
-        }
-    }"""
-
     @BeforeEach
     fun setUp() {
-        memeCommand = MemeCommand()
+        fetcher = mockk()
+        // Unconfined so the launched IO coroutine resolves synchronously in tests.
+        memeCommand = MemeCommand(fetcher, Dispatchers.Unconfined)
 
         every { event.hook } returns hook
         every { event.user } returns user
@@ -98,25 +81,13 @@ internal class MemeCommandTest {
     }
 
     @Test
-    @Throws(IOException::class)
     fun `successful fetch edits the original with a loading embed then a result embed plus a Re-roll button`() {
         val subredditOptionMapping = mockk<OptionMapping> { every { asString } returns "raimimemes" }
         every { event.getOption("subreddit") } returns subredditOptionMapping
+        coEvery { fetcher.fetch("raimimemes", "day", 1) } returns
+            RedditMemeFetcher.Result.Success("Sample Reddit Post", "https://reddit/sample", "sample_author")
 
-        val httpClient = mockk<HttpClient>()
-        val httpResponse = mockk<HttpResponse>()
-        val statusLine = mockk<StatusLine>()
-        val httpEntity = mockk<HttpEntity>()
-        val contentStream: InputStream = ByteArrayInputStream(jsonResponse.toByteArray())
-
-        every { httpClient.execute(any()) } returns httpResponse
-        every { httpResponse.statusLine } returns statusLine
-        every { statusLine.statusCode } returns 200
-        every { httpResponse.entity } returns httpEntity
-        every { httpEntity.content } returns contentStream
-        every { httpEntity.isStreaming } returns false
-
-        memeCommand.handle(DefaultCommandContext(event), httpClient, userDto, deleteDelay = 0)
+        memeCommand.handle(DefaultCommandContext(event), userDto, deleteDelay = 0)
 
         // Loading edit (immediate) + result edit (after fetch) = 2 calls.
         verify(exactly = 2) { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) }
@@ -124,16 +95,27 @@ internal class MemeCommandTest {
     }
 
     @Test
-    fun `users without meme permission get the default permission-error followup and no edit happens`() {
-        every { userDto.memePermission } returns false
-        val httpClient = mockk<HttpClient>(relaxed = true)
-        // sendMessageFormat is used by the Command interface's default
-        // sendErrorMessage — relaxed mock auto-stubs it.
+    fun `a fetch error edits the original with just an error embed and no Re-roll button`() {
+        val subredditOptionMapping = mockk<OptionMapping> { every { asString } returns "raimimemes" }
+        every { event.getOption("subreddit") } returns subredditOptionMapping
+        coEvery { fetcher.fetch("raimimemes", "day", 1) } returns
+            RedditMemeFetcher.Result.Error("No memes found in r/raimimemes.")
 
-        memeCommand.handle(DefaultCommandContext(event), httpClient, userDto, deleteDelay = 0)
+        memeCommand.handle(DefaultCommandContext(event), userDto, deleteDelay = 0)
+
+        // Loading edit + error edit = 2 calls, but no re-roll row.
+        verify(exactly = 2) { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) }
+        verify(exactly = 0) { editAction.setComponents(any<ActionRow>()) }
+    }
+
+    @Test
+    fun `users without meme permission get the default permission-error followup and no fetch happens`() {
+        every { userDto.memePermission } returns false
+
+        memeCommand.handle(DefaultCommandContext(event), userDto, deleteDelay = 0)
 
         verify(exactly = 0) { hook.editOriginalEmbeds(any<Collection<MessageEmbed>>()) }
-        verify(exactly = 0) { httpClient.execute(any()) }
+        coVerify(exactly = 0) { fetcher.fetch(any(), any(), any()) }
     }
 
     @Test
