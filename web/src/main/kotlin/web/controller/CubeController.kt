@@ -124,10 +124,10 @@ class CubeController(
     private fun previewResponse(result: CubeResult<PreviewData>): ResponseEntity<CubePreviewResponse> =
         when (result) {
             is CubeResult.Success -> ResponseEntity.ok(
-                CubePreviewResponse(true, null, result.value.poolSize, result.value.groups, result.value.notFound)
+                CubePreviewResponse(true, null, result.value.poolSize, result.value.groups, result.value.notFound, result.value.note)
             )
             is CubeResult.Failure ->
-                ResponseEntity.badRequest().body(CubePreviewResponse(false, result.error, 0, emptyList(), emptyList()))
+                ResponseEntity.badRequest().body(CubePreviewResponse(false, result.error, 0, emptyList(), emptyList(), null))
         }
 
     private fun generateResponse(result: CubeResult<GenerateData>): ResponseEntity<CubeGenerateResponse> =
@@ -142,10 +142,11 @@ class CubeController(
                     packs = result.value.packs,
                     distribution = result.value.distribution,
                     notFound = result.value.notFound,
+                    note = result.value.note,
                 )
             )
             is CubeResult.Failure -> ResponseEntity.badRequest().body(
-                CubeGenerateResponse(false, result.error, 0, 0, 0, emptyList(), emptyList(), emptyList())
+                CubeGenerateResponse(false, result.error, 0, 0, 0, emptyList(), emptyList(), emptyList(), null)
             )
         }
 
@@ -238,6 +239,7 @@ data class CubePreviewResponse(
     val poolSize: Int,
     val groups: List<CategoryGroup>,
     val notFound: List<String> = emptyList(),
+    val note: String? = null,
 )
 
 data class CubeGenerateResponse(
@@ -249,4 +251,5 @@ data class CubeGenerateResponse(
     val packs: List<List<CardView>>,
     val distribution: List<CategoryAsFan>,
     val notFound: List<String> = emptyList(),
+    val note: String? = null,
 )

@@ -60,7 +60,7 @@ class CubeWebService {
         return when (val resolved = resolveList(list)) {
             is CubeResult.Failure -> CubeResult.error(resolved.error)
             is CubeResult.Success -> CubeResult.ok(
-                buildPreview("your list", resolved.value.cards, packSize, resolved.value.notFound)
+                buildPreview("your list", resolved.value.cards, packSize, resolved.value.notFound, resolved.value.note)
             )
         }
     }
@@ -77,7 +77,7 @@ class CubeWebService {
         when (val resolved = resolveList(list)) {
             is CubeResult.Failure -> CubeResult.error(resolved.error)
             is CubeResult.Success ->
-                buildGenerate("your list", resolved.value.cards, packCount, packSize, balanced, resolved.value.notFound)
+                buildGenerate("your list", resolved.value.cards, packCount, packSize, balanced, resolved.value.notFound, resolved.value.note)
         }
 
     private fun buildPreview(
@@ -85,12 +85,14 @@ class CubeWebService {
         pool: List<ScryfallCard>,
         packSize: Int,
         notFound: List<String>,
+        note: String? = null,
     ): PreviewData = PreviewData(
         query = label,
         poolSize = pool.size,
         packSize = packSize,
         groups = groups(pool, packSize),
         notFound = notFound,
+        note = note,
     )
 
     private fun buildGenerate(
@@ -100,6 +102,7 @@ class CubeWebService {
         packSize: Int,
         balanced: Boolean,
         notFound: List<String>,
+        note: String? = null,
     ): CubeResult<GenerateData> {
         val cards = pool.map { it.card }
         val viewByName = pool.associate { it.card.name to it.toView() }
@@ -117,6 +120,7 @@ class CubeWebService {
                     },
                     distribution = distribution(packs.value.cards, packSize),
                     notFound = notFound,
+                    note = note,
                 )
             )
         }
@@ -283,7 +287,14 @@ class CubeWebService {
 
         val matched = matchEntries(entries, fetched)
         if (matched.pool.isEmpty()) return CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
-        return CubeResult.ok(ResolvedPool(matched.pool.take(MAX_CARDS), matched.notFound))
+        // Be transparent if we had to cap a very large pool rather than
+        // silently dropping the overflow.
+        val note = if (matched.pool.size > MAX_CARDS) {
+            "Your list resolved to ${matched.pool.size} cards; only the first $MAX_CARDS were used."
+        } else {
+            null
+        }
+        return CubeResult.ok(ResolvedPool(matched.pool.take(MAX_CARDS), matched.notFound, note))
     }
 
     /**
@@ -385,8 +396,12 @@ data class CategoryGroup(
 /** One parsed decklist line: a card name and how many copies to include. */
 data class ListEntry(val name: String, val count: Int)
 
-/** A resolved custom list: the card pool plus any names Scryfall didn't know. */
-data class ResolvedPool(val cards: List<ScryfallCard>, val notFound: List<String>)
+/** A resolved custom list: the card pool, unresolved names, and an optional note. */
+data class ResolvedPool(
+    val cards: List<ScryfallCard>,
+    val notFound: List<String>,
+    val note: String? = null,
+)
 
 /** Outcome of matching list entries to fetched cards: the pool + unresolved names. */
 data class MatchResult(val pool: List<ScryfallCard>, val notFound: List<String>)
@@ -397,6 +412,7 @@ data class PreviewData(
     val packSize: Int,
     val groups: List<CategoryGroup>,
     val notFound: List<String> = emptyList(),
+    val note: String? = null,
 )
 
 data class GenerateData(
@@ -408,4 +424,5 @@ data class GenerateData(
     val packs: List<List<CardView>>,
     val distribution: List<CategoryAsFan>,
     val notFound: List<String> = emptyList(),
+    val note: String? = null,
 )

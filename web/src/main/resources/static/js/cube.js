@@ -684,7 +684,7 @@
             request
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'No results.'); return; }
-                    setStatus(status, sourceLabel(src) + ' → ' + json.poolSize + ' cards');
+                    setStatus(status, sourceLabel(src) + ' → ' + json.poolSize + ' cards' + (json.note ? ' · ' + json.note : ''));
                     hide(empty);
                     renderGroups(groups, json.groups);
                     show(groups);
@@ -744,7 +744,8 @@
                     hide(empty);
                     lastPacks = json.packs;
                     summary.textContent = 'Dealt ' + json.packCount + ' packs of ' + json.packSize +
-                        ' from a ' + json.poolSize + '-card pool. Click any card to view it on Scryfall.';
+                        ' from a ' + json.poolSize + '-card pool. Click any card to view it on Scryfall.' +
+                        (json.note ? ' ' + json.note : '');
                     show(summary);
                     renderPacks(result, json.packs);
                     show(result);

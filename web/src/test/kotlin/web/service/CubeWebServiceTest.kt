@@ -292,6 +292,18 @@ class CubeWebServiceTest {
     }
 
     @Test
+    fun `matchEntries resolves a meld part like any single-faced card`() {
+        // Meld parts (e.g. Bruna, the Fading Light) are normal single-faced
+        // cards — not two faces — so they resolve by their plain name.
+        val result = service.matchEntries(
+            listOf(entry("Bruna, the Fading Light")),
+            listOf(sc("Bruna, the Fading Light")),
+        )
+        assertEquals(1, result.pool.size)
+        assertTrue(result.notFound.isEmpty())
+    }
+
+    @Test
     fun `matchEntries notFound is de-duplicated`() {
         val result = service.matchEntries(listOf(entry("Ghost"), entry("Ghost")), emptyList())
         assertTrue(result.pool.isEmpty())

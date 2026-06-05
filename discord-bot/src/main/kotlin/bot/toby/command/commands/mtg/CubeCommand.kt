@@ -54,9 +54,13 @@ class CubeCommand @Autowired constructor(
         }
     }
 
-    /** A draftable pool plus a human label for it (query text or cube name). */
+    /** A draftable pool plus a human label, and any names that didn't resolve. */
     private sealed interface PoolResult {
-        data class Ready(val pool: List<CubeCard>, val label: String) : PoolResult
+        data class Ready(
+            val pool: List<CubeCard>,
+            val label: String,
+            val notFound: List<String> = emptyList(),
+        ) : PoolResult
         data class Failed(val message: String) : PoolResult
     }
 
@@ -88,8 +92,11 @@ class CubeCommand @Autowired constructor(
                     val pool = entries.flatMap { entry ->
                         byName[MtgNames.lookupKey(entry.name)]?.let { card -> List(entry.count) { card } } ?: emptyList()
                     }
+                    val notFound = entries.map { it.name }
+                        .filter { byName[MtgNames.lookupKey(it)] == null }
+                        .distinct()
                     if (pool.isEmpty()) PoolResult.Failed("None of `$saved`'s cards matched Scryfall.")
-                    else PoolResult.Ready(pool, "saved cube \"$saved\"")
+                    else PoolResult.Ready(pool, "saved cube \"$saved\"", notFound)
                 }
             }
         }
@@ -129,6 +136,7 @@ class CubeCommand @Autowired constructor(
                     packSize = packSize,
                     counts = AsFan.categoryCounts(pool),
                     distribution = AsFan.distribution(pool, packSize),
+                    notFound = resolved.notFound,
                 )
                 reply(ctx, embed, deleteDelay)
             }
@@ -157,6 +165,7 @@ class CubeCommand @Autowired constructor(
                             selected = selected,
                             counts = AsFan.categoryCounts(selected),
                             distribution = AsFan.distribution(selected, packSize),
+                            notFound = resolved.notFound,
                         )
                         val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs), ATTACHMENT_NAME)
                         ctx.event.hook.sendMessageEmbeds(embed).addFiles(file).queue()
