@@ -166,6 +166,75 @@ describe('renderPacks', () => {
     });
 });
 
+describe('manaSymbolUrls', () => {
+    test('maps each {sym} to a Scryfall symbol SVG, stripping braces and slashes', () => {
+        const urls = Cube.manaSymbolUrls('{1}{W/U}{R}');
+        expect(urls.map((u) => u.symbol)).toEqual(['{1}', '{W/U}', '{R}']);
+        expect(urls[0].url).toBe('https://svgs.scryfall.io/card-symbols/1.svg');
+        expect(urls[1].url).toBe('https://svgs.scryfall.io/card-symbols/WU.svg');
+        expect(urls[2].url).toBe('https://svgs.scryfall.io/card-symbols/R.svg');
+    });
+    test('returns an empty list for a costless / null cost', () => {
+        expect(Cube.manaSymbolUrls(null)).toEqual([]);
+        expect(Cube.manaSymbolUrls('')).toEqual([]);
+    });
+});
+
+describe('cardTile enrichments (via renderGroups)', () => {
+    function tileFor(card) {
+        const container = document.createElement('div');
+        Cube.renderGroups(container, [{ category: 'Red', count: card.count || 1, asFan: 1.0, cards: [card] }]);
+        return container.querySelector('.cube-card');
+    }
+
+    test('renders a mana-symbol row from the mana cost', () => {
+        const tile = tileFor({ name: 'Bolt', imageUrl: 'i', imageUrlLarge: 'l', typeLine: 'Instant', manaValue: 1, manaCost: '{R}' });
+        const syms = tile.querySelectorAll('.cube-card-mana .cube-mana-symbol');
+        expect(syms).toHaveLength(1);
+        expect(syms[0].getAttribute('src')).toBe('https://svgs.scryfall.io/card-symbols/R.svg');
+    });
+
+    test('shows a copy-count badge only when count > 1', () => {
+        const many = tileFor({ name: 'Forest', imageUrl: 'i', imageUrlLarge: 'l', typeLine: 'Basic Land — Forest', manaValue: 0, count: 10 });
+        expect(many.querySelector('.cube-card-qty').textContent).toBe('×10');
+        const one = tileFor({ name: 'Sol Ring', imageUrl: 'i', imageUrlLarge: 'l', typeLine: 'Artifact', manaValue: 1, count: 1 });
+        expect(one.querySelector('.cube-card-qty')).toBeNull();
+    });
+
+    test('a double-faced card gets a flip control and back-face data; a single-faced one does not', () => {
+        const dfc = tileFor({ name: 'Huntmaster', imageUrl: 'front-sm', imageUrlLarge: 'front-lg', imageUrlBack: 'back', typeLine: 'Creature', manaValue: 3 });
+        expect(dfc.getAttribute('data-back')).toBe('back');
+        expect(dfc.querySelector('.cube-card-flip')).not.toBeNull();
+        const plain = tileFor({ name: 'Bolt', imageUrl: 'i', imageUrlLarge: 'l', typeLine: 'Instant', manaValue: 1 });
+        expect(plain.querySelector('.cube-card-flip')).toBeNull();
+    });
+});
+
+describe('card flip wiring', () => {
+    test('flipping swaps the thumbnail and the hover/lightbox image to the back face and back', () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        Cube.renderGroups(container, [{
+            category: 'Red', count: 1, asFan: 1.0, cards: [
+                { name: 'DFC', imageUrl: 'front-sm', imageUrlLarge: 'front-lg', imageUrlBack: 'back', typeLine: 'Creature', manaValue: 3 },
+            ],
+        }]);
+        const tile = container.querySelector('.cube-card');
+        const img = tile.querySelector('img.cube-card-img');
+        const flip = tile.querySelector('.cube-card-flip');
+        expect(tile.getAttribute('data-large')).toBe('front-lg');
+
+        flip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        expect(tile.getAttribute('data-large')).toBe('back');
+        expect(img.getAttribute('src')).toBe('back');
+
+        flip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        expect(tile.getAttribute('data-large')).toBe('front-lg');
+        expect(img.getAttribute('src')).toBe('front-sm');
+        document.body.removeChild(container);
+    });
+});
+
 describe('zoomPosition', () => {
     const VW = 1000;
     const VH = 800;
