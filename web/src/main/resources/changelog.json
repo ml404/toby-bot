@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Draft from your own card list, saved to your account",
+    "summary": "Two related additions to the `/cube` web tool.",
+    "emoji": "✨",
+    "prNumber": 614
+  },
+  {
+    "date": "June 2026",
     "title": "Show card images and thumbnails on the cube web page",
     "summary": "Follow-up to #612 (merged). The `/cube` web page now shows **card images** instead of plain names.",
     "emoji": "✨",
