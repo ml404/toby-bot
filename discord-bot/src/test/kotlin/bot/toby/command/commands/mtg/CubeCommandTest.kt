@@ -7,6 +7,8 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import database.dto.user.CubeListDto
+import database.service.user.CubeListService
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
@@ -21,17 +23,21 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 class CubeCommandTest : CommandTest {
 
     private lateinit var fetcher: ScryfallCubeFetcher
+    private lateinit var cubeListService: CubeListService
     private lateinit var command: CubeCommand
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
         fetcher = mockk()
-        command = CubeCommand(fetcher)
+        cubeListService = mockk(relaxed = true)
+        command = CubeCommand(fetcher, cubeListService)
+        every { requestingUserDto.discordId } returns 100L
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
     }
@@ -162,6 +168,87 @@ class CubeCommandTest : CommandTest {
         assertEquals("Couldn't build that cube", slot.captured.title)
     }
 
+    // --- saved cubes ---------------------------------------------------
+
+    private fun savedCube(name: String, cards: String) =
+        CubeListDto(discordId = 100L, name = name, cards = cards, createdAt = Instant.EPOCH, updatedAt = Instant.EPOCH)
+
+    @Test
+    fun `generate from a saved cube resolves the names and deals packs`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(3)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "3 Bolt\nForest")
+        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Bolt", setOf(MtgColor.RED)), CubeCard("Forest", isLand = true)),
+        )
+
+        run()
+
+        verify(exactly = 1) { cubeListService.get(100L, "My Cube") }
+        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
+        assertTrue(slot.captured.title!!.contains("Generated 1 packs of 3"))
+        assertTrue(slot.captured.description!!.contains("My Cube"))
+    }
+
+    @Test
+    fun `preview from a saved cube shows its distribution`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Bolt\nForest")
+        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Bolt", setOf(MtgColor.RED)), CubeCard("Forest", isLand = true)),
+        )
+
+        run()
+
+        assertEquals("Cube preview", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("My Cube"))
+    }
+
+    @Test
+    fun `generate with an unknown saved cube name errors`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("Nope")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns null
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        every { cubeListService.get(100L, "Nope") } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        verify(exactly = 0) { fetcher.fetchByNames(any()) }
+    }
+
+    @Test
+    fun `generate with neither query nor saved errors`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns null
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns null
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+    }
+
     // --- metadata ------------------------------------------------------
 
     @Test
@@ -190,5 +277,8 @@ class CubeCommandTest : CommandTest {
         val generate = subs.getValue("generate").options
         assertEquals(OptionType.STRING, generate.first { it.name == "query" }.type)
         assertEquals(OptionType.BOOLEAN, generate.first { it.name == "balanced" }.type)
+        // query and saved are both optional (one-of, validated at runtime).
+        assertEquals(false, generate.first { it.name == "query" }.isRequired)
+        assertEquals(false, generate.first { it.name == "saved" }.isRequired)
     }
 }

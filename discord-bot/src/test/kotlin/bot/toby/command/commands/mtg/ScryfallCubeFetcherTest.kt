@@ -77,6 +77,46 @@ class ScryfallCubeFetcherTest {
         every { entity.content } returns ByteArrayInputStream(body.toByteArray())
     }
 
+    // --- fetchByNames (saved-cube resolution via /cards/collection) ----
+
+    @Test
+    fun `fetchByNames resolves a list of names into cards`() {
+        val client = mockk<HttpClient>()
+        stubResponse(
+            client, 200,
+            """{"data":[
+                {"name":"Lightning Bolt","color_identity":["R"],"type_line":"Instant","cmc":1},
+                {"name":"Forest","color_identity":[],"type_line":"Basic Land — Forest"}
+            ]}""",
+        )
+        val result = fetcher.fetchByNames(listOf("Lightning Bolt", "Forest"), client)
+        val success = assertInstanceOf(ScryfallCubeFetcher.Result.Success::class.java, result)
+        assertEquals(listOf("Lightning Bolt", "Forest"), success.cards.map { it.name })
+    }
+
+    @Test
+    fun `fetchByNames fails fast on an empty list without calling the network`() {
+        val client = mockk<HttpClient>()
+        assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, fetcher.fetchByNames(listOf("  ", ""), client))
+    }
+
+    @Test
+    fun `fetchByNames reports an HTTP error`() {
+        val client = mockk<HttpClient>()
+        stubResponse(client, 500, "boom")
+        val result = fetcher.fetchByNames(listOf("Bolt"), client)
+        val failure = assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, result)
+        assertTrue(failure.message.contains("HTTP 500"))
+    }
+
+    @Test
+    fun `fetchByNames fails when nothing resolves`() {
+        val client = mockk<HttpClient>()
+        stubResponse(client, 200, """{"data":[]}""")
+        val result = fetcher.fetchByNames(listOf("Definitely Not A Card"), client)
+        assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, result)
+    }
+
     @Test
     fun `fetch returns parsed cards on a single page`() {
         val client = mockk<HttpClient>()
