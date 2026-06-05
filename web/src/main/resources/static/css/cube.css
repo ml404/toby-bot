@@ -729,6 +729,7 @@ button:disabled {
 }
 
 .cube-card {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -773,6 +774,66 @@ button:disabled {
 
 .cube-card:hover .cube-card-name {
     color: var(--mtg-gold);
+}
+
+/* Mana cost: a centered row of small Scryfall symbol SVGs under the name. */
+.cube-card-mana {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+}
+
+.cube-mana-symbol {
+    width: 13px;
+    height: 13px;
+}
+
+/* Copy-count badge for de-duped preview tiles ("×10"). */
+.cube-card-qty {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    padding: 1px 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+    background: rgb(0 0 0 / 72%);
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+/* Flip control on double-faced card tiles. */
+.cube-card-flip {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 0.85rem;
+    color: var(--text);
+    background: rgb(0 0 0 / 72%);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: 999px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.cube-card:hover .cube-card-flip,
+.cube-card-flip:focus-visible {
+    opacity: 1;
+}
+
+/* Touch devices have no hover — keep the flip control visible there. */
+@media (hover: none) {
+    .cube-card-flip {
+        opacity: 1;
+    }
 }
 
 /* Hover-to-enlarge: a single floating full-size card + stat line,

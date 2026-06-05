@@ -96,6 +96,9 @@ class CubeWebServiceTest {
         assertEquals("Instant", red.cards.first().typeLine)
         assertEquals(1.0, red.cards.first().manaValue, 1e-9)
         assertEquals(3, red.count) // count still includes the duplicate
+        // Each deduped tile carries its own copy count so duplicates aren't hidden.
+        assertEquals(2, red.cards.first { it.name == "Bolt" }.count)
+        assertEquals(1, red.cards.first { it.name == "Shock" }.count)
         // 3 red / 5 pool × 5 = 3.0
         assertEquals(3.0, red.asFan, 1e-9)
     }
@@ -145,6 +148,29 @@ class CubeWebServiceTest {
                "type_line":"Land // Creature — Demon","cmc":0.0}]}"""
         )
         assertEquals(CardCategory.LAND, service.parseScryfall(root).first().card.category)
+    }
+
+    @Test
+    fun `parseScryfall pulls the mana cost and the back-face image for a double-faced card`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Huntmaster of the Fells // Ravager of the Fells","color_identity":["R","G"],
+               "type_line":"Creature","mana_cost":"","card_faces":[
+                 {"mana_cost":"{2}{R}{G}","image_uris":{"small":"f-sm.jpg","normal":"f-lg.jpg"}},
+                 {"image_uris":{"small":"b-sm.jpg","normal":"b-lg.jpg"}}]}]}"""
+        )
+        val parsed = service.parseScryfall(root).first()
+        assertEquals("{2}{R}{G}", parsed.manaCost) // falls back to the front face
+        assertEquals("b-lg.jpg", parsed.imageUrlBack)
+    }
+
+    @Test
+    fun `parseScryfall pulls the mana cost for a single-faced card and leaves no back image`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Bolt","color_identity":["R"],"type_line":"Instant","mana_cost":"{R}"}]}"""
+        )
+        val parsed = service.parseScryfall(root).first()
+        assertEquals("{R}", parsed.manaCost)
+        assertEquals(null, parsed.imageUrlBack)
     }
 
     @Test

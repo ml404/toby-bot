@@ -150,10 +150,13 @@ class CubeWebService {
             .filter { byCategory[it] != null }
             .map { cat ->
                 val bucket = byCategory.getValue(cat)
+                // De-dupe by name so a pool with ten Forests shows one tile,
+                // but carry the copy count onto that tile so it's not hidden.
+                val counts = bucket.groupingBy { it.card.name }.eachCount()
                 val cards = bucket
                     .distinctBy { it.card.name }
                     .sortedBy { it.card.name }
-                    .map { it.toView() }
+                    .map { it.toView().copy(count = counts.getValue(it.card.name)) }
                 CategoryGroup(
                     category = cat.displayName,
                     count = bucket.size,
@@ -188,6 +191,8 @@ class CubeWebService {
                 ),
                 imageUrl = imageOf(node, "small"),
                 imageUrlLarge = imageOf(node, "normal"),
+                imageUrlBack = backImageOf(node),
+                manaCost = manaCostOf(node),
             )
         }
     }
@@ -203,6 +208,34 @@ class CubeWebService {
         val faces = node.path("card_faces")
         if (faces.isArray && faces.size() > 0) {
             faces[0].path("image_uris").path(size).asText("").takeIf { it.isNotBlank() }?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * The back-face `normal` image for a double-faced card (transform / modal
+     * DFC), or null. Only true two-faced cards carry per-face `image_uris`;
+     * split, adventure and aftermath cards share one image, so they correctly
+     * return null here (no spurious "flip" affordance).
+     */
+    private fun backImageOf(node: JsonNode): String? {
+        val faces = node.path("card_faces")
+        if (faces.isArray && faces.size() > 1) {
+            faces[1].path("image_uris").path("normal").asText("").takeIf { it.isNotBlank() }?.let { return it }
+        }
+        return null
+    }
+
+    /**
+     * The card's mana cost string (e.g. `{1}{R}{R}`). Single-faced cards carry
+     * it directly; double-faced cards put it on the front face. Null when the
+     * card has none (most lands).
+     */
+    private fun manaCostOf(node: JsonNode): String? {
+        node.path("mana_cost").asText("").takeIf { it.isNotBlank() }?.let { return it }
+        val faces = node.path("card_faces")
+        if (faces.isArray && faces.size() > 0) {
+            faces[0].path("mana_cost").asText("").takeIf { it.isNotBlank() }?.let { return it }
         }
         return null
     }
@@ -374,15 +407,23 @@ sealed interface CubeResult<out T> {
 data class CategoryAsFan(val category: String, val count: Int, val asFan: Double)
 
 /** A card paired with its Scryfall images, kept only inside the service. */
-data class ScryfallCard(val card: CubeCard, val imageUrl: String?, val imageUrlLarge: String?) {
-    fun toView(): CardView = CardView(card.name, imageUrl, imageUrlLarge, card.typeLine, card.manaValue)
+data class ScryfallCard(
+    val card: CubeCard,
+    val imageUrl: String?,
+    val imageUrlLarge: String?,
+    val imageUrlBack: String? = null,
+    val manaCost: String? = null,
+) {
+    fun toView(): CardView =
+        CardView(card.name, imageUrl, imageUrlLarge, card.typeLine, card.manaValue, manaCost, imageUrlBack)
 }
 
 /**
  * A single card the page renders: display name, small thumbnail, the larger
- * image used for the hover-to-enlarge preview, and the stat line (type +
- * mana value) shown under that preview. Either image may be null when
- * Scryfall has none.
+ * image used for the hover-to-enlarge preview, the stat line (type + mana
+ * value), the mana cost, the back-face image for double-faced cards, and how
+ * many copies sit in the pool (>1 only in the de-duped preview groups). Any
+ * image or the mana cost may be null when Scryfall has none.
  */
 data class CardView(
     val name: String,
@@ -390,6 +431,9 @@ data class CardView(
     val imageUrlLarge: String?,
     val typeLine: String,
     val manaValue: Double,
+    val manaCost: String? = null,
+    val imageUrlBack: String? = null,
+    val count: Int = 1,
 )
 
 /** A colour/land bucket plus the actual cards it contains. */

@@ -49,6 +49,27 @@
         return parts.join(' · ');
     }
 
+    /**
+     * Scryfall card-symbol SVG URLs for a mana cost like "{1}{R}{R}". Each
+     * {sym} maps to svgs.scryfall.io/card-symbols/<code>.svg, where <code> is
+     * the symbol with braces and slashes removed ({W/U} -> WU). Pure, so it's
+     * unit-testable; returns [] for null/empty/costless cards.
+     */
+    function manaSymbolUrls(manaCost) {
+        if (!manaCost) return [];
+        const out = [];
+        const re = /\{([^}]+)\}/g;
+        let m;
+        while ((m = re.exec(manaCost)) !== null) {
+            const code = m[1].replace(/\//g, '').toUpperCase();
+            out.push({
+                symbol: '{' + m[1] + '}',
+                url: 'https://svgs.scryfall.io/card-symbols/' + encodeURIComponent(code) + '.svg',
+            });
+        }
+        return out;
+    }
+
     /** Exact-name Scryfall search for a card, so the link opens that card. */
     function scryfallCardUrl(name) {
         return 'https://scryfall.com/search?q=' + encodeURIComponent('!"' + name + '"');
@@ -121,6 +142,46 @@
         name.className = 'cube-card-name';
         name.textContent = card.name;
         a.appendChild(name);
+
+        // Mana cost as a row of Scryfall symbol SVGs, so the cost is scannable
+        // without squinting at the thumbnail.
+        const symbols = manaSymbolUrls(card.manaCost);
+        if (symbols.length) {
+            const mana = document.createElement('span');
+            mana.className = 'cube-card-mana';
+            symbols.forEach(function (s) {
+                const sym = document.createElement('img');
+                sym.className = 'cube-mana-symbol';
+                sym.src = s.url;
+                sym.alt = s.symbol;
+                sym.setAttribute('loading', 'lazy');
+                mana.appendChild(sym);
+            });
+            a.appendChild(mana);
+        }
+
+        // Copy count for de-duped preview tiles ("×10 Forest").
+        if (card.count && card.count > 1) {
+            const qty = document.createElement('span');
+            qty.className = 'cube-card-qty';
+            qty.textContent = '×' + card.count;
+            a.appendChild(qty);
+        }
+
+        // Double-faced cards get a flip control that swaps the thumbnail and
+        // the hover/lightbox image between the front and back faces.
+        if (card.imageUrlBack) {
+            a.setAttribute('data-back', card.imageUrlBack);
+            a.setAttribute('data-front-large', card.imageUrlLarge || card.imageUrl || '');
+            a.setAttribute('data-front-thumb', card.imageUrl || card.imageUrlLarge || '');
+            const flip = document.createElement('button');
+            flip.type = 'button';
+            flip.className = 'cube-card-flip';
+            flip.setAttribute('aria-label', 'Flip card');
+            flip.title = 'Flip card';
+            flip.textContent = '⇄';
+            a.appendChild(flip);
+        }
         return a;
     }
 
@@ -962,6 +1023,8 @@
         }
 
         doc.addEventListener('click', function (e) {
+            // A flip-button tap is handled by wireCardFlip, not the lightbox.
+            if (e.target.closest && e.target.closest('.cube-card-flip')) return;
             const card = e.target.closest && e.target.closest('.cube-card[data-large]');
             if (card && prefersTap()) {
                 e.preventDefault();
@@ -974,6 +1037,35 @@
         });
         doc.addEventListener('keydown', function (e) {
             if (e.key === 'Escape' && !modal.hidden) close();
+        });
+    }
+
+    /**
+     * Flips a double-faced card's tile in place: swaps the thumbnail image and
+     * the `data-large` URL (which drives the hover-zoom and lightbox) between
+     * the front and back faces. Event-delegated so it covers tiles rendered
+     * after load. preventDefault stops the tile's Scryfall link from firing.
+     */
+    function wireCardFlip(doc) {
+        doc.addEventListener('click', function (e) {
+            const flip = e.target.closest && e.target.closest('.cube-card-flip');
+            if (!flip) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const card = flip.closest('.cube-card');
+            if (!card || !card.getAttribute('data-back')) return;
+            const img = card.querySelector('img.cube-card-img');
+            const flipped = card.getAttribute('data-flipped') === 'true';
+            if (flipped) {
+                card.setAttribute('data-large', card.getAttribute('data-front-large') || '');
+                if (img) img.src = card.getAttribute('data-front-thumb') || img.src;
+                card.setAttribute('data-flipped', 'false');
+            } else {
+                const back = card.getAttribute('data-back');
+                card.setAttribute('data-large', back);
+                if (img) img.src = back;
+                card.setAttribute('data-flipped', 'true');
+            }
         });
     }
 
@@ -993,6 +1085,7 @@
         wireAsFan(doc);
         wirePreview(doc);
         wireGenerate(doc);
+        wireCardFlip(doc);
         wireZoom(doc);
         wireLightbox(doc);
     }
@@ -1005,6 +1098,7 @@
         categoryColor: categoryColor,
         scryfallCardUrl: scryfallCardUrl,
         cardStatline: cardStatline,
+        manaSymbolUrls: manaSymbolUrls,
         tabIdFromHash: tabIdFromHash,
         zoomPosition: zoomPosition,
         deleteListUrl: deleteListUrl,
