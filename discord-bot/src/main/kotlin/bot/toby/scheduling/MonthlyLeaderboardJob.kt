@@ -42,14 +42,30 @@ class MonthlyLeaderboardJob @Autowired constructor(
 
         /** Fallback UTC hour when MONTHLY_LEADERBOARD_HOUR is unset or invalid. */
         const val DEFAULT_LEADERBOARD_HOUR: Int = 12
+
+        /**
+         * The month boundary itself. The hourly tick at this UTC hour (00:00 on
+         * the 1st) freezes each guild's authoritative end-of-last-month snapshot,
+         * so the figures reflect balances at the moment the new month starts even
+         * when a guild posts later in the day.
+         */
+        const val BOUNDARY_HOUR: Int = 0
     }
 
     /**
-     * Runs hourly on the 1st of the month; for each guild it posts when the
-     * current UTC hour matches that guild's `MONTHLY_LEADERBOARD_HOUR` config
-     * (default [DEFAULT_LEADERBOARD_HOUR] = 12:00 UTC). Spring's cron scheduler
-     * doesn't replay missed ticks, so this fires at most once per month per
-     * guild — the same guarantee as the original single-cron schedule.
+     * Runs hourly on the 1st of the month. Two things happen per guild:
+     *
+     * 1. At [BOUNDARY_HOUR] (00:00 UTC) — and, as a best-effort fallback, at the
+     *    guild's posting hour — the guild's month-boundary snapshot is frozen via
+     *    [snapshotService] `upsertIfMissing`. The midnight tick wins the race, so
+     *    the frozen value is the balance at exactly the month boundary.
+     * 2. When the current UTC hour matches the guild's `MONTHLY_LEADERBOARD_HOUR`
+     *    config (default [DEFAULT_LEADERBOARD_HOUR] = 12:00 UTC) the board is
+     *    posted, computed purely from the frozen boundary snapshots — never the
+     *    live balance.
+     *
+     * Spring's cron scheduler doesn't replay missed ticks, so the post fires at
+     * most once per month per guild.
      */
     @Scheduled(cron = "0 0 * 1 * *", zone = "UTC")
     fun postMonthlyLeaderboard() {
@@ -67,18 +83,57 @@ class MonthlyLeaderboardJob @Autowired constructor(
                     ConfigDto.Configurations.MONTHLY_LEADERBOARD_HOUR,
                     DEFAULT_LEADERBOARD_HOUR,
                 )
-                if (now.hour == targetHour) postForGuild(guild, today, previousMonthStart)
+                val isBoundary = now.hour == BOUNDARY_HOUR
+                val isPosting = now.hour == targetHour
+                if (!isBoundary && !isPosting) return@runCatching
+
+                val users = userService.listGuildUsers(guild.idLong).filterNotNull()
+                if (users.isEmpty()) {
+                    logger.info { "Skipping guild ${guild.idLong} — no tracked users." }
+                    return@runCatching
+                }
+
+                // Freeze (or reuse) the authoritative month-boundary snapshot.
+                // upsertIfMissing keeps whatever was written first — the 00:00
+                // tick — so a later posting tick reads the midnight values.
+                val boundarySnapshots = freezeMonthBoundary(guild.idLong, today, users)
+
+                if (isPosting) {
+                    postForGuild(guild, today, previousMonthStart, users, boundarySnapshots)
+                }
             }.onFailure { logger.error("Monthly leaderboard failed for guild ${guild.idLong}: ${it.message}") }
         }
     }
 
-    private fun postForGuild(guild: Guild, thisMonthStart: LocalDate, previousMonthStart: LocalDate) {
-        val users = userService.listGuildUsers(guild.idLong).filterNotNull()
-        if (users.isEmpty()) {
-            logger.info { "Skipping guild ${guild.idLong} — no tracked users." }
-            return
-        }
+    /**
+     * Snapshots each user's current balance as the month-boundary value for
+     * [boundaryDate], unless one already exists, and returns the authoritative
+     * (possibly pre-existing) snapshot per user. The live balance is only ever
+     * used to seed a missing row — once frozen, the boundary value is reused.
+     */
+    private fun freezeMonthBoundary(
+        guildId: Long,
+        boundaryDate: LocalDate,
+        users: List<database.dto.user.UserDto>
+    ): Map<Long, MonthlyCreditSnapshotDto> = users.associate { dto ->
+        dto.discordId to snapshotService.upsertIfMissing(
+            MonthlyCreditSnapshotDto(
+                discordId = dto.discordId,
+                guildId = guildId,
+                snapshotDate = boundaryDate,
+                socialCredit = dto.socialCredit ?: 0L,
+                tobyCoins = dto.tobyCoins
+            )
+        )
+    }
 
+    private fun postForGuild(
+        guild: Guild,
+        thisMonthStart: LocalDate,
+        previousMonthStart: LocalDate,
+        users: List<database.dto.user.UserDto>,
+        boundarySnapshots: Map<Long, MonthlyCreditSnapshotDto>
+    ) {
         val priorSnapshots = snapshotService.listForGuildDate(guild.idLong, previousMonthStart)
             .associateBy { it.discordId }
 
@@ -99,29 +154,31 @@ class MonthlyLeaderboardJob @Autowired constructor(
         val rows = users
             .filter { dto -> guild.getMemberById(dto.discordId)?.user?.isBot != true }
             .map { dto ->
-                val current = dto.socialCredit ?: 0L
-                val baseline = priorSnapshots[dto.discordId]?.socialCredit
+                // End-of-last-month total = the balance frozen at this month's
+                // boundary (00:00 on the 1st). Fall back to the live balance only
+                // if the boundary freeze somehow never ran for this user.
+                val endTotal = boundarySnapshots[dto.discordId]?.socialCredit ?: (dto.socialCredit ?: 0L)
+                // Start-of-last-month total = the previous month's boundary snapshot.
+                val startTotal = priorSnapshots[dto.discordId]?.socialCredit
                 // No prior-month snapshot means we have no starting point to
-                // measure last month's change against, so treat the delta as 0
-                // rather than counting the user's entire current balance as
-                // "earned last month". Counting the full balance ranks everyone
-                // by their lifetime total and turns the board into a current-
-                // standings list instead of a last-month snapshot. This mirrors
-                // ModerationWebService / LeaderboardWebService, which use the
-                // same 0L fallback; the thisMonthStart snapshot written below
-                // seeds the baseline so the next month's delta is correct.
-                val rawDelta = if (baseline == null) 0L else current - baseline
+                // measure last month's change against, so report 0 earned rather
+                // than counting the user's whole balance. Mirrors the web
+                // leaderboards; the boundary snapshot frozen above seeds the
+                // baseline so next month's earnings are correct.
                 val ubi = ubiByUser[dto.discordId] ?: 0L
-                val creditsDelta = (rawDelta - ubi).coerceAtLeast(0L)
+                val creditsEarned = if (startTotal == null) 0L
+                    else (endTotal - startTotal - ubi).coerceAtLeast(0L)
                 MonthlyRow(
                     discordId = dto.discordId,
-                    creditsDelta = creditsDelta,
+                    creditsEarned = creditsEarned,
+                    endTotal = endTotal,
                     voiceSeconds = voiceSecondsByUser[dto.discordId] ?: 0L
                 )
             }
-            .filter { it.creditsDelta > 0 || it.voiceSeconds > 0 }
+            .filter { it.creditsEarned > 0 || it.voiceSeconds > 0 }
             .sortedWith(
-                compareByDescending<MonthlyRow> { it.creditsDelta }
+                compareByDescending<MonthlyRow> { it.creditsEarned }
+                    .thenByDescending { it.endTotal }
                     .thenByDescending { it.voiceSeconds }
             ).take(TOP_N)
 
@@ -136,8 +193,6 @@ class MonthlyLeaderboardJob @Autowired constructor(
             runCatching { channel.sendMessageEmbeds(embed).queue() }
                 .onFailure { logger.error("Could not send leaderboard to ${channel.id}: ${it.message}") }
         }
-
-        writeCurrentMonthSnapshot(guild.idLong, users, thisMonthStart)
     }
 
     private fun resolveChannel(guild: Guild): TextChannel? {
@@ -167,7 +222,7 @@ class MonthlyLeaderboardJob @Autowired constructor(
             rows.mapIndexed { idx, row ->
                 val name = guild.getMemberById(row.discordId)?.effectiveName ?: "Unknown (${row.discordId})"
                 val voice = formatDuration(row.voiceSeconds)
-                "**#${idx + 1}** $name — ${row.creditsDelta} credits · $voice"
+                "**#${idx + 1}** $name — ${row.creditsEarned} credits · ${row.endTotal} total · $voice"
             }.joinToString("\n")
         }
 
@@ -175,22 +230,11 @@ class MonthlyLeaderboardJob @Autowired constructor(
             .setTitle("Monthly Social Credit Leaderboard — $monthLabel")
             .setDescription(description)
             .setColor(Color(0xFFD700))
-            .setFooter("Totals reflect credits earned (including voice-time) and counted voice time.")
-            .build()
-    }
-
-    private fun writeCurrentMonthSnapshot(guildId: Long, users: List<database.dto.user.UserDto>, snapshotDate: LocalDate) {
-        users.forEach { dto ->
-            snapshotService.upsert(
-                MonthlyCreditSnapshotDto(
-                    discordId = dto.discordId,
-                    guildId = guildId,
-                    snapshotDate = snapshotDate,
-                    socialCredit = dto.socialCredit ?: 0L,
-                    tobyCoins = dto.tobyCoins
-                )
+            .setFooter(
+                "Credits = earned last month (voice-time included, UBI excluded). " +
+                        "Total = balance at month end. Frozen at the 1st."
             )
-        }
+            .build()
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -202,7 +246,8 @@ class MonthlyLeaderboardJob @Autowired constructor(
 
     private data class MonthlyRow(
         val discordId: Long,
-        val creditsDelta: Long,
+        val creditsEarned: Long,
+        val endTotal: Long,
         val voiceSeconds: Long
     )
 }
