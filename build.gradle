@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import kotlinx.kover.gradle.plugin.dsl.AggregationType
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
 buildscript {
     ext {
@@ -30,8 +32,10 @@ plugins {
     id 'com.autonomousapps.dependency-analysis' version '3.6.1'
     // Kotlin-native line/branch coverage. Aggregates across every
     // subproject (see the kover { } block + dependencies at the
-    // bottom of this file). Non-blocking — CI prints the % but does
-    // not gate merges. Run `./gradlew koverHtmlReport` locally.
+    // bottom of this file). The aggregate report is gated by a
+    // verification floor (`koverVerify`) so coverage can't silently
+    // regress — see the `kover { reports { verify { } } }` block below.
+    // Run `./gradlew koverHtmlReport` locally for the browsable report.
     id 'org.jetbrains.kotlinx.kover' version '0.9.1'
 }
 
@@ -124,6 +128,24 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+}
+
+// Coverage regression floor. `koverVerify` fails the build if the
+// aggregate report dips below these bounds, pinning coverage so it can
+// only ratchet upward. The floors sit a few points below the current
+// CI numbers (line ~82%, branch ~63%) to absorb routine refactors
+// without flaking; raise them as coverage climbs. Verification runs
+// against the aggregate report wired up in the `dependencies` block
+// below, and CI invokes `koverVerify` explicitly (see gradle.yml).
+kover {
+    reports {
+        verify {
+            rule {
+                minBound(80, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
+                minBound(60, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
+            }
+        }
+    }
 }
 
 // Aggregate coverage across every Kotlin subproject into one report.

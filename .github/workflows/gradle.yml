@@ -44,10 +44,13 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TOKEN: ${{ secrets.TOKEN }}
-        run: ./gradlew build koverXmlReport koverHtmlReport
+        # koverVerify gates the build on the coverage floor declared in
+        # build.gradle (`kover { reports { verify { } } }`). It fails the
+        # job if the aggregate line/branch coverage regresses below the pin.
+        run: ./gradlew build koverXmlReport koverHtmlReport koverVerify
       - name: Print Kover line coverage
-        # Informational only — no threshold gate. Parses the aggregate
-        # report's LINE counter (covered / (covered + missed) * 100).
+        # Informational summary on top of the koverVerify gate above.
+        # Parses the aggregate report's LINE counter (covered / (covered + missed) * 100).
         run: |
           report=build/reports/kover/report.xml
           if [ ! -f "$report" ]; then echo "Kover report not found at $report"; exit 0; fi
