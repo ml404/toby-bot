@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Show card images and thumbnails on the cube web page",
+    "summary": "Follow-up to #612 (merged). The `/cube` web page now shows **card images** instead of plain names.",
+    "emoji": "✨",
+    "prNumber": 613
+  },
+  {
+    "date": "June 2026",
     "title": "Add MTG cube tooling: as-fan calculator and randomised pack generator",
     "summary": "## What & why",
     "emoji": "✨",
