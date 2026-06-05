@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Move /meme Reddit fetching onto ktor + coroutines",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 628
+  },
+  {
+    "date": "June 2026",
     "title": "Move cube Scryfall fetching onto ktor + coroutines",
     "summary": "## Why",
     "emoji": "✨",
