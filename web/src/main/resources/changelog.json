@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Move cube Scryfall fetching onto ktor + coroutines",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 627
+  },
+  {
+    "date": "June 2026",
     "title": "Add /cube saved subcommand to list saved cubes in Discord",
     "summary": "## What",
     "emoji": "✨",
