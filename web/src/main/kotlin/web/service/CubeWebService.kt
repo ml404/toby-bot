@@ -6,6 +6,7 @@ import common.mtg.AsFan
 import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeCard
+import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
 import org.springframework.stereotype.Service
@@ -268,22 +269,38 @@ class CubeWebService {
         val entries = parseList(text)
         if (entries.isEmpty()) return CubeResult.error("Paste at least one card name, one per line.")
 
-        val resolved = HashMap<String, ScryfallCard>()
+        val fetched = mutableListOf<ScryfallCard>()
         for (chunk in entries.map { it.name }.distinct().chunked(COLLECTION_BATCH)) {
             when (val batch = fetchCollection(chunk)) {
                 is CubeResult.Failure -> return CubeResult.error(batch.error)
-                is CubeResult.Success -> batch.value.forEach { resolved[it.card.name.lowercase()] = it }
+                is CubeResult.Success -> fetched.addAll(batch.value)
             }
         }
 
+        val matched = matchEntries(entries, fetched)
+        if (matched.pool.isEmpty()) return CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
+        return CubeResult.ok(ResolvedPool(matched.pool.take(MAX_CARDS), matched.notFound))
+    }
+
+    /**
+     * Matches parsed list entries to fetched cards and expands quantities.
+     * Each card is indexed by its full name AND each face, so a pasted
+     * front-face name (e.g. "Archangel Avacyn") matches the full name
+     * Scryfall returns for a transform card ("Archangel Avacyn // Avacyn,
+     * the Purifier"). Entries that don't resolve go into [MatchResult.notFound].
+     */
+    fun matchEntries(entries: List<ListEntry>, cards: List<ScryfallCard>): MatchResult {
+        val byKey = HashMap<String, ScryfallCard>()
+        cards.forEach { card ->
+            MtgNames.matchKeys(card.card.name).forEach { key -> byKey.putIfAbsent(key, card) }
+        }
         val pool = mutableListOf<ScryfallCard>()
         val notFound = mutableListOf<String>()
         for (entry in entries) {
-            val card = resolved[entry.name.lowercase()]
+            val card = byKey[MtgNames.lookupKey(entry.name)]
             if (card == null) notFound.add(entry.name) else repeat(entry.count) { pool.add(card) }
         }
-        if (pool.isEmpty()) return CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
-        return CubeResult.ok(ResolvedPool(pool.take(MAX_CARDS), notFound.distinct()))
+        return MatchResult(pool, notFound.distinct())
     }
 
     /** One `/cards/collection` POST for up to 75 names. */
@@ -366,6 +383,9 @@ data class ListEntry(val name: String, val count: Int)
 
 /** A resolved custom list: the card pool plus any names Scryfall didn't know. */
 data class ResolvedPool(val cards: List<ScryfallCard>, val notFound: List<String>)
+
+/** Outcome of matching list entries to fetched cards: the pool + unresolved names. */
+data class MatchResult(val pool: List<ScryfallCard>, val notFound: List<String>)
 
 data class PreviewData(
     val query: String,
