@@ -173,14 +173,16 @@ class CubeCommand @Autowired constructor(
         SubcommandData(SUB_PREVIEW, "Show the as-fan distribution of a cube (a Scryfall query or a saved cube).")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_QUERY, "Scryfall search defining the cube (e.g. set:vow).", false),
-                OptionData(OptionType.STRING, OPT_SAVED, "Name of a cube you saved on the website (instead of a query).", false),
+                OptionData(OptionType.STRING, OPT_SAVED, "Name of a cube you saved on the website (instead of a query).", false)
+                    .setAutoComplete(true),
                 OptionData(OptionType.INTEGER, OPT_PACK_SIZE, "Cards per pack (default 15).", false)
                     .setMinValue(1).setMaxValue(MAX_PACK_SIZE.toLong()),
             ),
         SubcommandData(SUB_GENERATE, "Deal randomised, as-fan-balanced packs from a Scryfall query or a saved cube.")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_QUERY, "Scryfall search defining the pool (e.g. cube:vintage).", false),
-                OptionData(OptionType.STRING, OPT_SAVED, "Name of a cube you saved on the website (instead of a query).", false),
+                OptionData(OptionType.STRING, OPT_SAVED, "Name of a cube you saved on the website (instead of a query).", false)
+                    .setAutoComplete(true),
                 OptionData(OptionType.INTEGER, OPT_PACKS, "How many packs to build (default 24).", false)
                     .setMinValue(1).setMaxValue(MAX_PACK_COUNT.toLong()),
                 OptionData(OptionType.INTEGER, OPT_PACK_SIZE, "Cards per pack (default 15).", false)

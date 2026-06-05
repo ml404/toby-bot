@@ -231,6 +231,40 @@ describe('deleteListUrl', () => {
     });
 });
 
+describe('card-name autocomplete helpers', () => {
+    test('scryfallAutocompleteUrl encodes the partial query', () => {
+        expect(Cube.scryfallAutocompleteUrl('lightn')).toBe('https://api.scryfall.com/cards/autocomplete?q=lightn');
+        expect(Cube.scryfallAutocompleteUrl('sol r')).toBe('https://api.scryfall.com/cards/autocomplete?q=sol%20r');
+    });
+
+    test('currentLineInfo finds the line the caret sits on', () => {
+        const value = 'Bolt\n3 ForE\nSol Ring';
+        // caret inside the middle line ("3 ForE", positions 5..11)
+        const info = Cube.currentLineInfo(value, 9);
+        expect(info.text).toBe('3 ForE');
+        expect(value.slice(info.start, info.end)).toBe('3 ForE');
+    });
+
+    test('splitQuantityPrefix peels a leading count off the card name', () => {
+        expect(Cube.splitQuantityPrefix('3 Forest')).toEqual({ prefix: '3 ', name: 'Forest' });
+        expect(Cube.splitQuantityPrefix('10x Island')).toEqual({ prefix: '10x ', name: 'Island' });
+        expect(Cube.splitQuantityPrefix('Sol Ring')).toEqual({ prefix: '', name: 'Sol Ring' });
+    });
+
+    test('applyCardChoice completes the caret line, keeping the quantity', () => {
+        const value = 'Bolt\n3 ForE\nSol Ring';
+        const result = Cube.applyCardChoice(value, 9, 'Forest');
+        expect(result.value).toBe('Bolt\n3 Forest\nSol Ring');
+        // caret lands at the end of the completed line ("...3 Forest")
+        expect(result.value.slice(0, result.caret)).toBe('Bolt\n3 Forest');
+    });
+
+    test('applyCardChoice works on the only line with no quantity', () => {
+        const result = Cube.applyCardChoice('light', 5, 'Lightning Bolt');
+        expect(result.value).toBe('Lightning Bolt');
+    });
+});
+
 describe('tap-to-enlarge (touch / no-hover devices)', () => {
     const realMatchMedia = window.matchMedia;
     afterEach(() => { window.matchMedia = realMatchMedia; });

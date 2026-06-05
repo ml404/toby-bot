@@ -252,13 +252,16 @@
 }
 
 .cube-listlabel {
-    display: grid;
-    gap: 4px;
+    margin-bottom: 4px;
     font-size: 0.85rem;
     color: var(--text-muted);
 }
 
-.cube-listlabel textarea {
+.cube-list-wrap {
+    position: relative;
+}
+
+.cube-list-wrap textarea {
     width: 100%;
     box-sizing: border-box;
     resize: vertical;
@@ -271,10 +274,46 @@
     line-height: 1.5;
 }
 
-.cube-listlabel textarea:focus {
+.cube-list-wrap textarea:focus {
     outline: none;
     border-color: var(--mtg-gold);
     box-shadow: 0 0 0 2px var(--mtg-gold-soft);
+}
+
+/* Scryfall card-name suggestions under the list box. */
+.cube-card-suggest {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    z-index: 20;
+    margin: 2px 0 0;
+    padding: 4px;
+    max-height: 260px;
+    overflow-y: auto;
+    list-style: none;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-md);
+}
+
+.cube-card-suggest[hidden] {
+    display: none;
+}
+
+.cube-card-suggest-item {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.cube-card-suggest-item:hover,
+.cube-card-suggest-item.is-active {
+    background: var(--mtg-gold-soft);
+    color: var(--mtg-gold);
 }
 
 .cube-saved {
@@ -285,14 +324,20 @@
     margin-top: var(--space-3);
 }
 
-.cube-saved select {
+.cube-saved-input {
     padding: 6px 10px;
     background: var(--bg-input);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     font: inherit;
-    min-width: 160px;
+    min-width: 180px;
+}
+
+.cube-saved-input:focus {
+    outline: none;
+    border-color: var(--mtg-gold);
+    box-shadow: 0 0 0 2px var(--mtg-gold-soft);
 }
 
 .cube-saved-status:empty {

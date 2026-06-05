@@ -376,37 +376,30 @@
         });
     }
 
-    /** Repopulates every saved-list <select> from the cached {name: cards} map. */
-    function fillSavedSelects(doc, cache) {
+    /** Repopulates the saved-cube datalist(s) from the cached {name: cards} map. */
+    function fillSavedOptions(doc, cache) {
         const names = Object.keys(cache).sort();
-        doc.querySelectorAll('[data-saved-lists]').forEach(function (sel) {
-            const keep = sel.value;
-            sel.replaceChildren();
-            const ph = document.createElement('option');
-            ph.value = '';
-            ph.textContent = names.length ? 'Load a saved list…' : 'No saved lists yet';
-            sel.appendChild(ph);
+        doc.querySelectorAll('[data-saved-options]').forEach(function (dl) {
+            dl.replaceChildren();
             names.forEach(function (name) {
                 const opt = document.createElement('option');
                 opt.value = name;
-                opt.textContent = name;
-                sel.appendChild(opt);
+                dl.appendChild(opt);
             });
-            if (cache[keep] != null) sel.value = keep;
         });
     }
 
     /**
-     * Account-bound saved lists: the cube list is persisted server-side
-     * against the logged-in Discord user via the `/cube/api/lists` endpoints,
-     * so it follows them across devices. The controls only exist in the DOM
-     * when the page rendered for a logged-in user (see cube.html), so this is
-     * a no-op for anonymous visitors.
+     * Account-bound saved lists: persisted server-side against the logged-in
+     * Discord user via `/cube/api/lists`, so they follow the user across
+     * devices. The saved-cube picker is a datalist-backed typeahead — type to
+     * filter your cube names, pick one to load it. The controls only exist in
+     * the DOM for a logged-in user (see cube.html), so this no-ops otherwise.
      */
     function wireSavedLists(doc) {
         const textarea = doc.querySelector('textarea[name="list"]');
-        const sel = doc.querySelector('[data-saved-lists]');
-        if (!textarea || !sel) return;
+        const input = doc.querySelector('[data-saved-lists]');
+        if (!textarea || !input) return;
         const saveBtn = doc.querySelector('[data-save-list]');
         const delBtn = doc.querySelector('[data-delete-list]');
         const status = doc.querySelector('[data-saved-status]');
@@ -417,20 +410,28 @@
                 .then(function (rows) {
                     cache = {};
                     (rows || []).forEach(function (row) { cache[row.name] = row.cards; });
-                    fillSavedSelects(doc, cache);
+                    fillSavedOptions(doc, cache);
                 })
-                .catch(function () { /* leave the selects as-is on a transient error */ });
+                .catch(function () { /* leave options as-is on a transient error */ });
         }
 
         reload();
 
+        // Typeahead: picking (or typing) a known saved name loads that cube.
+        input.addEventListener('change', function () {
+            const name = (input.value || '').trim();
+            if (cache[name] == null) return;
+            textarea.value = cache[name];
+            setSource(doc, 'list');
+            setStatus(status, 'Loaded “' + name + '”.');
+        });
+
         if (saveBtn) saveBtn.addEventListener('click', function () {
             const text = (textarea.value || '').trim();
             if (!text) { setStatus(status, 'Nothing to save — paste a list first.'); return; }
-            // Default the prompt to the currently-loaded list's name so editing
-            // and re-saving overwrites it in one step (Enter), while typing a
-            // new name saves a separate copy.
-            const suggested = (sel && sel.value) || '';
+            // Default the prompt to the name in the picker so editing and
+            // re-saving overwrites it in one step (Enter); a new name forks it.
+            const suggested = (input.value || '').trim();
             const name = root.prompt ? root.prompt('Name this cube list (same name overwrites):', suggested) : null;
             if (!name || !name.trim()) return;
             setStatus(status, 'Saving…');
@@ -445,25 +446,125 @@
             }).then(function (saved) {
                 if (!saved) return;
                 setStatus(status, 'Saved “' + saved.name + '”.');
-                reload().then(function () { if (sel) sel.value = saved.name; });
+                reload().then(function () { input.value = saved.name; });
             }).catch(function () { setStatus(status, 'Couldn\'t save. Try again.'); });
         });
 
-        if (sel) sel.addEventListener('change', function () {
-            if (!sel.value || cache[sel.value] == null) return;
-            textarea.value = cache[sel.value];
-            setSource(doc, 'list');
-            setStatus(status, 'Loaded “' + sel.value + '”.');
-        });
-
         if (delBtn) delBtn.addEventListener('click', function () {
-            if (!sel || !sel.value) return;
-            const name = sel.value;
+            const name = (input.value || '').trim();
+            if (!name) return;
             setStatus(status, 'Deleting…');
             fetch(deleteListUrl(name), { method: 'DELETE' })
-                .then(function () { setStatus(status, 'Deleted “' + name + '”.'); return reload(); })
+                .then(function () { setStatus(status, 'Deleted “' + name + '”.'); input.value = ''; return reload(); })
                 .catch(function () { setStatus(status, 'Couldn\'t delete. Try again.'); });
         });
+    }
+
+    // --- Card-name autocomplete (Scryfall) -----------------------------
+
+    const MAX_CARD_SUGGEST = 10;
+
+    function scryfallAutocompleteUrl(query) {
+        return 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query);
+    }
+
+    /** The line of [value] the caret sits on: its bounds and text. */
+    function currentLineInfo(value, caret) {
+        const start = value.lastIndexOf('\n', caret - 1) + 1;
+        let end = value.indexOf('\n', caret);
+        if (end < 0) end = value.length;
+        return { start: start, end: end, text: value.slice(start, end) };
+    }
+
+    /** Splits a leading quantity (`3 `, `3x `) off a decklist line. */
+    function splitQuantityPrefix(line) {
+        const m = line.match(/^(\d+[xX]?\s+)/);
+        return m ? { prefix: m[1], name: line.slice(m[1].length) } : { prefix: '', name: line };
+    }
+
+    /** Replaces the card name on the caret's line with [choice], keeping the quantity. */
+    function applyCardChoice(value, caret, choice) {
+        const line = currentLineInfo(value, caret);
+        const newLine = splitQuantityPrefix(line.text).prefix + choice;
+        return {
+            value: value.slice(0, line.start) + newLine + value.slice(line.end),
+            caret: line.start + newLine.length,
+        };
+    }
+
+    /**
+     * As the user types a card name in the list box, suggests real card names
+     * from Scryfall's autocomplete API and completes the current line on pick
+     * (keeping any leading quantity). Arrow keys + Enter/Escape, plus mouse.
+     */
+    function wireCardAutocomplete(doc) {
+        const textarea = doc.querySelector('textarea[name="list"]');
+        const box = doc.querySelector('[data-card-suggest]');
+        if (!textarea || !box) return;
+        let timer = null;
+        let controller = null;
+        let items = [];
+        let active = -1;
+
+        function close() { box.hidden = true; box.replaceChildren(); items = []; active = -1; }
+
+        function setActive(i) {
+            const lis = box.querySelectorAll('.cube-card-suggest-item');
+            lis.forEach(function (el) { el.classList.remove('is-active'); });
+            if (i < 0 || i >= lis.length) { active = -1; return; }
+            active = i;
+            lis[i].classList.add('is-active');
+            lis[i].scrollIntoView({ block: 'nearest' });
+        }
+
+        function pick(name) {
+            const applied = applyCardChoice(textarea.value, textarea.selectionStart, name);
+            textarea.value = applied.value;
+            textarea.selectionStart = textarea.selectionEnd = applied.caret;
+            close();
+            textarea.focus();
+        }
+
+        function render(names) {
+            box.replaceChildren();
+            items = names;
+            active = -1;
+            if (!names.length) { close(); return; }
+            names.forEach(function (name) {
+                const li = document.createElement('li');
+                li.className = 'cube-card-suggest-item';
+                li.setAttribute('role', 'option');
+                li.textContent = name;
+                li.addEventListener('mousedown', function (e) { e.preventDefault(); pick(name); });
+                box.appendChild(li);
+            });
+            box.hidden = false;
+        }
+
+        function suggest() {
+            const info = currentLineInfo(textarea.value, textarea.selectionStart);
+            const partial = splitQuantityPrefix(info.text).name.trim();
+            if (partial.length < 2) { close(); return; }
+            if (controller) controller.abort();
+            controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            fetch(scryfallAutocompleteUrl(partial), controller ? { signal: controller.signal } : undefined)
+                .then(function (r) { return r.ok ? r.json() : { data: [] }; })
+                .then(function (json) { render((json.data || []).slice(0, MAX_CARD_SUGGEST)); })
+                .catch(function () { /* aborted or offline — leave the box as it is */ });
+        }
+
+        textarea.addEventListener('input', function () {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(suggest, 160);
+        });
+        textarea.addEventListener('keydown', function (e) {
+            if (box.hidden) return;
+            if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(active + 1, items.length - 1)); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(active - 1, 0)); }
+            else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(items[active]); }
+            else if (e.key === 'Escape') { close(); }
+        });
+        textarea.addEventListener('blur', function () { setTimeout(close, 150); });
     }
 
     function wireAsFan(doc) {
@@ -732,6 +833,7 @@
         wireTabs(doc);
         wireSource(doc);
         wireSavedLists(doc);
+        wireCardAutocomplete(doc);
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
@@ -751,6 +853,10 @@
         tabIdFromHash: tabIdFromHash,
         zoomPosition: zoomPosition,
         deleteListUrl: deleteListUrl,
+        scryfallAutocompleteUrl: scryfallAutocompleteUrl,
+        currentLineInfo: currentLineInfo,
+        splitQuantityPrefix: splitQuantityPrefix,
+        applyCardChoice: applyCardChoice,
         packsToText: packsToText,
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,
