@@ -270,7 +270,11 @@ class CubeWebService {
         if (entries.isEmpty()) return CubeResult.error("Paste at least one card name, one per line.")
 
         val fetched = mutableListOf<ScryfallCard>()
-        for (chunk in entries.map { it.name }.distinct().chunked(COLLECTION_BATCH)) {
+        // Look cards up by their front face: Scryfall's collection lookup
+        // matches a single face, not the full "A // B" name. matchEntries
+        // ties the full-name cards Scryfall returns back to the entries.
+        val requestNames = entries.map { MtgNames.requestName(it.name) }.filter { it.isNotEmpty() }.distinct()
+        for (chunk in requestNames.chunked(COLLECTION_BATCH)) {
             when (val batch = fetchCollection(chunk)) {
                 is CubeResult.Failure -> return CubeResult.error(batch.error)
                 is CubeResult.Success -> fetched.addAll(batch.value)
