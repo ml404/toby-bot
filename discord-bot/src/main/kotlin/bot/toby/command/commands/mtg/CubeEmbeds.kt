@@ -21,6 +21,9 @@ internal object CubeEmbeds {
 
     private const val AUTHOR = "🃏  Cube workshop" // 🃏
 
+    /** Keep the "couldn't find" field under Discord's 1024-char field cap. */
+    private const val NOT_FOUND_LIMIT = 1000
+
     fun asFanEmbed(typeCount: Int, cubeSize: Int, packSize: Int, value: Double): MessageEmbed =
         embed(color = OK_COLOR) {
             setAuthor(AUTHOR)
@@ -40,11 +43,13 @@ internal object CubeEmbeds {
         packSize: Int,
         counts: Map<CardCategory, Int>,
         distribution: Map<CardCategory, Double>,
+        notFound: List<String> = emptyList(),
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Cube preview")
         setDescription("Query `$query` → **$poolSize** cards, as-fan per **$packSize**-card pack.")
         field("Distribution", distributionTable(counts, distribution), inline = false)
+        addNotFoundField(notFound)
     }
 
     /** Summary of a generated set of packs. */
@@ -57,6 +62,7 @@ internal object CubeEmbeds {
         selected: List<CubeCard>,
         counts: Map<CardCategory, Int>,
         distribution: Map<CardCategory, Double>,
+        notFound: List<String> = emptyList(),
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Generated $packCount packs of $packSize")
@@ -65,7 +71,24 @@ internal object CubeEmbeds {
                 if (balanced) "\nAs-fan balanced across colours, colourless and lands." else ""
         )
         field("As-fan per pack", distributionTable(counts, distribution), inline = false)
+        addNotFoundField(notFound)
         setFooter("Full pack lists attached as a text file.")
+    }
+
+    /**
+     * Adds a "couldn't find" field listing names Scryfall didn't resolve, so
+     * a saved cube with a typo (or a card Scryfall doesn't know) is visible
+     * rather than silently dropped. Stays within the 1024-char field limit.
+     */
+    private fun net.dv8tion.jda.api.EmbedBuilder.addNotFoundField(notFound: List<String>) {
+        if (notFound.isEmpty()) return
+        val joined = notFound.joinToString(", ")
+        val value = if (joined.length <= NOT_FOUND_LIMIT) {
+            joined
+        } else {
+            joined.take(NOT_FOUND_LIMIT).substringBeforeLast(", ") + " … (+more)"
+        }
+        field("⚠️ Couldn't find ${notFound.size}", value, inline = false)
     }
 
     fun errorEmbed(message: String): MessageEmbed = embed(color = ERROR_COLOR) {

@@ -190,6 +190,20 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `previewList passes a truncation note through to the response`() {
+        val data = PreviewData(
+            query = "your list", poolSize = 750, packSize = 15, groups = emptyList(),
+            notFound = emptyList(), note = "Your list resolved to 900 cards; only the first 750 were used.",
+        )
+        every { service.previewList(any(), any()) } returns CubeResult.ok(data)
+
+        val response = controller.previewList(CubeListPreviewRequest("big list", 15))
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("Your list resolved to 900 cards; only the first 750 were used.", response.body!!.note)
+    }
+
+    @Test
     fun `previewList returns 400 when the list resolves to nothing`() {
         every { service.previewList(any(), any()) } returns CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
         val response = controller.previewList(CubeListPreviewRequest("asdf\nqwer", 15))

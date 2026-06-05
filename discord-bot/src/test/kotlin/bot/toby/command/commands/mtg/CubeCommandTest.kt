@@ -267,6 +267,28 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
+    fun `generate from a saved cube reports cards it could not resolve`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Bolt\nNonexistent Card")
+        every { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Bolt", setOf(MtgColor.RED))),
+        )
+
+        run()
+
+        val warning = slot.captured.fields.firstOrNull { it.name?.contains("Couldn't find") == true }
+        assertTrue(warning != null, "expected a 'couldn't find' field on the embed")
+        assertTrue(warning!!.value!!.contains("Nonexistent Card"))
+    }
+
+    @Test
     fun `preview from a saved cube shows its distribution`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
