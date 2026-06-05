@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Monthly board posts a frozen midnight-boundary snapshot of last month",
+    "summary": "## Problem",
+    "emoji": "🔨",
+    "prNumber": 610
+  },
+  {
+    "date": "June 2026",
     "title": "Per-guild configurable UTC hour for daily cron jobs",
     "summary": "## Background",
     "emoji": "🎟️",
