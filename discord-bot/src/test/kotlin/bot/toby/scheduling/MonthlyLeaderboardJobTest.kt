@@ -117,7 +117,7 @@ class MonthlyLeaderboardJobTest {
 
         verify(exactly = 0) { userService.listGuildUsers(any()) }
         verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 0) { snapshotService.upsert(any()) }
+        verify(exactly = 0) { snapshotService.upsertIfMissing(any()) }
     }
 
     @Test
@@ -127,7 +127,7 @@ class MonthlyLeaderboardJobTest {
         job.postMonthlyLeaderboard()
 
         verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 0) { snapshotService.upsert(any()) }
+        verify(exactly = 0) { snapshotService.upsertIfMissing(any()) }
     }
 
     @Test
@@ -144,7 +144,7 @@ class MonthlyLeaderboardJobTest {
         every { configService.getConfigByName(any(), guildId.toString()) } returns null
 
         val snapshots = mutableListOf<MonthlyCreditSnapshotDto>()
-        every { snapshotService.upsert(capture(snapshots)) } answers { firstArg() }
+        every { snapshotService.upsertIfMissing(capture(snapshots)) } answers { firstArg() }
 
         job.postMonthlyLeaderboard()
 
@@ -356,7 +356,7 @@ class MonthlyLeaderboardJobTest {
         every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns false
 
         val snapshots = mutableListOf<MonthlyCreditSnapshotDto>()
-        every { snapshotService.upsert(capture(snapshots)) } answers { firstArg() }
+        every { snapshotService.upsertIfMissing(capture(snapshots)) } answers { firstArg() }
 
         job.postMonthlyLeaderboard()
 
