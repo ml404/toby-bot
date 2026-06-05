@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import common.mtg.AsFan
 import common.mtg.CardCategory
+import common.mtg.CardListParser
 import common.mtg.CubeCard
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
@@ -250,23 +251,12 @@ class CubeWebService {
     }
 
     /**
-     * Parses a pasted decklist into (name, count) entries. Accepts one card
-     * per line, with an optional leading quantity (`3 Forest`, `3x Forest`)
-     * and an optional trailing set/collector tag (`Bolt (2X2) 117`). Blank
-     * lines and `#` / `//` comments are ignored.
+     * Parses a pasted decklist into (name, count) entries. Delegates to the
+     * shared [CardListParser] so the web tool and the Discord command agree
+     * on the accepted format.
      */
     fun parseList(text: String): List<ListEntry> =
-        text.lineSequence().mapNotNull { raw ->
-            var line = raw.trim()
-            if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) return@mapNotNull null
-            var count = 1
-            QUANTITY_PREFIX.find(line)?.let { m ->
-                count = m.groupValues[1].toIntOrNull()?.coerceIn(1, MAX_PER_NAME) ?: 1
-                line = line.substring(m.range.last + 1).trim()
-            }
-            line = line.replace(SET_SUFFIX, "").trim()
-            if (line.isEmpty()) null else ListEntry(line, count)
-        }.toList()
+        CardListParser.parse(text).map { ListEntry(it.name, it.count) }
 
     /**
      * Resolves a pasted list into a card pool by looking the names up via
@@ -329,9 +319,6 @@ class CubeWebService {
         const val MAX_CARDS = 750
         const val MAX_PAGES = 10
         const val COLLECTION_BATCH = 75
-        const val MAX_PER_NAME = 100
-        val QUANTITY_PREFIX = Regex("^(\\d+)[xX]?\\s+")
-        val SET_SUFFIX = Regex("\\s+\\([^)]*\\).*$")
     }
 }
 

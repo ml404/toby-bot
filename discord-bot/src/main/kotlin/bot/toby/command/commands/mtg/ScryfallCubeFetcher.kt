@@ -1,5 +1,7 @@
 package bot.toby.command.commands.mtg
 
+import com.google.gson.Gson
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import common.logging.DiscordLogger
@@ -7,6 +9,8 @@ import common.mtg.CubeCard
 import common.mtg.MtgColor
 import org.apache.http.client.HttpClient
 import org.apache.http.client.methods.HttpGet
+import org.apache.http.client.methods.HttpPost
+import org.apache.http.entity.StringEntity
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
 import org.springframework.stereotype.Component
@@ -30,6 +34,7 @@ import java.nio.charset.StandardCharsets
 class ScryfallCubeFetcher {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
+    private val gson: Gson = Gson()
 
     sealed interface Result {
         data class Success(val cards: List<CubeCard>) : Result
@@ -88,6 +93,61 @@ class ScryfallCubeFetcher {
     }
 
     /**
+     * Resolves an explicit list of card names (e.g. a user's saved cube)
+     * into cards via Scryfall's `/cards/collection` endpoint, batched at 75
+     * identifiers per request. Returns the resolved cards (one per found
+     * name, de-duplicated by the caller's list); names Scryfall doesn't know
+     * are simply absent from the result. Creates a default client; the
+     * overload taking one is the test seam.
+     */
+    fun fetchByNames(names: List<String>): Result = fetchByNames(names, HttpClients.createDefault())
+
+    fun fetchByNames(names: List<String>, httpClient: HttpClient): Result {
+        val unique = names.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        if (unique.isEmpty()) return Result.Failure("That cube has no card names in it.")
+
+        val cards = mutableListOf<CubeCard>()
+        try {
+            unique.chunked(COLLECTION_BATCH).forEachIndexed { index, chunk ->
+                if (index > 0) Thread.sleep(SCRYFALL_DELAY_MS) // be polite to the API
+                val post = HttpPost(COLLECTION_ENDPOINT).apply {
+                    setHeader("Content-Type", "application/json")
+                    entity = StringEntity(collectionBody(chunk), StandardCharsets.UTF_8)
+                }
+                val response = httpClient.execute(post)
+                val status = response.statusLine.statusCode
+                if (status != 200) {
+                    EntityUtils.consume(response.entity)
+                    return Result.Failure("Scryfall returned HTTP $status resolving your cube.")
+                }
+                val root = JsonParser.parseReader(InputStreamReader(response.entity.content)).asJsonObject
+                EntityUtils.consume(response.entity)
+                root.getAsJsonArray("data")?.forEach { element ->
+                    parseCard(element.asJsonObject)?.let(cards::add)
+                }
+            }
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            return Result.Failure("Lookup interrupted.")
+        } catch (e: Exception) {
+            logger.error("Scryfall collection lookup failed: $e")
+            return Result.Failure("Couldn't reach Scryfall: ${e.message}")
+        }
+
+        if (cards.isEmpty()) return Result.Failure("None of those card names matched Scryfall.")
+        return Result.Success(cards)
+    }
+
+    /** Builds the `{"identifiers":[{"name":...}]}` body, escaping names via Gson. */
+    private fun collectionBody(names: List<String>): String {
+        val identifiers = JsonArray()
+        names.forEach { name ->
+            identifiers.add(JsonObject().apply { addProperty("name", name) })
+        }
+        return JsonObject().apply { add("identifiers", identifiers) }.let(gson::toJson)
+    }
+
+    /**
      * Maps a single Scryfall card object to a [CubeCard]. Returns null for
      * entries without a name (which we can't meaningfully draft). Colour
      * comes from `color_identity` — the cube-sorting convention — and land
@@ -116,8 +176,10 @@ class ScryfallCubeFetcher {
 
     companion object {
         private const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
+        private const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         const val DEFAULT_MAX_CARDS = 750
         private const val MAX_PAGES = 10
+        private const val COLLECTION_BATCH = 75
         private const val SCRYFALL_DELAY_MS = 100L
     }
 }
