@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Surface dropped cards: Discord \"couldn't find\" + web pool-cap note",
+    "summary": "The remaining transparency items from the audit (\"do all\").",
+    "emoji": "✨",
+    "prNumber": 623
+  },
+  {
+    "date": "June 2026",
     "title": "Guard pack generation against an Int-overflow OOM (web DoS)",
     "summary": "Another from the deeper audit — a more serious one: an **OOM / DoS** in pack generation reachable from the web.",
     "emoji": "✨",
