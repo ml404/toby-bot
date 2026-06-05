@@ -320,6 +320,93 @@
         }).then(function (r) { return r.json(); });
     }
 
+    // --- Deep links, card count, in-progress spinner -------------------
+
+    /** A shareable URL that pre-loads a Scryfall query (no login needed). */
+    function queryShareUrl(origin, query) {
+        return (origin || '') + '/cube?q=' + encodeURIComponent(query);
+    }
+
+    /** Reads ?q= / ?list= prefill params from a URL search string. */
+    function readUrlPrefill(search) {
+        const params = new URLSearchParams(search || '');
+        const out = {};
+        const q = params.get('q');
+        const list = params.get('list');
+        if (q) out.q = q;
+        if (list) out.list = list;
+        return out;
+    }
+
+    /** Counts the card lines in a pasted list (skips blanks and comments). */
+    function countCards(text) {
+        return (text || '').split('\n')
+            .map(function (line) { return line.trim(); })
+            .filter(function (line) {
+                return line !== '' && line.indexOf('#') !== 0 && line.indexOf('//') !== 0;
+            })
+            .length;
+    }
+
+    function setSpinner(doc, name, on) {
+        const el = doc.querySelector('[data-spinner="' + name + '"]');
+        if (el) el.hidden = !on;
+    }
+
+    /** Live "N cards" counter + a clear button for the paste box. */
+    function wireCardCount(doc) {
+        const textarea = doc.querySelector('textarea[name="list"]');
+        const count = doc.querySelector('[data-card-count]');
+        if (!textarea || !count) return;
+        function update() {
+            const n = countCards(textarea.value);
+            count.textContent = n + (n === 1 ? ' card' : ' cards');
+        }
+        textarea.addEventListener('input', update);
+        update(); // initial (a shared/prefilled list arrives populated)
+        const clear = doc.querySelector('[data-clear-list]');
+        if (clear) clear.addEventListener('click', function () {
+            textarea.value = '';
+            update();
+            textarea.focus();
+        });
+    }
+
+    /** "Copy link" for the current Scryfall search → /cube?q=... */
+    function wireCopyQuery(doc) {
+        const btn = doc.querySelector('[data-copy-query]');
+        const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
+        if (!btn || !input) return;
+        const label = btn.textContent;
+        btn.addEventListener('click', function () {
+            const q = (input.value || '').trim();
+            if (!q) { btn.textContent = 'Enter a search first'; root.setTimeout(function () { btn.textContent = label; }, 1500); return; }
+            const url = queryShareUrl(root.location && root.location.origin, q);
+            if (root.navigator && root.navigator.clipboard) {
+                root.navigator.clipboard.writeText(url).then(
+                    function () { btn.textContent = '✓ Link copied'; root.setTimeout(function () { btn.textContent = label; }, 2000); },
+                    function () { btn.textContent = url; }
+                );
+            } else {
+                btn.textContent = url;
+            }
+        });
+    }
+
+    /** Pre-loads the source from ?q= / ?list= so a shared link lands ready. */
+    function prefillFromUrl(doc) {
+        const pre = readUrlPrefill(root.location && root.location.search);
+        if (pre.q != null) {
+            const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
+            if (input) input.value = pre.q;
+            setSource(doc, 'search');
+        } else if (pre.list != null) {
+            const textarea = doc.querySelector('textarea[name="list"]');
+            if (textarea) textarea.value = pre.list;
+            setSource(doc, 'list');
+        }
+    }
+
     /** Disables the form's submit button while a request is in flight. */
     function withBusy(form, busy) {
         const btn = form.querySelector('button[type="submit"]');
@@ -678,6 +765,7 @@
             setStatus(status, src.mode === 'list' ? 'Resolving your list…' : 'Fetching cards from Scryfall…');
             hide(groups); hide(notFound);
             withBusy(form, true);
+            setSpinner(doc, 'preview', true);
             const request = src.mode === 'list'
                 ? postJson('/cube/api/preview', { list: src.list, packSize: Number(packSize) })
                 : getJson(previewUrl({ query: src.query, packSize: packSize }));
@@ -691,7 +779,7 @@
                     renderNotFound(notFound, json.notFound);
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
-                .then(function () { withBusy(form, false); });
+                .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
         });
     }
 
@@ -734,6 +822,7 @@
             setStatus(status, src.mode === 'list' ? 'Resolving your list and dealing packs…' : 'Drawing cards and dealing packs…');
             hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
             withBusy(form, true);
+            setSpinner(doc, 'generate', true);
             const request = src.mode === 'list'
                 ? postJson('/cube/api/generate', { list: src.list, packs: Number(packs), packSize: Number(packSize), balanced: balanced })
                 : getJson(generateUrl({ query: src.query, packs: packs, packSize: packSize, balanced: balanced }));
@@ -755,7 +844,7 @@
                     renderNotFound(notFound, json.notFound);
                 })
                 .catch(function () { setStatus(status, 'Something went wrong building packs.'); })
-                .then(function () { withBusy(form, false); });
+                .then(function () { withBusy(form, false); setSpinner(doc, 'generate', false); });
         });
     }
 
@@ -894,8 +983,12 @@
         wireSavedLists(doc);
         wireShare(doc);
         wireCardAutocomplete(doc);
-        // A shared cube arrives pre-loaded in the list box — show that source.
+        prefillFromUrl(doc);
+        // A shared cube arrives pre-loaded in the list box — show that source
+        // (this wins over a ?q= / ?list= prefill).
         if (doc.querySelector('[data-shared-banner]')) setSource(doc, 'list');
+        wireCardCount(doc);
+        wireCopyQuery(doc);
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
@@ -916,6 +1009,9 @@
         zoomPosition: zoomPosition,
         deleteListUrl: deleteListUrl,
         absoluteUrl: absoluteUrl,
+        queryShareUrl: queryShareUrl,
+        readUrlPrefill: readUrlPrefill,
+        countCards: countCards,
         scryfallAutocompleteUrl: scryfallAutocompleteUrl,
         currentLineInfo: currentLineInfo,
         splitQuantityPrefix: splitQuantityPrefix,

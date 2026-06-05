@@ -242,6 +242,36 @@ describe('absoluteUrl', () => {
     });
 });
 
+describe('queryShareUrl', () => {
+    test('builds a ?q= deep link, encoding the query', () => {
+        expect(Cube.queryShareUrl('https://toby-bot.co.uk', 't:dragon c:r'))
+            .toBe('https://toby-bot.co.uk/cube?q=t%3Adragon%20c%3Ar');
+    });
+});
+
+describe('readUrlPrefill', () => {
+    test('reads a ?q= query param', () => {
+        expect(Cube.readUrlPrefill('?q=set%3Avow')).toEqual({ q: 'set:vow' });
+    });
+    test('reads a ?list= param', () => {
+        expect(Cube.readUrlPrefill('?list=Bolt%0AForest')).toEqual({ list: 'Bolt\nForest' });
+    });
+    test('is empty when neither is present', () => {
+        expect(Cube.readUrlPrefill('?foo=bar')).toEqual({});
+        expect(Cube.readUrlPrefill('')).toEqual({});
+    });
+});
+
+describe('countCards', () => {
+    test('counts non-blank, non-comment lines', () => {
+        expect(Cube.countCards('Bolt\nForest\n\n# comment\n// also\n3 Island')).toBe(3);
+    });
+    test('is zero for empty or comment-only text', () => {
+        expect(Cube.countCards('')).toBe(0);
+        expect(Cube.countCards('# just a note\n\n')).toBe(0);
+    });
+});
+
 describe('card-name autocomplete helpers', () => {
     test('scryfallAutocompleteUrl encodes the partial query', () => {
         expect(Cube.scryfallAutocompleteUrl('lightn')).toBe('https://api.scryfall.com/cards/autocomplete?q=lightn');

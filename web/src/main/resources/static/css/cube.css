@@ -512,6 +512,12 @@ button:disabled {
     cursor: progress;
 }
 
+.cube-statusline {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
 .cube-status {
     margin: var(--space-2) 0;
     color: var(--text-muted);
@@ -520,6 +526,54 @@ button:disabled {
 
 .cube-status:empty {
     display: none;
+}
+
+/* In-progress spinner shown next to the status while Scryfall is fetched. */
+.cube-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border-strong);
+    border-top-color: var(--mtg-gold);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: cube-spin 0.7s linear infinite;
+}
+
+.cube-spinner[hidden] {
+    display: none;
+}
+
+@keyframes cube-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Card-count + clear row under the paste box, and the "copy link" button. */
+.cube-list-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-top: 6px;
+}
+
+.cube-card-count {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+}
+
+.cube-link-btn {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: var(--mtg-gold);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.cube-link-btn:hover {
+    color: var(--accent-light);
 }
 
 .cube-empty {
