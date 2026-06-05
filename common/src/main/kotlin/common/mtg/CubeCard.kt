@@ -62,4 +62,18 @@ data class CubeCard(
             colors.size >= 2 -> CardCategory.MULTICOLOR
             else -> CardCategory.ofColor(colors.first())
         }
+
+    companion object {
+        /**
+         * Whether a Scryfall `type_line` denotes a land, judged by the
+         * **front face** only. A modal/transform card's combined type line
+         * (e.g. "Legendary Enchantment // Legendary Land" for
+         * Legion's Landing) mentions "Land" on the back, but the card is
+         * drafted and cast as its front face — so it shouldn't be bucketed
+         * as a land. Only when the front face itself is a land (e.g.
+         * "Land // Creature" for Westvale Abbey) is it a land.
+         */
+        fun isLandType(typeLine: String): Boolean =
+            typeLine.substringBefore("//").contains("Land", ignoreCase = true)
+    }
 }

@@ -62,6 +62,25 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard buckets a modal land-back card by its front face, not as a land`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Legion's Landing // Adanto, the First Fort","color_identity":["W"],
+               "type_line":"Legendary Enchantment // Legendary Land"}""")
+        )!!
+        assertEquals(false, card.isLand)
+        assertEquals(CardCategory.WHITE, card.category)
+    }
+
+    @Test
+    fun `parseCard keeps a front-face land as a land`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Westvale Abbey // Ormendahl, Profane Prince","color_identity":[],
+               "type_line":"Land // Creature — Demon"}""")
+        )!!
+        assertEquals(CardCategory.LAND, card.category)
+    }
+
+    @Test
     fun `parseCard flags lands from the type line`() {
         val card = fetcher.parseCard(
             obj("""{"name":"Sacred Foundry","color_identity":["R","W"],"type_line":"Land — Mountain Plains"}""")

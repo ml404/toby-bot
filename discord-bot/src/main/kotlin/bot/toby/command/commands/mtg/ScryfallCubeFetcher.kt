@@ -163,7 +163,7 @@ class ScryfallCubeFetcher {
         return CubeCard(
             name = name,
             colors = MtgColor.parse(identity),
-            isLand = typeLine.contains("Land", ignoreCase = true),
+            isLand = CubeCard.isLandType(typeLine),
             typeLine = typeLine,
             manaValue = manaValue,
             imageUrl = imageUrl(card),
