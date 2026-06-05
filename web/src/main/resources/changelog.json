@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add /cube saved subcommand to list saved cubes in Discord",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 626
+  },
+  {
+    "date": "June 2026",
     "title": "Web cube UX: shareable query links, live card count, loading spinner",
     "summary": "First of two UX-polish PRs (the other adds `/cube saved` in Discord). Closes three of the usability gaps from the review.",
     "emoji": "✨",
