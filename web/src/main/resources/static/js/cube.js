@@ -36,6 +36,19 @@
             ' of these in a ' + packSize + '-card pack.';
     }
 
+    /**
+     * The one-line "stat line" shown under the hover-zoom: the type line
+     * plus mana value (omitted for 0-cost cards like lands). e.g.
+     * "Instant · MV 1", or just "Basic Land — Forest".
+     */
+    function cardStatline(typeLine, manaValue) {
+        const parts = [];
+        if (typeLine) parts.push(typeLine);
+        const mv = Number(manaValue);
+        if (mv > 0) parts.push('MV ' + (Number.isInteger(mv) ? mv : mv));
+        return parts.join(' · ');
+    }
+
     /** Exact-name Scryfall search for a card, so the link opens that card. */
     function scryfallCardUrl(name) {
         return 'https://scryfall.com/search?q=' + encodeURIComponent('!"' + name + '"');
@@ -87,8 +100,9 @@
         a.target = '_blank';
         a.rel = 'noopener';
         a.title = card.name;
-        // The larger image drives the hover-to-enlarge preview (see wireZoom).
+        // The larger image + stat line drive the hover-to-enlarge preview.
         if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
+        a.setAttribute('data-statline', cardStatline(card.typeLine, card.manaValue));
         if (card.imageUrl) {
             const img = document.createElement('img');
             img.className = 'cube-card-img';
@@ -420,18 +434,24 @@
      */
     function wireZoom(doc) {
         if (!doc.body) return;
-        const overlay = doc.createElement('img');
+        const overlay = doc.createElement('figure');
         overlay.className = 'cube-zoom';
-        overlay.alt = '';
         overlay.hidden = true;
         overlay.setAttribute('aria-hidden', 'true');
+        const overlayImg = doc.createElement('img');
+        overlayImg.className = 'cube-zoom-img';
+        overlayImg.alt = '';
+        const overlayStat = doc.createElement('figcaption');
+        overlayStat.className = 'cube-zoom-stat';
+        overlay.appendChild(overlayImg);
+        overlay.appendChild(overlayStat);
         doc.body.appendChild(overlay);
 
         const view = doc.defaultView || { innerWidth: 1024, innerHeight: 768 };
 
         function place(e) {
             const w = overlay.offsetWidth || 240;
-            const h = overlay.offsetHeight || 340;
+            const h = overlay.offsetHeight || 360;
             const pos = zoomPosition(e.clientX, e.clientY, w, h, view.innerWidth, view.innerHeight);
             overlay.style.left = pos.left + 'px';
             overlay.style.top = pos.top + 'px';
@@ -444,7 +464,10 @@
         doc.addEventListener('mouseover', function (e) {
             const card = cardFrom(e.target);
             if (!card) return;
-            overlay.src = card.getAttribute('data-large');
+            overlayImg.src = card.getAttribute('data-large');
+            const stat = card.getAttribute('data-statline') || '';
+            overlayStat.textContent = stat;
+            overlayStat.hidden = stat === '';
             overlay.hidden = false;
             place(e);
         });
@@ -457,7 +480,7 @@
             // Ignore moves between the card's own children.
             if (cardFrom(e.relatedTarget) === card) return;
             overlay.hidden = true;
-            overlay.removeAttribute('src');
+            overlayImg.removeAttribute('src');
         });
     }
 
@@ -477,6 +500,7 @@
         asfanSentence: asfanSentence,
         categoryColor: categoryColor,
         scryfallCardUrl: scryfallCardUrl,
+        cardStatline: cardStatline,
         tabIdFromHash: tabIdFromHash,
         zoomPosition: zoomPosition,
         packsToText: packsToText,

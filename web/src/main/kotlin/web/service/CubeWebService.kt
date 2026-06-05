@@ -73,7 +73,7 @@ class CubeWebService {
                             packSize = packSize,
                             balanced = balanced,
                             packs = packs.value.packs.map { pack ->
-                                pack.map { viewByName[it.name] ?: CardView(it.name, null, null) }
+                                pack.map { viewByName[it.name] ?: CardView(it.name, null, null, it.typeLine, it.manaValue) }
                             },
                             distribution = distribution(packs.value.cards, packSize),
                         )
@@ -233,15 +233,22 @@ data class CategoryAsFan(val category: String, val count: Int, val asFan: Double
 
 /** A card paired with its Scryfall images, kept only inside the service. */
 data class ScryfallCard(val card: CubeCard, val imageUrl: String?, val imageUrlLarge: String?) {
-    fun toView(): CardView = CardView(card.name, imageUrl, imageUrlLarge)
+    fun toView(): CardView = CardView(card.name, imageUrl, imageUrlLarge, card.typeLine, card.manaValue)
 }
 
 /**
- * A single card the page renders: display name, small thumbnail, and the
- * larger image used for the hover-to-enlarge preview. Either image may be
- * null when Scryfall has none.
+ * A single card the page renders: display name, small thumbnail, the larger
+ * image used for the hover-to-enlarge preview, and the stat line (type +
+ * mana value) shown under that preview. Either image may be null when
+ * Scryfall has none.
  */
-data class CardView(val name: String, val imageUrl: String?, val imageUrlLarge: String?)
+data class CardView(
+    val name: String,
+    val imageUrl: String?,
+    val imageUrlLarge: String?,
+    val typeLine: String,
+    val manaValue: Double,
+)
 
 /** A colour/land bucket plus the actual cards it contains. */
 data class CategoryGroup(

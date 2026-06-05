@@ -77,10 +77,11 @@ class CubeWebServiceTest {
 
     @Test
     fun `groups lists the actual cards per category, deduped, alphabetised, with thumbnails`() {
+        val bolt = CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0)
         val pool = listOf(
             ScryfallCard(CubeCard("Shock", setOf(MtgColor.RED)), "https://img/shock.jpg", "https://img/shock-lg.jpg"),
-            ScryfallCard(CubeCard("Bolt", setOf(MtgColor.RED)), "https://img/bolt.jpg", "https://img/bolt-lg.jpg"),
-            ScryfallCard(CubeCard("Bolt", setOf(MtgColor.RED)), "https://img/bolt.jpg", "https://img/bolt-lg.jpg"),
+            ScryfallCard(bolt, "https://img/bolt.jpg", "https://img/bolt-lg.jpg"),
+            ScryfallCard(bolt, "https://img/bolt.jpg", "https://img/bolt-lg.jpg"),
             ScryfallCard(CubeCard("Swords", setOf(MtgColor.WHITE)), null, null),
             ScryfallCard(CubeCard("Wastes", isLand = true), null, null),
         )
@@ -91,6 +92,9 @@ class CubeWebServiceTest {
         assertEquals(listOf("Bolt", "Shock"), red.cards.map { it.name }) // deduped + sorted
         assertEquals("https://img/bolt.jpg", red.cards.first().imageUrl)
         assertEquals("https://img/bolt-lg.jpg", red.cards.first().imageUrlLarge)
+        // Stat line fields carry through for the hover preview.
+        assertEquals("Instant", red.cards.first().typeLine)
+        assertEquals(1.0, red.cards.first().manaValue, 1e-9)
         assertEquals(3, red.count) // count still includes the duplicate
         // 3 red / 5 pool × 5 = 3.0
         assertEquals(3.0, red.asFan, 1e-9)

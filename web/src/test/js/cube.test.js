@@ -33,6 +33,21 @@ describe('categoryColor', () => {
     });
 });
 
+describe('cardStatline', () => {
+    test('joins type line and mana value', () => {
+        expect(Cube.cardStatline('Instant', 1)).toBe('Instant · MV 1');
+        expect(Cube.cardStatline('Creature — Goblin', 2)).toBe('Creature — Goblin · MV 2');
+    });
+
+    test('omits mana value for 0-cost cards like lands', () => {
+        expect(Cube.cardStatline('Basic Land — Forest', 0)).toBe('Basic Land — Forest');
+    });
+
+    test('handles a missing type line', () => {
+        expect(Cube.cardStatline('', 3)).toBe('MV 3');
+    });
+});
+
 describe('scryfallCardUrl', () => {
     test('builds an exact-name Scryfall search link', () => {
         expect(Cube.scryfallCardUrl('Lightning Bolt'))
@@ -97,8 +112,8 @@ describe('renderGroups (preview shows the actual cards as thumbnails)', () => {
         Cube.renderGroups(container, [
             {
                 category: 'Red', count: 2, asFan: 2.0, cards: [
-                    { name: 'Bolt', imageUrl: 'https://img/bolt.jpg', imageUrlLarge: 'https://img/bolt-lg.jpg' },
-                    { name: 'Shock', imageUrl: null, imageUrlLarge: null },
+                    { name: 'Bolt', imageUrl: 'https://img/bolt.jpg', imageUrlLarge: 'https://img/bolt-lg.jpg', typeLine: 'Instant', manaValue: 1 },
+                    { name: 'Shock', imageUrl: null, imageUrlLarge: null, typeLine: 'Instant', manaValue: 1 },
                 ],
             },
             {
@@ -117,6 +132,7 @@ describe('renderGroups (preview shows the actual cards as thumbnails)', () => {
         expect(img.getAttribute('loading')).toBe('lazy');
         expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
         expect(tiles[0].getAttribute('data-large')).toBe('https://img/bolt-lg.jpg');
+        expect(tiles[0].getAttribute('data-statline')).toBe('Instant · MV 1');
         expect(tiles[0].querySelector('.cube-card-name').textContent).toBe('Bolt');
         // Second card has no image → placeholder, no <img>, no zoom target.
         expect(tiles[1].querySelector('img')).toBeNull();
@@ -175,18 +191,20 @@ describe('zoomPosition', () => {
 });
 
 describe('hover-to-enlarge', () => {
-    test('hovering a card shows the large image; leaving hides it', () => {
+    test('hovering a card shows the large image + stat line; leaving hides it', () => {
         // cube.js wires the jsdom document on import, creating the overlay.
         const card = document.createElement('a');
         card.className = 'cube-card';
         card.setAttribute('data-large', 'https://img/big.jpg');
+        card.setAttribute('data-statline', 'Instant · MV 1');
         document.body.appendChild(card);
 
         card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 40, clientY: 40 }));
         const overlay = document.querySelector('.cube-zoom');
         expect(overlay).not.toBeNull();
         expect(overlay.hidden).toBe(false);
-        expect(overlay.getAttribute('src')).toBe('https://img/big.jpg');
+        expect(overlay.querySelector('.cube-zoom-img').getAttribute('src')).toBe('https://img/big.jpg');
+        expect(overlay.querySelector('.cube-zoom-stat').textContent).toBe('Instant · MV 1');
 
         card.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
         expect(overlay.hidden).toBe(true);
