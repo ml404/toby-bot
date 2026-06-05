@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Resolve double-faced cards by either face in pasted cube lists",
+    "summary": "Fixes double-faced / transform cards not resolving from a pasted list when you write just one face.",
+    "emoji": "✨",
+    "prNumber": 619
+  },
+  {
+    "date": "June 2026",
     "title": "Add shareable cube links (/cube/c/&lt;token&gt;)",
     "summary": "Second of the two follow-ups (the first, #617, adds card image links to the Discord output). Per the choice of \"server-stored short link\".",
     "emoji": "✨",
