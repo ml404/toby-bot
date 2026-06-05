@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add MTG cube tooling: as-fan calculator and randomised pack generator",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 612
+  },
+  {
+    "date": "June 2026",
     "title": "Raise coverage to 85% line and pin a regression floor",
     "summary": "## Goal",
     "emoji": "🎟️",
