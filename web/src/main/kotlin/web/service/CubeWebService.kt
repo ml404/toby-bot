@@ -62,7 +62,7 @@ class CubeWebService {
             is CubeResult.Failure -> CubeResult.error(pool.error)
             is CubeResult.Success -> {
                 val cards = pool.value.map { it.card }
-                val imageByName = pool.value.associate { it.card.name to it.imageUrl }
+                val viewByName = pool.value.associate { it.card.name to it.toView() }
                 when (val packs = PackGenerator(Random.Default).generate(cards, packCount, packSize, balanced)) {
                     is PackGenerator.Result.Failure -> CubeResult.error(packs.reason)
                     is PackGenerator.Result.Success -> CubeResult.ok(
@@ -73,7 +73,7 @@ class CubeWebService {
                             packSize = packSize,
                             balanced = balanced,
                             packs = packs.value.packs.map { pack ->
-                                pack.map { CardView(it.name, imageByName[it.name]) }
+                                pack.map { viewByName[it.name] ?: CardView(it.name, null, null) }
                             },
                             distribution = distribution(packs.value.cards, packSize),
                         )
@@ -110,7 +110,7 @@ class CubeWebService {
                 val cards = bucket
                     .distinctBy { it.card.name }
                     .sortedBy { it.card.name }
-                    .map { CardView(it.card.name, it.imageUrl) }
+                    .map { it.toView() }
                 CategoryGroup(
                     category = cat.displayName,
                     count = bucket.size,
@@ -143,17 +143,23 @@ class CubeWebService {
                     typeLine = typeLine,
                     manaValue = node.path("cmc").asDouble(0.0),
                 ),
-                imageUrl = thumbnailUrl(node),
+                imageUrl = imageOf(node, "small"),
+                imageUrlLarge = imageOf(node, "normal"),
             )
         }
     }
 
-    /** The small (146×204) thumbnail for a card, or null if Scryfall has none. */
-    private fun thumbnailUrl(node: JsonNode): String? {
-        node.path("image_uris").path("small").asText("").takeIf { it.isNotBlank() }?.let { return it }
+    /**
+     * A card image at the given Scryfall [size] (`small` ≈ 146×204 thumb,
+     * `normal` ≈ 488×680 for the hover zoom), or null if Scryfall has none.
+     * Single-faced cards carry `image_uris` directly; double-faced cards
+     * put images on the first face instead.
+     */
+    private fun imageOf(node: JsonNode, size: String): String? {
+        node.path("image_uris").path(size).asText("").takeIf { it.isNotBlank() }?.let { return it }
         val faces = node.path("card_faces")
         if (faces.isArray && faces.size() > 0) {
-            faces[0].path("image_uris").path("small").asText("").takeIf { it.isNotBlank() }?.let { return it }
+            faces[0].path("image_uris").path(size).asText("").takeIf { it.isNotBlank() }?.let { return it }
         }
         return null
     }
@@ -225,11 +231,17 @@ sealed interface CubeResult<out T> {
 
 data class CategoryAsFan(val category: String, val count: Int, val asFan: Double)
 
-/** A card paired with its Scryfall thumbnail, kept only inside the service. */
-data class ScryfallCard(val card: CubeCard, val imageUrl: String?)
+/** A card paired with its Scryfall images, kept only inside the service. */
+data class ScryfallCard(val card: CubeCard, val imageUrl: String?, val imageUrlLarge: String?) {
+    fun toView(): CardView = CardView(card.name, imageUrl, imageUrlLarge)
+}
 
-/** A single card the page renders: display name + thumbnail (may be null). */
-data class CardView(val name: String, val imageUrl: String?)
+/**
+ * A single card the page renders: display name, small thumbnail, and the
+ * larger image used for the hover-to-enlarge preview. Either image may be
+ * null when Scryfall has none.
+ */
+data class CardView(val name: String, val imageUrl: String?, val imageUrlLarge: String?)
 
 /** A colour/land bucket plus the actual cards it contains. */
 data class CategoryGroup(

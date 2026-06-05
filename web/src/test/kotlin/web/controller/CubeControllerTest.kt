@@ -73,8 +73,8 @@ class CubeControllerTest {
                 CategoryGroup(
                     "White", 50, 2.7,
                     listOf(
-                        CardView("Sigarda's Splendor", "https://img/sigarda.jpg"),
-                        CardView("Sungold Sentinel", null),
+                        CardView("Sigarda's Splendor", "https://img/sigarda.jpg", "https://img/sigarda-lg.jpg"),
+                        CardView("Sungold Sentinel", null, null),
                     ),
                 )
             ),
@@ -106,8 +106,8 @@ class CubeControllerTest {
         val data = GenerateData(
             query = "cube:vintage", poolSize = 540, packCount = 24, packSize = 15, balanced = true,
             packs = listOf(
-                listOf(CardView("Bolt", "https://img/bolt.jpg"), CardView("Forest", null)),
-                listOf(CardView("Sol Ring", "https://img/solring.jpg")),
+                listOf(CardView("Bolt", "https://img/bolt.jpg", "https://img/bolt-lg.jpg"), CardView("Forest", null, null)),
+                listOf(CardView("Sol Ring", "https://img/solring.jpg", "https://img/solring-lg.jpg")),
             ),
             distribution = listOf(CategoryAsFan("Red", 100, 2.7)),
         )

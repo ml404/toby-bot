@@ -504,6 +504,29 @@ button:disabled {
     color: var(--mtg-gold);
 }
 
+/* Hover-to-enlarge: a single floating full-size card, positioned by JS. */
+.cube-zoom {
+    position: fixed;
+    z-index: 1000;
+    width: auto;
+    height: min(72vh, 680px);
+    max-width: 92vw;
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    pointer-events: none;
+}
+
+.cube-zoom[hidden] {
+    display: none;
+}
+
+/* No mouse → no hover preview (and it would otherwise stick on tap). */
+@media (hover: none) {
+    .cube-zoom {
+        display: none;
+    }
+}
+
 /* --- Generated packs ------------------------------------------------ */
 
 .cube-generate-summary {

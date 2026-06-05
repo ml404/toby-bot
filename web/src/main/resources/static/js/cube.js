@@ -87,6 +87,8 @@
         a.target = '_blank';
         a.rel = 'noopener';
         a.title = card.name;
+        // The larger image drives the hover-to-enlarge preview (see wireZoom).
+        if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
         if (card.imageUrl) {
             const img = document.createElement('img');
             img.className = 'cube-card-img';
@@ -210,6 +212,23 @@
 
     function setStatus(el, msg) {
         if (el) el.textContent = msg;
+    }
+
+    /**
+     * Where to put the hover-zoom image: offset from the cursor, flipped to
+     * the cursor's other side if it would overflow, and clamped inside the
+     * viewport with a small margin. Pure so it's unit-testable.
+     */
+    function zoomPosition(px, py, w, h, vw, vh) {
+        const OFFSET = 18;
+        const MARGIN = 8;
+        let left = px + OFFSET;
+        if (left + w > vw - MARGIN) left = px - OFFSET - w; // flip to the left
+        if (left < MARGIN) left = MARGIN;
+        let top = py - h / 2;
+        if (top + h > vh - MARGIN) top = vh - h - MARGIN;
+        if (top < MARGIN) top = MARGIN;
+        return { left: left, top: top };
     }
 
     function show(el) { if (el) el.hidden = false; }
@@ -393,12 +412,62 @@
         });
     }
 
+    /**
+     * Hover-to-enlarge: one shared floating image, shown while the pointer
+     * is over any card tile that carries a `data-large` URL, positioned
+     * next to the cursor. Event-delegated on the document so it covers
+     * tiles rendered after load. Hard-off on touch via CSS (`hover: none`).
+     */
+    function wireZoom(doc) {
+        if (!doc.body) return;
+        const overlay = doc.createElement('img');
+        overlay.className = 'cube-zoom';
+        overlay.alt = '';
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        doc.body.appendChild(overlay);
+
+        const view = doc.defaultView || { innerWidth: 1024, innerHeight: 768 };
+
+        function place(e) {
+            const w = overlay.offsetWidth || 240;
+            const h = overlay.offsetHeight || 340;
+            const pos = zoomPosition(e.clientX, e.clientY, w, h, view.innerWidth, view.innerHeight);
+            overlay.style.left = pos.left + 'px';
+            overlay.style.top = pos.top + 'px';
+        }
+
+        function cardFrom(node) {
+            return node && node.closest ? node.closest('.cube-card[data-large]') : null;
+        }
+
+        doc.addEventListener('mouseover', function (e) {
+            const card = cardFrom(e.target);
+            if (!card) return;
+            overlay.src = card.getAttribute('data-large');
+            overlay.hidden = false;
+            place(e);
+        });
+        doc.addEventListener('mousemove', function (e) {
+            if (!overlay.hidden) place(e);
+        });
+        doc.addEventListener('mouseout', function (e) {
+            const card = cardFrom(e.target);
+            if (!card) return;
+            // Ignore moves between the card's own children.
+            if (cardFrom(e.relatedTarget) === card) return;
+            overlay.hidden = true;
+            overlay.removeAttribute('src');
+        });
+    }
+
     function wire(doc) {
         wireTabs(doc);
         wireExamples(doc);
         wireAsFan(doc);
         wirePreview(doc);
         wireGenerate(doc);
+        wireZoom(doc);
     }
 
     if (root && root.document) wire(root.document);
@@ -409,6 +478,7 @@
         categoryColor: categoryColor,
         scryfallCardUrl: scryfallCardUrl,
         tabIdFromHash: tabIdFromHash,
+        zoomPosition: zoomPosition,
         packsToText: packsToText,
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,

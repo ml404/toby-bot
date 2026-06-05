@@ -97,26 +97,31 @@ describe('renderGroups (preview shows the actual cards as thumbnails)', () => {
         Cube.renderGroups(container, [
             {
                 category: 'Red', count: 2, asFan: 2.0, cards: [
-                    { name: 'Bolt', imageUrl: 'https://img/bolt.jpg' },
-                    { name: 'Shock', imageUrl: null },
+                    { name: 'Bolt', imageUrl: 'https://img/bolt.jpg', imageUrlLarge: 'https://img/bolt-lg.jpg' },
+                    { name: 'Shock', imageUrl: null, imageUrlLarge: null },
                 ],
             },
-            { category: 'Land', count: 1, asFan: 0.5, cards: [{ name: 'Wastes', imageUrl: 'https://img/wastes.jpg' }] },
+            {
+                category: 'Land', count: 1, asFan: 0.5,
+                cards: [{ name: 'Wastes', imageUrl: 'https://img/wastes.jpg', imageUrlLarge: 'https://img/wastes-lg.jpg' }],
+            },
         ]);
         const blocks = container.querySelectorAll('.cube-group');
         expect(blocks).toHaveLength(2);
 
         const tiles = blocks[0].querySelectorAll('.cube-card-grid .cube-card');
         expect(tiles).toHaveLength(2);
-        // First card has an image.
+        // First card has an image + the large URL for hover-zoom.
         const img = tiles[0].querySelector('img.cube-card-img');
         expect(img.getAttribute('src')).toBe('https://img/bolt.jpg');
         expect(img.getAttribute('loading')).toBe('lazy');
         expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
+        expect(tiles[0].getAttribute('data-large')).toBe('https://img/bolt-lg.jpg');
         expect(tiles[0].querySelector('.cube-card-name').textContent).toBe('Bolt');
-        // Second card has no image → placeholder, no <img>.
+        // Second card has no image → placeholder, no <img>, no zoom target.
         expect(tiles[1].querySelector('img')).toBeNull();
         expect(tiles[1].querySelector('.cube-card-img-empty')).not.toBeNull();
+        expect(tiles[1].hasAttribute('data-large')).toBe(false);
         // Header still shows the as-fan.
         expect(blocks[0].querySelector('.cube-bar-value').textContent).toBe('2.00 / pack');
     });
@@ -126,8 +131,11 @@ describe('renderPacks', () => {
     test('renders each pack\'s cards as thumbnail tiles linking to Scryfall', () => {
         const container = document.createElement('div');
         Cube.renderPacks(container, [
-            [{ name: 'Bolt', imageUrl: 'https://img/bolt.jpg' }, { name: 'Shock', imageUrl: null }],
-            [{ name: 'Forest', imageUrl: 'https://img/forest.jpg' }],
+            [
+                { name: 'Bolt', imageUrl: 'https://img/bolt.jpg', imageUrlLarge: 'https://img/bolt-lg.jpg' },
+                { name: 'Shock', imageUrl: null, imageUrlLarge: null },
+            ],
+            [{ name: 'Forest', imageUrl: 'https://img/forest.jpg', imageUrlLarge: 'https://img/forest-lg.jpg' }],
         ]);
         const packs = container.querySelectorAll('.cube-pack');
         expect(packs).toHaveLength(2);
@@ -137,7 +145,64 @@ describe('renderPacks', () => {
         expect(tiles).toHaveLength(2);
         expect(tiles[0].querySelector('img.cube-card-img').getAttribute('src')).toBe('https://img/bolt.jpg');
         expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
+        expect(tiles[0].getAttribute('data-large')).toBe('https://img/bolt-lg.jpg');
         expect(packs[1].querySelector('.cube-card-name').textContent).toBe('Forest');
+    });
+});
+
+describe('zoomPosition', () => {
+    const VW = 1000;
+    const VH = 800;
+
+    test('offsets the preview to the right of the cursor by default', () => {
+        const pos = Cube.zoomPosition(100, 400, 300, 420, VW, VH);
+        expect(pos.left).toBe(118); // 100 + 18 offset
+    });
+
+    test('flips to the left when the preview would overflow the right edge', () => {
+        const pos = Cube.zoomPosition(900, 400, 300, 420, VW, VH);
+        // 900 + 18 + 300 = 1218 > 1000 → flip: 900 - 18 - 300 = 582
+        expect(pos.left).toBe(582);
+    });
+
+    test('clamps vertically within the viewport margin', () => {
+        const top = Cube.zoomPosition(100, 10, 300, 420, VW, VH).top;
+        expect(top).toBe(8); // MARGIN, not a negative off-screen value
+
+        const bottom = Cube.zoomPosition(100, 790, 300, 420, VW, VH).top;
+        expect(bottom).toBe(VH - 420 - 8); // pinned so the bottom stays on-screen
+    });
+});
+
+describe('hover-to-enlarge', () => {
+    test('hovering a card shows the large image; leaving hides it', () => {
+        // cube.js wires the jsdom document on import, creating the overlay.
+        const card = document.createElement('a');
+        card.className = 'cube-card';
+        card.setAttribute('data-large', 'https://img/big.jpg');
+        document.body.appendChild(card);
+
+        card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 40, clientY: 40 }));
+        const overlay = document.querySelector('.cube-zoom');
+        expect(overlay).not.toBeNull();
+        expect(overlay.hidden).toBe(false);
+        expect(overlay.getAttribute('src')).toBe('https://img/big.jpg');
+
+        card.dispatchEvent(new MouseEvent('mouseout', { bubbles: true }));
+        expect(overlay.hidden).toBe(true);
+
+        document.body.removeChild(card);
+    });
+
+    test('cards without a large image never trigger the overlay', () => {
+        const card = document.createElement('a');
+        card.className = 'cube-card'; // no data-large
+        document.body.appendChild(card);
+
+        card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, clientX: 40, clientY: 40 }));
+        expect(document.querySelector('.cube-zoom').hidden).toBe(true);
+
+        document.body.removeChild(card);
     });
 });
 
