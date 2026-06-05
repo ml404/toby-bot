@@ -12,6 +12,10 @@ import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.user.UserDto
 import database.service.user.CubeListService
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
@@ -42,6 +46,10 @@ import kotlin.random.Random
 class CubeCommand @Autowired constructor(
     private val fetcher: ScryfallCubeFetcher,
     private val cubeListService: CubeListService,
+    // Mirrors the /dnd command: IO-bound subcommands run on this dispatcher
+    // (tests pass Dispatchers.Unconfined so the launched work resolves
+    // synchronously).
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : MtgCommand {
 
     override val name: String = "cube"
@@ -50,20 +58,39 @@ class CubeCommand @Autowired constructor(
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
         when (ctx.event.subcommandName) {
-            SUB_ASFAN -> handleAsFan(ctx, deleteDelay)
-            SUB_PREVIEW -> handlePreview(ctx, requestingUserDto, deleteDelay)
-            SUB_GENERATE -> handleGenerate(ctx, requestingUserDto)
-            SUB_SAVED -> handleSaved(ctx, requestingUserDto, deleteDelay)
+            SUB_ASFAN -> handleAsFan(ctx, deleteDelay) // pure maths, no IO
+            SUB_PREVIEW -> launchHandling(ctx) { handlePreview(ctx, requestingUserDto, deleteDelay) }
+            SUB_GENERATE -> launchHandling(ctx) { handleGenerate(ctx, requestingUserDto) }
+            SUB_SAVED -> launchHandling(ctx) { handleSaved(ctx, requestingUserDto, deleteDelay) }
             else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate or saved."), deleteDelay)
         }
     }
 
-    /** A draftable pool plus a human label, and any names that didn't resolve. */
+    /**
+     * Runs an IO-bound subcommand on [dispatcher] (the Scryfall fetch and the
+     * saved-cube DB read both block), mirroring the `/dnd` query handler, so
+     * the work never ties up the gateway or the CPU-bound default dispatcher.
+     * An unexpected failure resolves the deferred reply with an error embed
+     * rather than leaving Discord's "thinking…" spinner hanging.
+     */
+    private fun launchHandling(ctx: CommandContext, block: suspend () -> Unit) {
+        CoroutineScope(dispatcher).launch {
+            runCatching { block() }.onFailure { e ->
+                logger.error("Cube subcommand '${ctx.event.subcommandName}' failed: $e")
+                ctx.event.hook.sendMessageEmbeds(
+                    CubeEmbeds.errorEmbed("Something went wrong building that cube. Try again in a moment.")
+                ).queue({}, {})
+            }
+        }
+    }
+
+    /** A draftable pool plus a human label, any names that didn't resolve, and an optional note. */
     private sealed interface PoolResult {
         data class Ready(
             val pool: List<CubeCard>,
             val label: String,
             val notFound: List<String> = emptyList(),
+            val note: String? = null,
         ) : PoolResult
         data class Failed(val message: String) : PoolResult
     }
@@ -73,7 +100,7 @@ class CubeCommand @Autowired constructor(
      * cube (looked up for their Discord account, then resolved name-by-name
      * via Scryfall) takes precedence over a Scryfall `query`.
      */
-    private fun resolvePool(ctx: CommandContext, requestingUserDto: UserDto): PoolResult {
+    private suspend fun resolvePool(ctx: CommandContext, requestingUserDto: UserDto): PoolResult {
         val saved = ctx.event.stringOption(OPT_SAVED)?.trim()
         if (!saved.isNullOrEmpty()) {
             val dto = cubeListService.get(requestingUserDto.discordId, saved)
@@ -100,7 +127,7 @@ class CubeCommand @Autowired constructor(
                         .filter { byName[MtgNames.lookupKey(it)] == null }
                         .distinct()
                     if (pool.isEmpty()) PoolResult.Failed("None of `$saved`'s cards matched Scryfall.")
-                    else PoolResult.Ready(pool, "saved cube \"$saved\"", notFound)
+                    else PoolResult.Ready(pool, "saved cube \"$saved\"", notFound, capNote(res.capped))
                 }
             }
         }
@@ -111,9 +138,14 @@ class CubeCommand @Autowired constructor(
         }
         return when (val res = fetcher.fetch(query)) {
             is ScryfallCubeFetcher.Result.Failure -> PoolResult.Failed(res.message)
-            is ScryfallCubeFetcher.Result.Success -> PoolResult.Ready(res.cards, query)
+            is ScryfallCubeFetcher.Result.Success -> PoolResult.Ready(res.cards, query, note = capNote(res.capped))
         }
     }
+
+    /** A user-facing note when the pool was truncated to the Scryfall fetch ceiling. */
+    private fun capNote(capped: Boolean): String? =
+        if (capped) "Matched more than ${ScryfallCubeFetcher.DEFAULT_MAX_CARDS} cards; only the first ${ScryfallCubeFetcher.DEFAULT_MAX_CARDS} were used."
+        else null
 
     private fun handleAsFan(ctx: CommandContext, deleteDelay: Int) {
         val total = ctx.event.intOption(OPT_TOTAL, 0)
@@ -128,7 +160,7 @@ class CubeCommand @Autowired constructor(
         reply(ctx, embed, deleteDelay)
     }
 
-    private fun handlePreview(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+    private suspend fun handlePreview(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val packSize = ctx.event.intOption(OPT_PACK_SIZE, DEFAULT_PACK_SIZE)
         when (val resolved = resolvePool(ctx, requestingUserDto)) {
             is PoolResult.Failed -> reply(ctx, CubeEmbeds.errorEmbed(resolved.message), deleteDelay)
@@ -141,13 +173,14 @@ class CubeCommand @Autowired constructor(
                     counts = AsFan.categoryCounts(pool),
                     distribution = AsFan.distribution(pool, packSize),
                     notFound = resolved.notFound,
+                    note = resolved.note,
                 )
                 reply(ctx, embed, deleteDelay)
             }
         }
     }
 
-    private fun handleGenerate(ctx: CommandContext, requestingUserDto: UserDto) {
+    private suspend fun handleGenerate(ctx: CommandContext, requestingUserDto: UserDto) {
         val packCount = ctx.event.intOption(OPT_PACKS, DEFAULT_PACK_COUNT)
         val packSize = ctx.event.intOption(OPT_PACK_SIZE, DEFAULT_PACK_SIZE)
         val balanced = ctx.event.booleanOption(OPT_BALANCED, true)
@@ -170,6 +203,7 @@ class CubeCommand @Autowired constructor(
                             counts = AsFan.categoryCounts(selected),
                             distribution = AsFan.distribution(selected, packSize),
                             notFound = resolved.notFound,
+                            note = resolved.note,
                         )
                         val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs), ATTACHMENT_NAME)
                         ctx.event.hook.sendMessageEmbeds(embed).addFiles(file).queue()
@@ -180,7 +214,7 @@ class CubeCommand @Autowired constructor(
     }
 
     /** Lists the cubes this user has saved on the website. */
-    private fun handleSaved(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+    private suspend fun handleSaved(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val saved = cubeListService.listForUser(requestingUserDto.discordId)
         reply(ctx, CubeEmbeds.savedCubesEmbed(saved), deleteDelay)
     }

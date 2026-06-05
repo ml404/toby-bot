@@ -46,10 +46,14 @@ internal object CubeEmbeds {
         counts: Map<CardCategory, Int>,
         distribution: Map<CardCategory, Double>,
         notFound: List<String> = emptyList(),
+        note: String? = null,
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Cube preview")
-        setDescription("Query `$query` → **$poolSize** cards, as-fan per **$packSize**-card pack.")
+        setDescription(
+            "Query `$query` → **$poolSize** cards, as-fan per **$packSize**-card pack." +
+                note.orEmpty().let { if (it.isNotEmpty()) "\nℹ️ $it" else "" }
+        )
         field("Distribution", distributionTable(counts, distribution), inline = false)
         addNotFoundField(notFound)
     }
@@ -65,12 +69,14 @@ internal object CubeEmbeds {
         counts: Map<CardCategory, Int>,
         distribution: Map<CardCategory, Double>,
         notFound: List<String> = emptyList(),
+        note: String? = null,
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Generated $packCount packs of $packSize")
         setDescription(
             "Drew **${selected.size}** cards from the **$poolSize**-card pool matching `$query`." +
-                if (balanced) "\nAs-fan balanced across colours, colourless and lands." else ""
+                (if (balanced) "\nAs-fan balanced across colours, colourless and lands." else "") +
+                note.orEmpty().let { if (it.isNotEmpty()) "\nℹ️ $it" else "" }
         )
         field("As-fan per pack", distributionTable(counts, distribution), inline = false)
         addNotFoundField(notFound)

@@ -7,14 +7,28 @@ import com.google.gson.JsonParser
 import common.logging.DiscordLogger
 import common.mtg.CubeCard
 import common.mtg.MtgColor
-import org.apache.http.client.HttpClient
-import org.apache.http.client.methods.HttpGet
-import org.apache.http.client.methods.HttpPost
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.HttpClients
-import org.apache.http.util.EntityUtils
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.timeout
+import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.content.TextContent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import java.io.InputStreamReader
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -25,33 +39,43 @@ import java.nio.charset.StandardCharsets
  * `cube:<name>` — so a user defines their pool with the same search
  * syntax they'd use on scryfall.com.
  *
- * Mirrors the HTTP/JSON approach of [bot.toby.command.commands.fetch.MemeCommand]:
- * an injectable Apache [HttpClient] (so tests stub the transport) and
- * Gson tree parsing. The card → [CubeCard] mapping is split into
- * [parseCard] so it can be unit-tested without any network.
+ * Uses the same coroutine + ktor stack as the `/dnd` lookups
+ * ([bot.toby.helpers.HttpHelper]): `suspend` functions that hop onto
+ * [Dispatchers.IO] via [withContext], fed by the shared injectable ktor
+ * [HttpClient] (so blocking network work never ties up the CPU-bound
+ * default dispatcher, and tests can drive it with a `MockEngine`). The
+ * card → [CubeCard] mapping is split into [parseCard] so it can be
+ * unit-tested without any network.
  */
 @Component
-class ScryfallCubeFetcher {
+class ScryfallCubeFetcher @Autowired constructor(
+    private val client: HttpClient,
+    private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+) {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val gson: Gson = Gson()
 
     sealed interface Result {
-        data class Success(val cards: List<CubeCard>) : Result
+        /**
+         * [capped] is true when the pool was truncated to the [DEFAULT_MAX_CARDS]
+         * ceiling — i.e. the query matched (or the list named) more cards than
+         * we deal from — so callers can tell the user rather than silently
+         * dropping the overflow.
+         */
+        data class Success(val cards: List<CubeCard>, val capped: Boolean = false) : Result
         data class Failure(val message: String) : Result
     }
 
     /**
      * Fetches up to [maxCards] cards matching [query], following Scryfall's
-     * pagination. Creates a default HTTP client; the overload taking a
-     * client is the test seam.
+     * pagination. Suspends on [Dispatchers.IO]; the pages are inherently
+     * sequential (each `next_page` comes from the previous response), which
+     * also naturally spaces the requests.
      */
-    fun fetch(query: String, maxCards: Int = DEFAULT_MAX_CARDS): Result =
-        fetch(query, maxCards, HttpClients.createDefault())
-
-    fun fetch(query: String, maxCards: Int, httpClient: HttpClient): Result {
+    suspend fun fetch(query: String, maxCards: Int = DEFAULT_MAX_CARDS): Result = withContext(dispatcher) {
         val trimmed = query.trim()
-        if (trimmed.isEmpty()) return Result.Failure("Give me a Scryfall search query (e.g. `set:vow`).")
+        if (trimmed.isEmpty()) return@withContext Result.Failure("Give me a Scryfall search query (e.g. `set:vow`).")
 
         val cards = mutableListOf<CubeCard>()
         var url: String? = searchUrl(trimmed)
@@ -59,86 +83,96 @@ class ScryfallCubeFetcher {
 
         try {
             while (url != null && cards.size < maxCards && page < MAX_PAGES) {
-                if (page > 0) Thread.sleep(SCRYFALL_DELAY_MS) // be polite to the API
-                val response = httpClient.execute(HttpGet(url))
-                val status = response.statusLine.statusCode
-                if (status == 404) {
-                    EntityUtils.consume(response.entity)
-                    return Result.Failure("No cards matched `$trimmed`.")
+                val response = client.get(url) {
+                    header(HttpHeaders.Accept, "application/json")
+                    timeout { requestTimeoutMillis = TIMEOUT_MS }
                 }
-                if (status != 200) {
-                    EntityUtils.consume(response.entity)
-                    return Result.Failure("Scryfall returned HTTP $status. Try again later.")
-                }
-                val root = JsonParser.parseReader(InputStreamReader(response.entity.content)).asJsonObject
-                EntityUtils.consume(response.entity)
+                val status = response.status.value
+                if (status == 404) return@withContext Result.Failure("No cards matched `$trimmed`.")
+                if (status != 200) return@withContext Result.Failure("Scryfall returned HTTP $status. Try again later.")
 
+                val root = JsonParser.parseString(response.bodyAsText()).asJsonObject
                 root.getAsJsonArray("data")?.forEach { element ->
                     parseCard(element.asJsonObject)?.let(cards::add)
                 }
-
                 url = if (root.get("has_more")?.asBoolean == true) root.get("next_page")?.asString else null
                 page++
             }
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            return Result.Failure("Lookup interrupted.")
+        } catch (e: CancellationException) {
+            throw e // never swallow coroutine cancellation
         } catch (e: Exception) {
             logger.error("Scryfall fetch failed for query '$trimmed': $e")
-            return Result.Failure("Couldn't reach Scryfall: ${e.message}")
+            return@withContext Result.Failure("Couldn't reach Scryfall: ${e.message}")
         }
 
-        if (cards.isEmpty()) return Result.Failure("No usable cards matched `$trimmed`.")
-        return Result.Success(cards.take(maxCards))
+        if (cards.isEmpty()) return@withContext Result.Failure("No usable cards matched `$trimmed`.")
+        // The query matched more than we deal from if we overshot the ceiling
+        // on the last page, or stopped with pages still unfetched.
+        val capped = cards.size > maxCards || url != null
+        Result.Success(cards.take(maxCards), capped)
     }
 
     /**
      * Resolves an explicit list of card names (e.g. a user's saved cube)
      * into cards via Scryfall's `/cards/collection` endpoint, batched at 75
-     * identifiers per request. Returns the resolved cards (one per found
-     * name, de-duplicated by the caller's list); names Scryfall doesn't know
-     * are simply absent from the result. Creates a default client; the
-     * overload taking one is the test seam.
+     * identifiers per request. The batches run concurrently (bounded by
+     * [MAX_CONCURRENT_BATCHES] so we don't burst past Scryfall's rate limit)
+     * on [Dispatchers.IO]. Names Scryfall doesn't know are simply absent from
+     * the result; the caller ties the returned cards back to its list.
      */
-    fun fetchByNames(names: List<String>): Result = fetchByNames(names, HttpClients.createDefault())
-
-    fun fetchByNames(names: List<String>, httpClient: HttpClient): Result {
+    suspend fun fetchByNames(names: List<String>): Result = withContext(dispatcher) {
         // Cap distinct lookups: a draft can't use more than DEFAULT_MAX_CARDS,
-        // so resolving more would just spam Scryfall (one POST per 75 names)
-        // and block the bot thread on the inter-batch delays.
-        val unique = names.map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(DEFAULT_MAX_CARDS)
-        if (unique.isEmpty()) return Result.Failure("That cube has no card names in it.")
+        // so resolving more would just spam Scryfall (one POST per 75 names).
+        val distinctNames = names.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+        val unique = distinctNames.take(DEFAULT_MAX_CARDS)
+        if (unique.isEmpty()) return@withContext Result.Failure("That cube has no card names in it.")
 
-        val cards = mutableListOf<CubeCard>()
-        try {
-            unique.chunked(COLLECTION_BATCH).forEachIndexed { index, chunk ->
-                if (index > 0) Thread.sleep(SCRYFALL_DELAY_MS) // be polite to the API
-                val post = HttpPost(COLLECTION_ENDPOINT).apply {
-                    setHeader("Content-Type", "application/json")
-                    entity = StringEntity(collectionBody(chunk), StandardCharsets.UTF_8)
-                }
-                val response = httpClient.execute(post)
-                val status = response.statusLine.statusCode
-                if (status != 200) {
-                    EntityUtils.consume(response.entity)
-                    return Result.Failure("Scryfall returned HTTP $status resolving your cube.")
-                }
-                val root = JsonParser.parseReader(InputStreamReader(response.entity.content)).asJsonObject
-                EntityUtils.consume(response.entity)
-                root.getAsJsonArray("data")?.forEach { element ->
-                    parseCard(element.asJsonObject)?.let(cards::add)
-                }
+        val gate = Semaphore(MAX_CONCURRENT_BATCHES)
+        val batches = try {
+            coroutineScope {
+                unique.chunked(COLLECTION_BATCH)
+                    .map { chunk -> async { gate.withPermit { fetchCollectionBatch(chunk) } } }
+                    .awaitAll()
             }
-        } catch (e: InterruptedException) {
-            Thread.currentThread().interrupt()
-            return Result.Failure("Lookup interrupted.")
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             logger.error("Scryfall collection lookup failed: $e")
-            return Result.Failure("Couldn't reach Scryfall: ${e.message}")
+            return@withContext Result.Failure("Couldn't reach Scryfall: ${e.message}")
         }
 
-        if (cards.isEmpty()) return Result.Failure("None of those card names matched Scryfall.")
-        return Result.Success(cards)
+        val cards = mutableListOf<CubeCard>()
+        for (batch in batches) {
+            when (batch) {
+                is BatchResult.Failure -> return@withContext Result.Failure(batch.message)
+                is BatchResult.Success -> cards.addAll(batch.cards)
+            }
+        }
+
+        if (cards.isEmpty()) return@withContext Result.Failure("None of those card names matched Scryfall.")
+        Result.Success(cards, capped = distinctNames.size > DEFAULT_MAX_CARDS)
+    }
+
+    private sealed interface BatchResult {
+        data class Success(val cards: List<CubeCard>) : BatchResult
+        data class Failure(val message: String) : BatchResult
+    }
+
+    /** One `/cards/collection` POST for up to 75 names. */
+    private suspend fun fetchCollectionBatch(chunk: List<String>): BatchResult {
+        val response: HttpResponse = client.post(COLLECTION_ENDPOINT) {
+            header(HttpHeaders.Accept, "application/json")
+            timeout { requestTimeoutMillis = TIMEOUT_MS }
+            setBody(TextContent(collectionBody(chunk), ContentType.Application.Json))
+        }
+        val status = response.status.value
+        if (status != 200) return BatchResult.Failure("Scryfall returned HTTP $status resolving your cube.")
+        val root = JsonParser.parseString(response.bodyAsText()).asJsonObject
+        val cards = mutableListOf<CubeCard>()
+        root.getAsJsonArray("data")?.forEach { element ->
+            parseCard(element.asJsonObject)?.let(cards::add)
+        }
+        return BatchResult.Success(cards)
     }
 
     /** Builds the `{"identifiers":[{"name":...}]}` body, escaping names via Gson. */
@@ -197,6 +231,9 @@ class ScryfallCubeFetcher {
         const val DEFAULT_MAX_CARDS = 750
         private const val MAX_PAGES = 10
         private const val COLLECTION_BATCH = 75
-        private const val SCRYFALL_DELAY_MS = 100L
+
+        /** Bounds the concurrent `/cards/collection` POSTs to stay polite to Scryfall. */
+        private const val MAX_CONCURRENT_BATCHES = 3
+        private const val TIMEOUT_MS = 10_000L
     }
 }
