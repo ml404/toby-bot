@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Resolve full double-faced names by requesting Scryfall by front face",
+    "summary": "Fixes the screenshot bug: a cube whose list contains the **full** double-faced names (`Archangel Avacyn // Avacyn, the Purifier`, `Fire // Ice`, `Huntmaster of the Fells // Ravager of the Fells`, …) reported all 9 as \"Couldn't find\".",
+    "emoji": "✨",
+    "prNumber": 620
+  },
+  {
+    "date": "June 2026",
     "title": "Resolve double-faced cards by either face in pasted cube lists",
     "summary": "Fixes double-faced / transform cards not resolving from a pasted list when you write just one face.",
     "emoji": "✨",
