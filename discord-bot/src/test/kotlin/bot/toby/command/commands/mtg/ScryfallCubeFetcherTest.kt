@@ -37,6 +37,31 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard pulls the normal image link for a single-faced card`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Bolt","color_identity":["R"],"type_line":"Instant",
+               "image_uris":{"small":"s.jpg","normal":"https://img/bolt.jpg"}}""")
+        )!!
+        assertEquals("https://img/bolt.jpg", card.imageUrl)
+    }
+
+    @Test
+    fun `parseCard falls back to the front face image for a double-faced card`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Delver // Aberration","color_identity":["U"],"type_line":"Creature",
+               "card_faces":[{"image_uris":{"normal":"https://img/front.jpg"}},
+                             {"image_uris":{"normal":"https://img/back.jpg"}}]}""")
+        )!!
+        assertEquals("https://img/front.jpg", card.imageUrl)
+    }
+
+    @Test
+    fun `parseCard leaves the image null when Scryfall has none`() {
+        val card = fetcher.parseCard(obj("""{"name":"Token","color_identity":[],"type_line":"Token"}"""))!!
+        assertEquals(null, card.imageUrl)
+    }
+
+    @Test
     fun `parseCard flags lands from the type line`() {
         val card = fetcher.parseCard(
             obj("""{"name":"Sacred Foundry","color_identity":["R","W"],"type_line":"Land — Mountain Plains"}""")

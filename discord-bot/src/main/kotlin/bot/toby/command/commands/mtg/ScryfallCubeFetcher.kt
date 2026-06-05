@@ -166,7 +166,21 @@ class ScryfallCubeFetcher {
             isLand = typeLine.contains("Land", ignoreCase = true),
             typeLine = typeLine,
             manaValue = manaValue,
+            imageUrl = imageUrl(card),
         )
+    }
+
+    /**
+     * The card's `normal` image link, or null. Single-faced cards carry
+     * `image_uris` directly; double-faced cards put it on the first face.
+     */
+    fun imageUrl(card: JsonObject): String? {
+        fun normalOf(obj: JsonObject?): String? =
+            obj?.getAsJsonObject("image_uris")?.get("normal")?.asString?.takeIf { it.isNotBlank() }
+
+        normalOf(card)?.let { return it }
+        val firstFace = card.getAsJsonArray("card_faces")?.firstOrNull()?.asJsonObject
+        return normalOf(firstFace)
     }
 
     private fun searchUrl(query: String): String {

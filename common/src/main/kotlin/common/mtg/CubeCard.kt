@@ -47,6 +47,12 @@ data class CubeCard(
     val isLand: Boolean = false,
     val typeLine: String = "",
     val manaValue: Double = 0.0,
+    /**
+     * Optional link to the card's image (Scryfall). Presentation-only — the
+     * `common` maths ignore it — but kept on the card so a surface that has
+     * it (the bot's pack list) can show it without a second lookup.
+     */
+    val imageUrl: String? = null,
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory
