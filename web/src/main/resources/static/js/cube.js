@@ -51,7 +51,7 @@
     function packsToText(packs) {
         return packs.map(function (pack, i) {
             return '== Pack ' + (i + 1) + ' (' + pack.length + ' cards) ==\n' +
-                pack.map(function (n) { return '  ' + n; }).join('\n');
+                pack.map(function (c) { return '  ' + c.name; }).join('\n');
         }).join('\n\n') + '\n';
     }
 
@@ -75,14 +75,36 @@
         return '/cube/api/generate?' + q.toString();
     }
 
-    /** A card name as a Scryfall link (opens in a new tab). */
-    function cardLink(name) {
+    /**
+     * A card as a thumbnail tile linking to its Scryfall page. Falls back
+     * to a captioned placeholder box when Scryfall has no image for it.
+     * Images lazy-load so a 500-card preview doesn't fetch everything at once.
+     */
+    function cardTile(card) {
         const a = document.createElement('a');
-        a.className = 'cube-card-link';
-        a.href = scryfallCardUrl(name);
+        a.className = 'cube-card';
+        a.href = scryfallCardUrl(card.name);
         a.target = '_blank';
         a.rel = 'noopener';
-        a.textContent = name;
+        a.title = card.name;
+        if (card.imageUrl) {
+            const img = document.createElement('img');
+            img.className = 'cube-card-img';
+            img.src = card.imageUrl;
+            img.alt = card.name;
+            img.setAttribute('loading', 'lazy');
+            img.setAttribute('width', '146');
+            img.setAttribute('height', '204');
+            a.appendChild(img);
+        } else {
+            const placeholder = document.createElement('span');
+            placeholder.className = 'cube-card-img cube-card-img-empty';
+            a.appendChild(placeholder);
+        }
+        const name = document.createElement('span');
+        name.className = 'cube-card-name';
+        name.textContent = card.name;
+        a.appendChild(name);
         return a;
     }
 
@@ -152,14 +174,12 @@
             head.appendChild(value);
             block.appendChild(head);
 
-            const list = document.createElement('ul');
-            list.className = 'cube-card-list';
-            group.cards.forEach(function (name) {
-                const li = document.createElement('li');
-                li.appendChild(cardLink(name));
-                list.appendChild(li);
+            const grid = document.createElement('div');
+            grid.className = 'cube-card-grid';
+            group.cards.forEach(function (card) {
+                grid.appendChild(cardTile(card));
             });
-            block.appendChild(list);
+            block.appendChild(grid);
             container.appendChild(block);
         });
         return container;
@@ -177,14 +197,12 @@
             count.textContent = pack.length + ' cards';
             heading.appendChild(count);
             card.appendChild(heading);
-            const list = document.createElement('ul');
-            list.className = 'cube-card-list';
-            pack.forEach(function (name) {
-                const li = document.createElement('li');
-                li.appendChild(cardLink(name));
-                list.appendChild(li);
+            const grid = document.createElement('div');
+            grid.className = 'cube-card-grid';
+            pack.forEach(function (c) {
+                grid.appendChild(cardTile(c));
             });
-            card.appendChild(list);
+            card.appendChild(grid);
             container.appendChild(card);
         });
         return container;

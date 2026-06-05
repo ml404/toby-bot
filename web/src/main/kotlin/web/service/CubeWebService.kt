@@ -61,7 +61,9 @@ class CubeWebService {
         return when (val pool = fetchPool(query)) {
             is CubeResult.Failure -> CubeResult.error(pool.error)
             is CubeResult.Success -> {
-                when (val packs = PackGenerator(Random.Default).generate(pool.value, packCount, packSize, balanced)) {
+                val cards = pool.value.map { it.card }
+                val imageByName = pool.value.associate { it.card.name to it.imageUrl }
+                when (val packs = PackGenerator(Random.Default).generate(cards, packCount, packSize, balanced)) {
                     is PackGenerator.Result.Failure -> CubeResult.error(packs.reason)
                     is PackGenerator.Result.Success -> CubeResult.ok(
                         GenerateData(
@@ -70,7 +72,9 @@ class CubeWebService {
                             packCount = packCount,
                             packSize = packSize,
                             balanced = balanced,
-                            packs = packs.value.packs.map { pack -> pack.map { it.name } },
+                            packs = packs.value.packs.map { pack ->
+                                pack.map { CardView(it.name, imageByName[it.name]) }
+                            },
                             distribution = distribution(packs.value.cards, packSize),
                         )
                     )
@@ -91,21 +95,25 @@ class CubeWebService {
     }
 
     /**
-     * Like [distribution] but carries the actual card names in each bucket
-     * (alphabetised) — so the preview can list the real cards, not just a
-     * count. Names dedupe to one entry each so a pool with duplicates
-     * doesn't repeat a card in the list.
+     * Like [distribution] but carries the actual cards (name + thumbnail)
+     * in each bucket, alphabetised. Cards dedupe by name so a pool with
+     * duplicates doesn't repeat one in the list; [CategoryGroup.count]
+     * still reflects the raw bucket size.
      */
-    fun groups(pool: List<CubeCard>, packSize: Int): List<CategoryGroup> {
-        val asFans = AsFan.distribution(pool, packSize)
-        val byCategory = pool.groupBy { it.category }
+    fun groups(pool: List<ScryfallCard>, packSize: Int): List<CategoryGroup> {
+        val asFans = AsFan.distribution(pool.map { it.card }, packSize)
+        val byCategory = pool.groupBy { it.card.category }
         return CardCategory.entries
             .filter { byCategory[it] != null }
             .map { cat ->
-                val cards = byCategory.getValue(cat).map { it.name }.distinct().sorted()
+                val bucket = byCategory.getValue(cat)
+                val cards = bucket
+                    .distinctBy { it.card.name }
+                    .sortedBy { it.card.name }
+                    .map { CardView(it.card.name, it.imageUrl) }
                 CategoryGroup(
                     category = cat.displayName,
-                    count = byCategory.getValue(cat).size,
+                    count = bucket.size,
                     asFan = asFans.getValue(cat),
                     cards = cards,
                 )
@@ -113,28 +121,48 @@ class CubeWebService {
     }
 
     /** Maps a Scryfall `/cards/search` JSON tree into cube cards. */
-    fun parseCards(root: JsonNode): List<CubeCard> {
+    fun parseCards(root: JsonNode): List<CubeCard> = parseScryfall(root).map { it.card }
+
+    /**
+     * Like [parseCards] but keeps each card's small thumbnail URL so the
+     * web page can render images. Single-faced cards carry `image_uris`
+     * directly; double-faced cards put images on the first face instead.
+     */
+    fun parseScryfall(root: JsonNode): List<ScryfallCard> {
         val data = root.path("data")
         if (!data.isArray) return emptyList()
         return data.mapNotNull { node ->
             val name = node.path("name").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             val identity = node.path("color_identity").mapNotNull { it.asText(null) }
             val typeLine = node.path("type_line").asText("")
-            CubeCard(
-                name = name,
-                colors = MtgColor.parse(identity),
-                isLand = typeLine.contains("Land", ignoreCase = true),
-                typeLine = typeLine,
-                manaValue = node.path("cmc").asDouble(0.0),
+            ScryfallCard(
+                card = CubeCard(
+                    name = name,
+                    colors = MtgColor.parse(identity),
+                    isLand = typeLine.contains("Land", ignoreCase = true),
+                    typeLine = typeLine,
+                    manaValue = node.path("cmc").asDouble(0.0),
+                ),
+                imageUrl = thumbnailUrl(node),
             )
         }
     }
 
-    private fun fetchPool(query: String): CubeResult<List<CubeCard>> {
+    /** The small (146×204) thumbnail for a card, or null if Scryfall has none. */
+    private fun thumbnailUrl(node: JsonNode): String? {
+        node.path("image_uris").path("small").asText("").takeIf { it.isNotBlank() }?.let { return it }
+        val faces = node.path("card_faces")
+        if (faces.isArray && faces.size() > 0) {
+            faces[0].path("image_uris").path("small").asText("").takeIf { it.isNotBlank() }?.let { return it }
+        }
+        return null
+    }
+
+    private fun fetchPool(query: String): CubeResult<List<ScryfallCard>> {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return CubeResult.error("Enter a Scryfall search query (e.g. set:vow).")
 
-        val cards = mutableListOf<CubeCard>()
+        val cards = mutableListOf<ScryfallCard>()
         var url: String? = searchUrl(trimmed)
         var page = 0
         try {
@@ -154,7 +182,7 @@ class CubeWebService {
                     else -> return CubeResult.error("Scryfall returned ${response.statusCode()}.")
                 }
                 val root = jackson.readTree(response.body())
-                cards.addAll(parseCards(root))
+                cards.addAll(parseScryfall(root))
                 url = if (root.path("has_more").asBoolean(false)) {
                     root.path("next_page").asText(null)
                 } else {
@@ -197,12 +225,18 @@ sealed interface CubeResult<out T> {
 
 data class CategoryAsFan(val category: String, val count: Int, val asFan: Double)
 
-/** A colour/land bucket plus the actual card names it contains. */
+/** A card paired with its Scryfall thumbnail, kept only inside the service. */
+data class ScryfallCard(val card: CubeCard, val imageUrl: String?)
+
+/** A single card the page renders: display name + thumbnail (may be null). */
+data class CardView(val name: String, val imageUrl: String?)
+
+/** A colour/land bucket plus the actual cards it contains. */
 data class CategoryGroup(
     val category: String,
     val count: Int,
     val asFan: Double,
-    val cards: List<String>,
+    val cards: List<CardView>,
 )
 
 data class PreviewData(
@@ -218,6 +252,6 @@ data class GenerateData(
     val packCount: Int,
     val packSize: Int,
     val balanced: Boolean,
-    val packs: List<List<String>>,
+    val packs: List<List<CardView>>,
     val distribution: List<CategoryAsFan>,
 )

@@ -60,8 +60,11 @@ describe('tabIdFromHash', () => {
 });
 
 describe('packsToText', () => {
-    test('renders each pack as a titled, indented block', () => {
-        const text = Cube.packsToText([['Bolt', 'Shock'], ['Forest']]);
+    test('renders each pack as a titled, indented block of card names', () => {
+        const text = Cube.packsToText([
+            [{ name: 'Bolt', imageUrl: 'u1' }, { name: 'Shock', imageUrl: null }],
+            [{ name: 'Forest', imageUrl: 'u3' }],
+        ]);
         expect(text).toContain('== Pack 1 (2 cards) ==');
         expect(text).toContain('  Bolt');
         expect(text).toContain('== Pack 2 (1 cards) ==');
@@ -88,39 +91,53 @@ describe('URL builders', () => {
     });
 });
 
-describe('renderGroups (preview lists the actual cards)', () => {
-    test('renders a group per category with its cards as Scryfall links', () => {
+describe('renderGroups (preview shows the actual cards as thumbnails)', () => {
+    test('renders a group per category, each card a thumbnail tile linking to Scryfall', () => {
         const container = document.createElement('div');
         Cube.renderGroups(container, [
-            { category: 'Red', count: 2, asFan: 2.0, cards: ['Bolt', 'Shock'] },
-            { category: 'Land', count: 1, asFan: 0.5, cards: ['Wastes'] },
+            {
+                category: 'Red', count: 2, asFan: 2.0, cards: [
+                    { name: 'Bolt', imageUrl: 'https://img/bolt.jpg' },
+                    { name: 'Shock', imageUrl: null },
+                ],
+            },
+            { category: 'Land', count: 1, asFan: 0.5, cards: [{ name: 'Wastes', imageUrl: 'https://img/wastes.jpg' }] },
         ]);
         const blocks = container.querySelectorAll('.cube-group');
         expect(blocks).toHaveLength(2);
 
-        const redCards = blocks[0].querySelectorAll('.cube-card-list .cube-card-link');
-        expect(redCards).toHaveLength(2);
-        expect(redCards[0].textContent).toBe('Bolt');
-        expect(redCards[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
-        expect(redCards[0].getAttribute('target')).toBe('_blank');
+        const tiles = blocks[0].querySelectorAll('.cube-card-grid .cube-card');
+        expect(tiles).toHaveLength(2);
+        // First card has an image.
+        const img = tiles[0].querySelector('img.cube-card-img');
+        expect(img.getAttribute('src')).toBe('https://img/bolt.jpg');
+        expect(img.getAttribute('loading')).toBe('lazy');
+        expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
+        expect(tiles[0].querySelector('.cube-card-name').textContent).toBe('Bolt');
+        // Second card has no image → placeholder, no <img>.
+        expect(tiles[1].querySelector('img')).toBeNull();
+        expect(tiles[1].querySelector('.cube-card-img-empty')).not.toBeNull();
         // Header still shows the as-fan.
         expect(blocks[0].querySelector('.cube-bar-value').textContent).toBe('2.00 / pack');
     });
 });
 
 describe('renderPacks', () => {
-    test('lists each pack\'s cards as clickable Scryfall links', () => {
+    test('renders each pack\'s cards as thumbnail tiles linking to Scryfall', () => {
         const container = document.createElement('div');
-        Cube.renderPacks(container, [['Bolt', 'Shock'], ['Forest']]);
+        Cube.renderPacks(container, [
+            [{ name: 'Bolt', imageUrl: 'https://img/bolt.jpg' }, { name: 'Shock', imageUrl: null }],
+            [{ name: 'Forest', imageUrl: 'https://img/forest.jpg' }],
+        ]);
         const packs = container.querySelectorAll('.cube-pack');
         expect(packs).toHaveLength(2);
         expect(packs[0].querySelector('h3').textContent).toContain('Pack 1');
         expect(packs[0].querySelector('.cube-pack-count').textContent).toBe('2 cards');
-        const links = packs[0].querySelectorAll('.cube-card-link');
-        expect(links).toHaveLength(2);
-        expect(links[0].textContent).toBe('Bolt');
-        expect(links[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
-        expect(packs[1].querySelector('.cube-card-link').textContent).toBe('Forest');
+        const tiles = packs[0].querySelectorAll('.cube-card-grid .cube-card');
+        expect(tiles).toHaveLength(2);
+        expect(tiles[0].querySelector('img.cube-card-img').getAttribute('src')).toBe('https://img/bolt.jpg');
+        expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Bolt'));
+        expect(packs[1].querySelector('.cube-card-name').textContent).toBe('Forest');
     });
 });
 

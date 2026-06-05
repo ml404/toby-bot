@@ -448,31 +448,60 @@ button:disabled {
     border-bottom: 1px solid var(--border);
 }
 
-/* --- Card lists (shared by packs + preview groups) ------------------ */
+/* --- Card thumbnails (shared by packs + preview groups) ------------- */
 
-.cube-card-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    columns: 2;
-    column-gap: var(--space-4);
+.cube-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: var(--space-2);
+    margin-top: var(--space-2);
 }
 
-.cube-card-list li {
-    break-inside: avoid;
-    line-height: 1.6;
-}
-
-.cube-card-link {
-    color: var(--text);
+.cube-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     text-decoration: none;
-    font-size: 0.86rem;
-    border-bottom: 1px dotted transparent;
+    color: var(--text-muted);
 }
 
-.cube-card-link:hover {
+.cube-card-img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 146 / 204;
+    object-fit: cover;
+    display: block;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    transition: transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+
+.cube-card:hover .cube-card-img {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--mtg-gold-border);
+}
+
+.cube-card-img-empty {
+    display: grid;
+    place-items: center;
+    border-style: dashed;
+    border-color: var(--border-strong);
+}
+
+.cube-card-name {
+    font-size: 0.72rem;
+    line-height: 1.25;
+    text-align: center;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.cube-card:hover .cube-card-name {
     color: var(--mtg-gold);
-    border-bottom-color: var(--mtg-gold-border);
 }
 
 /* --- Generated packs ------------------------------------------------ */
@@ -519,8 +548,8 @@ button:disabled {
     padding: var(--space-3);
 }
 
-.cube-pack .cube-card-list {
-    columns: 1;
+.cube-pack .cube-card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
 }
 
 .cube-pack h3 {
@@ -576,10 +605,6 @@ button:disabled {
 
     .cube-submit {
         align-self: start;
-    }
-
-    .cube-card-list {
-        columns: 1;
     }
 
     .cube-bar-row,

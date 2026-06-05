@@ -73,25 +73,56 @@ class CubeWebServiceTest {
         assertEquals(2.0, red.asFan, 1e-9)
     }
 
-    // --- groups (cards per category) -----------------------------------
+    // --- groups (cards per category, with thumbnails) ------------------
 
     @Test
-    fun `groups lists the actual card names per category, deduped and alphabetised`() {
+    fun `groups lists the actual cards per category, deduped, alphabetised, with thumbnails`() {
         val pool = listOf(
-            CubeCard("Shock", setOf(MtgColor.RED)),
-            CubeCard("Bolt", setOf(MtgColor.RED)),
-            CubeCard("Bolt", setOf(MtgColor.RED)), // duplicate
-            CubeCard("Swords", setOf(MtgColor.WHITE)),
-            CubeCard("Wastes", isLand = true),
+            ScryfallCard(CubeCard("Shock", setOf(MtgColor.RED)), "https://img/shock.jpg"),
+            ScryfallCard(CubeCard("Bolt", setOf(MtgColor.RED)), "https://img/bolt.jpg"),
+            ScryfallCard(CubeCard("Bolt", setOf(MtgColor.RED)), "https://img/bolt.jpg"), // duplicate
+            ScryfallCard(CubeCard("Swords", setOf(MtgColor.WHITE)), null),
+            ScryfallCard(CubeCard("Wastes", isLand = true), null),
         )
         val groups = service.groups(pool, packSize = 5)
         assertEquals(listOf("White", "Red", "Land"), groups.map { it.category })
 
         val red = groups.first { it.category == "Red" }
-        assertEquals(listOf("Bolt", "Shock"), red.cards) // deduped + sorted
+        assertEquals(listOf("Bolt", "Shock"), red.cards.map { it.name }) // deduped + sorted
+        assertEquals("https://img/bolt.jpg", red.cards.first().imageUrl)
         assertEquals(3, red.count) // count still includes the duplicate
         // 3 red / 5 pool × 5 = 3.0
         assertEquals(3.0, red.asFan, 1e-9)
+    }
+
+    // --- parseScryfall (thumbnail extraction) --------------------------
+
+    @Test
+    fun `parseScryfall pulls the small thumbnail for single-faced cards`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Bolt","color_identity":["R"],"type_line":"Instant",
+               "image_uris":{"small":"https://img/bolt-small.jpg","normal":"https://img/bolt-normal.jpg"}}]}"""
+        )
+        val parsed = service.parseScryfall(root)
+        assertEquals(1, parsed.size)
+        assertEquals("https://img/bolt-small.jpg", parsed.first().imageUrl)
+    }
+
+    @Test
+    fun `parseScryfall falls back to the front face image for double-faced cards`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Delver of Secrets // Insectile Aberration","color_identity":["U"],
+               "type_line":"Creature","card_faces":[
+                 {"image_uris":{"small":"https://img/delver-front.jpg"}},
+                 {"image_uris":{"small":"https://img/delver-back.jpg"}}]}]}"""
+        )
+        assertEquals("https://img/delver-front.jpg", service.parseScryfall(root).first().imageUrl)
+    }
+
+    @Test
+    fun `parseScryfall yields a null thumbnail when Scryfall has no image`() {
+        val root = mapper.readTree("""{"data":[{"name":"Imageless","color_identity":[],"type_line":"Token"}]}""")
+        assertEquals(null, service.parseScryfall(root).first().imageUrl)
     }
 
     // --- preview (pure validation branch) ------------------------------

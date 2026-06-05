@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
+import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
 import web.service.CubeResult
@@ -68,7 +69,15 @@ class CubeControllerTest {
     fun `preview returns 200 with the card groups on success`() {
         val data = PreviewData(
             query = "set:vow", poolSize = 277, packSize = 15,
-            groups = listOf(CategoryGroup("White", 50, 2.7, listOf("Sigarda's Splendor", "Sungold Sentinel"))),
+            groups = listOf(
+                CategoryGroup(
+                    "White", 50, 2.7,
+                    listOf(
+                        CardView("Sigarda's Splendor", "https://img/sigarda.jpg"),
+                        CardView("Sungold Sentinel", null),
+                    ),
+                )
+            ),
         )
         every { service.preview("set:vow", 15) } returns CubeResult.ok(data)
 
@@ -78,7 +87,9 @@ class CubeControllerTest {
         assertTrue(response.body!!.ok)
         assertEquals(277, response.body!!.poolSize)
         assertEquals(1, response.body!!.groups.size)
-        assertEquals(listOf("Sigarda's Splendor", "Sungold Sentinel"), response.body!!.groups.first().cards)
+        val cards = response.body!!.groups.first().cards
+        assertEquals(listOf("Sigarda's Splendor", "Sungold Sentinel"), cards.map { it.name })
+        assertEquals("https://img/sigarda.jpg", cards.first().imageUrl)
     }
 
     @Test
@@ -94,7 +105,10 @@ class CubeControllerTest {
     fun `generate returns 200 with packs on success`() {
         val data = GenerateData(
             query = "cube:vintage", poolSize = 540, packCount = 24, packSize = 15, balanced = true,
-            packs = listOf(listOf("Bolt", "Forest"), listOf("Sol Ring")),
+            packs = listOf(
+                listOf(CardView("Bolt", "https://img/bolt.jpg"), CardView("Forest", null)),
+                listOf(CardView("Sol Ring", "https://img/solring.jpg")),
+            ),
             distribution = listOf(CategoryAsFan("Red", 100, 2.7)),
         )
         every { service.generate("cube:vintage", 24, 15, true) } returns CubeResult.ok(data)
@@ -106,7 +120,8 @@ class CubeControllerTest {
         assertTrue(body.ok)
         assertEquals(24, body.packCount)
         assertEquals(2, body.packs.size)
-        assertEquals(listOf("Bolt", "Forest"), body.packs.first())
+        assertEquals(listOf("Bolt", "Forest"), body.packs.first().map { it.name })
+        assertEquals("https://img/bolt.jpg", body.packs.first().first().imageUrl)
     }
 
     @Test
