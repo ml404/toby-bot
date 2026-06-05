@@ -5,82 +5,117 @@
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
-<main id="main" class="container">
-    <h1 class="mb-3">MTG Cube workshop</h1>
-    <p class="muted mb-5">
-        Build randomised draft packs and crunch
-        <a href="https://magic.wizards.com/en/news/making-magic/nuts-and-bolts-key-concepts-2015-08-31"
-           target="_blank" rel="noopener">as-fan</a>
-        for a Magic: The Gathering cube. Define your pool with a
-        <a href="https://scryfall.com/docs/syntax" target="_blank" rel="noopener">Scryfall search</a>
-        (e.g. <code>cube:vintage</code>, <code>set:vow</code>, <code>t:dragon</code>). Same tools the
-        <code>/cube</code> Discord command uses, no login required.
-    </p>
+<main id="main" class="cube-main">
+    <header class="cube-hero">
+        <div class="cube-hero-inner">
+            <p class="cube-eyebrow">Magic: The Gathering</p>
+            <h1>Cube workshop</h1>
+            <p class="cube-lede">
+                Build randomised draft packs and crunch
+                <a href="https://magic.wizards.com/en/news/making-magic/nuts-and-bolts-key-concepts-2015-08-31"
+                   target="_blank" rel="noopener">as-fan</a>
+                for your cube. Define a pool with a
+                <a href="https://scryfall.com/docs/syntax" target="_blank" rel="noopener">Scryfall search</a>,
+                draw a random subset, and deal it into balanced boosters — the same tools the
+                <code>/cube</code> Discord command uses. No login required.
+            </p>
+            <ul class="cube-chips" aria-label="Example Scryfall queries">
+                <li><button type="button" class="cube-chip" data-example="cube:vintage">cube:vintage</button></li>
+                <li><button type="button" class="cube-chip" data-example="set:vow">set:vow</button></li>
+                <li><button type="button" class="cube-chip" data-example="t:dragon">t:dragon</button></li>
+                <li><button type="button" class="cube-chip" data-example="c:r t:instant">c:r t:instant</button></li>
+            </ul>
+        </div>
+    </header>
 
-    <!-- As-fan calculator -->
-    <section class="cube-card">
-        <h2>As-fan calculator</h2>
-        <p class="muted">Expected copies of a card type you open per booster: <code>(type ÷ cube size) × pack size</code>.</p>
-        <form class="cube-form" data-form="asfan" autocomplete="off">
-            <label>Cards of that type
-                <input type="number" name="total" min="0" value="60" required>
-            </label>
-            <label>Cube size
-                <input type="number" name="cubeSize" min="1" value="540" required>
-            </label>
-            <label>Pack size
-                <input type="number" name="packSize" min="1" max="30" value="15" required>
-            </label>
-            <button type="submit" class="btn">Calculate</button>
-        </form>
-        <p class="cube-status muted" data-status="asfan" aria-live="polite"></p>
-        <p class="cube-asfan-result" data-result="asfan" hidden></p>
-    </section>
+    <div class="cube-shell">
+        <div class="cube-tabs segmented" role="tablist" aria-label="Cube tools">
+            <button type="button" id="tab-asfan" class="cube-tab" role="tab"
+                    data-tab="asfan" aria-controls="panel-asfan" aria-selected="true">
+                As-fan calculator
+            </button>
+            <button type="button" id="tab-preview" class="cube-tab" role="tab"
+                    data-tab="preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1">
+                Cube preview
+            </button>
+            <button type="button" id="tab-generate" class="cube-tab" role="tab"
+                    data-tab="generate" aria-controls="panel-generate" aria-selected="false" tabindex="-1">
+                Pack generator
+            </button>
+        </div>
 
-    <!-- Preview -->
-    <section class="cube-card">
-        <h2>Cube preview</h2>
-        <p class="muted">See the colour / colourless / land as-fan of everything a query matches.</p>
-        <form class="cube-form" data-form="preview" autocomplete="off">
-            <label class="cube-query">Scryfall query
-                <input type="text" name="query" placeholder="e.g. set:vow" required>
-            </label>
-            <label>Pack size
-                <input type="number" name="packSize" min="1" max="30" value="15" required>
-            </label>
-            <button type="submit" class="btn">Preview</button>
-        </form>
-        <p class="cube-status muted" data-status="preview" aria-live="polite"></p>
-        <table class="cube-table" data-result="preview" hidden>
-            <thead><tr><th>Category</th><th>Count</th><th>As-fan / pack</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </section>
+        <!-- As-fan calculator -->
+        <section id="panel-asfan" class="cube-panel" role="tabpanel" aria-labelledby="tab-asfan" data-panel="asfan">
+            <p class="cube-panel-intro">
+                Expected copies of a card type you open per booster:
+                <code>(type ÷ cube size) × pack size</code>.
+            </p>
+            <form class="cube-form" data-form="asfan" autocomplete="off">
+                <label>Cards of that type
+                    <input type="number" name="total" min="0" value="60" required>
+                </label>
+                <label>Cube size
+                    <input type="number" name="cubeSize" min="1" value="540" required>
+                </label>
+                <label>Pack size
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                </label>
+                <button type="submit" class="btn">Calculate</button>
+            </form>
+            <p class="cube-status" data-status="asfan" aria-live="polite"></p>
+            <div class="cube-asfan-result" data-result="asfan" hidden>
+                <span class="cube-asfan-number" data-asfan-number>0.00</span>
+                <span class="cube-asfan-unit">of that type per pack</span>
+            </div>
+        </section>
 
-    <!-- Generate -->
-    <section class="cube-card">
-        <h2>Generate packs</h2>
-        <p class="muted">Randomly draw cards from the pool and deal evenly-sized, as-fan-balanced packs.</p>
-        <form class="cube-form" data-form="generate" autocomplete="off">
-            <label class="cube-query">Scryfall query
-                <input type="text" name="query" placeholder="e.g. cube:vintage" required>
-            </label>
-            <label>Packs
-                <input type="number" name="packs" min="1" max="90" value="24" required>
-            </label>
-            <label>Pack size
-                <input type="number" name="packSize" min="1" max="30" value="15" required>
-            </label>
-            <label class="cube-checkbox">
-                <input type="checkbox" name="balanced" checked>
-                Balance as-fan across packs
-            </label>
-            <button type="submit" class="btn">Generate</button>
-        </form>
-        <p class="cube-status muted" data-status="generate" aria-live="polite"></p>
-        <div class="cube-generate-summary" data-summary="generate" hidden></div>
-        <div class="cube-packs" data-result="generate" hidden></div>
-    </section>
+        <!-- Preview -->
+        <section id="panel-preview" class="cube-panel" role="tabpanel" aria-labelledby="tab-preview"
+                 data-panel="preview" hidden>
+            <p class="cube-panel-intro">
+                See the colour / colourless / land as-fan of every card a query matches.
+            </p>
+            <form class="cube-form" data-form="preview" autocomplete="off">
+                <label class="cube-query">Scryfall query
+                    <input type="text" name="query" placeholder="e.g. set:vow" required>
+                </label>
+                <label>Pack size
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                </label>
+                <button type="submit" class="btn">Preview</button>
+            </form>
+            <p class="cube-status" data-status="preview" aria-live="polite"></p>
+            <div class="cube-dist" data-result="preview" hidden></div>
+        </section>
+
+        <!-- Generate -->
+        <section id="panel-generate" class="cube-panel" role="tabpanel" aria-labelledby="tab-generate"
+                 data-panel="generate" hidden>
+            <p class="cube-panel-intro">
+                Randomly draw cards from the pool and deal evenly-sized, as-fan-balanced packs.
+            </p>
+            <form class="cube-form" data-form="generate" autocomplete="off">
+                <label class="cube-query">Scryfall query
+                    <input type="text" name="query" placeholder="e.g. cube:vintage" required>
+                </label>
+                <label>Packs
+                    <input type="number" name="packs" min="1" max="90" value="24" required>
+                </label>
+                <label>Pack size
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                </label>
+                <label class="cube-checkbox">
+                    <input type="checkbox" name="balanced" checked>
+                    Balance as-fan across packs
+                </label>
+                <button type="submit" class="btn">Generate</button>
+            </form>
+            <p class="cube-status" data-status="generate" aria-live="polite"></p>
+            <div class="cube-generate-summary" data-summary="generate" hidden></div>
+            <div class="cube-dist" data-dist="generate" hidden></div>
+            <div class="cube-packs" data-result="generate" hidden></div>
+        </section>
+    </div>
 </main>
 
 <script th:src="@{/js/cube.js}"></script>

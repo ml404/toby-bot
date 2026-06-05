@@ -1,20 +1,152 @@
-.cube-card {
+/* MTG Cube workshop. Gold "five-colour" accent over the dashboard's dark
+   theme, a hero band, a tabbed tool shell, colour-pie as-fan bars, and a
+   booster-pack grid. Tokens come from base.css :root. */
+
+:root {
+    --mtg-gold: #c7a14f;
+    --mtg-gold-soft: rgba(199, 161, 79, 0.14);
+    --mtg-gold-border: rgba(199, 161, 79, 0.45);
+}
+
+.cube-main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 var(--space-4) var(--space-10);
+}
+
+/* --- Hero ----------------------------------------------------------- */
+
+.cube-hero {
+    position: relative;
+    margin: 0 calc(-1 * var(--space-4)) var(--space-6);
+    padding: var(--space-10) var(--space-4) var(--space-8);
+    background:
+        radial-gradient(80% 70% at 50% 0%, var(--mtg-gold-soft) 0%, transparent 65%),
+        var(--gradient-hero);
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+}
+
+.cube-hero-inner {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.cube-eyebrow {
+    margin: 0 0 var(--space-2);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--mtg-gold);
+}
+
+.cube-hero h1 {
+    margin: 0 0 var(--space-3);
+    font-size: 2.2rem;
+    color: var(--heading);
+}
+
+.cube-lede {
+    margin: 0 auto;
+    max-width: 620px;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.cube-lede code {
+    color: var(--mtg-gold);
+}
+
+.cube-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.cube-chip {
+    padding: 5px 12px;
+    background: var(--mtg-gold-soft);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: 999px;
+    color: var(--mtg-gold);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+}
+
+.cube-chip:hover {
+    background: rgba(199, 161, 79, 0.26);
+}
+
+/* --- Tabs ------------------------------------------------------------ */
+
+.cube-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: var(--space-5);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+}
+
+.cube-tab {
+    flex: 1;
+    padding: 10px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+.cube-tab:hover {
+    color: var(--text);
+}
+
+.cube-tab[aria-selected="true"] {
+    background: var(--mtg-gold-soft);
+    color: var(--mtg-gold);
+    box-shadow: inset 0 0 0 1px var(--mtg-gold-border);
+}
+
+/* --- Panels & forms ------------------------------------------------- */
+
+.cube-panel {
     background: var(--bg-elevated);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    padding: var(--space-4);
-    max-width: 860px;
-    margin-bottom: var(--space-4);
+    padding: var(--space-5);
+    box-shadow: var(--shadow-sm);
 }
 
-.cube-card h2 {
+.cube-panel[hidden] {
+    display: none;
+}
+
+.cube-panel-intro {
     margin-top: 0;
+    color: var(--text-muted);
+}
+
+.cube-panel-intro code,
+.cube-generate-summary strong {
+    color: var(--mtg-gold);
 }
 
 .cube-form {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--space-3);
     align-items: end;
     margin-bottom: var(--space-3);
 }
@@ -32,15 +164,21 @@
 
 .cube-form input[type="text"],
 .cube-form input[type="number"] {
-    padding: 6px 10px;
-    background: var(--bg);
+    padding: 8px 10px;
+    background: var(--bg-input);
     color: var(--text);
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-sm);
     font: inherit;
 }
 
-.cube-form .cube-checkbox {
+.cube-form input:focus {
+    outline: none;
+    border-color: var(--mtg-gold);
+    box-shadow: 0 0 0 2px var(--mtg-gold-soft);
+}
+
+.cube-checkbox {
     flex-direction: row;
     align-items: center;
     gap: 6px;
@@ -51,65 +189,161 @@
     height: fit-content;
 }
 
+.cube-status {
+    margin: var(--space-2) 0;
+    color: var(--text-muted);
+    min-height: 1.2em;
+}
+
 .cube-status:empty {
     display: none;
 }
 
+/* --- As-fan result -------------------------------------------------- */
+
 .cube-asfan-result {
-    font-size: 1.25rem;
-    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    background: var(--bg);
+    border: 1px solid var(--mtg-gold-border);
+    border-radius: var(--radius-md);
+}
+
+.cube-asfan-result[hidden] {
+    display: none;
+}
+
+.cube-asfan-number {
+    font-size: 2.4rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--mtg-gold);
+}
+
+.cube-asfan-unit {
+    color: var(--text-muted);
+}
+
+/* --- As-fan bars ---------------------------------------------------- */
+
+.cube-dist {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+
+.cube-dist[hidden] {
+    display: none;
+}
+
+.cube-bar-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.cube-bar-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.88rem;
     color: var(--text);
 }
 
-.cube-table {
-    width: 100%;
-    max-width: 480px;
-    border-collapse: collapse;
+.cube-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+    flex-shrink: 0;
 }
 
-.cube-table th,
-.cube-table td {
-    text-align: left;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border);
+.cube-bar-track {
+    height: 10px;
+    background: var(--bg);
+    border-radius: 999px;
+    overflow: hidden;
 }
 
-.cube-table th {
+.cube-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width var(--dur-base) var(--ease-out);
+}
+
+.cube-bar-value {
+    font-size: 0.82rem;
     color: var(--text-muted);
-    font-weight: 600;
+    white-space: nowrap;
 }
+
+/* --- Generated packs ------------------------------------------------ */
 
 .cube-generate-summary {
-    margin-bottom: var(--space-3);
+    margin-top: var(--space-4);
     color: var(--text);
+}
+
+.cube-generate-summary[hidden] {
+    display: none;
 }
 
 .cube-packs {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: var(--space-3);
+    margin-top: var(--space-4);
+}
+
+.cube-packs[hidden] {
+    display: none;
 }
 
 .cube-pack {
     background: var(--bg);
     border: 1px solid var(--border);
+    border-top: 2px solid var(--mtg-gold-border);
     border-radius: var(--radius-sm);
     padding: var(--space-3);
 }
 
 .cube-pack h3 {
-    margin: 0 0 6px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin: 0 0 var(--space-2);
     font-size: 0.95rem;
+    color: var(--heading);
+}
+
+.cube-pack-count {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: var(--text-muted);
 }
 
 .cube-pack ul {
     margin: 0;
-    padding-left: 18px;
-    font-size: 0.85rem;
+    padding-left: 16px;
+    font-size: 0.82rem;
     color: var(--text-muted);
+    line-height: 1.5;
 }
 
 @media (max-width: 600px) {
+    .cube-hero h1 {
+        font-size: 1.7rem;
+    }
+
+    .cube-tabs {
+        flex-direction: column;
+    }
+
     .cube-form {
         flex-direction: column;
         align-items: stretch;
@@ -117,5 +351,24 @@
 
     .cube-form .btn {
         align-self: start;
+    }
+
+    .cube-bar-row {
+        grid-template-columns: 90px 1fr;
+        grid-template-areas:
+            "label track"
+            "value value";
+    }
+
+    .cube-bar-label {
+        grid-area: label;
+    }
+
+    .cube-bar-track {
+        grid-area: track;
+    }
+
+    .cube-bar-value {
+        grid-area: value;
     }
 }
