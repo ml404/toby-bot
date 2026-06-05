@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import kotlinx.kover.gradle.plugin.dsl.AggregationType
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
 buildscript {
     ext {
@@ -30,8 +32,10 @@ plugins {
     id 'com.autonomousapps.dependency-analysis' version '3.6.1'
     // Kotlin-native line/branch coverage. Aggregates across every
     // subproject (see the kover { } block + dependencies at the
-    // bottom of this file). Non-blocking — CI prints the % but does
-    // not gate merges. Run `./gradlew koverHtmlReport` locally.
+    // bottom of this file). The aggregate report is gated by a
+    // verification floor (`koverVerify`) so coverage can't silently
+    // regress — see the `kover { reports { verify { } } }` block below.
+    // Run `./gradlew koverHtmlReport` locally for the browsable report.
     id 'org.jetbrains.kotlinx.kover' version '0.9.1'
 }
 
@@ -124,6 +128,48 @@ repositories {
 
 kotlin {
     jvmToolchain(21)
+}
+
+// Coverage configuration: what counts, and the regression floor.
+//
+// filters/excludes — keep the metric focused on hand-written logic by
+// dropping code there's no value in unit-testing: JPA entities and other
+// data holders (`*Dto`, the `bot.toby.dto` web API response models),
+// Spring `@Configuration` beans, the `@SpringBootApplication` entry point,
+// and Kotlin's synthetic interface `$DefaultImpls` shims. These are wiring
+// and serialization, not behaviour.
+//
+// verify — `koverVerify` fails the build if the (filtered) aggregate report
+// dips below these bounds, pinning coverage so it can only ratchet upward.
+// The floors sit just under the current CI numbers (line ~85%, instruction
+// ~82%, branch ~67%) to absorb routine refactors without flaking; raise them
+// as coverage climbs. NOTE on branch: Kotlin emits a synthetic branch for
+// nearly every null-safe access (`?.`/`?:`/non-null params), so aggregate
+// branch coverage runs structurally lower than line/instruction — chasing
+// 85% branch isn't meaningful here, so the branch floor is set accordingly.
+// Verification runs against the aggregate report wired up in the
+// `dependencies` block below, and CI invokes `koverVerify` (see gradle.yml).
+kover {
+    reports {
+        filters {
+            excludes {
+                annotatedBy(
+                    'jakarta.persistence.Entity',
+                    'org.springframework.context.annotation.Configuration',
+                    'org.springframework.boot.autoconfigure.SpringBootApplication',
+                )
+                classes('*Dto', '*Dto$*', '*$DefaultImpls')
+                packages('bot.toby.dto')
+            }
+        }
+        verify {
+            rule {
+                minBound(85, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
+                minBound(81, CoverageUnit.INSTRUCTION, AggregationType.COVERED_PERCENTAGE)
+                minBound(66, CoverageUnit.BRANCH, AggregationType.COVERED_PERCENTAGE)
+            }
+        }
+    }
 }
 
 // Aggregate coverage across every Kotlin subproject into one report.
