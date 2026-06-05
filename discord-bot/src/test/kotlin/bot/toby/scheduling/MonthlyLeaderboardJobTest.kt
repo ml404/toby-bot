@@ -76,6 +76,10 @@ class MonthlyLeaderboardJobTest {
         every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns true
         val createAction = mockk<MessageCreateAction>(relaxed = true)
         every { channel.sendMessageEmbeds(any<MessageEmbed>()) } returns createAction
+        // Default: the boundary freeze echoes back the dto it was given, so the
+        // frozen end-of-month total equals the user's balance unless a test
+        // overrides upsertIfMissing to simulate a pre-existing boundary row.
+        every { snapshotService.upsertIfMissing(any()) } answers { firstArg() }
 
         job = MonthlyLeaderboardJob(
             jda, userService, voiceSessionService, snapshotService, configService,
@@ -358,5 +362,104 @@ class MonthlyLeaderboardJobTest {
 
         verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
         assertEquals(1, snapshots.size)
+    }
+
+    // ---------------------------------------------------------------------
+    // The board must post a SNAPSHOT of last month, frozen at the midnight
+    // month boundary — not a figure derived from the live balance at the
+    // (later) posting hour. The three tests below pin that contract.
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun `earnings come from the frozen month-boundary snapshot, not the live balance`() {
+        val today = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val prevMonth = today.minusMonths(1)
+        // Alice's LIVE balance has already drifted to 999 in the new month, but
+        // the authoritative end-of-last-month boundary snapshot froze her at 400.
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 999L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, prevMonth) } returns
+            listOf(MonthlyCreditSnapshotDto(discordId = 1L, guildId = guildId, snapshotDate = prevMonth, socialCredit = 100L))
+        // The boundary snapshot already exists (frozen at midnight), so the
+        // freeze is a no-op that returns the authoritative 400 — never 999.
+        every { snapshotService.upsertIfMissing(any()) } answers {
+            val dto = firstArg<MonthlyCreditSnapshotDto>()
+            if (dto.snapshotDate == today)
+                MonthlyCreditSnapshotDto(discordId = dto.discordId, guildId = guildId, snapshotDate = today, socialCredit = 400L)
+            else dto
+        }
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        val description = embedSlot.captured.description ?: ""
+        // Earnings = 400 (frozen end) - 100 (frozen start) = 300, NOT 999 - 100 = 899.
+        assertTrue(description.contains("300 credits"),
+            "expected frozen-boundary earnings of 300, got: $description")
+        assertFalse(description.contains("899"),
+            "must not derive earnings from the live balance (899): $description")
+    }
+
+    @Test
+    fun `end-of-month total comes from the frozen boundary even after the balance drops`() {
+        val today = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+        val prevMonth = today.minusMonths(1)
+        // Alice ended last month at 400 (frozen) but has since spent down to 50
+        // in the new month. The board is a snapshot of last month, so it must
+        // still show her 400 total and her 300 of earnings.
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 50L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, prevMonth) } returns
+            listOf(MonthlyCreditSnapshotDto(discordId = 1L, guildId = guildId, snapshotDate = prevMonth, socialCredit = 100L))
+        every { snapshotService.upsertIfMissing(any()) } answers {
+            val dto = firstArg<MonthlyCreditSnapshotDto>()
+            if (dto.snapshotDate == today)
+                MonthlyCreditSnapshotDto(discordId = dto.discordId, guildId = guildId, snapshotDate = today, socialCredit = 400L)
+            else dto
+        }
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val embedSlot = slot<MessageEmbed>()
+        val createAction = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embedSlot)) } returns createAction
+
+        job.postMonthlyLeaderboard()
+
+        val description = embedSlot.captured.description ?: ""
+        assertFalse(description.startsWith("No activity recorded"),
+            "live balance (50 < 100 baseline) wrongly drops Alice from the board: $description")
+        assertTrue(description.contains("400 total"),
+            "expected end-of-month total of 400 (frozen), got: $description")
+        assertTrue(description.contains("300 credits"),
+            "expected frozen-boundary earnings of 300, got: $description")
+    }
+
+    @Test
+    fun `boundary snapshot is frozen at the midnight tick even when the guild posts later`() {
+        // A guild posts at the default hour (12:00). At the 00:00 tick the job
+        // must still freeze the authoritative month-boundary snapshot for that
+        // guild (so the noon post reflects midnight) without posting yet.
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 250L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        val today = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
+
+        jobAtHour(0).postMonthlyLeaderboard()
+
+        // Frozen the boundary for the user at midnight…
+        verify(atLeast = 1) {
+            snapshotService.upsertIfMissing(match { it.discordId == 1L && it.snapshotDate == today })
+        }
+        // …but did NOT post (the guild's posting hour is 12:00, not 00:00).
+        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 }
