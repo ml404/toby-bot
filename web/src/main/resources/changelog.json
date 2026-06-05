@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Web cube UX: shareable query links, live card count, loading spinner",
+    "summary": "First of two UX-polish PRs (the other adds `/cube saved` in Discord). Closes three of the usability gaps from the review.",
+    "emoji": "✨",
+    "prNumber": 625
+  },
+  {
+    "date": "June 2026",
     "title": "Bound oversized cube inputs (Scryfall lookups + stored text)",
     "summary": "A second audit pass — three unbounded-input issues that could exhaust resources or get us rate-limited.",
     "emoji": "✨",
