@@ -7,6 +7,7 @@ import bot.toby.command.commands.fetch.FetchCommand
 import bot.toby.command.commands.game.pvp.GameCommand
 import bot.toby.command.commands.misc.MiscCommand
 import bot.toby.command.commands.moderation.ModerationCommand
+import bot.toby.command.commands.mtg.MtgCommand
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.UserDtoHelper
 import common.logging.DiscordLogger
@@ -65,6 +66,7 @@ class DefaultCommandManager @Autowired constructor(
     override val fetchCommands: List<Command> get() = commands.filterIsInstance<FetchCommand>()
     override val economyCommands: List<Command> get() = commands.filterIsInstance<EconomyCommand>()
     override val gameCommands: List<Command> get() = commands.filterIsInstance<GameCommand>()
+    override val mtgCommands: List<Command> get() = commands.filterIsInstance<MtgCommand>()
 
     override fun handle(event: SlashCommandInteractionEvent) {
         val guildId = event.guild?.id ?: return

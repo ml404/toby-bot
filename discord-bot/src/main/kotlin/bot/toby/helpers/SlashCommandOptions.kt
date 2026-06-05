@@ -20,3 +20,6 @@ fun SlashCommandInteractionEvent.intOption(name: String, default: Int = 0): Int 
 
 fun SlashCommandInteractionEvent.stringOption(name: String): String? =
     getOption(name)?.asString
+
+fun SlashCommandInteractionEvent.booleanOption(name: String, default: Boolean = false): Boolean =
+    getOption(name)?.asBoolean ?: default

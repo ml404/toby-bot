@@ -70,7 +70,8 @@ class HomeStatsService(
                 economyCommands.size +
                 gameCommands.size +
                 miscCommands.size +
-                fetchCommands.size
+                fetchCommands.size +
+                mtgCommands.size
         },
         gameCount = GameCatalog.total,
         minigameCount = GameCatalog.minigameCount,
