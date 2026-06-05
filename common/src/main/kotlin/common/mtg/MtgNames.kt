@@ -33,4 +33,19 @@ object MtgNames {
 
     /** The lookup key for a user-entered name (trimmed, lower-cased). */
     fun lookupKey(name: String): String = name.trim().lowercase()
+
+    /**
+     * The identifier to send to Scryfall's collection lookup for [name].
+     * Scryfall matches a card by a single face, **not** by its full
+     * `A // B` name, so a pasted full name (e.g.
+     * `Archangel Avacyn // Avacyn, the Purifier`) must be reduced to its
+     * front face or it comes back "not found". Single-faced and front-face
+     * names pass through unchanged; the returned card (under its full name)
+     * is tied back to the original entry by [matchKeys].
+     */
+    fun requestName(name: String): String {
+        val trimmed = name.trim()
+        val idx = trimmed.indexOf(FACE_SEPARATOR)
+        return if (idx >= 0) trimmed.substring(0, idx).trim() else trimmed
+    }
 }

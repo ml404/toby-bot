@@ -72,7 +72,10 @@ class CubeCommand @Autowired constructor(
                 ?: return PoolResult.Failed("You have no saved cube named `$saved`. Save one on the website first.")
             val entries = CardListParser.parse(dto.cards)
             if (entries.isEmpty()) return PoolResult.Failed("Your saved cube `$saved` is empty.")
-            return when (val res = fetcher.fetchByNames(entries.map { it.name })) {
+            // Resolve by front face — Scryfall's collection lookup matches a
+            // single face, not the full "A // B" name; matchKeys ties the
+            // returned full-name cards back to the entries below.
+            return when (val res = fetcher.fetchByNames(entries.map { MtgNames.requestName(it.name) })) {
                 is ScryfallCubeFetcher.Result.Failure -> PoolResult.Failed(res.message)
                 is ScryfallCubeFetcher.Result.Success -> {
                     // Index by full name AND each face so a pasted front-face

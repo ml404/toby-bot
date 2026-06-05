@@ -220,6 +220,32 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
+    fun `a saved cube with full DFC names requests Scryfall by front face`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
+        // The cube stores the full "//" name (as exported from a deckbuilder).
+        every { cubeListService.get(100L, "My Cube") } returns
+            savedCube("My Cube", "Archangel Avacyn // Avacyn, the Purifier")
+        val requested = slot<List<String>>()
+        every { fetcher.fetchByNames(capture(requested)) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
+        )
+
+        run()
+
+        // Scryfall is asked for the front face only (the full "//" name 404s).
+        assertEquals(listOf("Archangel Avacyn"), requested.captured)
+        // …and the returned full-name card still resolves into a dealt pack.
+        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
+    }
+
+    @Test
     fun `a saved cube's back-face name also resolves a transform card`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction

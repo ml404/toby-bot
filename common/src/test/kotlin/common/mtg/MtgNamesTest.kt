@@ -94,4 +94,31 @@ class MtgNamesTest {
         assertTrue(keys.contains(MtgNames.lookupKey("  WEAR  ")))
         assertTrue(keys.contains(MtgNames.lookupKey("tear")))
     }
+
+    @Test
+    fun `requestName reduces a full multi-faced name to its front face`() {
+        assertEquals("Archangel Avacyn", MtgNames.requestName("Archangel Avacyn // Avacyn, the Purifier"))
+        assertEquals("Fire", MtgNames.requestName("Fire // Ice"))
+        assertEquals("Huntmaster of the Fells", MtgNames.requestName("Huntmaster of the Fells // Ravager of the Fells"))
+    }
+
+    @Test
+    fun `requestName leaves single-faced and front-face names unchanged`() {
+        assertEquals("Lightning Bolt", MtgNames.requestName("Lightning Bolt"))
+        assertEquals("Archangel Avacyn", MtgNames.requestName("Archangel Avacyn"))
+    }
+
+    @Test
+    fun `requestName trims surrounding and around-separator whitespace`() {
+        assertEquals("Fire", MtgNames.requestName("  Fire // Ice  "))
+        assertEquals("Commit", MtgNames.requestName("Commit//Memory"))
+    }
+
+    @Test
+    fun `the front face requestName resolves back via matchKeys`() {
+        // End-to-end of the fix: send the front face, match the full name back.
+        val request = MtgNames.requestName("Archangel Avacyn // Avacyn, the Purifier")
+        val fullNameKeys = MtgNames.matchKeys("Archangel Avacyn // Avacyn, the Purifier")
+        assertTrue(fullNameKeys.contains(MtgNames.lookupKey(request)))
+    }
 }
