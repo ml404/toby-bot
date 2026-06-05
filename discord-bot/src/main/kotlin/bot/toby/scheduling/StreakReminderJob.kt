@@ -19,8 +19,12 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 /**
- * 23:00 UTC nudge for users with an active streak who haven't claimed
- * today. Routed through [NotificationRouter], which checks
+ * 18:00 UTC nudge for users with an active streak who haven't claimed
+ * today. The streak resets at midnight UTC (the daily reset jobs run at
+ * `0 0 0 * * *`), so firing six hours ahead leaves a usable window to
+ * claim — the previous 23:00 slot landed one hour before the reset, in
+ * the middle of the night for most timezones, and was effectively too
+ * late to act on. Routed through [NotificationRouter], which checks
  * [NotificationChannelKind.STREAK_REMINDER] opt-in — that kind defaults
  * to off, so existing servers stay quiet; users explicitly opt in via
  * `/notify set STREAK_REMINDER on` or the web preferences page.
@@ -40,7 +44,7 @@ class StreakReminderJob @Autowired constructor(
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
-    @Scheduled(cron = "0 0 23 * * *", zone = "UTC")
+    @Scheduled(cron = "0 0 18 * * *", zone = "UTC")
     fun runHourly() {
         val today = LocalDate.now(clock.withZone(ZoneOffset.UTC))
         logger.info { "Running streak-reminder job for $today" }

@@ -123,8 +123,8 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly uses today's UTC date — not the wall-clock local date`() {
-        // Cron is `0 0 23 * * *` in UTC. Job picks UTC date via the
+    fun `runHourly uses today's UTC date - not the wall-clock local date`() {
+        // Cron is `0 0 18 * * *` in UTC. Job picks UTC date via the
         // injected clock. Verify the LoginStreakService query receives
         // the fixed UTC date from the clock.
         every {
@@ -139,7 +139,7 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly isolates per-guild failures — one throwing guild doesn't kill the loop`() {
+    fun `runHourly isolates per-guild failures - one throwing guild doesn't kill the loop`() {
         every {
             loginStreakService.findActiveStreaksDueForReminder(100L, today)
         } throws RuntimeException("DB hiccup")
@@ -193,7 +193,7 @@ class StreakReminderJobTest {
     }
 
     @Test
-    fun `runHourly also pushes every at-risk user — regression guard for forgotten push surface`() {
+    fun `runHourly also pushes every at-risk user - regression guard for forgotten push surface`() {
         // STREAK_REMINDER supports DM + PUSH. Before dispatch enforcement,
         // the job DM'd at-risk users but never pushed — opted-in browsers
         // got nothing. Dispatch now requires both, and this test pins
