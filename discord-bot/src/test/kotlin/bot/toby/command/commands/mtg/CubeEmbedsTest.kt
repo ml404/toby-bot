@@ -358,6 +358,34 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `watchAddedEmbed describes the watch and its target`() {
+        val watch = database.dto.user.CardPriceWatchDto(
+            id = 9, discordId = 7, cardName = "Ragavan", currency = "usd",
+            direction = database.dto.user.CardPriceWatchDto.Direction.BELOW.name, threshold = 30.0,
+        )
+        val card = CubeCard("Ragavan, Nimble Pilferer", imageUrl = "https://img/r.jpg")
+        val embed = CubeEmbeds.watchAddedEmbed(watch, card, common.mtg.MtgCurrency.USD, 45.0)
+        val desc = embed.description!!
+        assertTrue(desc.contains("below \$30.00"), desc)
+        assertTrue(desc.contains("#9"))
+        assertTrue(desc.contains("now \$45.00"), desc)
+    }
+
+    @Test
+    fun `watchListEmbed lists watches or shows an empty state`() {
+        val empty = CubeEmbeds.watchListEmbed(emptyList())
+        assertTrue(empty.description!!.contains("not watching any"))
+
+        val watches = listOf(
+            database.dto.user.CardPriceWatchDto(id = 1, cardName = "Ragavan", currency = "usd", direction = "BELOW", threshold = 30.0),
+            database.dto.user.CardPriceWatchDto(id = 2, cardName = "Mox", currency = "eur", direction = "ABOVE", threshold = 100.0),
+        )
+        val desc = CubeEmbeds.watchListEmbed(watches).description!!
+        assertTrue(desc.contains("#1") && desc.contains("Ragavan") && desc.contains("below \$30.00"), desc)
+        assertTrue(desc.contains("#2") && desc.contains("€100.00"), desc)
+    }
+
+    @Test
     fun `ruleEmbed shows the keyword and its reminder text`() {
         val embed = CubeEmbeds.ruleEmbed(common.mtg.MtgGlossary.Term("Trample", "This creature can deal excess combat damage…"))
         assertEquals("Trample", embed.title)

@@ -7,10 +7,10 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality', 'reference'];
+    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality', 'reference', 'watch'];
 
     // Tools that work off their own inputs, not the shared "Your cube" source.
-    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality', 'reference'];
+    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality', 'reference', 'watch'];
 
     // Colour-pie palette for swatches/bars. Tuned to read on the dark
     // dashboard background while staying recognisably W/U/B/R/G + gold
@@ -1517,6 +1517,91 @@
         wireLookupForm(doc, 'rule', 'term', ruleUrl, function (json) { return json.rule; }, renderRule, 'Enter a keyword.');
     }
 
+    const WATCHES_API = '/cube/api/watches';
+
+    /** Formats a watch as "Card — below $30 (USD)". Pure. */
+    function watchLine(watch) {
+        const m = currencyMeta(watch.currency);
+        return watch.cardName + ' — ' + watch.direction + ' ' + m.symbol +
+            Number(watch.threshold).toFixed(2) + m.suffix + ' (' + m.display + ')';
+    }
+
+    /** Renders the user's price watches with a Remove button each; [onRemove] gets the id. */
+    function renderWatches(container, watches, onRemove) {
+        container.replaceChildren();
+        if (!watches || !watches.length) {
+            const p = document.createElement('p');
+            p.className = 'cube-watches-empty muted';
+            p.textContent = 'No price watches yet. Add one above.';
+            container.appendChild(p);
+            return container;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'cube-watches-list';
+        watches.forEach(function (w) {
+            const li = document.createElement('li');
+            li.className = 'cube-watch';
+            const span = document.createElement('span');
+            span.className = 'cube-watch-text';
+            span.textContent = watchLine(w);
+            li.appendChild(span);
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-secondary cube-watch-remove';
+            btn.textContent = 'Remove';
+            btn.addEventListener('click', function () { onRemove(w.id); });
+            li.appendChild(btn);
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+        return container;
+    }
+
+    function wireWatch(doc) {
+        const block = doc.querySelector('[data-watch-block]');
+        if (!block) return; // logged out — nothing to wire
+        const form = q(doc, '[data-form="watch"]');
+        const status = statusFor(doc, 'watch');
+        const result = q(doc, '[data-result="watch"]');
+
+        function remove(id) {
+            fetch(WATCHES_API + '?id=' + encodeURIComponent(id), { method: 'DELETE' })
+                .then(function () { reload(); })
+                .catch(function () { setStatus(status, 'Couldn’t remove that watch. Try again.'); });
+        }
+        function reload() {
+            return getJson(WATCHES_API)
+                .then(function (rows) { renderWatches(result, rows || [], remove); })
+                .catch(function () { /* leave as-is on a transient error */ });
+        }
+        reload();
+
+        if (form) form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = new FormData(form);
+            const name = (data.get('name') || '').trim();
+            const threshold = Number(data.get('threshold'));
+            if (!name) { setStatus(status, 'Enter a card name.'); return; }
+            if (!(threshold > 0)) { setStatus(status, 'Enter a positive target price.'); return; }
+            setStatus(status, 'Adding…');
+            withBusy(form, true);
+            postJson(WATCHES_API, {
+                name: name,
+                direction: data.get('direction') || 'below',
+                currency: data.get('currency') || 'usd',
+                threshold: threshold,
+            })
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'Couldn’t add that watch.'); return; }
+                    setStatus(status, 'Watching ' + json.watch.cardName + '. You\'ll be DM\'d when it crosses your target.');
+                    form.reset();
+                    reload();
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
+    }
+
     /** Shared wiring for a single-field GET lookup form (set / rule). */
     function wireLookupForm(doc, name, field, urlFn, pick, render, emptyMsg) {
         const form = q(doc, '[data-form="' + name + '"]');
@@ -1937,6 +2022,7 @@
         wireCardLookup(doc);
         wireLegality(doc);
         wireReference(doc);
+        wireWatch(doc);
         wirePreview(doc);
         wireGenerate(doc);
         wireCardFlip(doc);
@@ -1979,6 +2065,8 @@
         ruleUrl: ruleUrl,
         renderSet: renderSet,
         renderRule: renderRule,
+        watchLine: watchLine,
+        renderWatches: renderWatches,
         cardUrl: cardUrl,
         rulingsUrl: rulingsUrl,
         combosUrl: combosUrl,

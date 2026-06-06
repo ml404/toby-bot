@@ -47,6 +47,7 @@ class CubeControllerTest {
     private lateinit var service: CubeWebService
     private lateinit var cubeLists: CubeListService
     private lateinit var sharedCubes: SharedCubeService
+    private lateinit var priceWatches: database.service.user.CardPriceWatchService
     private lateinit var controller: CubeController
 
     private fun loggedIn() = mockk<OAuth2User> {
@@ -75,7 +76,8 @@ class CubeControllerTest {
         service = mockk()
         cubeLists = mockk(relaxed = true)
         sharedCubes = mockk(relaxed = true)
-        controller = CubeController(service, cubeLists, sharedCubes)
+        priceWatches = mockk(relaxed = true)
+        controller = CubeController(service, cubeLists, sharedCubes, priceWatches)
     }
 
     @Test
@@ -547,5 +549,63 @@ class CubeControllerTest {
         assertEquals("cube", controller.sharedPage("nope", null, model))
 
         verify { model.addAttribute("sharedMissing", true) }
+    }
+
+    // --- price watches -------------------------------------------------
+
+    @Test
+    fun `watches requires login`() {
+        assertEquals(401, controller.watches(anon()).statusCode.value())
+        assertEquals(401, controller.watches(null).statusCode.value())
+    }
+
+    @Test
+    fun `addWatch resolves the card, captures its price and creates the watch`() {
+        every { service.card("Ragavan") } returns CubeResult.ok(
+            CardLookupView(
+                name = "Ragavan, Nimble Pilferer", imageUrl = null, imageUrlLarge = null, imageUrlBack = null,
+                typeLine = "Legendary Creature", manaValue = 1.0, manaCost = "{R}", rarity = "Mythic",
+                colors = listOf("Red"), priceUsd = "45.00",
+            )
+        )
+        every {
+            priceWatches.create(discordId, 0L, "Ragavan, Nimble Pilferer", "usd", database.dto.user.CardPriceWatchDto.Direction.BELOW, 30.0, 45.0)
+        } returns database.dto.user.CardPriceWatchDto(id = 9, cardName = "Ragavan, Nimble Pilferer", currency = "usd", direction = "BELOW", threshold = 30.0)
+
+        val response = controller.addWatch(AddWatchRequest("Ragavan", "usd", "below", 30.0), loggedIn())
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals(9, response.body!!.watch!!.id)
+    }
+
+    @Test
+    fun `addWatch 400s on an unknown card and 409s at the watch cap`() {
+        every { service.card(any()) } returns CubeResult.error("No card found matching “zzz”.")
+        val notFound = controller.addWatch(AddWatchRequest("zzz", "usd", "below", 30.0), loggedIn())
+        assertEquals(HttpStatus.BAD_REQUEST, notFound.statusCode)
+        assertFalse(notFound.body!!.ok)
+
+        every { service.card("Ragavan") } returns CubeResult.ok(
+            CardLookupView(
+                name = "Ragavan", imageUrl = null, imageUrlLarge = null, imageUrlBack = null,
+                typeLine = "", manaValue = 0.0, manaCost = null, rarity = null, colors = emptyList(), priceUsd = "45.00",
+            )
+        )
+        every { priceWatches.create(any(), any(), any(), any(), any(), any(), any()) } returns null
+        every { priceWatches.maxPerUser } returns 25
+        val capped = controller.addWatch(AddWatchRequest("Ragavan", "usd", "below", 30.0), loggedIn())
+        assertEquals(409, capped.statusCode.value())
+    }
+
+    @Test
+    fun `deleteWatch requires login and reports removal`() {
+        assertEquals(401, controller.deleteWatch(5L, anon()).statusCode.value())
+
+        every { priceWatches.remove(5L, discordId) } returns true
+        assertEquals(HttpStatus.NO_CONTENT, controller.deleteWatch(5L, loggedIn()).statusCode)
+
+        every { priceWatches.remove(6L, discordId) } returns false
+        assertEquals(HttpStatus.NOT_FOUND, controller.deleteWatch(6L, loggedIn()).statusCode)
     }
 }

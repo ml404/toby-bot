@@ -58,6 +58,12 @@ enum class NotificationChannelKind(
         description = "Off by default — DM receipts when a /pricealert trigger auto-executes a buy or sell on your behalf.",
         perSurfaceDefaults = mapOf(Surface.DM to false, Surface.PUSH to false),
     ),
+    CARD_PRICE_ALERT(
+        displayName = "Card price watch",
+        description = "DM when a Magic card you're watching (/cube watch-add) crosses your target price.",
+        // DM-only and on by default — you opted in by creating the watch.
+        perSurfaceDefaults = mapOf(Surface.DM to true),
+    ),
     INTRO_PROMPT(
         displayName = "Intro setup prompt",
         description = "First-time prompt to set your voice-channel intro song.",

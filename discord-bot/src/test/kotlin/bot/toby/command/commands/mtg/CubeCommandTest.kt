@@ -7,6 +7,7 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import database.dto.user.CardPriceWatchDto
 import database.dto.user.CubeListDto
 import database.service.user.CubeListService
 import io.mockk.coEvery
@@ -33,6 +34,7 @@ class CubeCommandTest : CommandTest {
     private lateinit var fetcher: ScryfallCubeFetcher
     private lateinit var cubeListService: CubeListService
     private lateinit var configService: database.service.guild.ConfigService
+    private lateinit var priceWatchService: database.service.user.CardPriceWatchService
     private lateinit var command: CubeCommand
 
     @BeforeEach
@@ -41,8 +43,9 @@ class CubeCommandTest : CommandTest {
         fetcher = mockk()
         cubeListService = mockk(relaxed = true)
         configService = mockk(relaxed = true) // null config → USD default
+        priceWatchService = mockk(relaxed = true)
         // Unconfined so the launched IO coroutine resolves synchronously in tests.
-        command = CubeCommand(fetcher, cubeListService, configService, Dispatchers.Unconfined)
+        command = CubeCommand(fetcher, cubeListService, configService, priceWatchService, Dispatchers.Unconfined)
         every { requestingUserDto.discordId } returns 100L
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
@@ -51,6 +54,8 @@ class CubeCommandTest : CommandTest {
     private fun intOpt(value: Int): OptionMapping = mockk { every { asInt } returns value }
     private fun strOpt(value: String): OptionMapping = mockk { every { asString } returns value }
     private fun boolOpt(value: Boolean): OptionMapping = mockk { every { asBoolean } returns value }
+    private fun numOpt(value: Double): OptionMapping = mockk { every { asDouble } returns value }
+    private fun longOpt(value: Long): OptionMapping = mockk { every { asLong } returns value }
 
     private fun run() = command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay = 0)
 
@@ -678,13 +683,84 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the ten subcommands with their options`() {
+    fun `watch-add resolves the card, captures the price and confirms`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_WATCH_ADD
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Ragavan")
+        every { event.getOption(CubeCommand.OPT_DIRECTION) } returns strOpt("BELOW")
+        every { event.getOption(CubeCommand.OPT_PRICE) } returns numOpt(30.0)
+        every { event.getOption(CubeCommand.OPT_CURRENCY) } returns strOpt("usd")
+        coEvery { fetcher.fetchNamed("Ragavan") } returns CubeCard("Ragavan, Nimble Pilferer", priceUsd = "45.00")
+        every {
+            priceWatchService.create(100L, any(), "Ragavan, Nimble Pilferer", "usd", CardPriceWatchDto.Direction.BELOW, 30.0, 45.0)
+        } returns CardPriceWatchDto(id = 5, cardName = "Ragavan, Nimble Pilferer", currency = "usd", direction = "BELOW", threshold = 30.0)
+
+        run()
+
+        assertTrue(slot.captured.title!!.contains("Watching"))
+        verify(exactly = 1) { priceWatchService.create(100L, any(), "Ragavan, Nimble Pilferer", "usd", CardPriceWatchDto.Direction.BELOW, 30.0, 45.0) }
+    }
+
+    @Test
+    fun `watch-add reports when the card can't be found`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_WATCH_ADD
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
+        every { event.getOption(CubeCommand.OPT_DIRECTION) } returns strOpt("BELOW")
+        every { event.getOption(CubeCommand.OPT_PRICE) } returns numOpt(30.0)
+        every { event.getOption(CubeCommand.OPT_CURRENCY) } returns null
+        coEvery { fetcher.fetchNamed(any()) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        verify(exactly = 0) { priceWatchService.create(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `watch-list shows the user's watches`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_WATCH_LIST
+        every { priceWatchService.listForUser(100L) } returns listOf(
+            CardPriceWatchDto(id = 1, cardName = "Ragavan", currency = "usd", direction = "BELOW", threshold = 30.0)
+        )
+
+        run()
+
+        assertEquals("Your card price watches", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Ragavan"))
+    }
+
+    @Test
+    fun `watch-remove deletes by id`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_WATCH_REMOVE
+        every { event.getOption(CubeCommand.OPT_WATCH_ID) } returns longOpt(5L)
+        every { priceWatchService.remove(5L, 100L) } returns true
+
+        run()
+
+        assertTrue(slot.captured.title!!.contains("Watch removed"))
+        verify(exactly = 1) { priceWatchService.remove(5L, 100L) }
+    }
+
+    @Test
+    fun `exposes the thirteen subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
         assertEquals(
-            setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos", "set", "rule"),
+            setOf(
+                "asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos",
+                "set", "rule", "watch-add", "watch-list", "watch-remove",
+            ),
             subs.keys,
         )
+        assertTrue(subs.getValue("watch-add").options.first { it.name == "name" }.isRequired)
+        assertTrue(subs.getValue("watch-remove").options.first { it.name == "id" }.isRequired)
         assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
         assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
         assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)

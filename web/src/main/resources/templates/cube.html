@@ -165,6 +165,12 @@
                 <span class="cube-tab-label">Reference</span>
                 <span class="cube-tab-sub">Sets &amp; keywords</span>
             </button>
+            <button type="button" id="tab-watch" class="cube-tab" role="tab"
+                    data-tab="watch" aria-controls="panel-watch" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔔</span>
+                <span class="cube-tab-label">Price watch</span>
+                <span class="cube-tab-sub">Alert on price</span>
+            </button>
         </div>
 
         <!-- Generate -->
@@ -387,6 +393,44 @@
             </form>
             <p class="cube-status" data-status="rule" aria-live="polite"></p>
             <div class="cube-rule" data-result="rule" hidden></div>
+        </section>
+
+        <!-- Price watch (account-bound; logged-in only) -->
+        <section id="panel-watch" class="cube-panel" role="tabpanel" aria-labelledby="tab-watch"
+                 data-panel="watch" hidden>
+            <p class="cube-panel-intro">
+                Get DM'd on Discord when a card's market price crosses your target — the website twin
+                of <code>/cube watch-add</code>. Prices are checked periodically; alerts are one-shot.
+            </p>
+            <div th:if="${loggedIn}" data-watch-block>
+                <form class="cube-form cube-watch-form" data-form="watch" autocomplete="off">
+                    <label>Card
+                        <input type="text" name="name" placeholder="e.g. Ragavan, Nimble Pilferer" autocomplete="off" required>
+                    </label>
+                    <label>Alert when price is
+                        <select name="direction">
+                            <option value="below" selected>below</option>
+                            <option value="above">above</option>
+                        </select>
+                    </label>
+                    <label>Target
+                        <input type="number" name="threshold" min="0" step="0.01" placeholder="30.00" required>
+                    </label>
+                    <label>Currency
+                        <select name="currency">
+                            <option value="usd" selected>USD ($)</option>
+                            <option value="eur">EUR (€)</option>
+                            <option value="tix">MTGO Tix</option>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn cube-submit">Add watch</button>
+                </form>
+                <p class="cube-status" data-status="watch" aria-live="polite"></p>
+                <div class="cube-watches" data-result="watch"></div>
+            </div>
+            <p class="cube-saved-login muted" th:unless="${loggedIn}">
+                <a href="/oauth2/authorization/discord">Log in with Discord</a> to set price-watch alerts.
+            </p>
         </section>
     </div>
 </main>

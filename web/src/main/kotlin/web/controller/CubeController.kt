@@ -1,5 +1,8 @@
 package web.controller
 
+import common.mtg.MtgCurrency
+import database.dto.user.CardPriceWatchDto
+import database.service.user.CardPriceWatchService
 import database.service.user.CubeListService
 import database.service.user.SharedCubeService
 import org.springframework.http.ResponseEntity
@@ -53,6 +56,7 @@ class CubeController(
     private val cubeWebService: CubeWebService,
     private val cubeLists: CubeListService,
     private val sharedCubes: SharedCubeService,
+    private val priceWatches: CardPriceWatchService,
 ) {
 
     @GetMapping
@@ -283,6 +287,55 @@ class CubeController(
         return ResponseEntity.noContent().build()
     }
 
+    // --- Card price watches (account-bound; require a logged-in Discord user) ---
+
+    @GetMapping("/api/watches", produces = ["application/json"])
+    @ResponseBody
+    fun watches(@AuthenticationPrincipal user: OAuth2User?): ResponseEntity<List<CardWatchView>> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        return ResponseEntity.ok(priceWatches.listForUser(discordId).map { it.toView() })
+    }
+
+    @PostMapping("/api/watches", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun addWatch(
+        @RequestBody request: AddWatchRequest,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<AddWatchResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        val currency = MtgCurrency.fromCode(request.currency) ?: MtgCurrency.DEFAULT
+        val direction = runCatching { CardPriceWatchDto.Direction.valueOf(request.direction.trim().uppercase()) }
+            .getOrNull() ?: return ResponseEntity.badRequest().body(AddWatchResponse(false, "Direction must be below or above.", null))
+        if (request.threshold <= 0.0) {
+            return ResponseEntity.badRequest().body(AddWatchResponse(false, "Target price must be positive.", null))
+        }
+        // Resolve the card (canonical name + current price) via Scryfall.
+        val resolved = when (val r = cubeWebService.card(request.name)) {
+            is CubeResult.Success -> r.value
+            is CubeResult.Failure -> return ResponseEntity.badRequest().body(AddWatchResponse(false, r.error, null))
+        }
+        val current = when (currency) {
+            MtgCurrency.USD -> resolved.priceUsd
+            MtgCurrency.EUR -> resolved.priceEur
+            MtgCurrency.TIX -> resolved.priceTix
+        }?.toDoubleOrNull()
+        // Web has no guild context — guild 0 routes the DM via the default opt-in.
+        val created = priceWatches.create(discordId, 0L, resolved.name, currency.code, direction, request.threshold, current)
+            ?: return ResponseEntity.status(409).body(AddWatchResponse(false, "You've hit the watch limit (${priceWatches.maxPerUser}).", null))
+        return ResponseEntity.ok(AddWatchResponse(true, null, created.toView()))
+    }
+
+    @DeleteMapping("/api/watches")
+    @ResponseBody
+    fun deleteWatch(
+        @RequestParam("id") id: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<Void> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        return if (priceWatches.remove(id, discordId)) ResponseEntity.noContent().build()
+        else ResponseEntity.notFound().build()
+    }
+
     // --- Share links (logged-in user mints a public, immutable snapshot) ---
 
     @PostMapping("/api/share", consumes = ["application/json"], produces = ["application/json"])
@@ -309,6 +362,32 @@ class CubeController(
         const val MAX_CARDS_LENGTH = 100_000
     }
 }
+
+data class AddWatchRequest(
+    val name: String = "",
+    val currency: String = "usd",
+    val direction: String = "below",
+    val threshold: Double = 0.0,
+)
+
+data class AddWatchResponse(val ok: Boolean, val error: String?, val watch: CardWatchView?)
+
+/** A card price watch as JSON for the web. */
+data class CardWatchView(
+    val id: Long,
+    val cardName: String,
+    val currency: String,
+    val direction: String,
+    val threshold: Double,
+)
+
+private fun CardPriceWatchDto.toView() = CardWatchView(
+    id = id ?: 0,
+    cardName = cardName,
+    currency = currency,
+    direction = direction.lowercase(),
+    threshold = threshold,
+)
 
 data class ShareCubeRequest(val name: String = "", val cards: String = "")
 
