@@ -36,7 +36,7 @@ class ConfigDto(
         // Inline [[card]] Magic lookups. Opt-out: enabled unless explicitly
         // set to "false" for the guild.
         CARD_MENTIONS("CARD_MENTIONS"),
-        // Currency the /cube preview's "cube value" total is reported in.
+        // Currency the /mtgcube preview's "cube value" total is reported in.
         // One of "usd", "eur" or "tix" (see common.mtg.MtgCurrency). Defaults
         // to USD when unset or unrecognised.
         CUBE_CURRENCY("CUBE_CURRENCY"),

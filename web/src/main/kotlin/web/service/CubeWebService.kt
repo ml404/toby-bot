@@ -51,7 +51,7 @@ class CubeWebService {
 
     /**
      * Looks a single card up by (fuzzy) name via Scryfall's `/cards/named`,
-     * for the web card-lookup tool — the website twin of `/card lookup`.
+     * for the web card-lookup tool — the website twin of `/mtgcard lookup`.
      */
     fun card(name: String): CubeResult<CardLookupView> {
         val trimmed = name.trim()
@@ -84,7 +84,7 @@ class CubeWebService {
 
     /**
      * Looks a card up by (fuzzy) name and fetches its official rulings — the
-     * website twin of `/card rulings`. Two calls: `/cards/named` to resolve the
+     * website twin of `/mtgcard rulings`. Two calls: `/cards/named` to resolve the
      * card (and its `rulings_uri`), then a GET of that uri. A resolved card
      * with no rulings is a success with an empty list, not an error.
      */
@@ -139,7 +139,7 @@ class CubeWebService {
 
     /**
      * Finds the combos a card appears in via the Commander Spellbook variants
-     * API — the website twin of `/card combos`. A reachable card with no combos
+     * API — the website twin of `/mtgcard combos`. A reachable card with no combos
      * is a success with an empty list, not an error.
      */
     fun combos(name: String): CubeResult<CombosView> {

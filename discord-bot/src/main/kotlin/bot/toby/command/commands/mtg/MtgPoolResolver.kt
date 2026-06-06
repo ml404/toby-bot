@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component
  * Resolves a draftable card pool from whichever source a user gave — a saved
  * cube (looked up for their Discord account, then resolved name-by-name via
  * Scryfall) which takes precedence over a Scryfall `query`. Shared by the
- * cube tools (`/cube preview` / `/cube generate`) and the deck checker
- * (`/deck legality`) so they resolve pools identically.
+ * cube tools (`/mtgcube preview` / `/mtgcube generate`) and the deck checker
+ * (`/mtgdeck legality`) so they resolve pools identically.
  */
 @Component
 class MtgPoolResolver @Autowired constructor(

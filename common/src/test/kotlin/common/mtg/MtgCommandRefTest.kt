@@ -25,10 +25,10 @@ class MtgCommandRefTest {
 
     @Test
     fun `the expected current command and subcommand names`() {
-        assertEquals("/card lookup", MtgCommandRef.CARD_LOOKUP)
-        assertEquals("/deck legality", MtgCommandRef.DECK_LEGALITY)
+        assertEquals("/mtgcard lookup", MtgCommandRef.CARD_LOOKUP)
+        assertEquals("/mtgdeck legality", MtgCommandRef.DECK_LEGALITY)
         assertEquals("/mtg set", MtgCommandRef.MTG_SET)
-        assertEquals("/pricewatch add", MtgCommandRef.PRICEWATCH_ADD)
-        assertEquals("pricewatch", MtgCommandRef.PRICEWATCH)
+        assertEquals("/mtgprice add", MtgCommandRef.PRICEWATCH_ADD)
+        assertEquals("mtgprice", MtgCommandRef.PRICEWATCH)
     }
 }

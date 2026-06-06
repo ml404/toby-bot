@@ -21,7 +21,7 @@ import kotlin.random.Random
 /**
  * Pulls a random SFW post off a subreddit's top listing for `/meme`.
  *
- * Uses the same coroutine + ktor stack as the `/dnd` and `/cube` lookups:
+ * Uses the same coroutine + ktor stack as the `/dnd` and `/mtgcube` lookups:
  * a `suspend` function that hops onto [Dispatchers.IO] via [withContext],
  * fed by the shared injectable ktor [HttpClient] with a per-request
  * timeout, so the blocking network work never ties up the CPU-bound

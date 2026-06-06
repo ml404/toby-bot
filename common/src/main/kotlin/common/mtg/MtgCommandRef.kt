@@ -11,18 +11,21 @@ package common.mtg
  * subcommands but the prose still said `/cube card`, `/cube watch-add`, …).
  *
  * The bare tokens (e.g. [Card.LOOKUP] = `"lookup"`) drive registration; the
- * pre-formatted [CARD_LOOKUP] = `"/card lookup"` strings are for copy. All are
+ * pre-formatted [CARD_LOOKUP] = `"/mtgcard lookup"` strings are for copy. All are
  * `const`, so they inline and can be referenced from enum constructors and
  * other `const val`s.
  */
 object MtgCommandRef {
 
-    // Top-level command names.
-    const val CUBE = "cube"
-    const val CARD = "card"
-    const val DECK = "deck"
+    // Top-level command names. All carry the `mtg` prefix so the Magic suite is
+    // obviously Magic in Discord's (alphabetical) command picker, groups under
+    // typing "/mtg", and doesn't clash with generically-named commands (e.g. the
+    // economy `/pricealert`). `/mtg` itself is the quick-reference command.
+    const val CUBE = "mtgcube"
+    const val CARD = "mtgcard"
+    const val DECK = "mtgdeck"
     const val MTG = "mtg"
-    const val PRICEWATCH = "pricewatch"
+    const val PRICEWATCH = "mtgprice"
 
     // Subcommand tokens, grouped by their parent command.
     object Cube {
@@ -54,6 +57,8 @@ object MtgCommandRef {
     }
 
     // Pre-formatted "/command subcommand" strings for user-facing copy.
+    const val CUBE_PREVIEW = "/$CUBE ${Cube.PREVIEW}"
+    const val CUBE_GENERATE = "/$CUBE ${Cube.GENERATE}"
     const val CARD_LOOKUP = "/$CARD ${Card.LOOKUP}"
     const val CARD_RULINGS = "/$CARD ${Card.RULINGS}"
     const val CARD_COMBOS = "/$CARD ${Card.COMBOS}"

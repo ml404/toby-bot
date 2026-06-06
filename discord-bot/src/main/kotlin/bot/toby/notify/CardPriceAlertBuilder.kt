@@ -12,7 +12,7 @@ import java.awt.Color
 /**
  * Renders the DM sent when a [CardPriceWatchDto] fires — a card-price-watch
  * alert. The watch is one-shot, so this is a "your target was hit" notice;
- * the footer nudges the user to re-arm with `/pricewatch add`.
+ * the footer nudges the user to re-arm with `/mtgprice add`.
  */
 object CardPriceAlertBuilder {
 

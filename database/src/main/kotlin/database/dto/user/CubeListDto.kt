@@ -11,7 +11,7 @@ import java.io.Serializable
 import java.time.Instant
 
 /**
- * A cube card list a user saved on the `/cube` web tool, keyed by
+ * A cube card list a user saved on the Magic toolkit web tool (`/magic`), keyed by
  * (discord_id, name) so a name is unique per account and re-saving the same
  * name upserts. `cards` is the raw pasted text (one card per line); the web
  * layer re-parses it on load so the format can evolve without a migration.

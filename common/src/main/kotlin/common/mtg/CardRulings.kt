@@ -3,7 +3,7 @@ package common.mtg
 /**
  * A card's official rulings (Scryfall `/cards/:id/rulings`) — the clarifying
  * notes the rules team publishes for tricky interactions. A pure value type
- * shared by the bot's `/card rulings` command and the web card-lookup tool,
+ * shared by the bot's `/mtgcard rulings` command and the web card-lookup tool,
  * both of which fetch from Scryfall (over their own HTTP clients) and map the
  * JSON into this. Presentation-only — no maths depend on it.
  *

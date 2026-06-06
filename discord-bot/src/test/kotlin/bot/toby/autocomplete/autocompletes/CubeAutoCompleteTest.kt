@@ -100,6 +100,6 @@ class CubeAutoCompleteTest {
 
     @Test
     fun `is registered against the cube command`() {
-        assertEquals("cube", autoComplete.name)
+        assertEquals("mtgcube", autoComplete.name)
     }
 }

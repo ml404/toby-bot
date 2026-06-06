@@ -114,7 +114,7 @@ class CardCommandTest : CommandTest {
 
     @Test
     fun `exposes lookup, rulings and combos subcommands`() {
-        assertEquals("card", command.name)
+        assertEquals("mtgcard", command.name)
         assertEquals(setOf("lookup", "rulings", "combos"), command.subCommands.map { it.name }.toSet())
         command.subCommands.forEach { sub ->
             assertTrue(sub.options.first { it.name == "name" }.isRequired)

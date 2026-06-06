@@ -109,7 +109,7 @@ class PriceWatchCommandTest : CommandTest {
 
     @Test
     fun `exposes add, list and remove subcommands`() {
-        assertEquals("pricewatch", command.name)
+        assertEquals("mtgprice", command.name)
         val subs = command.subCommands.associateBy { it.name }
         assertEquals(setOf("add", "list", "remove"), subs.keys)
         assertTrue(subs.getValue("add").options.first { it.name == "name" }.isRequired)

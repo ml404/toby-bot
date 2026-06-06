@@ -80,7 +80,7 @@ class DeckCommandTest : CommandTest {
 
     @Test
     fun `exposes the legality subcommand with format choices`() {
-        assertEquals("deck", command.name)
+        assertEquals("mtgdeck", command.name)
         assertEquals(setOf("legality"), command.subCommands.map { it.name }.toSet())
         val format = command.subCommands.first().options.first { it.name == "format" }
         assertTrue(format.isRequired)
