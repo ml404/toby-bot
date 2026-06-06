@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Surface cube value on generate, per-card prices in pack files, and value extremes",
+    "summary": "Three follow-ups that round out the cube-value tooling — the gaps noted after the prices/currency work landed.",
+    "emoji": "✨",
+    "prNumber": 650
+  },
+  {
+    "date": "June 2026",
     "title": "Group the Magic settings into their own admin section",
     "summary": "The two Magic config keys were buried in the generic **\"Messages & leaderboards\"** section of the moderation settings page, mixed in with delete-delay and leaderboard config. This gives Magic its own home.",
     "emoji": "🛡️",
