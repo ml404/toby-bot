@@ -337,6 +337,7 @@
         const totals = analytics.totalValues || [];
         const code = (els.valueCurrency && els.valueCurrency.value) || 'usd';
         renderTotalValue(els.value, totals, code);
+        renderValueExtremes(els.extremes, analytics.valueExtremes || [], code);
         // Only offer the currency switch when something in the pool is priced.
         if (els.valueCurrency) els.valueCurrency.hidden = totals.length === 0;
         show(els.breakdown);
@@ -369,6 +370,36 @@
         const text = totalValueText(totalValues, code);
         if (!text) { el.hidden = true; el.textContent = ''; return; }
         el.textContent = text;
+        el.hidden = false;
+    }
+
+    /** Formats one currency amount, e.g. "$1.50" / "1.50 tix". Pure. */
+    function formatMoney(amount, code) {
+        const m = currencyMeta(code);
+        return m.symbol + Number(amount).toFixed(2) + m.suffix;
+    }
+
+    /** Renders the most/least valuable cards in [code] as two rows; hides when none priced. */
+    function renderValueExtremes(el, valueExtremes, code) {
+        if (!el) return;
+        const match = (valueExtremes || []).filter(function (e) { return e.currency === code; })[0];
+        if (!match) { el.hidden = true; el.replaceChildren(); return; }
+        el.replaceChildren();
+        function row(label, name, amount) {
+            const div = document.createElement('div');
+            div.className = 'cube-extreme';
+            const tag = document.createElement('span');
+            tag.className = 'cube-extreme-label';
+            tag.textContent = label;
+            const card = document.createElement('span');
+            card.className = 'cube-extreme-card';
+            card.textContent = name + ' (' + formatMoney(amount, code) + ')';
+            div.appendChild(tag);
+            div.appendChild(card);
+            return div;
+        }
+        el.appendChild(row('Most valuable', match.mostName, match.mostAmount));
+        el.appendChild(row('Least valuable', match.leastName, match.leastAmount));
         el.hidden = false;
     }
 
@@ -1321,15 +1352,18 @@
         const pairs = q(doc, '[data-pairs="preview"]');
         const pips = q(doc, '[data-pips="preview"]');
         const value = q(doc, '[data-value="preview"]');
+        const extremes = q(doc, '[data-value-extremes="preview"]');
         const valueCurrency = q(doc, '[data-value-currency="preview"]');
         const actions = q(doc, '[data-actions="preview"]');
         let lastTotalValues = [];
+        let lastValueExtremes = [];
 
-        // Switching currency re-renders the total line from the cached totals —
-        // no refetch, since every currency's total is already in the payload.
+        // Switching currency re-renders the value lines from the cached payload —
+        // no refetch, since every currency's totals/extremes are already present.
         if (valueCurrency) {
             valueCurrency.addEventListener('change', function () {
                 renderTotalValue(value, lastTotalValues, valueCurrency.value);
+                renderValueExtremes(extremes, lastValueExtremes, valueCurrency.value);
             });
         }
         const copyBtn = q(doc, '[data-copy="preview"]');
@@ -1408,7 +1442,8 @@
                     show(actions);
                     renderNotFound(notFound, json.notFound);
                     lastTotalValues = (json.analytics && json.analytics.totalValues) || [];
-                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, valueCurrency: valueCurrency });
+                    lastValueExtremes = (json.analytics && json.analytics.valueExtremes) || [];
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, extremes: extremes, valueCurrency: valueCurrency });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1697,9 +1732,11 @@
         rulingsUrl: rulingsUrl,
         priceLine: priceLine,
         totalValueText: totalValueText,
+        formatMoney: formatMoney,
         renderCardLookup: renderCardLookup,
         renderRulings: renderRulings,
         renderTotalValue: renderTotalValue,
+        renderValueExtremes: renderValueExtremes,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,

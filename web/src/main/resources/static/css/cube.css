@@ -1173,6 +1173,25 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     font-size: 0.85rem;
 }
 
+/* Most/least valuable cards, under the cube value (same currency as the switch). */
+.cube-extremes {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: var(--space-2);
+    font-size: 0.85rem;
+}
+
+.cube-extreme-label {
+    display: inline-block;
+    min-width: 8.5em;
+    color: var(--text-muted);
+}
+
+.cube-extreme-card {
+    color: var(--heading);
+}
+
 /* Singleton-violation warning (non-basic duplicates), matching .cube-notfound. */
 .cube-dup-warning {
     margin: var(--space-2) 0 0;

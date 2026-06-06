@@ -54,6 +54,7 @@ internal object CubeEmbeds {
         notFound: List<String> = emptyList(),
         note: String? = null,
         currency: MtgCurrency = MtgCurrency.DEFAULT,
+        valueExtremes: CubeAnalytics.ValueExtremes? = null,
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Cube preview")
@@ -69,6 +70,7 @@ internal object CubeEmbeds {
         if (analytics.colorPairs.isNotEmpty()) field("Colour pairs", pairTable(analytics.colorPairs), inline = false)
         if (analytics.colorPips.isNotEmpty()) field("Colour pips", pipTable(analytics.colorPips), inline = false)
         cubeValue(analytics, currency)?.let { field("Cube value", it, inline = false) }
+        valueExtremes?.let { field("Top & bottom value", valueExtremesBlock(it), inline = false) }
         addDuplicatesField(analytics.duplicates)
         addNotFoundField(notFound)
     }
@@ -85,6 +87,7 @@ internal object CubeEmbeds {
         distribution: Map<CardCategory, Double>,
         notFound: List<String> = emptyList(),
         note: String? = null,
+        currency: MtgCurrency = MtgCurrency.DEFAULT,
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Generated $packCount packs of $packSize")
@@ -94,6 +97,8 @@ internal object CubeEmbeds {
                 note.orEmpty().let { if (it.isNotEmpty()) "\nℹ️ $it" else "" }
         )
         field("As-fan per pack", distributionTable(counts, distribution), inline = false)
+        // Total value of the cards actually dealt into the packs.
+        valueLine(CubeAnalytics.totalValues(selected), currency)?.let { field("Packs value", it, inline = false) }
         addNotFoundField(notFound)
         setFooter("Full pack lists attached as a text file.")
     }
@@ -208,12 +213,27 @@ internal object CubeEmbeds {
      * anything in the pool is priced in when the chosen one has no prices, or
      * null when nothing in the pool is priced at all.
      */
-    fun cubeValue(analytics: CubeAnalytics.Analytics, currency: MtgCurrency): String? {
-        val total = analytics.totalValueIn(currency)?.let { currency to it }
-            ?: analytics.totalValues.firstOrNull()?.let { it.currency to it.amount }
+    fun cubeValue(analytics: CubeAnalytics.Analytics, currency: MtgCurrency): String? =
+        valueLine(analytics.totalValues, currency)
+
+    /**
+     * A `≈ $123.45 (priced cards, USD)` line from a per-currency total list,
+     * preferring [currency] but falling back to the first currency anything is
+     * priced in, or null when nothing is priced at all.
+     */
+    fun valueLine(totalValues: List<CubeAnalytics.TotalValue>, currency: MtgCurrency): String? {
+        val total = totalValues.firstOrNull { it.currency == currency }?.let { currency to it.amount }
+            ?: totalValues.firstOrNull()?.let { it.currency to it.amount }
             ?: return null
         val (cur, amount) = total
         return "≈ ${cur.symbol}${format(amount)}${cur.suffix} (priced cards, ${cur.display})"
+    }
+
+    /** A two-line "most / least valuable card" block in the extremes' currency. */
+    fun valueExtremesBlock(ext: CubeAnalytics.ValueExtremes): String {
+        fun line(v: CubeAnalytics.ValuedCard) =
+            "${v.name} (${ext.currency.symbol}${format(v.amount)}${ext.currency.suffix})"
+        return "**Most:** ${line(ext.mostValuable)}\n**Least:** ${line(ext.leastValuable)}"
     }
 
     /**
@@ -297,12 +317,17 @@ internal object CubeEmbeds {
      * far past what fits in an embed, so the full lists ride along as an
      * attachment.
      */
-    fun packsFile(packs: List<List<CubeCard>>): ByteArray = buildString {
+    fun packsFile(packs: List<List<CubeCard>>, currency: MtgCurrency = MtgCurrency.DEFAULT): ByteArray = buildString {
         packs.forEachIndexed { i, pack ->
-            appendLine("== Pack ${i + 1} (${pack.size} cards) ==")
+            val priced = pack.mapNotNull { it.price(currency)?.toDoubleOrNull() }
+            val packTotal = priced.takeIf { it.isNotEmpty() }
+                ?.let { " — ≈ ${currency.symbol}${format(it.sum())}${currency.suffix}" }
+                .orEmpty()
+            appendLine("== Pack ${i + 1} (${pack.size} cards)$packTotal ==")
             pack.forEach { card ->
+                val price = card.price(currency)?.let { " (${currency.symbol}$it${currency.suffix})" }.orEmpty()
                 val image = card.imageUrl?.let { " — $it" }.orEmpty()
-                appendLine("  ${card.name}$image")
+                appendLine("  ${card.name}$price$image")
             }
             appendLine()
         }

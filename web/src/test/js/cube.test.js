@@ -537,6 +537,45 @@ describe('renderTotalValue', () => {
     });
 });
 
+describe('formatMoney (pure)', () => {
+    test('applies each currency symbol/suffix', () => {
+        expect(Cube.formatMoney(1.5, 'usd')).toBe('$1.50');
+        expect(Cube.formatMoney(1.5, 'eur')).toBe('€1.50');
+        expect(Cube.formatMoney(1.5, 'tix')).toBe('1.50 tix');
+    });
+});
+
+describe('renderValueExtremes', () => {
+    const extremes = [
+        { currency: 'usd', display: 'USD', mostName: 'Pricey', mostAmount: 60, leastName: 'Cheap', leastAmount: 0.25 },
+        { currency: 'eur', display: 'EUR', mostName: 'Pricey', mostAmount: 55, leastName: 'Cheap', leastAmount: 0.2 },
+    ];
+
+    test('renders most and least valuable rows for the chosen currency', () => {
+        const el = document.createElement('div');
+        el.hidden = true;
+        Cube.renderValueExtremes(el, extremes, 'usd');
+        expect(el.hidden).toBe(false);
+        const rows = el.querySelectorAll('.cube-extreme');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].textContent).toContain('Pricey ($60.00)');
+        expect(rows[1].textContent).toContain('Cheap ($0.25)');
+
+        Cube.renderValueExtremes(el, extremes, 'eur');
+        expect(el.querySelector('.cube-extreme-card').textContent).toContain('Pricey (€55.00)');
+    });
+
+    test('hides when the chosen currency has no extremes', () => {
+        const el = document.createElement('div');
+        Cube.renderValueExtremes(el, extremes, 'tix');
+        expect(el.hidden).toBe(true);
+        expect(el.querySelectorAll('.cube-extreme')).toHaveLength(0);
+
+        Cube.renderValueExtremes(el, [], 'usd');
+        expect(el.hidden).toBe(true);
+    });
+});
+
 describe('renderDiff (compare two lists)', () => {
     test('renders Added / Removed / Count-changed sections with prefixes', () => {
         const container = document.createElement('div');
@@ -696,6 +735,8 @@ describe('cube report analytics renderers', () => {
         const pips = document.createElement('div');
         const value = document.createElement('p');
         value.hidden = true;
+        const extremes = document.createElement('div');
+        extremes.hidden = true;
         const valueCurrency = document.createElement('select');
         valueCurrency.innerHTML = '<option value="usd">USD</option><option value="eur">EUR</option>';
         valueCurrency.hidden = true;
@@ -710,8 +751,9 @@ describe('cube report analytics renderers', () => {
                 colorPairs: [{ pair: 'Azorius (WU)', count: 4 }],
                 colorPips: [{ color: 'White', count: 6 }],
                 totalValues: [{ currency: 'usd', display: 'USD', amount: 42.5 }, { currency: 'eur', display: 'EUR', amount: 38 }],
+                valueExtremes: [{ currency: 'usd', display: 'USD', mostName: 'Pricey', mostAmount: 40, leastName: 'Cheap', leastAmount: 0.5 }],
             },
-            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, valueCurrency: valueCurrency },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, extremes: extremes, valueCurrency: valueCurrency },
         );
         expect(breakdown.hidden).toBe(false);
         expect(avgMv.textContent).toContain('Average mana value 2.50');
@@ -726,6 +768,10 @@ describe('cube report analytics renderers', () => {
         expect(value.hidden).toBe(false);
         expect(value.textContent).toContain('$42.50');
         expect(valueCurrency.hidden).toBe(false);
+        // Value extremes render in the same currency.
+        expect(extremes.hidden).toBe(false);
+        expect(extremes.textContent).toContain('Pricey ($40.00)');
+        expect(extremes.textContent).toContain('Cheap ($0.50)');
     });
 
     test('renderAnalytics hides the currency switch when nothing is priced', () => {
