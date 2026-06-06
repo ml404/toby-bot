@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Feature the MTG cube workshop on the homepage",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 643
+  },
+  {
+    "date": "June 2026",
     "title": "Add a web single-card lookup (Card lookup tab)",
     "summary": "## Why",
     "emoji": "✨",
