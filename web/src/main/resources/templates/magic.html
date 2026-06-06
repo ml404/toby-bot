@@ -15,11 +15,18 @@
             <p class="cube-eyebrow">Magic: The Gathering</p>
             <h1>Magic toolkit</h1>
             <p class="cube-lede">
-                A grab-bag of Magic: The Gathering tools — build and balance a draft cube, look up any
-                card's details, rulings and combos, check a deck's format legality, browse set and
-                keyword reference, and set price-watch alerts. Pick a tool below.
+                A grab-bag of Magic: The Gathering tools — look up any card's details, rulings and
+                combos, check a deck's format legality, browse set and keyword reference, build and
+                balance a draft cube, and set price-watch alerts. Pick a tool below.
             </p>
+        </div>
+    </header>
 
+    <div class="cube-shell">
+        <!-- Cube-building onboarding — only shown when a cube tool (Preview /
+             Generate) is active, via data-needs-cube; hidden on the default
+             (Card lookup) tab and the other standalone tools. -->
+        <div class="cube-onboarding" data-needs-cube hidden>
             <ol class="cube-steps" aria-label="How it works">
                 <li class="cube-step"><span class="cube-step-num">1</span>
                     <span class="cube-step-text"><strong>Choose your cards</strong> (search or paste a list).</span></li>
@@ -47,12 +54,10 @@
                 </div>
             </details>
         </div>
-    </header>
 
-    <div class="cube-shell">
         <!-- Shared card source, used by Preview and Generate (hidden on the
              standalone As-fan calculator via data-needs-cube). -->
-        <section class="cube-source-card" data-needs-cube>
+        <section class="cube-source-card" data-needs-cube hidden>
             <div class="cube-source-head">
                 <h2>Your cube</h2>
                 <span class="cube-source-note">Used by Preview &amp; Generate</span>
@@ -126,39 +131,12 @@
             </div>
         </section>
 
-        <p class="cube-tabs-hint" id="cube-tabs-hint" data-needs-cube>Then pick a tool:</p>
-        <div class="cube-tabs" role="tablist" aria-label="Magic tools" aria-describedby="cube-tabs-hint">
-            <div class="cube-tab-group" role="presentation">
-                <span class="cube-tab-group-label" aria-hidden="true">Build a cube</span>
-            <button type="button" id="tab-generate" class="cube-tab" role="tab"
-                    data-tab="generate" aria-controls="panel-generate" aria-selected="true">
-                <span class="cube-tab-icon" aria-hidden="true">🃏</span>
-                <span class="cube-tab-label">Generate packs</span>
-                <span class="cube-tab-sub">Deal a draft</span>
-            </button>
-            <button type="button" id="tab-preview" class="cube-tab" role="tab"
-                    data-tab="preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1">
-                <span class="cube-tab-icon" aria-hidden="true">📊</span>
-                <span class="cube-tab-label">Preview a cube</span>
-                <span class="cube-tab-sub">Check the balance</span>
-            </button>
-            <button type="button" id="tab-asfan" class="cube-tab" role="tab"
-                    data-tab="asfan" aria-controls="panel-asfan" aria-selected="false" tabindex="-1">
-                <span class="cube-tab-icon" aria-hidden="true">🔢</span>
-                <span class="cube-tab-label">As-fan calculator</span>
-                <span class="cube-tab-sub">Quick maths</span>
-            </button>
-            <button type="button" id="tab-compare" class="cube-tab" role="tab"
-                    data-tab="compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1">
-                <span class="cube-tab-icon" aria-hidden="true">🔀</span>
-                <span class="cube-tab-label">Compare</span>
-                <span class="cube-tab-sub">Diff two lists</span>
-            </button>
-            </div>
+        <p class="cube-tabs-hint" id="cube-tabs-hint" data-needs-cube hidden>Then pick a tool:</p>
+        <div class="cube-tabs" role="tablist" aria-label="Magic tools">
             <div class="cube-tab-group" role="presentation">
                 <span class="cube-tab-group-label" aria-hidden="true">Card &amp; deck tools</span>
             <button type="button" id="tab-card" class="cube-tab" role="tab"
-                    data-tab="card" aria-controls="panel-card" aria-selected="false" tabindex="-1">
+                    data-tab="card" aria-controls="panel-card" aria-selected="true">
                 <span class="cube-tab-icon" aria-hidden="true">🔍</span>
                 <span class="cube-tab-label">Card lookup</span>
                 <span class="cube-tab-sub">Find one card</span>
@@ -185,11 +163,38 @@
                 <span class="cube-tab-sub">Sets &amp; keywords</span>
             </button>
             </div>
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Build a cube</span>
+            <button type="button" id="tab-generate" class="cube-tab" role="tab"
+                    data-tab="generate" aria-controls="panel-generate" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🃏</span>
+                <span class="cube-tab-label">Generate packs</span>
+                <span class="cube-tab-sub">Deal a draft</span>
+            </button>
+            <button type="button" id="tab-preview" class="cube-tab" role="tab"
+                    data-tab="preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">📊</span>
+                <span class="cube-tab-label">Preview a cube</span>
+                <span class="cube-tab-sub">Check the balance</span>
+            </button>
+            <button type="button" id="tab-asfan" class="cube-tab" role="tab"
+                    data-tab="asfan" aria-controls="panel-asfan" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔢</span>
+                <span class="cube-tab-label">As-fan calculator</span>
+                <span class="cube-tab-sub">Quick maths</span>
+            </button>
+            <button type="button" id="tab-compare" class="cube-tab" role="tab"
+                    data-tab="compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔀</span>
+                <span class="cube-tab-label">Compare</span>
+                <span class="cube-tab-sub">Diff two lists</span>
+            </button>
+            </div>
         </div>
 
         <!-- Generate -->
         <section id="panel-generate" class="cube-panel" role="tabpanel" aria-labelledby="tab-generate"
-                 data-panel="generate">
+                 data-panel="generate" hidden>
             <p class="cube-panel-intro">
                 Draws cards at random from <strong>your cube</strong> above and deals them into
                 evenly-sized, balanced booster packs.
@@ -339,7 +344,7 @@
 
         <!-- Card lookup -->
         <section id="panel-card" class="cube-panel" role="tabpanel" aria-labelledby="tab-card"
-                 data-panel="card" hidden>
+                 data-panel="card">
             <p class="cube-panel-intro">
                 Look up any Magic card by name and see its image and details — the website twin of
                 the <code th:text="${mtgCmd.cardLookup}">/mtgcard lookup</code> Discord command.

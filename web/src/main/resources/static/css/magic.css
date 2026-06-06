@@ -130,6 +130,11 @@
     padding-left: var(--space-5);
 }
 
+/* Cube-building onboarding (steps + explainer), shown only on the cube tools. */
+.cube-onboarding {
+    margin-bottom: var(--space-5);
+}
+
 /* --- Tabs ------------------------------------------------------------ */
 
 .cube-tabs-hint {
