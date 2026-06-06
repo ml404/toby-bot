@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Group the Magic settings into their own admin section",
+    "summary": "The two Magic config keys were buried in the generic **\"Messages & leaderboards\"** section of the moderation settings page, mixed in with delete-delay and leaderboard config. This gives Magic its own home.",
+    "emoji": "🛡️",
+    "prNumber": 649
+  },
+  {
+    "date": "June 2026",
     "title": "Add card rulings lookup to the MTG tools (Discord + web)",
     "summary": "Rounds out the \"card bot\" feature set: look up a Magic card's **official rulings** (the rules team's clarifications for tricky interactions) on both Discord and the web — the last of the three hot features picked earlier (prices ✅, legality ✅, rulings — this PR).",
     "emoji": "✨",
