@@ -53,9 +53,13 @@ class CubeCardTest {
     }
 
     @Test
-    fun `rarity defaults to null and round-trips when set`() {
-        assertEquals(null, CubeCard(name = "Placeholder").rarity)
-        assertEquals("mythic", CubeCard(name = "Ragavan", rarity = "mythic").rarity)
+    fun `rarity and manaCost default to null and round-trip when set`() {
+        val plain = CubeCard(name = "Placeholder")
+        assertEquals(null, plain.rarity)
+        assertEquals(null, plain.manaCost)
+        val ragavan = CubeCard(name = "Ragavan", rarity = "mythic", manaCost = "{R}")
+        assertEquals("mythic", ragavan.rarity)
+        assertEquals("{R}", ragavan.manaCost)
     }
 
     @Test

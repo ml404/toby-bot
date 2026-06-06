@@ -24,6 +24,12 @@ object CubeAnalytics {
     /** A non-basic card name appearing more than once (a singleton violation). */
     data class Duplicate(val name: String, val count: Int)
 
+    /** Count of two-colour cards supporting a guild, e.g. "Azorius (WU)". */
+    data class ColorPairCount(val pair: String, val count: Int)
+
+    /** Coloured mana pips of one colour across the whole cube (the true colour weight). */
+    data class ColorPipCount(val color: String, val count: Int)
+
     /** The whole report, assembled once so the surfaces render identical numbers. */
     data class Analytics(
         val curve: List<ManaCurveBucket>,
@@ -32,10 +38,28 @@ object CubeAnalytics {
         val types: List<TypeCount>,
         val rarities: List<RarityCount>,
         val duplicates: List<Duplicate>,
+        val colorPairs: List<ColorPairCount>,
+        val colorPips: List<ColorPipCount>,
     )
 
     /** The highest mana-value bucket; everything at or above it folds into "7+". */
     const val CURVE_TOP = 7
+
+    /** The ten guilds, in allied-then-enemy order, for the colour-pair breakdown. */
+    private val GUILDS: List<Pair<Set<MtgColor>, String>> = listOf(
+        setOf(MtgColor.WHITE, MtgColor.BLUE) to "Azorius",
+        setOf(MtgColor.BLUE, MtgColor.BLACK) to "Dimir",
+        setOf(MtgColor.BLACK, MtgColor.RED) to "Rakdos",
+        setOf(MtgColor.RED, MtgColor.GREEN) to "Gruul",
+        setOf(MtgColor.GREEN, MtgColor.WHITE) to "Selesnya",
+        setOf(MtgColor.WHITE, MtgColor.BLACK) to "Orzhov",
+        setOf(MtgColor.BLUE, MtgColor.RED) to "Izzet",
+        setOf(MtgColor.BLACK, MtgColor.GREEN) to "Golgari",
+        setOf(MtgColor.RED, MtgColor.WHITE) to "Boros",
+        setOf(MtgColor.GREEN, MtgColor.BLUE) to "Simic",
+    )
+
+    private val PIP = Regex("\\{([^}]+)\\}")
 
     fun analyze(cards: List<CubeCard>, packSize: Int): Analytics = Analytics(
         curve = manaCurve(cards),
@@ -44,7 +68,47 @@ object CubeAnalytics {
         types = typeCounts(cards, packSize),
         rarities = rarityCounts(cards, packSize),
         duplicates = duplicates(cards),
+        colorPairs = colorPairs(cards),
+        colorPips = colorPips(cards),
     )
+
+    /**
+     * Two-colour cards grouped by guild, in guild order, present pairs only —
+     * how well each two-colour archetype is supported. Includes dual lands
+     * (they're fixing for that pair).
+     */
+    fun colorPairs(cards: List<CubeCard>): List<ColorPairCount> {
+        val twoColor = cards.filter { it.colors.size == 2 }
+        return GUILDS.mapNotNull { (set, name) ->
+            val count = twoColor.count { it.colors == set }
+            if (count > 0) ColorPairCount("$name (${pairCode(set)})", count) else null
+        }
+    }
+
+    /** The WUBRG-ordered symbol code for a colour set, e.g. {W,U} → "WU". */
+    private fun pairCode(colors: Set<MtgColor>): String =
+        MtgColor.entries.filter { it in colors }.joinToString("") { it.symbol.toString() }
+
+    /**
+     * Coloured mana pips per colour across every card's mana cost — the cube's
+     * true colour weight, which card counts alone miss. Hybrid pips ({W/U})
+     * count toward both colours; generic/Phyrexian/colourless symbols are
+     * ignored. WUBRG order, present colours only.
+     */
+    fun colorPips(cards: List<CubeCard>): List<ColorPipCount> {
+        val counts = linkedMapOf<MtgColor, Int>()
+        cards.forEach { card ->
+            val cost = card.manaCost ?: return@forEach
+            PIP.findAll(cost).forEach { match ->
+                match.groupValues[1].forEach { ch ->
+                    MtgColor.fromSymbol(ch)?.let { counts[it] = (counts[it] ?: 0) + 1 }
+                }
+            }
+        }
+        return MtgColor.entries
+            .filter { counts[it] != null }
+            .map { ColorPipCount(it.displayName, counts.getValue(it)) }
+    }
 
     /**
      * The mana curve of the nonland cards: always all eight buckets

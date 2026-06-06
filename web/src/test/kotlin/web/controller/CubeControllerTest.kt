@@ -19,6 +19,8 @@ import web.service.AnalyticsView
 import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
+import web.service.ColorPairView
+import web.service.ColorPipView
 import web.service.CubeResult
 import web.service.CubeWebService
 import web.service.CurveBucketView
@@ -55,6 +57,8 @@ class CubeControllerTest {
         types = types,
         rarities = listOf(RarityCountView("Common", 1, 0.5)),
         duplicates = duplicates,
+        colorPairs = listOf(ColorPairView("Azorius (WU)", 3)),
+        colorPips = listOf(ColorPipView("White", 5)),
     )
 
     @BeforeEach

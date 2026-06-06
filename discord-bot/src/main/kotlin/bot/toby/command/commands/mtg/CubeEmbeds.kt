@@ -61,6 +61,8 @@ internal object CubeEmbeds {
         if (analytics.nonLandCount > 0) field("Mana curve", curveLine(analytics), inline = false)
         field("Card types", typeTable(analytics.types), inline = false)
         field("Rarity", rarityTable(analytics.rarities), inline = false)
+        if (analytics.colorPairs.isNotEmpty()) field("Colour pairs", pairTable(analytics.colorPairs), inline = false)
+        if (analytics.colorPips.isNotEmpty()) field("Colour pips", pipTable(analytics.colorPips), inline = false)
         addDuplicatesField(analytics.duplicates)
         addNotFoundField(notFound)
     }
@@ -130,6 +132,14 @@ internal object CubeEmbeds {
     private fun rarityTable(rarities: List<CubeAnalytics.RarityCount>): String =
         rarities.joinToString("\n") { "${it.rarity.displayName} — ${it.count} (${format(it.asFan)}/pack)" }
             .ifEmpty { "—" }
+
+    /** A `guild — count` table for the two-colour cards. */
+    private fun pairTable(pairs: List<CubeAnalytics.ColorPairCount>): String =
+        pairs.joinToString("\n") { "${it.pair} — ${it.count}" }
+
+    /** Coloured mana pips as a compact one-liner: `White 42 · Blue 38 · …`. */
+    private fun pipTable(pips: List<CubeAnalytics.ColorPipCount>): String =
+        pips.joinToString(" · ") { "${it.color} ${it.count}" }
 
     /** Keep the saved-cube listing under Discord's 4096-char description cap. */
     private const val SAVED_LIST_LIMIT = 25

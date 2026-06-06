@@ -446,6 +446,32 @@ describe('cube report analytics renderers', () => {
         expect(row.querySelector('.cube-bar-value').textContent).toBe('5.00 / pack · 90');
     });
 
+    test('renderColorPairs lists each guild with its count', () => {
+        const container = document.createElement('div');
+        Cube.renderColorPairs(container, [
+            { pair: 'Azorius (WU)', count: 12 },
+            { pair: 'Simic (GU)', count: 6 },
+        ]);
+        const rows = container.querySelectorAll('.cube-bar-row');
+        expect(rows).toHaveLength(2);
+        expect(rows[0].querySelector('.cube-bar-label').textContent).toBe('Azorius (WU)');
+        expect(rows[0].querySelector('.cube-bar-value').textContent).toBe('12');
+        expect(rows[0].querySelector('.cube-bar-fill').style.width).toBe('100%'); // tallest
+    });
+
+    test('renderColorPips tints each bar with its colour swatch', () => {
+        const container = document.createElement('div');
+        Cube.renderColorPips(container, [{ color: 'White', count: 40 }, { color: 'Blue', count: 20 }]);
+        const rows = container.querySelectorAll('.cube-bar-row');
+        expect(rows[0].querySelector('.cube-bar-label').textContent).toBe('White');
+        // The pip bar is tinted with the colour-pie swatch, not the neutral grey
+        // (jsdom reports the colour as rgb(...), so just assert it's set and not neutral).
+        const bg = rows[0].querySelector('.cube-bar-fill').style.background;
+        expect(bg).not.toBe('');
+        expect(bg).not.toBe('rgb(122, 122, 138)'); // NEUTRAL_BAR #7a7a8a
+        expect(rows[1].querySelector('.cube-bar-fill').style.width).toBe('50%');
+    });
+
     test('renderDuplicates warns on non-basic duplicates and hides when there are none', () => {
         const el = document.createElement('p');
         Cube.renderDuplicates(el, [{ name: 'Sol Ring', count: 2 }, { name: 'Mana Crypt', count: 3 }]);
@@ -467,6 +493,8 @@ describe('cube report analytics renderers', () => {
         const curve = document.createElement('div');
         const types = document.createElement('div');
         const rarity = document.createElement('div');
+        const pairs = document.createElement('div');
+        const pips = document.createElement('div');
         Cube.renderAnalytics(
             {
                 curve: [{ label: '0', count: 1 }, { label: '1', count: 2 }],
@@ -475,8 +503,10 @@ describe('cube report analytics renderers', () => {
                 types: [{ type: 'Creature', count: 2, asFan: 1.0 }],
                 rarities: [{ rarity: 'Rare', count: 1, asFan: 0.5 }],
                 duplicates: [{ name: 'Sol Ring', count: 2 }],
+                colorPairs: [{ pair: 'Azorius (WU)', count: 4 }],
+                colorPips: [{ color: 'White', count: 6 }],
             },
-            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips },
         );
         expect(breakdown.hidden).toBe(false);
         expect(avgMv.textContent).toContain('Average mana value 2.50');
@@ -484,6 +514,8 @@ describe('cube report analytics renderers', () => {
         expect(curve.querySelectorAll('.cube-bar-row')).toHaveLength(2);
         expect(types.querySelector('.cube-bar-label').textContent).toBe('Creature');
         expect(rarity.querySelector('.cube-bar-label').textContent).toBe('Rare');
+        expect(pairs.querySelector('.cube-bar-label').textContent).toBe('Azorius (WU)');
+        expect(pips.querySelector('.cube-bar-label').textContent).toBe('White');
         expect(dupes.hidden).toBe(false);
     });
 

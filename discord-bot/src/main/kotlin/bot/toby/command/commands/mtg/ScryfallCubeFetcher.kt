@@ -205,7 +205,21 @@ class ScryfallCubeFetcher @Autowired constructor(
             manaValue = manaValue,
             imageUrl = imageUrl(card),
             rarity = card.get("rarity")?.asString?.takeIf { it.isNotBlank() },
+            manaCost = manaCost(card),
         )
+    }
+
+    /**
+     * The card's `mana_cost`, or null. Single-faced cards carry it directly;
+     * double-faced cards put it on the first face.
+     */
+    fun manaCost(card: JsonObject): String? {
+        fun costOf(obj: JsonObject?): String? =
+            obj?.get("mana_cost")?.asString?.takeIf { it.isNotBlank() }
+
+        costOf(card)?.let { return it }
+        val firstFace = card.getAsJsonArray("card_faces")?.firstOrNull()?.asJsonObject
+        return costOf(firstFace)
     }
 
     /**
