@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Richer, configurable card lookups: oracle text, DFC backs, opt-out toggle",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 646
+  },
+  {
+    "date": "June 2026",
     "title": "Add inline [[card]] Magic lookups in chat",
     "summary": "## Why",
     "emoji": "✨",
