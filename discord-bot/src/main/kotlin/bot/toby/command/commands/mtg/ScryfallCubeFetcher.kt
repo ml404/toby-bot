@@ -158,6 +158,30 @@ class ScryfallCubeFetcher @Autowired constructor(
         data class Failure(val message: String) : BatchResult
     }
 
+    /**
+     * Resolves a single card by (fuzzy) name via Scryfall's `/cards/named`,
+     * for inline `[[card]]` chat lookups. Returns null when nothing matches
+     * or Scryfall is unreachable — the caller just skips it.
+     */
+    suspend fun fetchNamed(name: String): CubeCard? = withContext(dispatcher) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext null
+        val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        try {
+            val response = client.get(url) {
+                header(HttpHeaders.Accept, "application/json")
+                timeout { requestTimeoutMillis = TIMEOUT_MS }
+            }
+            if (response.status.value != 200) return@withContext null
+            parseCard(JsonParser.parseString(response.bodyAsText()).asJsonObject)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error("Scryfall named lookup failed for '$trimmed': $e")
+            null
+        }
+    }
+
     /** One `/cards/collection` POST for up to 75 names. */
     private suspend fun fetchCollectionBatch(chunk: List<String>): BatchResult {
         val response: HttpResponse = client.post(COLLECTION_ENDPOINT) {
@@ -243,6 +267,7 @@ class ScryfallCubeFetcher @Autowired constructor(
     companion object {
         private const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         private const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
+        private const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
         const val DEFAULT_MAX_CARDS = 750
         private const val MAX_PAGES = 10
         private const val COLLECTION_BATCH = 75

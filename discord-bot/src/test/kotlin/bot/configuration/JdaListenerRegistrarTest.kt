@@ -26,6 +26,7 @@ class JdaListenerRegistrarTest {
         val startUpHandler = mockk<StartUpHandler>()
         val voiceEventHandler = mockk<VoiceEventHandler>()
         val messageChatListener = mockk<MessageChatListener>()
+        val cardMentionListener = mockk<bot.toby.handler.CardMentionListener>()
         val slashCommandEventListener = mockk<SlashCommandEventListener>()
         val buttonEventListener = mockk<ButtonEventListener>()
         val menuEventListener = mockk<MenuEventListener>()
@@ -42,6 +43,7 @@ class JdaListenerRegistrarTest {
             startUpHandler,
             voiceEventHandler,
             messageChatListener,
+            cardMentionListener,
             slashCommandEventListener,
             buttonEventListener,
             menuEventListener,
@@ -59,6 +61,7 @@ class JdaListenerRegistrarTest {
                 startUpHandler,
                 voiceEventHandler,
                 messageChatListener,
+                cardMentionListener,
                 slashCommandEventListener,
                 buttonEventListener,
                 menuEventListener,

@@ -227,6 +227,40 @@ class ScryfallCubeFetcherTest {
         assertTrue(request.url.toString().endsWith("/cards/collection"))
     }
 
+    // --- fetchNamed (fuzzy single-card for [[mentions]]) ----------------
+
+    @Test
+    fun `fetchNamed resolves a single fuzzy name to a card`() = runBlocking {
+        val engine = MockEngine {
+            respond(
+                """{"name":"Lightning Bolt","color_identity":["R"],"type_line":"Instant","cmc":1,
+                   "image_uris":{"normal":"https://img/bolt.jpg"}}""",
+                HttpStatusCode.OK, jsonHeaders,
+            )
+        }
+        val card = fetcherWith(engine).fetchNamed("lightning bolt")
+        assertEquals("Lightning Bolt", card?.name)
+        assertEquals("https://img/bolt.jpg", card?.imageUrl)
+        assertTrue(engine.requestHistory.single().url.toString().contains("/cards/named?fuzzy="))
+    }
+
+    @Test
+    fun `fetchNamed returns null when nothing matches (404)`() = runBlocking {
+        assertNull(fetcherWith(MockEngine { respondError(HttpStatusCode.NotFound) }).fetchNamed("zzzznotacard"))
+    }
+
+    @Test
+    fun `fetchNamed returns null for a blank name without calling the network`() = runBlocking {
+        val engine = MockEngine { respond("{}", HttpStatusCode.OK, jsonHeaders) }
+        assertNull(fetcherWith(engine).fetchNamed("   "))
+        assertEquals(0, engine.requestHistory.size)
+    }
+
+    @Test
+    fun `fetchNamed swallows a transport failure as null`() = runBlocking {
+        assertNull(fetcherWith(MockEngine { throw IOException("down") }).fetchNamed("Bolt"))
+    }
+
     // --- fetch ---------------------------------------------------------
 
     @Test
