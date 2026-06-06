@@ -30,7 +30,11 @@ import bot.toby.command.commands.game.casino.wheeloffortune.WheelOfFortuneComman
 import bot.toby.command.commands.fetch.MemeCommand
 import bot.toby.command.commands.misc.*
 import bot.toby.command.commands.moderation.*
+import bot.toby.command.commands.mtg.CardCommand
 import bot.toby.command.commands.mtg.CubeCommand
+import bot.toby.command.commands.mtg.DeckCommand
+import bot.toby.command.commands.mtg.MtgReferenceCommand
+import bot.toby.command.commands.mtg.PriceWatchCommand
 import bot.toby.command.commands.music.channel.JoinCommand
 import bot.toby.command.commands.music.channel.LeaveCommand
 import bot.toby.command.commands.music.intro.DeleteIntroCommand
@@ -175,6 +179,10 @@ class CommandManagerTest {
             TicTacToeCommand::class.java,
             Connect4Command::class.java,
             CubeCommand::class.java,
+            CardCommand::class.java,
+            DeckCommand::class.java,
+            MtgReferenceCommand::class.java,
+            PriceWatchCommand::class.java,
         )
 
         Assertions.assertTrue(availableCommands.containsAll(commandManager.allCommands.map { it.javaClass }.toList()))
