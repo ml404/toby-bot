@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Reprioritise the Magic toolkit page as a multi-tool hub (not cube-first)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 661
+  },
+  {
+    "date": "June 2026",
     "title": "Prefix the Magic commands with \"mtg\" so they're obviously MTG in Discord",
     "summary": "## Why",
     "emoji": "🛡️",
