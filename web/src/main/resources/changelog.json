@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add card price watch alerts (Discord + web)",
+    "summary": "Add card price watch alerts (Discord + web)",
+    "emoji": "✨",
+    "prNumber": 655
+  },
+  {
+    "date": "June 2026",
     "title": "Surface the card-centric MTG tools in the navbar\n\nThe card tools (lookup, deck legality, sets & keywords) are generically\nuseful, not cube-specific, but were only reachable by wandering into the\ncube-builder page. Add them to the global Magic dropdown as hash deep-links\n(already wired on the cube page), so they're discoverable from any page,\nahead of the cube-builder entries. A navbar test pins the links.\n\nStacked on the reference branch (links to its new #reference tab); retarget\nto main as the chain merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
     "summary": "Surface the card-centric MTG tools in the navbar\n\nThe card tools (lookup, deck legality, sets & keywords) are generically\nuseful, not cube-specific, but were only reachable by wandering into the\ncube-builder page. Add them to the global Magic dropdown as hash deep-links\n(already wired on the cube page), so they're discoverable from any page,\nahead of the cube-builder entries. A navbar test pins the links.\n\nStacked on the reference branch (links to its new #reference tab); retarget\nto main as the chain merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
     "emoji": "✨",
