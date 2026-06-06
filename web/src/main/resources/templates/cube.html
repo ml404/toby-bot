@@ -202,7 +202,20 @@
             </div>
             <p class="cube-empty" data-empty="preview">Choose your cards above, then hit <strong>Preview balance</strong>.</p>
             <p class="cube-notfound" data-notfound="preview" hidden></p>
+            <p class="cube-dup-warning" data-duplicates="preview" hidden></p>
             <div class="cube-groups" data-result="preview" hidden></div>
+            <details class="cube-breakdown" data-breakdown="preview-analytics" hidden>
+                <summary>Show mana curve, types &amp; rarity</summary>
+                <div class="cube-analytics">
+                    <p class="cube-avg-mv" data-avg-mv="preview"></p>
+                    <h4 class="cube-analytics-h">Mana curve</h4>
+                    <div class="cube-dist" data-curve="preview"></div>
+                    <h4 class="cube-analytics-h">Card types</h4>
+                    <div class="cube-dist" data-types="preview"></div>
+                    <h4 class="cube-analytics-h">Rarity</h4>
+                    <div class="cube-dist" data-rarity="preview"></div>
+                </div>
+            </details>
         </section>
 
         <!-- As-fan calculator -->

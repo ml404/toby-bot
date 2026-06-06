@@ -185,17 +185,99 @@
         return a;
     }
 
-    function asFanBar(category, asFan, max) {
-        const color = categoryColor(category);
-        const pct = max > 0 ? Math.max(2, Math.round((asFan / max) * 100)) : 0;
+    // A neutral bar colour for analytics with no colour-pie meaning (curve,
+    // types, rarity), matching the categoryColor fallback.
+    const NEUTRAL_BAR = '#7a7a8a';
+
+    /** A length-scaled bar track from a 0..1 [ratio] in [color]. */
+    function barTrack(ratio, color) {
         const track = document.createElement('div');
         track.className = 'cube-bar-track';
         const fill = document.createElement('div');
         fill.className = 'cube-bar-fill';
-        fill.style.width = pct + '%';
+        fill.style.width = (ratio > 0 ? Math.max(2, Math.round(ratio * 100)) : 0) + '%';
         fill.style.background = color;
         track.appendChild(fill);
         return track;
+    }
+
+    function asFanBar(category, asFan, max) {
+        return barTrack(max > 0 ? asFan / max : 0, categoryColor(category));
+    }
+
+    /** A `label | bar | value` row (no colour swatch) for the analytics panels. */
+    function statRow(labelText, valueText, ratio, color) {
+        const rowEl = document.createElement('div');
+        rowEl.className = 'cube-bar-row';
+        const label = document.createElement('span');
+        label.className = 'cube-bar-label';
+        label.textContent = labelText;
+        const value = document.createElement('span');
+        value.className = 'cube-bar-value';
+        value.textContent = valueText;
+        rowEl.appendChild(label);
+        rowEl.appendChild(barTrack(ratio, color));
+        rowEl.appendChild(value);
+        return rowEl;
+    }
+
+    /** The mana curve: one bar per bucket ("0".."7+"), scaled to the tallest. */
+    function renderManaCurve(container, curve) {
+        container.replaceChildren();
+        const max = curve.reduce(function (m, b) { return Math.max(m, b.count); }, 0);
+        curve.forEach(function (b) {
+            container.appendChild(statRow(b.label, String(b.count), max > 0 ? b.count / max : 0, NEUTRAL_BAR));
+        });
+        return container;
+    }
+
+    /** The card-type breakdown: count + as-fan per type. */
+    function renderTypeBreakdown(container, types) {
+        container.replaceChildren();
+        const max = types.reduce(function (m, t) { return Math.max(m, t.asFan); }, 0);
+        types.forEach(function (t) {
+            container.appendChild(statRow(t.type, formatAsFan(t.asFan) + ' / pack · ' + t.count, max > 0 ? t.asFan / max : 0, NEUTRAL_BAR));
+        });
+        return container;
+    }
+
+    /** The rarity breakdown: count + as-fan per rarity. */
+    function renderRarity(container, rarities) {
+        container.replaceChildren();
+        const max = rarities.reduce(function (m, r) { return Math.max(m, r.asFan); }, 0);
+        rarities.forEach(function (r) {
+            container.appendChild(statRow(r.rarity, formatAsFan(r.asFan) + ' / pack · ' + r.count, max > 0 ? r.asFan / max : 0, NEUTRAL_BAR));
+        });
+        return container;
+    }
+
+    /** A singleton-violation warning; hidden when the cube has no non-basic duplicates. */
+    function renderDuplicates(el, duplicates) {
+        if (!el) return;
+        if (!duplicates || !duplicates.length) { el.hidden = true; el.textContent = ''; return; }
+        el.textContent = '⚠️ ' + duplicates.length + ' non-basic card' + (duplicates.length > 1 ? 's' : '') +
+            ' duplicated: ' + duplicates.map(function (d) { return d.name + ' ×' + d.count; }).join(', ');
+        el.hidden = false;
+    }
+
+    /**
+     * Renders the whole cube report into the preview panels (duplicates
+     * warning always-visible, the rest inside a collapsible). Tolerates a
+     * missing analytics payload (older responses) and any missing element.
+     */
+    function renderAnalytics(analytics, els) {
+        renderDuplicates(els.dupes, analytics && analytics.duplicates);
+        if (!analytics) { hide(els.breakdown); return; }
+        if (els.avgMv) {
+            els.avgMv.textContent = analytics.nonLandCount > 0
+                ? 'Average mana value ' + formatAsFan(analytics.averageManaValue) +
+                    ' over ' + analytics.nonLandCount + ' nonland card' + (analytics.nonLandCount > 1 ? 's' : '')
+                : 'No nonland cards.';
+        }
+        if (els.curve) renderManaCurve(els.curve, analytics.curve || []);
+        if (els.types) renderTypeBreakdown(els.types, analytics.types || []);
+        if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
+        show(els.breakdown);
     }
 
     /** As-fan bars only (the secondary "balance" view under a generate). */
@@ -880,6 +962,12 @@
         const empty = emptyFor(doc, 'preview');
         const groups = q(doc, '[data-result="preview"]');
         const notFound = q(doc, '[data-notfound="preview"]');
+        const dupes = q(doc, '[data-duplicates="preview"]');
+        const breakdown = q(doc, '[data-breakdown="preview-analytics"]');
+        const avgMv = q(doc, '[data-avg-mv="preview"]');
+        const curve = q(doc, '[data-curve="preview"]');
+        const types = q(doc, '[data-types="preview"]');
+        const rarity = q(doc, '[data-rarity="preview"]');
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const packSize = new FormData(form).get('packSize');
@@ -887,7 +975,7 @@
             const err = sourceError(src);
             if (err) { setStatus(status, err); return; }
             setStatus(status, src.mode === 'list' ? 'Resolving your list…' : 'Fetching cards from Scryfall…');
-            hide(groups); hide(notFound);
+            hide(groups); hide(notFound); hide(dupes); hide(breakdown);
             withBusy(form, true);
             setSpinner(doc, 'preview', true);
             const request = src.mode === 'list'
@@ -901,6 +989,7 @@
                     renderGroups(groups, json.groups);
                     show(groups);
                     renderNotFound(notFound, json.notFound);
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1179,6 +1268,11 @@
         previewUrl: previewUrl,
         generateUrl: generateUrl,
         renderDistribution: renderDistribution,
+        renderManaCurve: renderManaCurve,
+        renderTypeBreakdown: renderTypeBreakdown,
+        renderRarity: renderRarity,
+        renderDuplicates: renderDuplicates,
+        renderAnalytics: renderAnalytics,
         renderGroups: renderGroups,
         renderPacks: renderPacks,
     };

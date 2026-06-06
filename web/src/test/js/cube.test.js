@@ -385,6 +385,102 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
     });
 });
 
+describe('cube report analytics renderers', () => {
+    test('renderManaCurve draws one scaled bar per bucket', () => {
+        const container = document.createElement('div');
+        Cube.renderManaCurve(container, [
+            { label: '0', count: 0 },
+            { label: '1', count: 10 },
+            { label: '2', count: 5 },
+            { label: '7+', count: 1 },
+        ]);
+        const rows = container.querySelectorAll('.cube-bar-row');
+        expect(rows).toHaveLength(4);
+        expect(rows[1].querySelector('.cube-bar-label').textContent).toBe('1');
+        expect(rows[1].querySelector('.cube-bar-value').textContent).toBe('10');
+        // Tallest bucket fills 100%, the empty one 0%.
+        expect(rows[1].querySelector('.cube-bar-fill').style.width).toBe('100%');
+        expect(rows[0].querySelector('.cube-bar-fill').style.width).toBe('0%');
+        expect(rows[3].querySelector('.cube-bar-label').textContent).toBe('7+');
+    });
+
+    test('renderTypeBreakdown shows the type, as-fan and count', () => {
+        const container = document.createElement('div');
+        Cube.renderTypeBreakdown(container, [
+            { type: 'Creature', count: 40, asFan: 4.2 },
+            { type: 'Instant', count: 12, asFan: 1.26 },
+        ]);
+        const rows = container.querySelectorAll('.cube-bar-row');
+        expect(rows[0].querySelector('.cube-bar-label').textContent).toBe('Creature');
+        expect(rows[0].querySelector('.cube-bar-value').textContent).toBe('4.20 / pack · 40');
+        expect(rows[0].querySelector('.cube-bar-fill').style.width).toBe('100%'); // tallest
+    });
+
+    test('renderRarity shows the rarity, as-fan and count', () => {
+        const container = document.createElement('div');
+        Cube.renderRarity(container, [{ rarity: 'Common', count: 90, asFan: 5.0 }]);
+        const row = container.querySelector('.cube-bar-row');
+        expect(row.querySelector('.cube-bar-label').textContent).toBe('Common');
+        expect(row.querySelector('.cube-bar-value').textContent).toBe('5.00 / pack · 90');
+    });
+
+    test('renderDuplicates warns on non-basic duplicates and hides when there are none', () => {
+        const el = document.createElement('p');
+        Cube.renderDuplicates(el, [{ name: 'Sol Ring', count: 2 }, { name: 'Mana Crypt', count: 3 }]);
+        expect(el.hidden).toBe(false);
+        expect(el.textContent).toContain('2 non-basic cards duplicated');
+        expect(el.textContent).toContain('Sol Ring ×2');
+        expect(el.textContent).toContain('Mana Crypt ×3');
+
+        Cube.renderDuplicates(el, []);
+        expect(el.hidden).toBe(true);
+        expect(el.textContent).toBe('');
+    });
+
+    test('renderAnalytics fills every panel and reveals the breakdown', () => {
+        const dupes = document.createElement('p');
+        const breakdown = document.createElement('details');
+        breakdown.hidden = true;
+        const avgMv = document.createElement('p');
+        const curve = document.createElement('div');
+        const types = document.createElement('div');
+        const rarity = document.createElement('div');
+        Cube.renderAnalytics(
+            {
+                curve: [{ label: '0', count: 1 }, { label: '1', count: 2 }],
+                averageManaValue: 2.5,
+                nonLandCount: 3,
+                types: [{ type: 'Creature', count: 2, asFan: 1.0 }],
+                rarities: [{ rarity: 'Rare', count: 1, asFan: 0.5 }],
+                duplicates: [{ name: 'Sol Ring', count: 2 }],
+            },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity },
+        );
+        expect(breakdown.hidden).toBe(false);
+        expect(avgMv.textContent).toContain('Average mana value 2.50');
+        expect(avgMv.textContent).toContain('3 nonland cards');
+        expect(curve.querySelectorAll('.cube-bar-row')).toHaveLength(2);
+        expect(types.querySelector('.cube-bar-label').textContent).toBe('Creature');
+        expect(rarity.querySelector('.cube-bar-label').textContent).toBe('Rare');
+        expect(dupes.hidden).toBe(false);
+    });
+
+    test('renderAnalytics tolerates a missing payload and an all-land pool', () => {
+        const breakdown = document.createElement('details');
+        const dupes = document.createElement('p');
+        Cube.renderAnalytics(null, { dupes: dupes, breakdown: breakdown });
+        expect(breakdown.hidden).toBe(true);
+        expect(dupes.hidden).toBe(true);
+
+        const avgMv = document.createElement('p');
+        Cube.renderAnalytics(
+            { curve: [], averageManaValue: 0, nonLandCount: 0, types: [], rarities: [], duplicates: [] },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: document.createElement('div'), types: document.createElement('div'), rarity: document.createElement('div') },
+        );
+        expect(avgMv.textContent).toBe('No nonland cards.');
+    });
+});
+
 describe('manaSymbolUrls', () => {
     test('maps each {sym} to a Scryfall symbol SVG, stripping braces and slashes', () => {
         const urls = Cube.manaSymbolUrls('{1}{W/U}{R}');

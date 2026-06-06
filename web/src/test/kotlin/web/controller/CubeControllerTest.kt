@@ -15,13 +15,18 @@ import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
+import web.service.AnalyticsView
 import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.CubeWebService
+import web.service.CurveBucketView
+import web.service.DuplicateView
 import web.service.GenerateData
 import web.service.PreviewData
+import web.service.RarityCountView
+import web.service.TypeCountView
 import java.time.Instant
 
 class CubeControllerTest {
@@ -38,6 +43,19 @@ class CubeControllerTest {
         every { getAttribute<String>("username") } returns "matt"
     }
     private fun anon() = mockk<OAuth2User> { every { getAttribute<String>("id") } returns null }
+
+    /** A sample cube report for preview fixtures. */
+    private fun analytics(
+        types: List<TypeCountView> = listOf(TypeCountView("Creature", 1, 0.5)),
+        duplicates: List<DuplicateView> = emptyList(),
+    ) = AnalyticsView(
+        curve = listOf(CurveBucketView("0", 0), CurveBucketView("1", 1)),
+        averageManaValue = 1.5,
+        nonLandCount = 1,
+        types = types,
+        rarities = listOf(RarityCountView("Common", 1, 0.5)),
+        duplicates = duplicates,
+    )
 
     @BeforeEach
     fun setup() {
@@ -95,6 +113,7 @@ class CubeControllerTest {
                     ),
                 )
             ),
+            analytics = analytics(),
         )
         every { service.preview("set:vow", 15) } returns CubeResult.ok(data)
 
@@ -107,6 +126,9 @@ class CubeControllerTest {
         val cards = response.body!!.groups.first().cards
         assertEquals(listOf("Sigarda's Splendor", "Sungold Sentinel"), cards.map { it.name })
         assertEquals("https://img/sigarda.jpg", cards.first().imageUrl)
+        // The cube report flows through the response.
+        assertEquals(1.5, response.body!!.analytics!!.averageManaValue)
+        assertEquals("Creature", response.body!!.analytics!!.types.first().type)
     }
 
     @Test
@@ -159,6 +181,7 @@ class CubeControllerTest {
         val data = PreviewData(
             query = "your list", poolSize = 2, packSize = 15,
             groups = listOf(CategoryGroup("Red", 2, 2.0, listOf(CardView("Bolt", null, null, "Instant", 1.0)))),
+            analytics = analytics(),
             notFound = listOf("Definitely Not A Card"),
         )
         every { service.previewList("3 Bolt\nDefinitely Not A Card", 15) } returns CubeResult.ok(data)
@@ -193,6 +216,7 @@ class CubeControllerTest {
     fun `previewList passes a truncation note through to the response`() {
         val data = PreviewData(
             query = "your list", poolSize = 750, packSize = 15, groups = emptyList(),
+            analytics = analytics(),
             notFound = emptyList(), note = "Your list resolved to 900 cards; only the first 750 were used.",
         )
         every { service.previewList(any(), any()) } returns CubeResult.ok(data)
