@@ -1,5 +1,6 @@
-// MTG cube workshop page. A guided, tabbed tool (generate packs / preview
-// a cube / as-fan calculator) over the /cube/api/* JSON endpoints. The
+// Magic toolkit page (/magic). A tabbed hub — cube building (generate / preview
+// / as-fan / compare), card tools (lookup / legality / price watch) and
+// reference (sets / keywords) — over the /magic/api/* JSON endpoints. The
 // emphasis is on showing the actual CARDS: generated packs and the preview
 // both list real card names linked to Scryfall. Pure helpers (URL builders,
 // formatting, colours, card links, hash↔tab mapping, DOM renderers) are
@@ -113,12 +114,12 @@
 
     function asfanUrl(p) {
         const q = new URLSearchParams({ total: p.total, cubeSize: p.cubeSize, packSize: p.packSize });
-        return '/cube/api/asfan?' + q.toString();
+        return '/magic/api/asfan?' + q.toString();
     }
 
     function previewUrl(p) {
         const q = new URLSearchParams({ query: p.query, packSize: p.packSize });
-        return '/cube/api/preview?' + q.toString();
+        return '/magic/api/preview?' + q.toString();
     }
 
     function generateUrl(p) {
@@ -128,7 +129,7 @@
             packSize: p.packSize,
             balanced: p.balanced ? 'true' : 'false',
         });
-        return '/cube/api/generate?' + q.toString();
+        return '/magic/api/generate?' + q.toString();
     }
 
     /**
@@ -139,7 +140,7 @@
     function samplePackRequest(src, packSize) {
         const ps = Number(packSize) || 15;
         if (src.mode === 'list') {
-            return { method: 'POST', url: '/cube/api/generate', body: { list: src.list, packs: 1, packSize: ps, balanced: true } };
+            return { method: 'POST', url: '/magic/api/generate', body: { list: src.list, packs: 1, packSize: ps, balanced: true } };
         }
         return { method: 'GET', url: generateUrl({ query: src.query, packs: 1, packSize: ps, balanced: true }) };
     }
@@ -433,12 +434,12 @@
 
     /** GET URL for the single-card lookup. */
     function cardUrl(name) {
-        return '/cube/api/card?name=' + encodeURIComponent(name);
+        return '/magic/api/card?name=' + encodeURIComponent(name);
     }
 
     /** GET URL for a card's official rulings. */
     function rulingsUrl(name) {
-        return '/cube/api/rulings?name=' + encodeURIComponent(name);
+        return '/magic/api/rulings?name=' + encodeURIComponent(name);
     }
 
     /**
@@ -524,7 +525,7 @@
         link.textContent = 'View on Scryfall ↗';
         facts.appendChild(link);
 
-        // On-demand rulings: a button that fetches /cube/api/rulings for this
+        // On-demand rulings: a button that fetches /magic/api/rulings for this
         // card and renders them into the box below (wired in wireCardLookup).
         const rulingsBtn = document.createElement('button');
         rulingsBtn.type = 'button';
@@ -534,7 +535,7 @@
         rulingsBtn.textContent = 'Show rulings';
         facts.appendChild(rulingsBtn);
 
-        // On-demand combos: fetches /cube/api/combos for this card.
+        // On-demand combos: fetches /magic/api/combos for this card.
         const combosBtn = document.createElement('button');
         combosBtn.type = 'button';
         combosBtn.className = 'btn btn-secondary cube-combos-btn';
@@ -562,7 +563,7 @@
 
     /** GET URL for a card's combos. */
     function combosUrl(name) {
-        return '/cube/api/combos?name=' + encodeURIComponent(name);
+        return '/magic/api/combos?name=' + encodeURIComponent(name);
     }
 
     /** Renders a card's combos (pieces → produces, each linked), or a friendly empty state. */
@@ -683,7 +684,7 @@
 
     /** POST body builder isn't needed; the URL is constant. */
     function legalityUrl() {
-        return '/cube/api/legality';
+        return '/magic/api/legality';
     }
 
     /**
@@ -912,7 +913,7 @@
 
     /**
      * Re-activate the matching tab when only the URL hash changes — i.e. a
-     * deep-link like /cube#preview clicked while already on /cube (e.g. from
+     * deep-link like /magic#preview clicked while already on /magic (e.g. from
      * the navbar dropdown), where no reload fires wireTabs again. Registered
      * unconditionally so it's live even if wireTabs bailed for lack of tabs.
      */
@@ -951,7 +952,7 @@
 
     /** A shareable URL that pre-loads a Scryfall query (no login needed). */
     function queryShareUrl(origin, query) {
-        return (origin || '') + '/cube?q=' + encodeURIComponent(query);
+        return (origin || '') + '/magic?q=' + encodeURIComponent(query);
     }
 
     /** Reads ?q= / ?list= prefill params from a URL search string. */
@@ -999,7 +1000,7 @@
         });
     }
 
-    /** "Copy link" for the current Scryfall search → /cube?q=... */
+    /** "Copy link" for the current Scryfall search → /magic?q=... */
     function wireCopyQuery(doc) {
         const btn = doc.querySelector('[data-copy-query]');
         const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
@@ -1042,7 +1043,7 @@
 
     // --- Saved lists (account-bound; persisted server-side) ------------
 
-    const LISTS_API = '/cube/api/lists';
+    const LISTS_API = '/magic/api/lists';
 
     /** DELETE URL for a saved list, with the name safely encoded. */
     function deleteListUrl(name) {
@@ -1110,7 +1111,7 @@
 
     /**
      * Account-bound saved lists: persisted server-side against the logged-in
-     * Discord user via `/cube/api/lists`, so they follow the user across
+     * Discord user via `/magic/api/lists`, so they follow the user across
      * devices. The saved-cube picker is a datalist-backed typeahead — type to
      * filter your cube names, pick one to load it. The controls only exist in
      * the DOM for a logged-in user (see cube.html), so this no-ops otherwise.
@@ -1181,7 +1182,7 @@
 
     /**
      * Publishes the current list as a public, immutable snapshot (logged-in
-     * only) and shows the resulting `/cube/c/<token>` link, copying it to the
+     * only) and shows the resulting `/magic/c/<token>` link, copying it to the
      * clipboard. The Share controls only exist in the DOM for a logged-in user.
      */
     function wireShare(doc) {
@@ -1208,7 +1209,7 @@
             if (!text) { setStatus(status, 'Nothing to share — paste a list first.'); return; }
             const name = ((nameInput && nameInput.value) || '').trim();
             setStatus(status, 'Creating link…');
-            fetch('/cube/api/share', {
+            fetch('/magic/api/share', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, cards: text }),
@@ -1417,7 +1418,7 @@
             setStatus(status, 'Comparing…');
             hide(result);
             withBusy(form, true);
-            postJson('/cube/api/diff', { listA: listA, listB: listB })
+            postJson('/magic/api/diff', { listA: listA, listB: listB })
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'Could not compare.'); return; }
                     setStatus(status, 'List A: ' + json.sizeA + ' cards · List B: ' + json.sizeB + ' cards');
@@ -1458,12 +1459,12 @@
 
     /** GET URL for a set lookup by code. */
     function setUrl(code) {
-        return '/cube/api/set?code=' + encodeURIComponent(code);
+        return '/magic/api/set?code=' + encodeURIComponent(code);
     }
 
     /** GET URL for a glossary keyword lookup. */
     function ruleUrl(term) {
-        return '/cube/api/rule?term=' + encodeURIComponent(term);
+        return '/magic/api/rule?term=' + encodeURIComponent(term);
     }
 
     /** Renders a set's headline facts (type, release date, card count) with a Scryfall link. */
@@ -1517,7 +1518,7 @@
         wireLookupForm(doc, 'rule', 'term', ruleUrl, function (json) { return json.rule; }, renderRule, 'Enter a keyword.');
     }
 
-    const WATCHES_API = '/cube/api/watches';
+    const WATCHES_API = '/magic/api/watches';
 
     /** Formats a watch as "Card — below $30 (USD)". Pure. */
     function watchLine(watch) {
@@ -1757,7 +1758,7 @@
             withBusy(form, true);
             setSpinner(doc, 'preview', true);
             const request = src.mode === 'list'
-                ? postJson('/cube/api/preview', { list: src.list, packSize: Number(packSize) })
+                ? postJson('/magic/api/preview', { list: src.list, packSize: Number(packSize) })
                 : getJson(previewUrl({ query: src.query, packSize: packSize }));
             request
                 .then(function (json) {
@@ -1819,7 +1820,7 @@
             withBusy(form, true);
             setSpinner(doc, 'generate', true);
             const request = src.mode === 'list'
-                ? postJson('/cube/api/generate', { list: src.list, packs: Number(packs), packSize: Number(packSize), balanced: balanced })
+                ? postJson('/magic/api/generate', { list: src.list, packs: Number(packs), packSize: Number(packSize), balanced: balanced })
                 : getJson(generateUrl({ query: src.query, packs: packs, packSize: packSize, balanced: balanced }));
             request
                 .then(function (json) {

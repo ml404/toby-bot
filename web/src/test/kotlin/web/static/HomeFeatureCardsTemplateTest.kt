@@ -128,28 +128,28 @@ class HomeFeatureCardsTemplateTest {
     }
 
     @Test
-    fun `magic cube card is present in the tabletop and tools section`() {
-        // The MTG cube workshop (/cube) is a substantial tool — workshop,
-        // the cube report, compare, card lookup — but was only reachable
-        // from the navbar. Pin a discoverable feature card next to the
-        // D&D / Utilities cluster it belongs with.
+    fun `magic toolkit card is present in the tabletop and tools section`() {
+        // The Magic toolkit (/cube) is a substantial tool — cube building,
+        // the cube report, compare, card lookup, legality, reference, price
+        // watches — but is otherwise only reachable from the navbar. Pin a
+        // discoverable feature card next to the D&D / Utilities cluster.
         assertTrue(
-            html.contains("<h3>MTG cube workshop</h3>"),
-            "home.html must include an `<h3>MTG cube workshop</h3>` feature-card heading " +
-                "so the Magic cube tooling is discoverable from the landing page."
+            html.contains("<h3>Magic toolkit</h3>"),
+            "home.html must include an `<h3>Magic toolkit</h3>` feature-card heading " +
+                "so the Magic tooling is discoverable from the landing page."
         )
         assertTrue(
-            html.contains("href=\"/cube\""),
-            "the MTG cube feature-card must link to `/cube` — the cube workshop page."
+            html.contains("href=\"/magic\""),
+            "the Magic toolkit feature-card must link to `/magic`."
         )
         val tabletopMarker = html.indexOf(">Tabletop &amp; Tools<")
         val ctaMarker = html.indexOf("Ready to add")
-        val cubeMarker = html.indexOf("<h3>MTG cube workshop</h3>")
+        val cubeMarker = html.indexOf("<h3>Magic toolkit</h3>")
         check(tabletopMarker >= 0) { "expected a `>Tabletop &amp; Tools<` section eyebrow on home.html" }
         check(ctaMarker >= 0) { "expected the final CTA on home.html" }
         assertTrue(
             cubeMarker in (tabletopMarker + 1) until ctaMarker,
-            "the MTG cube card must sit inside the Tabletop & Tools section, " +
+            "the Magic toolkit card must sit inside the Tabletop & Tools section, " +
                 "grouped with D&D lookups and Utilities."
         )
     }
