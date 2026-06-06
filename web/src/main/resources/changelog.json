@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add shared cube-analytics core (curve, types, rarity, duplicates)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 634
+  },
+  {
+    "date": "June 2026",
     "title": "Make cube packs & preview groups collapsible for easier navigation",
     "summary": "## Why",
     "emoji": "✨",
