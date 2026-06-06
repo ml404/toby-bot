@@ -442,7 +442,7 @@ class ScryfallCubeFetcher @Autowired constructor(
         private const val SETS_ENDPOINT = "https://api.scryfall.com/sets"
         private const val SPELLBOOK_ENDPOINT = "https://backend.commanderspellbook.com/variants/"
 
-        /** Cap on how many combos a single `/cube combos` lookup returns. */
+        /** Cap on how many combos a single `/card combos` lookup returns. */
         const val MAX_COMBOS = 5
         const val DEFAULT_MAX_CARDS = 750
         private const val MAX_PAGES = 10

@@ -60,7 +60,7 @@ enum class NotificationChannelKind(
     ),
     CARD_PRICE_ALERT(
         displayName = "Card price watch",
-        description = "DM when a Magic card you're watching (/cube watch-add) crosses your target price.",
+        description = "DM when a Magic card you're watching (/pricewatch add) crosses your target price.",
         // DM-only and on by default — you opted in by creating the watch.
         perSurfaceDefaults = mapOf(Surface.DM to true),
     ),

@@ -193,7 +193,7 @@ internal object CubeEmbeds {
         setDescription(message)
     }
 
-    /** A single-card panel for `/cube card`: image plus its key facts. */
+    /** A single-card panel for `/card lookup`: image plus its key facts. */
     fun cardEmbed(card: CubeCard): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle(card.name)
@@ -275,7 +275,7 @@ internal object CubeEmbeds {
     }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
     /**
-     * The official rulings panel for `/cube rulings`: each ruling as a
+     * The official rulings panel for `/card rulings`: each ruling as a
      * `> date — comment` block, oldest first, trimmed to stay within an embed
      * description. Shows a friendly empty state when the card has no rulings.
      */
@@ -292,7 +292,7 @@ internal object CubeEmbeds {
     }
 
     /**
-     * The combos panel for `/cube combos`: one field per combo listing the
+     * The combos panel for `/card combos`: one field per combo listing the
      * pieces it needs and what it produces, linked to Commander Spellbook.
      * Shows a friendly empty state when the card is in no known combos.
      */
@@ -310,7 +310,7 @@ internal object CubeEmbeds {
         setFooter("Source: Commander Spellbook")
     }
 
-    /** A set's headline facts for `/cube set`: type, release date, card count, with the set icon. */
+    /** A set's headline facts for `/mtg set`: type, release date, card count, with the set icon. */
     fun setEmbed(set: MtgSet): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("${set.name} (${set.code})")
@@ -340,7 +340,7 @@ internal object CubeEmbeds {
         val now = currentPrice?.let { " (now ${money(it, currency)})" }.orEmpty()
         setDescription(
             "I'll DM you when **${card.name}** is **$dir ${money(watch.threshold, currency)}**$now.\n" +
-                "Watch **#${watch.id}** · one-shot · remove with `/cube watch-remove id:${watch.id}`."
+                "Watch **#${watch.id}** · one-shot · remove with `/pricewatch remove id:${watch.id}`."
         )
         setFooter("Manage card-price-watch DMs in /preferences notifications.")
     }
@@ -350,7 +350,7 @@ internal object CubeEmbeds {
         setAuthor(AUTHOR)
         setTitle("Your card price watches")
         if (watches.isEmpty()) {
-            setDescription("You're not watching any cards. Add one with `/cube watch-add`.")
+            setDescription("You're not watching any cards. Add one with `/pricewatch add`.")
             return@embed
         }
         setDescription(
@@ -359,7 +359,7 @@ internal object CubeEmbeds {
                 "• **#${w.id}** ${w.cardName} — ${w.directionEnum.name.lowercase()} ${money(w.threshold, cur)}"
             }
         )
-        setFooter("Remove one with /cube watch-remove id:<id>")
+        setFooter("Remove one with /pricewatch remove id:<id>")
     }
 
     /** Confirmation that a watch was removed. */
@@ -373,12 +373,12 @@ internal object CubeEmbeds {
     private fun money(amount: Double, currency: MtgCurrency): String =
         "${currency.symbol}${format(amount)}${currency.suffix}"
 
-    /** A keyword's reminder text for `/cube rule`. */
+    /** A keyword's reminder text for `/mtg rule`. */
     fun ruleEmbed(term: MtgGlossary.Term): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle(term.keyword)
         setDescription(term.text)
-        setFooter("Reminder text · use /cube rulings for card-specific official rulings")
+        setFooter("Reminder text · use /card rulings for card-specific official rulings")
     }
 
     /** One combo as a `Cards: … → Produces: …` block with a Spellbook link, within the field cap. */

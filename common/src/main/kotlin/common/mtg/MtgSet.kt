@@ -1,7 +1,7 @@
 package common.mtg
 
 /**
- * A Magic set's headline facts (Scryfall `/sets/:code`) — for the `/cube set`
+ * A Magic set's headline facts (Scryfall `/sets/:code`) — for the `/mtg set`
  * quick-reference command and its web twin. A pure value type; both surfaces
  * fetch from Scryfall and map the JSON into this.
  */

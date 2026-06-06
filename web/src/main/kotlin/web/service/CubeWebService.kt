@@ -51,7 +51,7 @@ class CubeWebService {
 
     /**
      * Looks a single card up by (fuzzy) name via Scryfall's `/cards/named`,
-     * for the web card-lookup tool — the website twin of `/cube card`.
+     * for the web card-lookup tool — the website twin of `/card lookup`.
      */
     fun card(name: String): CubeResult<CardLookupView> {
         val trimmed = name.trim()
@@ -84,7 +84,7 @@ class CubeWebService {
 
     /**
      * Looks a card up by (fuzzy) name and fetches its official rulings — the
-     * website twin of `/cube rulings`. Two calls: `/cards/named` to resolve the
+     * website twin of `/card rulings`. Two calls: `/cards/named` to resolve the
      * card (and its `rulings_uri`), then a GET of that uri. A resolved card
      * with no rulings is a success with an empty list, not an error.
      */
@@ -139,7 +139,7 @@ class CubeWebService {
 
     /**
      * Finds the combos a card appears in via the Commander Spellbook variants
-     * API — the website twin of `/cube combos`. A reachable card with no combos
+     * API — the website twin of `/card combos`. A reachable card with no combos
      * is a success with an empty list, not an error.
      */
     fun combos(name: String): CubeResult<CombosView> {
@@ -161,7 +161,7 @@ class CubeWebService {
         }
     }
 
-    /** Looks up a Magic set by code via Scryfall's `/sets/:code` — the web twin of `/cube set`. */
+    /** Looks up a Magic set by code via Scryfall's `/sets/:code` — the web twin of `/mtg set`. */
     fun set(code: String): CubeResult<SetView> {
         val trimmed = code.trim().lowercase()
         if (trimmed.isEmpty()) return CubeResult.error("Enter a set code (e.g. vow).")
@@ -196,7 +196,7 @@ class CubeWebService {
         }
     }
 
-    /** Looks a keyword up in the built-in glossary (pure, no network) — the web twin of `/cube rule`. */
+    /** Looks a keyword up in the built-in glossary (pure, no network) — the web twin of `/mtg rule`. */
     fun rule(term: String): CubeResult<RuleView> {
         if (term.trim().isEmpty()) return CubeResult.error("Enter a keyword (e.g. trample).")
         return MtgGlossary.lookup(term)
