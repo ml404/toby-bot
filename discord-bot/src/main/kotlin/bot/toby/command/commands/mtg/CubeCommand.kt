@@ -72,7 +72,9 @@ class CubeCommand @Autowired constructor(
             SUB_RULINGS -> launchHandling(ctx) { handleRulings(ctx, deleteDelay) }
             SUB_LEGALITY -> launchHandling(ctx) { handleLegality(ctx, requestingUserDto, deleteDelay) }
             SUB_COMBOS -> launchHandling(ctx) { handleCombos(ctx, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings, legality or combos."), deleteDelay)
+            SUB_SET -> launchHandling(ctx) { handleSet(ctx, deleteDelay) }
+            SUB_RULE -> handleRule(ctx, deleteDelay) // static glossary, no IO
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings, legality, combos, set or rule."), deleteDelay)
         }
     }
 
@@ -291,6 +293,32 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Looks up a Magic set by its code on Scryfall. */
+    private suspend fun handleSet(ctx: CommandContext, deleteDelay: Int) {
+        val code = ctx.event.stringOption(OPT_CODE)?.trim()
+        if (code.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a set `code` (e.g. vow, mh3)."), deleteDelay)
+            return
+        }
+        when (val set = fetcher.fetchSet(code)) {
+            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a set with code `$code`."), deleteDelay)
+            else -> reply(ctx, CubeEmbeds.setEmbed(set), deleteDelay)
+        }
+    }
+
+    /** Looks up a keyword's reminder text in the built-in glossary (no network). */
+    private fun handleRule(ctx: CommandContext, deleteDelay: Int) {
+        val term = ctx.event.stringOption(OPT_TERM)?.trim()
+        if (term.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a keyword (e.g. trample, deathtouch)."), deleteDelay)
+            return
+        }
+        when (val found = common.mtg.MtgGlossary.lookup(term)) {
+            null -> reply(ctx, CubeEmbeds.errorEmbed("No glossary entry for `$term`. Try an evergreen keyword like trample or flying."), deleteDelay)
+            else -> reply(ctx, CubeEmbeds.ruleEmbed(found), deleteDelay)
+        }
+    }
+
     /** Checks a saved cube / queried pool against a format's banned & legality list. */
     private suspend fun handleLegality(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val formatKey = ctx.event.stringOption(OPT_FORMAT)?.trim()?.lowercase()
@@ -356,6 +384,10 @@ class CubeCommand @Autowired constructor(
             ),
         SubcommandData(SUB_COMBOS, "Find the combos a Magic card is part of (Commander Spellbook).")
             .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Thassa's Oracle).", true)),
+        SubcommandData(SUB_SET, "Look up a Magic set by its code (release date, card count).")
+            .addOptions(OptionData(OptionType.STRING, OPT_CODE, "The set code (e.g. vow, mh3).", true)),
+        SubcommandData(SUB_RULE, "Look up a Magic keyword's reminder text (e.g. trample, flying).")
+            .addOptions(OptionData(OptionType.STRING, OPT_TERM, "The keyword to explain.", true)),
     )
 
     companion object {
@@ -367,10 +399,14 @@ class CubeCommand @Autowired constructor(
         const val SUB_RULINGS = "rulings"
         const val SUB_LEGALITY = "legality"
         const val SUB_COMBOS = "combos"
+        const val SUB_SET = "set"
+        const val SUB_RULE = "rule"
 
         const val OPT_TOTAL = "total"
         const val OPT_NAME = "name"
         const val OPT_FORMAT = "format"
+        const val OPT_CODE = "code"
+        const val OPT_TERM = "term"
         const val OPT_CUBE_SIZE = "cube-size"
         const val OPT_PACK_SIZE = "pack-size"
         const val OPT_QUERY = "query"

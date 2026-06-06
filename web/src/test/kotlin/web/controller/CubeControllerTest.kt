@@ -33,8 +33,10 @@ import web.service.PreviewData
 import web.service.RarityCountView
 import web.service.ComboView
 import web.service.CombosView
+import web.service.RuleView
 import web.service.RulingView
 import web.service.RulingsView
+import web.service.SetView
 import web.service.TypeCountView
 import java.time.Instant
 
@@ -205,6 +207,34 @@ class CubeControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
         assertFalse(response.body!!.ok)
         assertTrue(response.body!!.combos.isEmpty())
+    }
+
+    @Test
+    fun `set returns 200 with the set facts and 400 on failure`() {
+        every { service.set("vow") } returns CubeResult.ok(
+            SetView("VOW", "Innistrad: Crimson Vow", "expansion", "2021-11-19", 277, null, null)
+        )
+        val ok = controller.set("vow")
+        assertEquals(HttpStatus.OK, ok.statusCode)
+        assertEquals("VOW", ok.body!!.set!!.code)
+
+        every { service.set(any()) } returns CubeResult.error("No set found with code “zzz”.")
+        val bad = controller.set("zzz")
+        assertEquals(HttpStatus.BAD_REQUEST, bad.statusCode)
+        assertFalse(bad.body!!.ok)
+    }
+
+    @Test
+    fun `rule returns 200 with the glossary entry and 400 on failure`() {
+        every { service.rule("trample") } returns CubeResult.ok(RuleView("Trample", "Excess damage tramples over."))
+        val ok = controller.rule("trample")
+        assertEquals(HttpStatus.OK, ok.statusCode)
+        assertEquals("Trample", ok.body!!.rule!!.keyword)
+
+        every { service.rule(any()) } returns CubeResult.error("No glossary entry.")
+        val bad = controller.rule("zzz")
+        assertEquals(HttpStatus.BAD_REQUEST, bad.statusCode)
+        assertFalse(bad.body!!.ok)
     }
 
     @Test

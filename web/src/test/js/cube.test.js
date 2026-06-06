@@ -68,6 +68,7 @@ describe('tabIdFromHash', () => {
         expect(Cube.tabIdFromHash('#compare')).toBe('compare');
         expect(Cube.tabIdFromHash('#card')).toBe('card');
         expect(Cube.tabIdFromHash('#legality')).toBe('legality');
+        expect(Cube.tabIdFromHash('#reference')).toBe('reference');
     });
 
     test('returns null for anything else', () => {
@@ -519,6 +520,34 @@ describe('rulings (rulingsUrl / renderRulings)', () => {
         Cube.renderRulings(container, { rulings: [] });
         expect(container.querySelector('.cube-rulings-empty').textContent).toContain('No official rulings');
         expect(container.querySelectorAll('.cube-ruling')).toHaveLength(0);
+    });
+});
+
+describe('reference (set + rule lookup)', () => {
+    test('setUrl and ruleUrl encode their query', () => {
+        expect(Cube.setUrl('vow')).toBe('/cube/api/set?code=vow');
+        expect(Cube.ruleUrl('double strike')).toBe('/cube/api/rule?term=' + encodeURIComponent('double strike'));
+    });
+
+    test('renderSet shows the headline facts and a Scryfall link', () => {
+        const el = document.createElement('div');
+        Cube.renderSet(el, {
+            code: 'VOW', name: 'Innistrad: Crimson Vow', setType: 'expansion',
+            releasedAt: '2021-11-19', cardCount: 277, scryfallUri: 'https://scryfall.com/sets/vow',
+        });
+        expect(el.querySelector('.cube-setinfo-h').textContent).toBe('Innistrad: Crimson Vow (VOW)');
+        const text = el.textContent;
+        expect(text).toContain('expansion');
+        expect(text).toContain('2021-11-19');
+        expect(text).toContain('277');
+        expect(el.querySelector('a').getAttribute('href')).toBe('https://scryfall.com/sets/vow');
+    });
+
+    test('renderRule shows the keyword and reminder text', () => {
+        const el = document.createElement('div');
+        Cube.renderRule(el, { keyword: 'Trample', text: 'Excess combat damage tramples over.' });
+        expect(el.querySelector('.cube-rule-h').textContent).toBe('Trample');
+        expect(el.querySelector('.cube-rule-text').textContent).toContain('tramples over');
     });
 });
 

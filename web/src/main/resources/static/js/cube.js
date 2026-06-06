@@ -7,10 +7,10 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality'];
+    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality', 'reference'];
 
     // Tools that work off their own inputs, not the shared "Your cube" source.
-    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality'];
+    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality', 'reference'];
 
     // Colour-pie palette for swatches/bars. Tuned to read on the dark
     // dashboard background while staying recognisably W/U/B/R/G + gold
@@ -1456,6 +1456,92 @@
         });
     }
 
+    /** GET URL for a set lookup by code. */
+    function setUrl(code) {
+        return '/cube/api/set?code=' + encodeURIComponent(code);
+    }
+
+    /** GET URL for a glossary keyword lookup. */
+    function ruleUrl(term) {
+        return '/cube/api/rule?term=' + encodeURIComponent(term);
+    }
+
+    /** Renders a set's headline facts (type, release date, card count) with a Scryfall link. */
+    function renderSet(container, set) {
+        container.replaceChildren();
+        const h = document.createElement('h3');
+        h.className = 'cube-setinfo-h';
+        h.textContent = set.name + ' (' + set.code + ')';
+        container.appendChild(h);
+        function fact(label, value) {
+            if (value == null || value === '') return;
+            const p = document.createElement('p');
+            p.className = 'cube-setinfo-fact';
+            const b = document.createElement('strong');
+            b.textContent = label + ' ';
+            p.appendChild(b);
+            p.appendChild(document.createTextNode(String(value)));
+            container.appendChild(p);
+        }
+        fact('Type', set.setType);
+        fact('Released', set.releasedAt);
+        fact('Cards', set.cardCount);
+        if (set.scryfallUri) {
+            const a = document.createElement('a');
+            a.className = 'btn btn-secondary';
+            a.href = set.scryfallUri;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            a.textContent = 'View on Scryfall ↗';
+            container.appendChild(a);
+        }
+        return container;
+    }
+
+    /** Renders a keyword glossary entry. */
+    function renderRule(container, rule) {
+        container.replaceChildren();
+        const h = document.createElement('h3');
+        h.className = 'cube-rule-h';
+        h.textContent = rule.keyword;
+        const p = document.createElement('p');
+        p.className = 'cube-rule-text';
+        p.textContent = rule.text;
+        container.appendChild(h);
+        container.appendChild(p);
+        return container;
+    }
+
+    function wireReference(doc) {
+        wireLookupForm(doc, 'set', 'code', setUrl, function (json) { return json.set; }, renderSet, 'Enter a set code.');
+        wireLookupForm(doc, 'rule', 'term', ruleUrl, function (json) { return json.rule; }, renderRule, 'Enter a keyword.');
+    }
+
+    /** Shared wiring for a single-field GET lookup form (set / rule). */
+    function wireLookupForm(doc, name, field, urlFn, pick, render, emptyMsg) {
+        const form = q(doc, '[data-form="' + name + '"]');
+        if (!form) return;
+        const status = statusFor(doc, name);
+        const result = q(doc, '[data-result="' + name + '"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const value = (new FormData(form).get(field) || '').trim();
+            if (!value) { setStatus(status, emptyMsg); return; }
+            setStatus(status, 'Looking up…');
+            hide(result);
+            withBusy(form, true);
+            getJson(urlFn(value))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'Not found.'); return; }
+                    setStatus(status, '');
+                    render(result, pick(json));
+                    show(result);
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
+    }
+
     function wireAsFan(doc) {
         const form = q(doc, '[data-form="asfan"]');
         if (!form) return;
@@ -1850,6 +1936,7 @@
         wireCompare(doc);
         wireCardLookup(doc);
         wireLegality(doc);
+        wireReference(doc);
         wirePreview(doc);
         wireGenerate(doc);
         wireCardFlip(doc);
@@ -1888,6 +1975,10 @@
         renderDiff: renderDiff,
         legalityUrl: legalityUrl,
         renderLegality: renderLegality,
+        setUrl: setUrl,
+        ruleUrl: ruleUrl,
+        renderSet: renderSet,
+        renderRule: renderRule,
         cardUrl: cardUrl,
         rulingsUrl: rulingsUrl,
         combosUrl: combosUrl,

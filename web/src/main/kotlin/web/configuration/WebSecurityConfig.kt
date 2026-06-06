@@ -25,7 +25,7 @@ class WebSecurityConfig {
                     // shared cube (/cube/c/**) are public; the saved-lists and
                     // share-create APIs are deliberately NOT listed here so they
                     // fall through to anyRequest().authenticated().
-                    "/cube", "/cube/c/**", "/cube/api/asfan", "/cube/api/preview", "/cube/api/generate", "/cube/api/diff", "/cube/api/card", "/cube/api/rulings", "/cube/api/legality", "/cube/api/combos",
+                    "/cube", "/cube/c/**", "/cube/api/asfan", "/cube/api/preview", "/cube/api/generate", "/cube/api/diff", "/cube/api/card", "/cube/api/rulings", "/cube/api/legality", "/cube/api/combos", "/cube/api/set", "/cube/api/rule",
                     "/sitemap.xml", "/robots.txt",
                     // Service worker for web push must be reachable
                     // unauthenticated — the browser registers it on

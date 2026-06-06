@@ -25,7 +25,9 @@ import web.service.CubeResult
 import web.service.DiffLineView
 import web.service.CubeWebService
 import web.service.ComboView
+import web.service.RuleView
 import web.service.RulingView
+import web.service.SetView
 import web.service.GenerateData
 import web.service.PreviewData
 import web.util.discordIdOrNull
@@ -154,6 +156,22 @@ class CubeController(
             )
             is CubeResult.Failure ->
                 ResponseEntity.badRequest().body(CubeCombosResponse(false, result.error, null, emptyList()))
+        }
+
+    @GetMapping("/api/set", produces = ["application/json"])
+    @ResponseBody
+    fun set(@RequestParam("code") code: String): ResponseEntity<CubeSetResponse> =
+        when (val result = cubeWebService.set(code)) {
+            is CubeResult.Success -> ResponseEntity.ok(CubeSetResponse(true, null, result.value))
+            is CubeResult.Failure -> ResponseEntity.badRequest().body(CubeSetResponse(false, result.error, null))
+        }
+
+    @GetMapping("/api/rule", produces = ["application/json"])
+    @ResponseBody
+    fun rule(@RequestParam("term") term: String): ResponseEntity<CubeRuleResponse> =
+        when (val result = cubeWebService.rule(term)) {
+            is CubeResult.Success -> ResponseEntity.ok(CubeRuleResponse(true, null, result.value))
+            is CubeResult.Failure -> ResponseEntity.badRequest().body(CubeRuleResponse(false, result.error, null))
         }
 
     @PostMapping("/api/legality", consumes = ["application/json"], produces = ["application/json"])
@@ -314,6 +332,10 @@ data class CubeCombosResponse(
     val name: String?,
     val combos: List<ComboView>,
 )
+
+data class CubeSetResponse(val ok: Boolean, val error: String?, val set: SetView?)
+
+data class CubeRuleResponse(val ok: Boolean, val error: String?, val rule: RuleView?)
 
 data class CubeLegalityRequest(val list: String = "", val format: String = "")
 

@@ -342,6 +342,29 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `setEmbed shows the set's headline facts`() {
+        val set = common.mtg.MtgSet(
+            code = "VOW", name = "Innistrad: Crimson Vow", setType = "expansion",
+            releasedAt = "2021-11-19", cardCount = 277,
+            iconUrl = "https://img/vow.svg", scryfallUri = "https://scryfall.com/sets/vow",
+        )
+        val embed = CubeEmbeds.setEmbed(set)
+        assertEquals("Innistrad: Crimson Vow (VOW)", embed.title)
+        assertEquals("https://scryfall.com/sets/vow", embed.url)
+        val desc = embed.description!!
+        assertTrue(desc.contains("Expansion"))
+        assertTrue(desc.contains("2021-11-19"))
+        assertTrue(desc.contains("277"))
+    }
+
+    @Test
+    fun `ruleEmbed shows the keyword and its reminder text`() {
+        val embed = CubeEmbeds.ruleEmbed(common.mtg.MtgGlossary.Term("Trample", "This creature can deal excess combat damage…"))
+        assertEquals("Trample", embed.title)
+        assertTrue(embed.description!!.contains("excess combat damage"))
+    }
+
+    @Test
     fun `rulingsBlock drops overflow rulings and notes how many were hidden`() {
         // 60 long rulings can't all fit under the description cap — the block
         // must stop early and append an "…and N more" pointer.
