@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Split the /cube super-command into focused MTG commands",
+    "summary": "`/cube` had grown to **13 subcommands** spanning cube-building, card lookups, reference, and price watches. This breaks it into five themed top-level commands, so each is small and discoverable:",
+    "emoji": "✨",
+    "prNumber": 656
+  },
+  {
+    "date": "June 2026",
     "title": "Add card price watch alerts (Discord + web)",
     "summary": "Add card price watch alerts (Discord + web)",
     "emoji": "✨",
