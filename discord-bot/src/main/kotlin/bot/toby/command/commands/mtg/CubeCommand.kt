@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
 import kotlin.random.Random
 
 /**
- * `/cube` — the cube-design tools: as-fan maths, pack preview/generation, and
+ * `/mtgcube` — the cube-design tools: as-fan maths, pack preview/generation, and
  * listing your saved cubes. Card lookups, deck legality, set/keyword reference
  * and price watches each live in their own command ([CardCommand],
  * [DeckCommand], [MtgReferenceCommand], [PriceWatchCommand]).

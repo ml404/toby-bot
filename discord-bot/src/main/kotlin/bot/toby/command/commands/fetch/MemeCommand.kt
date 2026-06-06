@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component
 @Component
 class MemeCommand @Autowired constructor(
     private val fetcher: RedditMemeFetcher,
-    // Mirrors /dnd and /cube: the Reddit fetch runs on this dispatcher
+    // Mirrors /dnd and /mtgcube: the Reddit fetch runs on this dispatcher
     // (tests pass Dispatchers.Unconfined so the launched work resolves
     // synchronously).
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,

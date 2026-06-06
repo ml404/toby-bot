@@ -8,7 +8,7 @@ package common.mtg
  * broadens the bot's appeal beyond cube builders.
  *
  * Reminder text is paraphrased from the comprehensive rules / Oracle reminder
- * text; it's a quick refresher, not a rules ruling (use `/card rulings` for
+ * text; it's a quick refresher, not a rules ruling (use `/mtgcard rulings` for
  * card-specific official rulings).
  */
 object MtgGlossary {

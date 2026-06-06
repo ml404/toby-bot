@@ -22,7 +22,7 @@ import java.awt.Color
 import java.nio.charset.StandardCharsets
 
 /**
- * Embed + attachment factories for `/cube`. Keeps the visual grammar of
+ * Embed + attachment factories for the Magic commands. Keeps the visual grammar of
  * the other polished utility commands (`MemeEmbeds`, `RollEmbeds`) so the
  * MTG tool feels like part of the set.
  */
@@ -163,8 +163,8 @@ internal object CubeEmbeds {
 
     /**
      * Lists the cubes a user has saved on the website, each with its card
-     * count, so they can see what's available to `/cube preview` or
-     * `/cube generate` without leaving Discord. Shows an empty-state nudge
+     * count, so they can see what's available to `/mtgcube preview` or
+     * `/mtgcube generate` without leaving Discord. Shows an empty-state nudge
      * when they have none saved yet.
      */
     fun savedCubesEmbed(saved: List<CubeListDto>): MessageEmbed = embed(color = OK_COLOR) {
@@ -173,8 +173,8 @@ internal object CubeEmbeds {
         if (saved.isEmpty()) {
             setDescription(
                 "You haven't saved any cubes yet. Build one on the website's " +
-                    "Cube workshop, hit **Save**, then use it here with " +
-                    "`/cube preview saved:` or `/cube generate saved:`."
+                    "Magic toolkit, hit **Save**, then use it here with " +
+                    "`${MtgCommandRef.CUBE_PREVIEW} saved:` or `${MtgCommandRef.CUBE_GENERATE} saved:`."
             )
             return@embed
         }
@@ -185,7 +185,7 @@ internal object CubeEmbeds {
         }
         val more = if (saved.size > shown.size) "\n…and ${saved.size - shown.size} more." else ""
         setDescription(lines + more)
-        setFooter("Use one with /cube preview saved: or /cube generate saved:")
+        setFooter("Use one with ${MtgCommandRef.CUBE_PREVIEW} saved: or ${MtgCommandRef.CUBE_GENERATE} saved:")
     }
 
     fun errorEmbed(message: String): MessageEmbed = embed(color = ERROR_COLOR) {
@@ -194,7 +194,7 @@ internal object CubeEmbeds {
         setDescription(message)
     }
 
-    /** A single-card panel for `/card lookup`: image plus its key facts. */
+    /** A single-card panel for `/mtgcard lookup`: image plus its key facts. */
     fun cardEmbed(card: CubeCard): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle(card.name)
@@ -276,7 +276,7 @@ internal object CubeEmbeds {
     }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
     /**
-     * The official rulings panel for `/card rulings`: each ruling as a
+     * The official rulings panel for `/mtgcard rulings`: each ruling as a
      * `> date — comment` block, oldest first, trimmed to stay within an embed
      * description. Shows a friendly empty state when the card has no rulings.
      */
@@ -293,7 +293,7 @@ internal object CubeEmbeds {
     }
 
     /**
-     * The combos panel for `/card combos`: one field per combo listing the
+     * The combos panel for `/mtgcard combos`: one field per combo listing the
      * pieces it needs and what it produces, linked to Commander Spellbook.
      * Shows a friendly empty state when the card is in no known combos.
      */

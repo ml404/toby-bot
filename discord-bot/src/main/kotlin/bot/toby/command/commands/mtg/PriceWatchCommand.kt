@@ -16,7 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * `/pricewatch` — get DM'd when a Magic card's market price crosses a target.
+ * `/mtgprice` — get DM'd when a Magic card's market price crosses a target.
  * `add` resolves the card and captures its current price; `list` and `remove`
  * manage your watches. The scheduled [bot.toby.scheduling.CardPriceWatchJob]
  * does the periodic checking and DMing.
@@ -112,7 +112,7 @@ class PriceWatchCommand @Autowired constructor(
             ),
         SubcommandData(SUB_LIST, "List your card price watches."),
         SubcommandData(SUB_REMOVE, "Remove one of your card price watches.")
-            .addOptions(OptionData(OptionType.INTEGER, OPT_WATCH_ID, "The watch id (from /pricewatch list).", true).setMinValue(1)),
+            .addOptions(OptionData(OptionType.INTEGER, OPT_WATCH_ID, "The watch id (from ${MtgCommandRef.PRICEWATCH_LIST}).", true).setMinValue(1)),
     )
 
     companion object {

@@ -64,7 +64,7 @@ class CubeController(
 
     /**
      * The Magic command names for the page copy, sourced from [MtgCommandRef]
-     * so the prose (e.g. "the website twin of `/card lookup`") can never drift
+     * so the prose (e.g. "the website twin of `/mtgcard lookup`") can never drift
      * from the actual Discord commands. Available to this controller's views as
      * `${mtgCmd.cardLookup}` etc.
      */

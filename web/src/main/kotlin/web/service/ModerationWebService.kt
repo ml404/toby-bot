@@ -824,7 +824,7 @@ class ModerationWebService(
                 v
             }
             ConfigDto.Configurations.CUBE_CURRENCY -> {
-                // The /cube preview's "cube value" currency. Normalise to the
+                // The /mtgcube preview's "cube value" currency. Normalise to the
                 // MtgCurrency code so the bot reads it back cleanly.
                 common.mtg.MtgCurrency.fromCode(rawValue)?.code
                     ?: return "Value must be one of usd, eur or tix."

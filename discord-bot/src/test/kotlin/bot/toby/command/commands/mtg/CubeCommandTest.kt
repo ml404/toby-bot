@@ -429,7 +429,7 @@ class CubeCommandTest : CommandTest {
 
     @Test
     fun `exposes the four cube subcommands with their options`() {
-        assertEquals("cube", command.name)
+        assertEquals("mtgcube", command.name)
         val subs = command.subCommands.associateBy { it.name }
         assertEquals(setOf("asfan", "preview", "generate", "saved"), subs.keys)
 

@@ -14,7 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * `/card` — single-card lookups: image + facts (`lookup`), official rulings
+ * `/mtgcard` — single-card lookups: image + facts (`lookup`), official rulings
  * (`rulings`), and the combos a card appears in (`combos`, via Commander
  * Spellbook). Card-centric, not cube-specific.
  */

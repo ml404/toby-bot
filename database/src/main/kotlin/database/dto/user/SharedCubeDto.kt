@@ -12,7 +12,7 @@ import java.time.Instant
 
 /**
  * An immutable, publicly-shareable snapshot of a cube card list, addressed
- * by a short random [token] (`/cube/c/<token>`). Created by a logged-in
+ * by a short random [token] (`/magic/c/<token>`). Created by a logged-in
  * user; readable by anyone with the link. `cards` is the raw list text so
  * the web layer re-parses it on open (same format as [CubeListDto]).
  */

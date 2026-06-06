@@ -15,7 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * `/deck` — deck-level analysis. Today: `legality`, which checks a saved cube
+ * `/mtgdeck` — deck-level analysis. Today: `legality`, which checks a saved cube
  * (or a Scryfall query) against a format and flags banned / not-in-format /
  * restricted cards.
  */
