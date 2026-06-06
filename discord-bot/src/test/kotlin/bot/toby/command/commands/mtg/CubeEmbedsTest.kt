@@ -326,6 +326,35 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `legalityEmbed reports an illegal deck with banned and not-in-format buckets`() {
+        val report = common.mtg.DeckLegality.check(
+            listOf(
+                CubeCard("Lightning Bolt", legalities = mapOf("modern" to "legal")),
+                CubeCard("Lurrus", legalities = mapOf("modern" to "banned")),
+                CubeCard("Black Lotus", legalities = mapOf("modern" to "not_legal")),
+            ),
+            "modern",
+        )
+        val embed = CubeEmbeds.legalityEmbed(report, "Modern", "my deck")
+        assertTrue(embed.title!!.contains("Not Modern-legal"))
+        assertEquals(CubeEmbeds.ERROR_COLOR.rgb, embed.color!!.rgb)
+        assertTrue(field(embed, "⛔ Banned 1")!!.value!!.contains("Lurrus"))
+        assertTrue(field(embed, "🚫 Not in format 1")!!.value!!.contains("Black Lotus"))
+    }
+
+    @Test
+    fun `legalityEmbed reports a clean legal deck`() {
+        val report = common.mtg.DeckLegality.check(
+            listOf(CubeCard("Lightning Bolt", legalities = mapOf("modern" to "legal"))),
+            "modern",
+        )
+        val embed = CubeEmbeds.legalityEmbed(report, "Modern", "my deck")
+        assertTrue(embed.title!!.contains("Legal in Modern"))
+        assertEquals(CubeEmbeds.OK_COLOR.rgb, embed.color!!.rgb)
+        assertTrue(embed.footer!!.text!!.contains("Every card is legal"))
+    }
+
+    @Test
     fun `packsFile lists each card, appending its image link when present`() {
         val packs = listOf(
             listOf(

@@ -185,6 +185,32 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `legality returns 200 with the deck verdict`() {
+        every { service.checkLegality("4 Lurrus", "modern") } returns CubeResult.ok(
+            web.service.LegalityData(
+                format = "Modern", legal = false, total = 4,
+                banned = listOf("Lurrus of the Dream-Den"), notLegal = emptyList(),
+                restricted = emptyList(), unknown = emptyList(),
+            )
+        )
+        val response = controller.legality(CubeLegalityRequest("4 Lurrus", "modern"))
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertFalse(response.body!!.legal)
+        assertEquals("Modern", response.body!!.format)
+        assertEquals(listOf("Lurrus of the Dream-Den"), response.body!!.banned)
+    }
+
+    @Test
+    fun `legality returns 400 on an unknown format`() {
+        every { service.checkLegality(any(), any()) } returns CubeResult.error("Unknown format.")
+        val response = controller.legality(CubeLegalityRequest("Bolt", "yugioh"))
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+        assertTrue(response.body!!.banned.isEmpty())
+    }
+
+    @Test
     fun `diff returns 200 with the comparison`() {
         every { service.diff("A list", "B list") } returns CubeResult.ok(
             DiffData(

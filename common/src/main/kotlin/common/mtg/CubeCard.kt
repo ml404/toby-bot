@@ -86,6 +86,14 @@ data class CubeCard(
      * Presentation-only.
      */
     val legalFormats: List<String> = emptyList(),
+    /**
+     * Raw Scryfall `legalities` status per format code we track (`"legal"`,
+     * `"not_legal"`, `"banned"`, `"restricted"`), for the formats in
+     * [CubeCard.FORMATS]. Drives the deck-legality checker, which needs to tell
+     * a banned card apart from one that's simply not in the format. Empty when
+     * unknown.
+     */
+    val legalities: Map<String, String> = emptyMap(),
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory
@@ -122,6 +130,10 @@ data class CubeCard(
         /** The display-cased formats this card is legal in, from a Scryfall `legalities` map (key→status). */
         fun legalFormatsOf(statusByFormat: (String) -> String?): List<String> =
             FORMATS.filter { (key, _) -> statusByFormat(key) == "legal" }.map { it.second }
+
+        /** The raw status per tracked format from a Scryfall `legalities` lookup, present codes only. */
+        fun legalitiesOf(statusByFormat: (String) -> String?): Map<String, String> =
+            FORMATS.mapNotNull { (key, _) -> statusByFormat(key)?.let { key to it } }.toMap()
 
         /**
          * Whether a Scryfall `type_line` denotes a land, judged by the

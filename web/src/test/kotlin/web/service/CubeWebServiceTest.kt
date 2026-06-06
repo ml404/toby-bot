@@ -125,6 +125,31 @@ class CubeWebServiceTest {
         assertEquals(null, card.priceEur)
         assertEquals(null, card.priceTix)
         assertTrue(card.legalFormats.isEmpty())
+        assertTrue(card.legalities.isEmpty())
+    }
+
+    @Test
+    fun `cardOf keeps the raw per-format legality statuses`() {
+        val node = mapper.readTree(
+            """{"name":"Lurrus","color_identity":["W","B"],"type_line":"Creature",
+               "legalities":{"modern":"banned","legacy":"banned","vintage":"restricted","commander":"legal"}}"""
+        )
+        val card = service.cardOf(node)!!.card
+        assertEquals("banned", card.legalities["modern"])
+        assertEquals("restricted", card.legalities["vintage"])
+        assertEquals("legal", card.legalities["commander"])
+    }
+
+    @Test
+    fun `checkLegality rejects an unknown format without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.checkLegality("Bolt", "yugioh"))
+        assertTrue(result.error.contains("Unknown format"))
+    }
+
+    @Test
+    fun `checkLegality rejects an empty list without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.checkLegality("   ", "modern"))
+        assertTrue(result.error.contains("at least one card"))
     }
 
     @Test

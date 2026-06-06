@@ -115,6 +115,16 @@ class CubeCardTest {
     }
 
     @Test
+    fun `legalitiesOf keeps the raw status per present format code`() {
+        val status = mapOf("modern" to "legal", "legacy" to "banned", "vintage" to "restricted")
+        val map = CubeCard.legalitiesOf { status[it] }
+        assertEquals("legal", map["modern"])
+        assertEquals("banned", map["legacy"])
+        assertEquals("restricted", map["vintage"])
+        assertFalse(map.containsKey("standard")) // absent codes are dropped
+    }
+
+    @Test
     fun `mono-coloured card maps to its colour bucket`() {
         assertEquals(
             CardCategory.RED,

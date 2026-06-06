@@ -144,6 +144,24 @@ class CubeController(
                 ResponseEntity.badRequest().body(CubeRulingsResponse(false, result.error, null, null, emptyList()))
         }
 
+    @PostMapping("/api/legality", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun legality(@RequestBody request: CubeLegalityRequest): ResponseEntity<CubeLegalityResponse> =
+        when (val result = cubeWebService.checkLegality(request.list, request.format)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubeLegalityResponse(
+                    ok = true, error = null,
+                    format = result.value.format, legal = result.value.legal, total = result.value.total,
+                    banned = result.value.banned, notLegal = result.value.notLegal,
+                    restricted = result.value.restricted, unknown = result.value.unknown,
+                    notFound = result.value.notFound, note = result.value.note,
+                )
+            )
+            is CubeResult.Failure -> ResponseEntity.badRequest().body(
+                CubeLegalityResponse(false, result.error, null, false, 0, emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), null)
+            )
+        }
+
     @PostMapping("/api/diff", consumes = ["application/json"], produces = ["application/json"])
     @ResponseBody
     fun diff(@RequestBody request: CubeDiffRequest): ResponseEntity<CubeDiffResponse> =
@@ -276,6 +294,22 @@ data class CubeRulingsResponse(
     val name: String?,
     val scryfallUri: String?,
     val rulings: List<RulingView>,
+)
+
+data class CubeLegalityRequest(val list: String = "", val format: String = "")
+
+data class CubeLegalityResponse(
+    val ok: Boolean,
+    val error: String?,
+    val format: String?,
+    val legal: Boolean,
+    val total: Int,
+    val banned: List<String>,
+    val notLegal: List<String>,
+    val restricted: List<String>,
+    val unknown: List<String>,
+    val notFound: List<String>,
+    val note: String?,
 )
 
 data class CubeDiffRequest(val listA: String = "", val listB: String = "")
