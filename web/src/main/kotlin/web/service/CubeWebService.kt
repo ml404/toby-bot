@@ -8,6 +8,7 @@ import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.CubeDiff
+import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
@@ -246,6 +247,18 @@ class CubeWebService {
             colorPairs = a.colorPairs.map { ColorPairView(it.pair, it.count) },
             colorPips = a.colorPips.map { ColorPipView(it.color, it.count) },
             totalValues = a.totalValues.map { TotalValueView(it.currency.code, it.currency.display, it.amount) },
+            valueExtremes = MtgCurrency.entries.mapNotNull { currency ->
+                CubeAnalytics.valueExtremes(cards, currency)?.let {
+                    ValueExtremesView(
+                        currency = currency.code,
+                        display = currency.display,
+                        mostName = it.mostValuable.name,
+                        mostAmount = it.mostValuable.amount,
+                        leastName = it.leastValuable.name,
+                        leastAmount = it.leastValuable.amount,
+                    )
+                }
+            },
         )
     }
 
@@ -670,10 +683,22 @@ data class AnalyticsView(
     val colorPips: List<ColorPipView>,
     /** Cube market value per currency (code, display name, amount), present currencies only. */
     val totalValues: List<TotalValueView> = emptyList(),
+    /** Most/least valuable card per currency, present currencies only. */
+    val valueExtremes: List<ValueExtremesView> = emptyList(),
 )
 
 /** One currency's summed cube value: Scryfall code ("usd"), display ("USD"), amount. */
 data class TotalValueView(val currency: String, val display: String, val amount: Double)
+
+/** The priciest and cheapest priced card in one currency. */
+data class ValueExtremesView(
+    val currency: String,
+    val display: String,
+    val mostName: String,
+    val mostAmount: Double,
+    val leastName: String,
+    val leastAmount: Double,
+)
 
 /** A single card looked up by name: image plus its key facts. */
 data class CardLookupView(

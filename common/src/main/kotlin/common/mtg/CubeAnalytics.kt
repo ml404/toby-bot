@@ -33,6 +33,12 @@ object CubeAnalytics {
     /** The cube's summed market value in one [MtgCurrency]. */
     data class TotalValue(val currency: MtgCurrency, val amount: Double)
 
+    /** A card paired with its price in some currency, for the value extremes. */
+    data class ValuedCard(val name: String, val amount: Double)
+
+    /** The priciest and cheapest priced cards in a pool, in a given currency. */
+    data class ValueExtremes(val currency: MtgCurrency, val mostValuable: ValuedCard, val leastValuable: ValuedCard)
+
     /** The whole report, assembled once so the surfaces render identical numbers. */
     data class Analytics(
         val curve: List<ManaCurveBucket>,
@@ -94,6 +100,18 @@ object CubeAnalytics {
                 ?.sum()
                 ?.let { TotalValue(currency, it) }
         }
+
+    /**
+     * The most- and least-valuable priced cards in the pool for [currency], or
+     * null when nothing is priced in it. Ties resolve to the first card seen.
+     * Unpriced cards (and cards with an unparseable price) are ignored.
+     */
+    fun valueExtremes(cards: List<CubeCard>, currency: MtgCurrency): ValueExtremes? {
+        val priced = cards.mapNotNull { card ->
+            card.price(currency)?.toDoubleOrNull()?.let { ValuedCard(card.name, it) }
+        }.takeIf { it.isNotEmpty() } ?: return null
+        return ValueExtremes(currency, priced.maxBy { it.amount }, priced.minBy { it.amount })
+    }
 
     /**
      * Two-colour cards grouped by guild, in guild order, present pairs only —

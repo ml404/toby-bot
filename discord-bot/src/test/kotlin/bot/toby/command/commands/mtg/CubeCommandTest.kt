@@ -167,6 +167,50 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
+    fun `generate reports the packs value in the guild's configured currency`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("cube:vintage")
+        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(2)
+        every { event.getOption(CubeCommand.OPT_BALANCED) } returns boolOpt(false)
+        every { configService.getConfigByName("CUBE_CURRENCY", "1") } returns mockk { every { value } returns "eur" }
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(
+                CubeCard("Bolt", setOf(MtgColor.RED), priceUsd = "2.00", priceEur = "1.50"),
+                CubeCard("Bear", setOf(MtgColor.GREEN), priceUsd = "0.50", priceEur = "0.40"),
+            ),
+        )
+
+        run()
+
+        val value = slot.captured.fields.first { it.name == "Packs value" }.value!!
+        assertTrue(value.contains("€1.90"), "expected EUR packs value, got: $value")
+    }
+
+    @Test
+    fun `preview reports the most and least valuable cards`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(
+                CubeCard("Pricey", setOf(MtgColor.RED), priceUsd = "60.00"),
+                CubeCard("Cheap", setOf(MtgColor.BLUE), priceUsd = "0.25"),
+            ),
+        )
+
+        run()
+
+        val value = slot.captured.fields.first { it.name == "Top & bottom value" }.value!!
+        assertTrue(value.contains("Pricey ($60.00)"), value)
+        assertTrue(value.contains("Cheap ($0.25)"), value)
+    }
+
+    @Test
     fun `generate reports when the pool is too small`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction

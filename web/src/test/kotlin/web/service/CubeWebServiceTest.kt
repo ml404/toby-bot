@@ -71,6 +71,24 @@ class CubeWebServiceTest {
         assertTrue(service.analyticsView(unpriced, packSize = 1).totalValues.isEmpty())
     }
 
+    @Test
+    fun `analyticsView carries per-currency most and least valuable cards`() {
+        val pool = listOf(
+            CubeCard("Pricey", setOf(MtgColor.RED), typeLine = "Creature", manaValue = 4.0, priceUsd = "60.00", priceEur = "55.00"),
+            CubeCard("Cheap", setOf(MtgColor.BLUE), typeLine = "Instant", manaValue = 1.0, priceUsd = "0.25", priceEur = "0.20"),
+        )
+        val byCur = service.analyticsView(pool, packSize = 2).valueExtremes.associateBy { it.currency }
+        assertEquals("Pricey", byCur["usd"]!!.mostName)
+        assertEquals(60.0, byCur["usd"]!!.mostAmount, 1e-9)
+        assertEquals("Cheap", byCur["usd"]!!.leastName)
+        assertEquals("USD", byCur["usd"]!!.display)
+        assertEquals("Pricey", byCur["eur"]!!.mostName)
+        assertEquals(55.0, byCur["eur"]!!.mostAmount, 1e-9)
+
+        // Nothing priced → no extremes.
+        assertTrue(service.analyticsView(listOf(CubeCard("Token", typeLine = "Token")), packSize = 1).valueExtremes.isEmpty())
+    }
+
     // --- card lookup ---------------------------------------------------
 
     @Test

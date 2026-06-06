@@ -246,6 +246,31 @@ class CubeAnalyticsTest {
     }
 
     @Test
+    fun `valueExtremes finds the priciest and cheapest priced card in a currency`() {
+        val pool = listOf(
+            card("Cheap", priceUsd = "0.25", priceEur = "0.20"),
+            card("Pricey", priceUsd = "60.00", priceEur = "55.00"),
+            card("Mid", priceUsd = "3.00", priceEur = "2.50"),
+            card("Unpriced", priceUsd = null),
+        )
+        val usd = CubeAnalytics.valueExtremes(pool, MtgCurrency.USD)!!
+        assertEquals(MtgCurrency.USD, usd.currency)
+        assertEquals("Pricey", usd.mostValuable.name)
+        assertEquals(60.00, usd.mostValuable.amount, 1e-9)
+        assertEquals("Cheap", usd.leastValuable.name)
+        assertEquals(0.25, usd.leastValuable.amount, 1e-9)
+        // Resolves independently per currency.
+        assertEquals("Pricey", CubeAnalytics.valueExtremes(pool, MtgCurrency.EUR)!!.mostValuable.name)
+    }
+
+    @Test
+    fun `valueExtremes is null when nothing is priced in that currency`() {
+        val pool = listOf(card("A", priceUsd = "1.00"))
+        assertEquals(null, CubeAnalytics.valueExtremes(pool, MtgCurrency.EUR))
+        assertEquals(null, CubeAnalytics.valueExtremes(emptyList(), MtgCurrency.USD))
+    }
+
+    @Test
     fun `Analytics totalValueIn resolves a currency or returns null`() {
         val a = CubeAnalytics.analyze(listOf(card("A", priceUsd = "4.00")), packSize = 1)
         assertEquals(4.00, a.totalValueIn(MtgCurrency.USD)!!, 1e-9)

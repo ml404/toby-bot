@@ -183,6 +183,7 @@ class CubeCommand @Autowired constructor(
             is PoolResult.Failed -> reply(ctx, CubeEmbeds.errorEmbed(resolved.message), deleteDelay)
             is PoolResult.Ready -> {
                 val pool = resolved.pool
+                val currency = currencyFor(ctx)
                 val embed = CubeEmbeds.previewEmbed(
                     query = resolved.label,
                     poolSize = pool.size,
@@ -192,7 +193,8 @@ class CubeCommand @Autowired constructor(
                     analytics = CubeAnalytics.analyze(pool, packSize),
                     notFound = resolved.notFound,
                     note = resolved.note,
-                    currency = currencyFor(ctx),
+                    currency = currency,
+                    valueExtremes = CubeAnalytics.valueExtremes(pool, currency),
                 )
                 reply(ctx, embed, deleteDelay)
             }
@@ -212,6 +214,7 @@ class CubeCommand @Autowired constructor(
                     is PackGenerator.Result.Failure -> ctx.event.hook.sendMessageEmbeds(CubeEmbeds.errorEmbed(packs.reason)).queue()
                     is PackGenerator.Result.Success -> {
                         val selected = packs.value.cards
+                        val currency = currencyFor(ctx)
                         val embed = CubeEmbeds.generateEmbed(
                             query = resolved.label,
                             poolSize = pool.size,
@@ -223,8 +226,9 @@ class CubeCommand @Autowired constructor(
                             distribution = AsFan.distribution(selected, packSize),
                             notFound = resolved.notFound,
                             note = resolved.note,
+                            currency = currency,
                         )
-                        val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs), ATTACHMENT_NAME)
+                        val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs, currency), ATTACHMENT_NAME)
                         ctx.event.hook.sendMessageEmbeds(embed).addFiles(file).queue()
                     }
                 }

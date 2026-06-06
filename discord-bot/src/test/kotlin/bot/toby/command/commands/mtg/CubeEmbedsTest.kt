@@ -239,6 +239,55 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `previewEmbed shows the most and least valuable cards when given extremes`() {
+        val pool = listOf(
+            card("Pricey", "Creature", 4.0, "mythic", priceUsd = "60.00"),
+            card("Cheap", "Instant", 1.0, "common", priceUsd = "0.25"),
+        )
+        val extremes = CubeAnalytics.valueExtremes(pool, common.mtg.MtgCurrency.USD)
+        val embed = CubeEmbeds.previewEmbed(
+            query = "q", poolSize = pool.size, packSize = 2,
+            counts = AsFan.categoryCounts(pool), distribution = AsFan.distribution(pool, 2),
+            analytics = CubeAnalytics.analyze(pool, 2), valueExtremes = extremes,
+        )
+        val value = field(embed, "Top & bottom value")!!.value!!
+        assertTrue(value.contains("Pricey ($60.00)"), "most: $value")
+        assertTrue(value.contains("Cheap ($0.25)"), "least: $value")
+    }
+
+    @Test
+    fun `previewEmbed omits the extremes field when none are given`() {
+        assertNull(field(preview(listOf(card("Bolt", "Instant", 1.0, "common"))), "Top & bottom value"))
+    }
+
+    @Test
+    fun `valueExtremesBlock formats most and least in the extremes currency`() {
+        val ext = CubeAnalytics.ValueExtremes(
+            common.mtg.MtgCurrency.EUR,
+            CubeAnalytics.ValuedCard("Big", 55.5),
+            CubeAnalytics.ValuedCard("Small", 0.4),
+        )
+        val block = CubeEmbeds.valueExtremesBlock(ext)
+        assertTrue(block.contains("Big (€55.50)"), block)
+        assertTrue(block.contains("Small (€0.40)"), block)
+    }
+
+    @Test
+    fun `generateEmbed shows the packs value in the chosen currency`() {
+        val selected = listOf(
+            CubeCard("Bolt", setOf(MtgColor.RED), priceUsd = "2.00", priceEur = "1.50"),
+            CubeCard("Bear", setOf(MtgColor.GREEN), priceUsd = "0.50", priceEur = "0.40"),
+        )
+        val embed = CubeEmbeds.generateEmbed(
+            query = "q", poolSize = 10, packCount = 1, packSize = 2, balanced = true,
+            selected = selected, counts = AsFan.categoryCounts(selected),
+            distribution = AsFan.distribution(selected, 2), currency = common.mtg.MtgCurrency.EUR,
+        )
+        val value = field(embed, "Packs value")!!.value!!
+        assertTrue(value.contains("€1.90"), "packs value: $value")
+    }
+
+    @Test
     fun `rulingsEmbed lists each ruling with its date, linking to Scryfall`() {
         val rulings = common.mtg.CardRulings(
             cardName = "Doubling Season",
@@ -291,5 +340,30 @@ class CubeEmbedsTest {
         // A card with no image is just its name — no trailing dash.
         assertTrue(text.contains("  Forest\n"))
         assertFalse(text.contains("Forest —"))
+    }
+
+    @Test
+    fun `packsFile includes per-card prices and a per-pack total in the chosen currency`() {
+        val packs = listOf(
+            listOf(
+                CubeCard("Lightning Bolt", setOf(MtgColor.RED), imageUrl = "https://img/bolt.jpg", priceUsd = "2.00", priceEur = "1.50"),
+                CubeCard("Forest", isLand = true, priceUsd = "0.10", priceEur = "0.08"),
+            ),
+        )
+        val text = String(CubeEmbeds.packsFile(packs, common.mtg.MtgCurrency.EUR), StandardCharsets.UTF_8)
+
+        // Pack header carries the EUR total (1.50 + 0.08).
+        assertTrue(text.contains("== Pack 1 (2 cards) — ≈ €1.58 =="), "header: $text")
+        // Each card shows its EUR price before the image link.
+        assertTrue(text.contains("  Lightning Bolt (€1.50) — https://img/bolt.jpg"), "bolt line: $text")
+        assertTrue(text.contains("  Forest (€0.08)"), "forest line: $text")
+    }
+
+    @Test
+    fun `packsFile omits prices and the pack total when nothing is priced`() {
+        val packs = listOf(listOf(CubeCard("Forest", isLand = true)))
+        val text = String(CubeEmbeds.packsFile(packs), StandardCharsets.UTF_8)
+        assertTrue(text.contains("== Pack 1 (1 cards) =="), text) // no " — ≈ " total
+        assertFalse(text.contains("≈"))
     }
 }
