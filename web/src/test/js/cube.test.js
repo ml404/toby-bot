@@ -385,6 +385,28 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
     });
 });
 
+describe('cube list export (groupsToList / cubeListText)', () => {
+    const groups = [
+        { category: 'Red', count: 2, asFan: 2, cards: [{ name: 'Lightning Bolt', count: 1 }, { name: 'Shock', count: 1 }] },
+        { category: 'Land', count: 10, asFan: 5, cards: [{ name: 'Forest', count: 10 }] },
+    ];
+
+    test('groupsToList emits one "<count> <name>" line per de-duped card', () => {
+        expect(Cube.groupsToList(groups)).toEqual(['1 Lightning Bolt', '1 Shock', '10 Forest']);
+    });
+
+    test('groupsToList defaults a missing/oneish count to 1 and tolerates empties', () => {
+        expect(Cube.groupsToList([{ cards: [{ name: 'Sol Ring' }] }])).toEqual(['1 Sol Ring']);
+        expect(Cube.groupsToList([])).toEqual([]);
+        expect(Cube.groupsToList(null)).toEqual([]);
+        expect(Cube.groupsToList([{ category: 'Empty' }])).toEqual([]);
+    });
+
+    test('cubeListText joins the lines with a trailing newline (re-importable by the parser)', () => {
+        expect(Cube.cubeListText(groups)).toBe('1 Lightning Bolt\n1 Shock\n10 Forest\n');
+    });
+});
+
 describe('cube report analytics renderers', () => {
     test('renderManaCurve draws one scaled bar per bucket', () => {
         const container = document.createElement('div');

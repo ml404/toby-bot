@@ -89,6 +89,25 @@
         }).join('\n\n') + '\n';
     }
 
+    /**
+     * The cube's cards as "<count> <name>" lines, from the de-duped preview
+     * groups (count is the copies in the pool, so "10 Forest"). A
+     * re-importable decklist — the read side of CardListParser.
+     */
+    function groupsToList(groups) {
+        const lines = [];
+        (groups || []).forEach(function (g) {
+            (g.cards || []).forEach(function (c) {
+                lines.push((c.count && c.count > 1 ? c.count : 1) + ' ' + c.name);
+            });
+        });
+        return lines;
+    }
+
+    function cubeListText(groups) {
+        return groupsToList(groups).join('\n') + '\n';
+    }
+
     function asfanUrl(p) {
         const q = new URLSearchParams({ total: p.total, cubeSize: p.cubeSize, packSize: p.packSize });
         return '/cube/api/asfan?' + q.toString();
@@ -968,6 +987,37 @@
         const curve = q(doc, '[data-curve="preview"]');
         const types = q(doc, '[data-types="preview"]');
         const rarity = q(doc, '[data-rarity="preview"]');
+        const actions = q(doc, '[data-actions="preview"]');
+        const copyBtn = q(doc, '[data-copy="preview"]');
+        const downloadBtn = q(doc, '[data-download="preview"]');
+        let lastGroups = [];
+
+        if (copyBtn) {
+            const label = copyBtn.textContent;
+            copyBtn.addEventListener('click', function () {
+                if (!lastGroups.length) return;
+                const text = cubeListText(lastGroups);
+                if (root.navigator && root.navigator.clipboard) {
+                    root.navigator.clipboard.writeText(text).then(
+                        function () { copyBtn.textContent = '✓ Copied'; root.setTimeout(function () { copyBtn.textContent = label; }, 2000); },
+                        function () { /* clipboard blocked — the download still works */ }
+                    );
+                }
+            });
+        }
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function () {
+                if (!lastGroups.length) return;
+                const blob = new Blob([cubeListText(lastGroups)], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'cube.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const packSize = new FormData(form).get('packSize');
@@ -975,7 +1025,7 @@
             const err = sourceError(src);
             if (err) { setStatus(status, err); return; }
             setStatus(status, src.mode === 'list' ? 'Resolving your list…' : 'Fetching cards from Scryfall…');
-            hide(groups); hide(notFound); hide(dupes); hide(breakdown);
+            hide(groups); hide(notFound); hide(dupes); hide(breakdown); hide(actions);
             withBusy(form, true);
             setSpinner(doc, 'preview', true);
             const request = src.mode === 'list'
@@ -988,6 +1038,8 @@
                     hide(empty);
                     renderGroups(groups, json.groups);
                     show(groups);
+                    lastGroups = json.groups || [];
+                    show(actions);
                     renderNotFound(notFound, json.notFound);
                     renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity });
                 })
@@ -1264,6 +1316,8 @@
         splitQuantityPrefix: splitQuantityPrefix,
         applyCardChoice: applyCardChoice,
         packsToText: packsToText,
+        groupsToList: groupsToList,
+        cubeListText: cubeListText,
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,
         generateUrl: generateUrl,
