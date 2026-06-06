@@ -102,6 +102,16 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard reads the rarity, leaving it null when absent`() {
+        val withRarity = fetcher.parseCard(
+            obj("""{"name":"Ragavan","color_identity":["R"],"type_line":"Legendary Creature","rarity":"mythic"}""")
+        )!!
+        assertEquals("mythic", withRarity.rarity)
+        val without = fetcher.parseCard(obj("""{"name":"Token","color_identity":[],"type_line":"Token"}"""))!!
+        assertEquals(null, without.rarity)
+    }
+
+    @Test
     fun `parseCard treats a card with no colour identity as colourless`() {
         val card = fetcher.parseCard(obj("""{"name":"Sol Ring","color_identity":[],"type_line":"Artifact"}"""))!!
         assertEquals(CardCategory.COLORLESS, card.category)

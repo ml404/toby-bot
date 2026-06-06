@@ -174,6 +174,18 @@ class CubeWebServiceTest {
     }
 
     @Test
+    fun `parseScryfall reads the rarity, leaving it null when absent`() {
+        val withRarity = service.parseScryfall(
+            mapper.readTree("""{"data":[{"name":"Ragavan","color_identity":["R"],"type_line":"Legendary Creature","rarity":"mythic"}]}""")
+        ).first().card
+        assertEquals("mythic", withRarity.rarity)
+        val without = service.parseScryfall(
+            mapper.readTree("""{"data":[{"name":"Token","color_identity":[],"type_line":"Token"}]}""")
+        ).first().card
+        assertEquals(null, without.rarity)
+    }
+
+    @Test
     fun `parseScryfall yields null images when Scryfall has none`() {
         val root = mapper.readTree("""{"data":[{"name":"Imageless","color_identity":[],"type_line":"Token"}]}""")
         val parsed = service.parseScryfall(root).first()

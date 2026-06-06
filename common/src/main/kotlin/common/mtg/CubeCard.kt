@@ -53,6 +53,12 @@ data class CubeCard(
      * it (the bot's pack list) can show it without a second lookup.
      */
     val imageUrl: String? = null,
+    /**
+     * Raw Scryfall `rarity` string (`common`/`uncommon`/`rare`/`mythic`/…),
+     * or null when unknown. Kept raw — [common.mtg.CubeAnalytics] resolves it
+     * to a [Rarity] — so this stays a dumb value type, like [imageUrl].
+     */
+    val rarity: String? = null,
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory
@@ -75,5 +81,15 @@ data class CubeCard(
          */
         fun isLandType(typeLine: String): Boolean =
             typeLine.substringBefore("//").contains("Land", ignoreCase = true)
+
+        /**
+         * Whether a `type_line`'s **front face** is a basic land — the five
+         * basics, their Snow-Covered variants, and Wastes all carry "Basic"
+         * in their type ("Basic Land — Forest", "Basic Snow Land — Island",
+         * "Basic Land"). Used to allow duplicate basics in a singleton cube
+         * without a brittle name list.
+         */
+        fun isBasicType(typeLine: String): Boolean =
+            typeLine.substringBefore("//").contains("Basic", ignoreCase = true)
     }
 }

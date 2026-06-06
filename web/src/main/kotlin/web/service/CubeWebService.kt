@@ -188,6 +188,7 @@ class CubeWebService {
                     isLand = CubeCard.isLandType(typeLine),
                     typeLine = typeLine,
                     manaValue = node.path("cmc").asDouble(0.0),
+                    rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
                 ),
                 imageUrl = imageOf(node, "small"),
                 imageUrlLarge = imageOf(node, "normal"),

@@ -37,6 +37,28 @@ class CubeCardTest {
     }
 
     @Test
+    fun `isBasicType recognises the basics, snow-covered basics and Wastes`() {
+        assertTrue(CubeCard.isBasicType("Basic Land — Forest"))
+        assertTrue(CubeCard.isBasicType("Basic Snow Land — Island"))
+        assertTrue(CubeCard.isBasicType("Basic Land")) // Wastes
+    }
+
+    @Test
+    fun `isBasicType is false for non-basic lands and spells`() {
+        assertFalse(CubeCard.isBasicType("Land — Mountain Plains")) // a dual is not basic
+        assertFalse(CubeCard.isBasicType("Legendary Land"))
+        assertFalse(CubeCard.isBasicType("Artifact"))
+        // Judged by the front face, like isLandType.
+        assertFalse(CubeCard.isBasicType("Legendary Enchantment // Basic Land"))
+    }
+
+    @Test
+    fun `rarity defaults to null and round-trips when set`() {
+        assertEquals(null, CubeCard(name = "Placeholder").rarity)
+        assertEquals("mythic", CubeCard(name = "Ragavan", rarity = "mythic").rarity)
+    }
+
+    @Test
     fun `mono-coloured card maps to its colour bucket`() {
         assertEquals(
             CardCategory.RED,
