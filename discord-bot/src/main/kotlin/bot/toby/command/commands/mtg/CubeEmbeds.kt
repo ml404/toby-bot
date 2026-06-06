@@ -6,6 +6,8 @@ import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
+import common.mtg.MtgColor
+import common.mtg.Rarity
 import database.dto.user.CubeListDto
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
@@ -176,6 +178,27 @@ internal object CubeEmbeds {
         setTitle("Couldn't build that cube")
         setDescription(message)
     }
+
+    /** A single-card panel for `/cube card`: image plus its key facts. */
+    fun cardEmbed(card: CubeCard): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle(card.name)
+        card.imageUrl?.let { setImage(it) }
+        val colours = if (card.colors.isEmpty()) "Colourless"
+        else MtgColor.entries.filter { it in card.colors }.joinToString(", ") { it.displayName }
+        setDescription(
+            buildList {
+                if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
+                add("**Mana value** · ${formatMv(card.manaValue)}")
+                card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
+                add("**Colour identity** · $colours")
+            }.joinToString("\n")
+        )
+    }
+
+    /** Mana value without a trailing `.0` (whole numbers are the norm). */
+    private fun formatMv(mv: Double): String =
+        if (mv % 1.0 == 0.0) mv.toInt().toString() else format(mv)
 
     /** A `category — count (as-fan)` table, in colour-pie order, present buckets only. */
     private fun distributionTable(
