@@ -38,6 +38,10 @@ class WebSecurityConfig {
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/moderation/**").authenticated()
+                // Operator-only surface. Authentication is enforced here;
+                // the bot-operator check (BOT_OWNER_IDS) happens in
+                // AdminController, which redirects non-operators home.
+                auth.requestMatchers("/admin/**").authenticated()
                 auth.requestMatchers("/economy/**").authenticated()
                 auth.requestMatchers("/tip/**").authenticated()
                 auth.requestMatchers("/duel/**").authenticated()
