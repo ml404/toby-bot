@@ -6,6 +6,7 @@ import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.MtgGlossary
 import common.mtg.MtgSet
+import database.dto.user.CardPriceWatchDto
 import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
@@ -324,6 +325,53 @@ internal object CubeEmbeds {
         setDescription(facts)
         setFooter("Source: Scryfall")
     }
+
+    /** Confirmation that a card price watch was created. */
+    fun watchAddedEmbed(
+        watch: CardPriceWatchDto,
+        card: CubeCard,
+        currency: MtgCurrency,
+        currentPrice: Double?,
+    ): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("🔔 Watching ${card.name}")
+        card.imageUrl?.let { setThumbnail(it) }
+        val dir = watch.directionEnum.name.lowercase()
+        val now = currentPrice?.let { " (now ${money(it, currency)})" }.orEmpty()
+        setDescription(
+            "I'll DM you when **${card.name}** is **$dir ${money(watch.threshold, currency)}**$now.\n" +
+                "Watch **#${watch.id}** · one-shot · remove with `/cube watch-remove id:${watch.id}`."
+        )
+        setFooter("Manage card-price-watch DMs in /preferences notifications.")
+    }
+
+    /** Lists the user's card price watches, or an empty-state nudge. */
+    fun watchListEmbed(watches: List<CardPriceWatchDto>): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("Your card price watches")
+        if (watches.isEmpty()) {
+            setDescription("You're not watching any cards. Add one with `/cube watch-add`.")
+            return@embed
+        }
+        setDescription(
+            watches.joinToString("\n") { w ->
+                val cur = MtgCurrency.fromCode(w.currency) ?: MtgCurrency.DEFAULT
+                "• **#${w.id}** ${w.cardName} — ${w.directionEnum.name.lowercase()} ${money(w.threshold, cur)}"
+            }
+        )
+        setFooter("Remove one with /cube watch-remove id:<id>")
+    }
+
+    /** Confirmation that a watch was removed. */
+    fun watchRemovedEmbed(id: Long): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("Watch removed")
+        setDescription("Stopped watching **#$id**.")
+    }
+
+    /** A money amount in a currency: `$1.50` / `€1.50` / `1.50 tix`. */
+    private fun money(amount: Double, currency: MtgCurrency): String =
+        "${currency.symbol}${format(amount)}${currency.suffix}"
 
     /** A keyword's reminder text for `/cube rule`. */
     fun ruleEmbed(term: MtgGlossary.Term): MessageEmbed = embed(color = OK_COLOR) {

@@ -14,8 +14,10 @@ import common.mtg.PackGenerator
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
 import database.dto.guild.ConfigDto
+import database.dto.user.CardPriceWatchDto
 import database.dto.user.UserDto
 import database.service.guild.ConfigService
+import database.service.user.CardPriceWatchService
 import database.service.user.CubeListService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -52,6 +54,7 @@ class CubeCommand @Autowired constructor(
     private val fetcher: ScryfallCubeFetcher,
     private val cubeListService: CubeListService,
     private val configService: ConfigService,
+    private val priceWatchService: CardPriceWatchService,
     // Mirrors the /dnd command: IO-bound subcommands run on this dispatcher
     // (tests pass Dispatchers.Unconfined so the launched work resolves
     // synchronously).
@@ -74,7 +77,10 @@ class CubeCommand @Autowired constructor(
             SUB_COMBOS -> launchHandling(ctx) { handleCombos(ctx, deleteDelay) }
             SUB_SET -> launchHandling(ctx) { handleSet(ctx, deleteDelay) }
             SUB_RULE -> handleRule(ctx, deleteDelay) // static glossary, no IO
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings, legality, combos, set or rule."), deleteDelay)
+            SUB_WATCH_ADD -> launchHandling(ctx) { handleWatchAdd(ctx, requestingUserDto, deleteDelay) }
+            SUB_WATCH_LIST -> handleWatchList(ctx, requestingUserDto, deleteDelay) // DB read, no network
+            SUB_WATCH_REMOVE -> handleWatchRemove(ctx, requestingUserDto, deleteDelay)
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings, legality, combos, set, rule, watch-add, watch-list or watch-remove."), deleteDelay)
         }
     }
 
@@ -319,6 +325,64 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Adds a card price watch: resolves the card, captures its current price, persists. */
+    private suspend fun handleWatchAdd(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+        val name = ctx.event.stringOption(OPT_NAME)?.trim()
+        val directionKey = ctx.event.stringOption(OPT_DIRECTION)?.trim()?.uppercase()
+        val price = ctx.event.getOption(OPT_PRICE)?.asDouble
+        val currency = MtgCurrency.fromCode(ctx.event.stringOption(OPT_CURRENCY)) ?: MtgCurrency.DEFAULT
+        if (name.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to watch."), deleteDelay); return
+        }
+        val direction = directionKey?.let { runCatching { CardPriceWatchDto.Direction.valueOf(it) }.getOrNull() }
+        if (direction == null) {
+            reply(ctx, CubeEmbeds.errorEmbed("Pick a `direction`: below or above."), deleteDelay); return
+        }
+        if (price == null || price <= 0.0) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a positive target `price`."), deleteDelay); return
+        }
+        val card = fetcher.fetchNamed(name)
+        if (card == null) {
+            reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay); return
+        }
+        val currentPrice = card.price(currency)?.toDoubleOrNull()
+        val created = priceWatchService.create(
+            discordId = requestingUserDto.discordId,
+            guildId = ctx.guild.idLong,
+            cardName = card.name,
+            currency = currency.code,
+            direction = direction,
+            threshold = price,
+            priceAtCreation = currentPrice,
+        )
+        if (created == null) {
+            reply(ctx, CubeEmbeds.errorEmbed("You've hit the watch limit (${priceWatchService.maxPerUser}). Remove one with `/cube watch-remove` first."), deleteDelay)
+        } else {
+            reply(ctx, CubeEmbeds.watchAddedEmbed(created, card, currency, currentPrice), deleteDelay)
+        }
+    }
+
+    /** Lists the caller's card price watches. */
+    private fun handleWatchList(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+        val watches = priceWatchService.listForUser(requestingUserDto.discordId)
+        reply(ctx, CubeEmbeds.watchListEmbed(watches), deleteDelay)
+    }
+
+    /** Removes one of the caller's watches by id (ownership-checked). */
+    private fun handleWatchRemove(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+        val id = ctx.event.getOption(OPT_WATCH_ID)?.asLong
+        if (id == null) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me the watch `id` to remove (see `/cube watch-list`)."), deleteDelay); return
+        }
+        val removed = priceWatchService.remove(id, requestingUserDto.discordId)
+        reply(
+            ctx,
+            if (removed) CubeEmbeds.watchRemovedEmbed(id)
+            else CubeEmbeds.errorEmbed("No watch #$id of yours to remove."),
+            deleteDelay,
+        )
+    }
+
     /** Checks a saved cube / queried pool against a format's banned & legality list. */
     private suspend fun handleLegality(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val formatKey = ctx.event.stringOption(OPT_FORMAT)?.trim()?.lowercase()
@@ -388,6 +452,19 @@ class CubeCommand @Autowired constructor(
             .addOptions(OptionData(OptionType.STRING, OPT_CODE, "The set code (e.g. vow, mh3).", true)),
         SubcommandData(SUB_RULE, "Look up a Magic keyword's reminder text (e.g. trample, flying).")
             .addOptions(OptionData(OptionType.STRING, OPT_TERM, "The keyword to explain.", true)),
+        SubcommandData(SUB_WATCH_ADD, "Get DM'd when a card's price crosses your target.")
+            .addOptions(
+                OptionData(OptionType.STRING, OPT_NAME, "The card to watch (e.g. Ragavan).", true),
+                OptionData(OptionType.STRING, OPT_DIRECTION, "Alert when the price goes…", true)
+                    .addChoice("below", CardPriceWatchDto.Direction.BELOW.name)
+                    .addChoice("above", CardPriceWatchDto.Direction.ABOVE.name),
+                OptionData(OptionType.NUMBER, OPT_PRICE, "Target price.", true).setMinValue(0.0),
+                OptionData(OptionType.STRING, OPT_CURRENCY, "Currency (default USD).", false)
+                    .addChoices(MtgCurrency.entries.map { net.dv8tion.jda.api.interactions.commands.Command.Choice(it.display, it.code) }),
+            ),
+        SubcommandData(SUB_WATCH_LIST, "List your card price watches."),
+        SubcommandData(SUB_WATCH_REMOVE, "Remove one of your card price watches.")
+            .addOptions(OptionData(OptionType.INTEGER, OPT_WATCH_ID, "The watch id (from /cube watch-list).", true).setMinValue(1)),
     )
 
     companion object {
@@ -401,12 +478,19 @@ class CubeCommand @Autowired constructor(
         const val SUB_COMBOS = "combos"
         const val SUB_SET = "set"
         const val SUB_RULE = "rule"
+        const val SUB_WATCH_ADD = "watch-add"
+        const val SUB_WATCH_LIST = "watch-list"
+        const val SUB_WATCH_REMOVE = "watch-remove"
 
         const val OPT_TOTAL = "total"
         const val OPT_NAME = "name"
         const val OPT_FORMAT = "format"
         const val OPT_CODE = "code"
         const val OPT_TERM = "term"
+        const val OPT_DIRECTION = "direction"
+        const val OPT_PRICE = "price"
+        const val OPT_CURRENCY = "currency"
+        const val OPT_WATCH_ID = "id"
         const val OPT_CUBE_SIZE = "cube-size"
         const val OPT_PACK_SIZE = "pack-size"
         const val OPT_QUERY = "query"

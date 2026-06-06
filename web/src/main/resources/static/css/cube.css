@@ -1224,6 +1224,32 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     font-size: 0.95rem;
 }
 
+/* Price-watch list. */
+.cube-watches {
+    margin-top: var(--space-3);
+}
+
+.cube-watches-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.cube-watch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-2, rgba(255, 255, 255, 0.03));
+    font-size: 0.9rem;
+}
+
 /* Total cube value (sum of priced cards), shown under the analytics breakdown,
    with a currency switch sitting alongside it. */
 .cube-total-value-row {

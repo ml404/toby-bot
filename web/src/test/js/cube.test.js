@@ -551,6 +551,35 @@ describe('reference (set + rule lookup)', () => {
     });
 });
 
+describe('price watches (watchLine / renderWatches)', () => {
+    test('watchLine formats a watch with its currency', () => {
+        expect(Cube.watchLine({ cardName: 'Ragavan', currency: 'usd', direction: 'below', threshold: 30 }))
+            .toBe('Ragavan — below $30.00 (USD)');
+        expect(Cube.watchLine({ cardName: 'Mox', currency: 'eur', direction: 'above', threshold: 100 }))
+            .toBe('Mox — above €100.00 (EUR)');
+    });
+
+    test('renderWatches lists watches with a wired Remove button', () => {
+        const el = document.createElement('div');
+        const removed = [];
+        Cube.renderWatches(el, [
+            { id: 1, cardName: 'Ragavan', currency: 'usd', direction: 'below', threshold: 30 },
+            { id: 2, cardName: 'Mox', currency: 'usd', direction: 'above', threshold: 100 },
+        ], function (id) { removed.push(id); });
+        const items = el.querySelectorAll('.cube-watch');
+        expect(items).toHaveLength(2);
+        expect(items[0].querySelector('.cube-watch-text').textContent).toContain('Ragavan — below $30.00');
+        items[0].querySelector('.cube-watch-remove').click();
+        expect(removed).toEqual([1]);
+    });
+
+    test('renderWatches shows an empty state', () => {
+        const el = document.createElement('div');
+        Cube.renderWatches(el, [], function () {});
+        expect(el.querySelector('.cube-watches-empty').textContent).toContain('No price watches');
+    });
+});
+
 describe('priceLine (pure)', () => {
     test('joins present currencies only', () => {
         expect(Cube.priceLine({ priceUsd: '1.50' })).toBe('$1.50');
