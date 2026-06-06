@@ -8,6 +8,7 @@ import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.CubeDiff
+import common.mtg.CardCombos
 import common.mtg.DeckLegality
 import common.mtg.MtgCurrency
 import common.mtg.MtgNames
@@ -132,6 +133,43 @@ class CubeWebService {
         return data.mapNotNull { node ->
             val comment = node.path("comment").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
             RulingView(node.path("published_at").asText(""), comment)
+        }
+    }
+
+    /**
+     * Finds the combos a card appears in via the Commander Spellbook variants
+     * API — the website twin of `/cube combos`. A reachable card with no combos
+     * is a success with an empty list, not an error.
+     */
+    fun combos(name: String): CubeResult<CombosView> {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return CubeResult.error("Enter a card name to find combos.")
+        val query = URLEncoder.encode("card:\"$trimmed\"", StandardCharsets.UTF_8)
+        val url = "$SPELLBOOK_ENDPOINT?q=$query&limit=$MAX_COMBOS&ordering=-popularity"
+        return try {
+            val response = scryfallGet(url)
+            if (response.statusCode() != 200) {
+                return CubeResult.error("Couldn't reach Commander Spellbook (${response.statusCode()}).")
+            }
+            CubeResult.ok(CombosView(trimmed, combosOf(jackson.readTree(response.body()))))
+        } catch (e: IOException) {
+            CubeResult.error("Could not reach Commander Spellbook: ${e.message}")
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CubeResult.error("Request interrupted.")
+        }
+    }
+
+    /** Maps a Commander Spellbook variants response into combo views. */
+    fun combosOf(root: JsonNode): List<ComboView> {
+        val results = root.path("results")
+        if (!results.isArray) return emptyList()
+        return results.mapNotNull { node ->
+            val id = node.path("id").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val uses = node.path("uses").mapNotNull { it.path("card").path("name").asText("").takeIf { n -> n.isNotBlank() } }
+            val produces = node.path("produces").mapNotNull { it.path("feature").path("name").asText("").takeIf { n -> n.isNotBlank() } }
+            if (uses.isEmpty() && produces.isEmpty()) return@mapNotNull null
+            ComboView(id, uses, produces, CardCombos.comboUrl(id))
         }
     }
 
@@ -621,6 +659,8 @@ class CubeWebService {
         const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
+        const val SPELLBOOK_ENDPOINT = "https://backend.commanderspellbook.com/variants/"
+        const val MAX_COMBOS = 5
         const val MAX_CARDS = 750
         const val MAX_PAGES = 10
         const val COLLECTION_BATCH = 75
@@ -762,6 +802,12 @@ data class RulingsView(
 
 /** One published ruling: the ISO publish date and the note text. */
 data class RulingView(val publishedAt: String, val comment: String)
+
+/** The combos a card appears in, looked up by name. */
+data class CombosView(val name: String, val combos: List<ComboView>)
+
+/** One combo: its pieces, payoff, and Commander Spellbook link. */
+data class ComboView(val id: String, val uses: List<String>, val produces: List<String>, val url: String)
 
 /** The outcome of checking a pasted decklist against a format. */
 data class LegalityData(

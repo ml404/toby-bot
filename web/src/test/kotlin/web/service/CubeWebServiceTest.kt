@@ -195,6 +195,35 @@ class CubeWebServiceTest {
         assertTrue(result.error.contains("card name"))
     }
 
+    // --- combos (Commander Spellbook) ----------------------------------
+
+    @Test
+    fun `combosOf maps uses, produces and the combo url, dropping empties`() {
+        val root = mapper.readTree(
+            """{"results":[
+              {"id":"42","uses":[{"card":{"name":"Thassa's Oracle"}}],"produces":[{"feature":{"name":"Win the game"}}]},
+              {"id":"","uses":[],"produces":[]},
+              {"id":"9","uses":[],"produces":[]}
+            ]}"""
+        )
+        val combos = service.combosOf(root)
+        assertEquals(1, combos.size)
+        assertEquals("42", combos.first().id)
+        assertEquals(listOf("Thassa's Oracle"), combos.first().uses)
+        assertEquals("https://commanderspellbook.com/combo/42/", combos.first().url)
+    }
+
+    @Test
+    fun `combosOf tolerates a missing results array`() {
+        assertTrue(service.combosOf(mapper.readTree("""{"detail":"nope"}""")).isEmpty())
+    }
+
+    @Test
+    fun `combos rejects a blank name without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.combos("  "))
+        assertTrue(result.error.contains("card name"))
+    }
+
     // --- diff (compare two lists) --------------------------------------
 
     @Test

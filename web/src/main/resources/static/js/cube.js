@@ -534,6 +534,15 @@
         rulingsBtn.textContent = 'Show rulings';
         facts.appendChild(rulingsBtn);
 
+        // On-demand combos: fetches /cube/api/combos for this card.
+        const combosBtn = document.createElement('button');
+        combosBtn.type = 'button';
+        combosBtn.className = 'btn btn-secondary cube-combos-btn';
+        combosBtn.setAttribute('data-load-combos', '');
+        combosBtn.setAttribute('data-card-name', card.name);
+        combosBtn.textContent = 'Show combos';
+        facts.appendChild(combosBtn);
+
         wrap.appendChild(facts);
         container.appendChild(wrap);
 
@@ -542,6 +551,60 @@
         rulingsBox.setAttribute('data-rulings-result', '');
         rulingsBox.hidden = true;
         container.appendChild(rulingsBox);
+
+        const combosBox = document.createElement('div');
+        combosBox.className = 'cube-combos';
+        combosBox.setAttribute('data-combos-result', '');
+        combosBox.hidden = true;
+        container.appendChild(combosBox);
+        return container;
+    }
+
+    /** GET URL for a card's combos. */
+    function combosUrl(name) {
+        return '/cube/api/combos?name=' + encodeURIComponent(name);
+    }
+
+    /** Renders a card's combos (pieces → produces, each linked), or a friendly empty state. */
+    function renderCombos(container, data) {
+        container.replaceChildren();
+        const h = document.createElement('h4');
+        h.className = 'cube-combos-h';
+        h.textContent = 'Combos';
+        container.appendChild(h);
+        const combos = (data && data.combos) || [];
+        if (!combos.length) {
+            const p = document.createElement('p');
+            p.className = 'cube-combos-empty';
+            p.textContent = 'No combos found for this card on Commander Spellbook.';
+            container.appendChild(p);
+            return container;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'cube-combos-list';
+        combos.forEach(function (combo) {
+            const li = document.createElement('li');
+            li.className = 'cube-combo';
+            const uses = document.createElement('div');
+            uses.className = 'cube-combo-uses';
+            uses.textContent = (combo.uses || []).join(', ');
+            const produces = document.createElement('div');
+            produces.className = 'cube-combo-produces';
+            produces.textContent = '→ ' + (combo.produces || []).join(', ');
+            li.appendChild(uses);
+            li.appendChild(produces);
+            if (combo.url) {
+                const a = document.createElement('a');
+                a.className = 'cube-combo-link';
+                a.href = combo.url;
+                a.target = '_blank';
+                a.rel = 'noopener';
+                a.textContent = 'View combo ↗';
+                li.appendChild(a);
+            }
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
         return container;
     }
 
@@ -1302,6 +1365,25 @@
                 .catch(function () { btn.disabled = false; btn.textContent = 'Show rulings'; });
         });
 
+        // Same pattern for the "Show combos" button.
+        result.addEventListener('click', function (e) {
+            const btn = e.target.closest && e.target.closest('[data-load-combos]');
+            if (!btn) return;
+            const name = btn.getAttribute('data-card-name');
+            const box = result.querySelector('[data-combos-result]');
+            if (!name || !box) return;
+            btn.disabled = true;
+            btn.textContent = 'Loading combos…';
+            getJson(combosUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { btn.disabled = false; btn.textContent = json.error || 'No combos found.'; return; }
+                    renderCombos(box, json);
+                    box.hidden = false;
+                    btn.hidden = true;
+                })
+                .catch(function () { btn.disabled = false; btn.textContent = 'Show combos'; });
+        });
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const name = (new FormData(form).get('name') || '').trim();
@@ -1808,6 +1890,8 @@
         renderLegality: renderLegality,
         cardUrl: cardUrl,
         rulingsUrl: rulingsUrl,
+        combosUrl: combosUrl,
+        renderCombos: renderCombos,
         priceLine: priceLine,
         totalValueText: totalValueText,
         formatMoney: formatMoney,

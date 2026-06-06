@@ -24,6 +24,7 @@ import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.DiffLineView
 import web.service.CubeWebService
+import web.service.ComboView
 import web.service.RulingView
 import web.service.GenerateData
 import web.service.PreviewData
@@ -142,6 +143,17 @@ class CubeController(
             )
             is CubeResult.Failure ->
                 ResponseEntity.badRequest().body(CubeRulingsResponse(false, result.error, null, null, emptyList()))
+        }
+
+    @GetMapping("/api/combos", produces = ["application/json"])
+    @ResponseBody
+    fun combos(@RequestParam("name") name: String): ResponseEntity<CubeCombosResponse> =
+        when (val result = cubeWebService.combos(name)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubeCombosResponse(true, null, result.value.name, result.value.combos)
+            )
+            is CubeResult.Failure ->
+                ResponseEntity.badRequest().body(CubeCombosResponse(false, result.error, null, emptyList()))
         }
 
     @PostMapping("/api/legality", consumes = ["application/json"], produces = ["application/json"])
@@ -294,6 +306,13 @@ data class CubeRulingsResponse(
     val name: String?,
     val scryfallUri: String?,
     val rulings: List<RulingView>,
+)
+
+data class CubeCombosResponse(
+    val ok: Boolean,
+    val error: String?,
+    val name: String?,
+    val combos: List<ComboView>,
 )
 
 data class CubeLegalityRequest(val list: String = "", val format: String = "")

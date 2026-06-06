@@ -316,6 +316,32 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `combosEmbed lists each combo's pieces, payoff and link`() {
+        val combos = common.mtg.CardCombos(
+            "Kiki-Jiki, Mirror Breaker",
+            listOf(
+                common.mtg.CardCombos.Combo(
+                    "7", listOf("Kiki-Jiki, Mirror Breaker", "Zealous Conscripts"),
+                    listOf("Infinite haste creatures"), "https://commanderspellbook.com/combo/7/",
+                ),
+            ),
+        )
+        val embed = CubeEmbeds.combosEmbed(combos)
+        assertEquals("Kiki-Jiki, Mirror Breaker — combos", embed.title)
+        val field = embed.fields.first { it.name == "Combo 1" }.value!!
+        assertTrue(field.contains("Zealous Conscripts"))
+        assertTrue(field.contains("Infinite haste creatures"))
+        assertTrue(field.contains("commanderspellbook.com/combo/7"))
+    }
+
+    @Test
+    fun `combosEmbed shows an empty state when the card is in no combos`() {
+        val embed = CubeEmbeds.combosEmbed(common.mtg.CardCombos("Plains", emptyList()))
+        assertTrue(embed.description!!.contains("No combos found"))
+        assertTrue(embed.fields.isEmpty())
+    }
+
+    @Test
     fun `rulingsBlock drops overflow rulings and notes how many were hidden`() {
         // 60 long rulings can't all fit under the description cap — the block
         // must stop early and append an "…and N more" pointer.

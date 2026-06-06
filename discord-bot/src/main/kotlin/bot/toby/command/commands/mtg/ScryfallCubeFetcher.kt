@@ -5,6 +5,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import common.logging.DiscordLogger
+import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.CubeCard
 import common.mtg.MtgColor
@@ -232,6 +233,49 @@ class ScryfallCubeFetcher @Autowired constructor(
             CardRulings.Ruling(obj.get("published_at")?.asString.orEmpty(), comment)
         } ?: emptyList()
 
+    /**
+     * Finds the combos a card appears in via the Commander Spellbook variants
+     * API, capped at [MAX_COMBOS]. Returns null when the lookup fails or the
+     * card name is blank; an empty [CardCombos.combos] list when the card is in
+     * no known combos. Suspends on [Dispatchers.IO].
+     */
+    suspend fun fetchCombos(name: String): CardCombos? = withContext(dispatcher) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext null
+        // q=card:"Name" filters variants that use that exact card.
+        val query = URLEncoder.encode("card:\"$trimmed\"", StandardCharsets.UTF_8)
+        val url = "$SPELLBOOK_ENDPOINT?q=$query&limit=$MAX_COMBOS&ordering=-popularity"
+        try {
+            val response = client.get(url) {
+                header(HttpHeaders.Accept, "application/json")
+                timeout { requestTimeoutMillis = TIMEOUT_MS }
+            }
+            if (response.status.value != 200) return@withContext null
+            CardCombos(trimmed, parseCombos(JsonParser.parseString(response.bodyAsText()).asJsonObject))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error("Commander Spellbook lookup failed for '$trimmed': $e")
+            null
+        }
+    }
+
+    /** Maps a Commander Spellbook variants response into [CardCombos.Combo]s. */
+    fun parseCombos(root: JsonObject): List<CardCombos.Combo> =
+        root.getAsJsonArray("results")?.mapNotNull { element ->
+            val obj = element.asJsonObject
+            val id = obj.get("id")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val uses = obj.getAsJsonArray("uses")?.mapNotNull { use ->
+                use.asJsonObject.getAsJsonObject("card")?.get("name")?.asString?.takeIf { it.isNotBlank() }
+            }.orEmpty()
+            val produces = obj.getAsJsonArray("produces")?.mapNotNull { prod ->
+                prod.asJsonObject.getAsJsonObject("feature")?.get("name")?.asString?.takeIf { it.isNotBlank() }
+            }.orEmpty()
+            // A combo with no listed pieces or payoff isn't worth showing.
+            if (uses.isEmpty() && produces.isEmpty()) return@mapNotNull null
+            CardCombos.Combo(id, uses, produces, CardCombos.comboUrl(id))
+        }.orEmpty()
+
     /** One `/cards/collection` POST for up to 75 names. */
     private suspend fun fetchCollectionBatch(chunk: List<String>): BatchResult {
         val response: HttpResponse = client.post(COLLECTION_ENDPOINT) {
@@ -356,6 +400,10 @@ class ScryfallCubeFetcher @Autowired constructor(
         private const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         private const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         private const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
+        private const val SPELLBOOK_ENDPOINT = "https://backend.commanderspellbook.com/variants/"
+
+        /** Cap on how many combos a single `/cube combos` lookup returns. */
+        const val MAX_COMBOS = 5
         const val DEFAULT_MAX_CARDS = 750
         private const val MAX_PAGES = 10
         private const val COLLECTION_BATCH = 75

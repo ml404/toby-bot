@@ -594,13 +594,45 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the seven subcommands with their options`() {
+    fun `combos looks the card up and replies with a combos panel`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_COMBOS
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Kiki-Jiki")
+        coEvery { fetcher.fetchCombos("Kiki-Jiki") } returns common.mtg.CardCombos(
+            "Kiki-Jiki, Mirror Breaker",
+            listOf(common.mtg.CardCombos.Combo("7", listOf("Kiki-Jiki", "Zealous Conscripts"), listOf("Infinite haste"), "u")),
+        )
+
+        run()
+
+        assertEquals("Kiki-Jiki, Mirror Breaker — combos", slot.captured.title)
+        assertTrue(slot.captured.fields.any { it.value!!.contains("Infinite haste") })
+    }
+
+    @Test
+    fun `combos reports when Commander Spellbook is unreachable`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_COMBOS
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Kiki-Jiki")
+        coEvery { fetcher.fetchCombos(any()) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Commander Spellbook"))
+    }
+
+    @Test
+    fun `exposes the eight subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality"), subs.keys)
+        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos"), subs.keys)
         assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
         assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
         assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)
+        assertTrue(subs.getValue("combos").options.first { it.name == "name" }.isRequired)
         // The legality format option is required and offers the tracked formats as choices.
         val format = subs.getValue("legality").options.first { it.name == "format" }
         assertTrue(format.isRequired)

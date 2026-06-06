@@ -451,6 +451,46 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
         expect(box).not.toBeNull();
         expect(box.hidden).toBe(true);
     });
+
+    test('renderCardLookup includes a Show combos button and a hidden combos box', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, { name: 'Kiki-Jiki', imageUrlLarge: 'n.jpg', typeLine: 'Creature', manaValue: 5, rarity: 'Rare', colors: ['Red'] });
+        const btn = container.querySelector('[data-load-combos]');
+        expect(btn).not.toBeNull();
+        expect(btn.getAttribute('data-card-name')).toBe('Kiki-Jiki');
+        const box = container.querySelector('[data-combos-result]');
+        expect(box).not.toBeNull();
+        expect(box.hidden).toBe(true);
+    });
+});
+
+describe('combos (combosUrl / renderCombos)', () => {
+    test('combosUrl encodes the name', () => {
+        expect(Cube.combosUrl("Thassa's Oracle"))
+            .toBe('/cube/api/combos?name=' + encodeURIComponent("Thassa's Oracle"));
+    });
+
+    test('renderCombos lists each combo with pieces, payoff and a link', () => {
+        const container = document.createElement('div');
+        Cube.renderCombos(container, {
+            combos: [
+                { id: '7', uses: ['Kiki-Jiki', 'Zealous Conscripts'], produces: ['Infinite haste creatures'], url: 'https://commanderspellbook.com/combo/7/' },
+            ],
+        });
+        expect(container.querySelector('.cube-combos-h').textContent).toBe('Combos');
+        const items = container.querySelectorAll('.cube-combo');
+        expect(items).toHaveLength(1);
+        expect(items[0].querySelector('.cube-combo-uses').textContent).toContain('Zealous Conscripts');
+        expect(items[0].querySelector('.cube-combo-produces').textContent).toContain('Infinite haste creatures');
+        expect(items[0].querySelector('.cube-combo-link').getAttribute('href')).toBe('https://commanderspellbook.com/combo/7/');
+    });
+
+    test('renderCombos shows an empty state when there are none', () => {
+        const container = document.createElement('div');
+        Cube.renderCombos(container, { combos: [] });
+        expect(container.querySelector('.cube-combos-empty').textContent).toContain('No combos found');
+        expect(container.querySelectorAll('.cube-combo')).toHaveLength(0);
+    });
 });
 
 describe('rulings (rulingsUrl / renderRulings)', () => {

@@ -31,6 +31,8 @@ import web.service.DuplicateView
 import web.service.GenerateData
 import web.service.PreviewData
 import web.service.RarityCountView
+import web.service.ComboView
+import web.service.CombosView
 import web.service.RulingView
 import web.service.RulingsView
 import web.service.TypeCountView
@@ -182,6 +184,27 @@ class CubeControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
         assertFalse(response.body!!.ok)
         assertTrue(response.body!!.rulings.isEmpty())
+    }
+
+    @Test
+    fun `combos returns 200 with the card's combos`() {
+        every { service.combos("Kiki-Jiki") } returns CubeResult.ok(
+            CombosView("Kiki-Jiki", listOf(ComboView("7", listOf("Kiki-Jiki"), listOf("Infinite haste"), "u")))
+        )
+        val response = controller.combos("Kiki-Jiki")
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals("Kiki-Jiki", response.body!!.name)
+        assertEquals(1, response.body!!.combos.size)
+    }
+
+    @Test
+    fun `combos returns 400 when the lookup fails`() {
+        every { service.combos(any()) } returns CubeResult.error("Could not reach Commander Spellbook: down")
+        val response = controller.combos("Kiki-Jiki")
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+        assertTrue(response.body!!.combos.isEmpty())
     }
 
     @Test
