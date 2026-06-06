@@ -66,6 +66,7 @@ describe('tabIdFromHash', () => {
         expect(Cube.tabIdFromHash('#preview')).toBe('preview');
         expect(Cube.tabIdFromHash('#asfan')).toBe('asfan');
         expect(Cube.tabIdFromHash('#compare')).toBe('compare');
+        expect(Cube.tabIdFromHash('#card')).toBe('card');
     });
 
     test('returns null for anything else', () => {
@@ -383,6 +384,37 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
         window.location.hash = '#preview';
         window.dispatchEvent(new window.Event('hashchange'));
         expect(source.hidden).toBe(false);
+    });
+});
+
+describe('card lookup (cardUrl / renderCardLookup)', () => {
+    test('cardUrl encodes the name', () => {
+        expect(Cube.cardUrl('Urza, Lord High Artificer')).toBe('/cube/api/card?name=' + encodeURIComponent('Urza, Lord High Artificer'));
+    });
+
+    test('renderCardLookup shows the large image, facts, mana symbols and a Scryfall link', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, {
+            name: 'Ragavan, Nimble Pilferer',
+            imageUrl: 's.jpg', imageUrlLarge: 'n.jpg',
+            typeLine: 'Legendary Creature — Monkey Pirate',
+            manaValue: 1, manaCost: '{R}', rarity: 'Mythic', colors: ['Red'],
+        });
+        expect(container.querySelector('.cube-cardlookup-img').getAttribute('src')).toBe('n.jpg');
+        expect(container.querySelector('h3').textContent).toBe('Ragavan, Nimble Pilferer');
+        const text = container.querySelector('.cube-cardlookup-facts').textContent;
+        expect(text).toContain('Legendary Creature — Monkey Pirate');
+        expect(text).toContain('Mythic');
+        expect(text).toContain('Red');
+        // The mana cost renders as a Scryfall symbol image.
+        expect(container.querySelector('.cube-mana-symbol').getAttribute('src')).toBe('https://svgs.scryfall.io/card-symbols/R.svg');
+        expect(container.querySelector('.cube-cardlookup-link').getAttribute('href')).toBe(Cube.scryfallCardUrl('Ragavan, Nimble Pilferer'));
+    });
+
+    test('renderCardLookup describes a colourless card', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, { name: 'Sol Ring', imageUrlLarge: 'n.jpg', typeLine: 'Artifact', manaValue: 1, manaCost: '{1}', rarity: null, colors: [] });
+        expect(container.querySelector('.cube-cardlookup-facts').textContent).toContain('Colourless');
     });
 });
 

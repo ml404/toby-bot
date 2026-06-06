@@ -147,6 +147,12 @@
                 <span class="cube-tab-label">Compare</span>
                 <span class="cube-tab-sub">Diff two lists</span>
             </button>
+            <button type="button" id="tab-card" class="cube-tab" role="tab"
+                    data-tab="card" aria-controls="panel-card" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔍</span>
+                <span class="cube-tab-label">Card lookup</span>
+                <span class="cube-tab-sub">Find one card</span>
+            </button>
         </div>
 
         <!-- Generate -->
@@ -285,6 +291,23 @@
             </form>
             <p class="cube-status" data-status="compare" aria-live="polite"></p>
             <div class="cube-diff" data-result="compare" hidden></div>
+        </section>
+
+        <!-- Card lookup -->
+        <section id="panel-card" class="cube-panel" role="tabpanel" aria-labelledby="tab-card"
+                 data-panel="card" hidden>
+            <p class="cube-panel-intro">
+                Look up any Magic card by name and see its image and details — the website twin of
+                the <code>/cube card</code> Discord command.
+            </p>
+            <form class="cube-form" data-form="card" autocomplete="off">
+                <label>Card name
+                    <input type="text" name="name" placeholder="e.g. Lightning Bolt" autocomplete="off" required>
+                </label>
+                <button type="submit" class="btn cube-submit">Look up</button>
+            </form>
+            <p class="cube-status" data-status="card" aria-live="polite"></p>
+            <div class="cube-cardlookup-wrap" data-result="card" hidden></div>
         </section>
     </div>
 </main>
