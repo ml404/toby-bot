@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Make cube packs & preview groups collapsible for easier navigation",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 633
+  },
+  {
+    "date": "June 2026",
     "title": "Cube UX: hide the source on the As-fan tab; clearer saved-cube picker",
     "summary": "## Usability pass on the `/cube` workshop page",
     "emoji": "✨",
