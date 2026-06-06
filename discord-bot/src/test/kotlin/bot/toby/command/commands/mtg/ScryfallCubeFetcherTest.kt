@@ -420,6 +420,61 @@ class ScryfallCubeFetcherTest {
         assertTrue(rulings!!.rulings.isEmpty())
     }
 
+    // --- combos (Commander Spellbook) ----------------------------------
+
+    @Test
+    fun `parseCombos maps uses, produces and the combo url`() {
+        val combos = fetcher.parseCombos(
+            obj("""{"results":[
+              {"id":"42-7","uses":[{"card":{"name":"Thassa's Oracle"}},{"card":{"name":"Demonic Consultation"}}],
+               "produces":[{"feature":{"name":"Win the game"}}]},
+              {"id":"","uses":[],"produces":[]},
+              {"id":"99","uses":[],"produces":[]}
+            ]}""")
+        )
+        assertEquals(1, combos.size) // blank id and empty uses+produces are dropped
+        assertEquals("42-7", combos[0].id)
+        assertEquals(listOf("Thassa's Oracle", "Demonic Consultation"), combos[0].uses)
+        assertEquals(listOf("Win the game"), combos[0].produces)
+        assertEquals("https://commanderspellbook.com/combo/42-7/", combos[0].url)
+    }
+
+    @Test
+    fun `parseCombos tolerates a missing results array`() {
+        assertTrue(fetcher.parseCombos(obj("""{"detail":"nope"}""")).isEmpty())
+    }
+
+    @Test
+    fun `fetchCombos resolves a card's combos from Commander Spellbook`() = runBlocking {
+        val engine = MockEngine { request ->
+            assertTrue(request.url.toString().contains("/variants/"))
+            respond(
+                """{"results":[{"id":"7","uses":[{"card":{"name":"Kiki-Jiki"}}],"produces":[{"feature":{"name":"Infinite haste creatures"}}]}]}""",
+                HttpStatusCode.OK, jsonHeaders,
+            )
+        }
+        val combos = fetcherWith(engine).fetchCombos("Kiki-Jiki, Mirror Breaker")
+        assertEquals("Kiki-Jiki, Mirror Breaker", combos?.cardName)
+        assertEquals(1, combos?.combos?.size)
+        assertEquals("Infinite haste creatures", combos?.combos?.first()?.produces?.first())
+    }
+
+    @Test
+    fun `fetchCombos returns an empty list when the card is in no combos`() = runBlocking {
+        val combos = fetcherWith(MockEngine { respond("""{"results":[]}""", HttpStatusCode.OK, jsonHeaders) })
+            .fetchCombos("Plains")
+        assertEquals("Plains", combos?.cardName)
+        assertTrue(combos!!.combos.isEmpty())
+    }
+
+    @Test
+    fun `fetchCombos returns null on a transport failure or blank name`() = runBlocking {
+        assertNull(fetcherWith(MockEngine { throw IOException("down") }).fetchCombos("Bolt"))
+        val engine = MockEngine { respond("{}", HttpStatusCode.OK, jsonHeaders) }
+        assertNull(fetcherWith(engine).fetchCombos("   "))
+        assertEquals(0, engine.requestHistory.size)
+    }
+
     // --- fetch ---------------------------------------------------------
 
     @Test

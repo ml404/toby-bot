@@ -71,7 +71,8 @@ class CubeCommand @Autowired constructor(
             SUB_CARD -> launchHandling(ctx) { handleCard(ctx, deleteDelay) }
             SUB_RULINGS -> launchHandling(ctx) { handleRulings(ctx, deleteDelay) }
             SUB_LEGALITY -> launchHandling(ctx) { handleLegality(ctx, requestingUserDto, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings or legality."), deleteDelay)
+            SUB_COMBOS -> launchHandling(ctx) { handleCombos(ctx, deleteDelay) }
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings, legality or combos."), deleteDelay)
         }
     }
 
@@ -277,6 +278,19 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Looks up the combos a single card appears in, via Commander Spellbook. */
+    private suspend fun handleCombos(ctx: CommandContext, deleteDelay: Int) {
+        val name = ctx.event.stringOption(OPT_NAME)?.trim()
+        if (name.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to find combos for."), deleteDelay)
+            return
+        }
+        when (val combos = fetcher.fetchCombos(name)) {
+            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't reach Commander Spellbook. Try again later."), deleteDelay)
+            else -> reply(ctx, CubeEmbeds.combosEmbed(combos), deleteDelay)
+        }
+    }
+
     /** Checks a saved cube / queried pool against a format's banned & legality list. */
     private suspend fun handleLegality(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val formatKey = ctx.event.stringOption(OPT_FORMAT)?.trim()?.lowercase()
@@ -340,6 +354,8 @@ class CubeCommand @Autowired constructor(
                     .setAutoComplete(true),
                 OptionData(OptionType.STRING, OPT_QUERY, "Or a Scryfall search to check instead (e.g. set:mh3).", false),
             ),
+        SubcommandData(SUB_COMBOS, "Find the combos a Magic card is part of (Commander Spellbook).")
+            .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Thassa's Oracle).", true)),
     )
 
     companion object {
@@ -350,6 +366,7 @@ class CubeCommand @Autowired constructor(
         const val SUB_CARD = "card"
         const val SUB_RULINGS = "rulings"
         const val SUB_LEGALITY = "legality"
+        const val SUB_COMBOS = "combos"
 
         const val OPT_TOTAL = "total"
         const val OPT_NAME = "name"

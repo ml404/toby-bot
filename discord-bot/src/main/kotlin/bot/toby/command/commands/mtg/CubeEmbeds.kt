@@ -2,6 +2,7 @@ package bot.toby.command.commands.mtg
 
 import common.discord.embed
 import common.discord.field
+import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.CardCategory
 import common.mtg.CardListParser
@@ -285,6 +286,32 @@ internal object CubeEmbeds {
         }
         setDescription(rulingsBlock(rulings.rulings))
         setFooter("${rulings.rulings.size} ruling${if (rulings.rulings.size == 1) "" else "s"} · source: Scryfall")
+    }
+
+    /**
+     * The combos panel for `/cube combos`: one field per combo listing the
+     * pieces it needs and what it produces, linked to Commander Spellbook.
+     * Shows a friendly empty state when the card is in no known combos.
+     */
+    fun combosEmbed(combos: CardCombos): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("${combos.cardName} — combos")
+        if (combos.combos.isEmpty()) {
+            setDescription("No combos found for this card on Commander Spellbook.")
+            return@embed
+        }
+        setDescription("Found **${combos.combos.size}** combo${if (combos.combos.size == 1) "" else "s"} using **${combos.cardName}**.")
+        combos.combos.forEachIndexed { i, combo ->
+            field("Combo ${i + 1}", comboField(combo), inline = false)
+        }
+        setFooter("Source: Commander Spellbook")
+    }
+
+    /** One combo as a `Cards: … → Produces: …` block with a Spellbook link, within the field cap. */
+    private fun comboField(combo: CardCombos.Combo): String {
+        val uses = combo.uses.joinToString(", ").ifEmpty { "—" }
+        val produces = combo.produces.joinToString(", ").ifEmpty { "—" }
+        return truncateField("**Cards:** $uses\n**Produces:** $produces\n[View combo](${combo.url})")
     }
 
     /**
