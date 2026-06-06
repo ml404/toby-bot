@@ -166,6 +166,54 @@ describe('renderPacks', () => {
     });
 });
 
+describe('collapsible result sections', () => {
+    test('packs render as open <details> with a summary, so they can be collapsed', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        const pack = container.querySelector('.cube-pack');
+        expect(pack.tagName).toBe('DETAILS');
+        expect(pack.open).toBe(true);
+        expect(pack.querySelector('summary')).not.toBeNull();
+    });
+
+    test('preview groups render as open <details>', () => {
+        const container = document.createElement('div');
+        Cube.renderGroups(container, [
+            { category: 'Red', count: 1, asFan: 1, cards: [{ name: 'Bolt' }] },
+            { category: 'Land', count: 1, asFan: 0.5, cards: [{ name: 'Wastes' }] },
+        ]);
+        const group = container.querySelector('.cube-group');
+        expect(group.tagName).toBe('DETAILS');
+        expect(group.open).toBe(true);
+        // The header (with its as-fan) lives in the summary.
+        expect(group.querySelector('summary .cube-bar-value').textContent).toBe('1.00 / pack');
+    });
+
+    test('a multi-section deal gets a Collapse all / Expand all toggle', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }], [{ name: 'Island' }]]);
+        const btn = container.querySelector('[data-collapse-all]');
+        expect(btn).not.toBeNull();
+        expect(btn.textContent).toBe('Collapse all');
+
+        btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        let packs = container.querySelectorAll('.cube-pack');
+        packs.forEach((d) => expect(d.open).toBe(false));
+        expect(btn.textContent).toBe('Expand all');
+
+        btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        packs = container.querySelectorAll('.cube-pack');
+        packs.forEach((d) => expect(d.open).toBe(true));
+        expect(btn.textContent).toBe('Collapse all');
+    });
+
+    test('a single section gets no collapse-all toggle', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }]]);
+        expect(container.querySelector('[data-collapse-all]')).toBeNull();
+    });
+});
+
 describe('deep-link hash activates the matching tab on in-page navigation', () => {
     // wire() ran at require time and registered a hashchange listener on the
     // window; here we stand up the tab markup and fire a hashchange to prove a

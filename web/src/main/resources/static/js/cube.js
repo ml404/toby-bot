@@ -226,14 +226,50 @@
         return container;
     }
 
+    /** A chevron that rotates when its parent <details> is open. */
+    function collapseChevron() {
+        const c = document.createElement('span');
+        c.className = 'cube-collapse-chevron';
+        c.setAttribute('aria-hidden', 'true');
+        c.textContent = '▸';
+        return c;
+    }
+
+    /**
+     * A "Collapse all / Expand all" control for a result area full of
+     * collapsible <details> sections — makes a 24-pack deal navigable.
+     */
+    function collapseToggle(container) {
+        const bar = document.createElement('div');
+        bar.className = 'cube-collapse-bar';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cube-link-btn';
+        btn.setAttribute('data-collapse-all', '');
+        btn.textContent = 'Collapse all';
+        btn.addEventListener('click', function () {
+            const sections = container.querySelectorAll('details.cube-pack, details.cube-group');
+            const anyOpen = Array.prototype.some.call(sections, function (d) { return d.open; });
+            Array.prototype.forEach.call(sections, function (d) { d.open = !anyOpen; });
+            btn.textContent = anyOpen ? 'Expand all' : 'Collapse all';
+        });
+        bar.appendChild(btn);
+        return bar;
+    }
+
     /** The preview: each colour/land group with its as-fan AND its cards. */
     function renderGroups(container, groups) {
         container.replaceChildren();
+        if (groups.length > 1) container.appendChild(collapseToggle(container));
         const max = groups.reduce(function (m, g) { return Math.max(m, g.asFan); }, 0);
         groups.forEach(function (group) {
-            const block = document.createElement('section');
+            const block = document.createElement('details');
             block.className = 'cube-group';
+            block.open = true;
 
+            const summary = document.createElement('summary');
+            summary.className = 'cube-section-summary';
+            summary.appendChild(collapseChevron());
             const head = document.createElement('div');
             head.className = 'cube-group-head';
             const label = document.createElement('span');
@@ -249,7 +285,8 @@
             head.appendChild(label);
             head.appendChild(asFanBar(group.category, group.asFan, max));
             head.appendChild(value);
-            block.appendChild(head);
+            summary.appendChild(head);
+            block.appendChild(summary);
 
             const grid = document.createElement('div');
             grid.className = 'cube-card-grid';
@@ -264,16 +301,22 @@
 
     function renderPacks(container, packs) {
         container.replaceChildren();
+        if (packs.length > 1) container.appendChild(collapseToggle(container));
         packs.forEach(function (pack, i) {
-            const card = document.createElement('div');
+            const card = document.createElement('details');
             card.className = 'cube-pack';
+            card.open = true;
+            const summary = document.createElement('summary');
+            summary.className = 'cube-section-summary cube-pack-head';
+            summary.appendChild(collapseChevron());
             const heading = document.createElement('h3');
             heading.textContent = 'Pack ' + (i + 1);
             const count = document.createElement('span');
             count.className = 'cube-pack-count';
             count.textContent = pack.length + ' cards';
             heading.appendChild(count);
-            card.appendChild(heading);
+            summary.appendChild(heading);
+            card.appendChild(summary);
             const grid = document.createElement('div');
             grid.className = 'cube-card-grid';
             pack.forEach(function (c) {

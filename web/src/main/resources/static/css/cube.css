@@ -733,6 +733,53 @@ button:disabled {
     border-bottom: 1px solid var(--border);
 }
 
+/* Collapsible pack / preview-group sections (native <details>). The summary
+   is the tap/click target; a chevron rotates to show the open state. */
+.cube-section-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    cursor: pointer;
+    list-style: none;
+}
+
+.cube-section-summary::-webkit-details-marker {
+    display: none;
+}
+
+.cube-section-summary > .cube-group-head {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.cube-section-summary > h3 {
+    flex: 1;
+    margin: 0;
+}
+
+.cube-collapse-chevron {
+    flex: none;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    line-height: 1;
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+
+details[open] > .cube-section-summary .cube-collapse-chevron {
+    transform: rotate(90deg);
+}
+
+.cube-section-summary:hover .cube-collapse-chevron,
+.cube-section-summary:focus-visible .cube-collapse-chevron {
+    color: var(--mtg-gold);
+}
+
+.cube-collapse-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: var(--space-2);
+}
+
 /* --- Card thumbnails (shared by packs + preview groups) ------------- */
 
 .cube-card-grid {
@@ -1015,7 +1062,7 @@ button:disabled {
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-2);
-    margin: 0 0 var(--space-2);
+    margin: 0;
     font-size: 0.95rem;
     color: var(--heading);
 }
