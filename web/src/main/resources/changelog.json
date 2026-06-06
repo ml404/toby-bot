@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Harden the cube feature after an audit pass",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 644
+  },
+  {
+    "date": "June 2026",
     "title": "Feature the MTG cube workshop on the homepage",
     "summary": "## Why",
     "emoji": "✨",
