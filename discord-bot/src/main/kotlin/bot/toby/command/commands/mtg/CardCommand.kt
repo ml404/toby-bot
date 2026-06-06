@@ -1,6 +1,7 @@
 package bot.toby.command.commands.mtg
 
 import bot.toby.helpers.stringOption
+import common.mtg.MtgCommandRef
 import common.mtg.MtgNames
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -23,7 +24,7 @@ class CardCommand @Autowired constructor(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AbstractMtgCommand(dispatcher) {
 
-    override val name: String = "card"
+    override val name: String = MtgCommandRef.CARD
     override val description: String = "Look up a Magic card — its details, official rulings, or combos."
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -92,9 +93,9 @@ class CardCommand @Autowired constructor(
     )
 
     companion object {
-        const val SUB_LOOKUP = "lookup"
-        const val SUB_RULINGS = "rulings"
-        const val SUB_COMBOS = "combos"
+        const val SUB_LOOKUP = MtgCommandRef.Card.LOOKUP
+        const val SUB_RULINGS = MtgCommandRef.Card.RULINGS
+        const val SUB_COMBOS = MtgCommandRef.Card.COMBOS
 
         const val OPT_NAME = "name"
     }

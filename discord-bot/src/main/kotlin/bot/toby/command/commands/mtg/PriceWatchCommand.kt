@@ -1,6 +1,7 @@
 package bot.toby.command.commands.mtg
 
 import bot.toby.helpers.stringOption
+import common.mtg.MtgCommandRef
 import common.mtg.MtgCurrency
 import core.command.CommandContext
 import database.dto.user.CardPriceWatchDto
@@ -27,7 +28,7 @@ class PriceWatchCommand @Autowired constructor(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AbstractMtgCommand(dispatcher) {
 
-    override val name: String = "pricewatch"
+    override val name: String = MtgCommandRef.PRICEWATCH
     override val description: String = "Get DM'd when a Magic card's price crosses your target."
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -71,7 +72,7 @@ class PriceWatchCommand @Autowired constructor(
             priceAtCreation = currentPrice,
         )
         if (created == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("You've hit the watch limit (${priceWatchService.maxPerUser}). Remove one with `/pricewatch remove` first."), deleteDelay)
+            reply(ctx, CubeEmbeds.errorEmbed("You've hit the watch limit (${priceWatchService.maxPerUser}). Remove one with `${MtgCommandRef.PRICEWATCH_REMOVE}` first."), deleteDelay)
         } else {
             reply(ctx, CubeEmbeds.watchAddedEmbed(created, card, currency, currentPrice), deleteDelay)
         }
@@ -87,7 +88,7 @@ class PriceWatchCommand @Autowired constructor(
     private fun handleRemove(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val id = ctx.event.getOption(OPT_WATCH_ID)?.asLong
         if (id == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me the watch `id` to remove (see `/pricewatch list`)."), deleteDelay); return
+            reply(ctx, CubeEmbeds.errorEmbed("Give me the watch `id` to remove (see `${MtgCommandRef.PRICEWATCH_LIST}`)."), deleteDelay); return
         }
         val removed = priceWatchService.remove(id, requestingUserDto.discordId)
         reply(
@@ -115,9 +116,9 @@ class PriceWatchCommand @Autowired constructor(
     )
 
     companion object {
-        const val SUB_ADD = "add"
-        const val SUB_LIST = "list"
-        const val SUB_REMOVE = "remove"
+        const val SUB_ADD = MtgCommandRef.PriceWatch.ADD
+        const val SUB_LIST = MtgCommandRef.PriceWatch.LIST
+        const val SUB_REMOVE = MtgCommandRef.PriceWatch.REMOVE
 
         const val OPT_NAME = "name"
         const val OPT_DIRECTION = "direction"

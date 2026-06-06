@@ -4,6 +4,7 @@ import common.discord.embed
 import common.discord.field
 import common.mtg.CardCombos
 import common.mtg.CardRulings
+import common.mtg.MtgCommandRef
 import common.mtg.MtgGlossary
 import common.mtg.MtgSet
 import database.dto.user.CardPriceWatchDto
@@ -340,7 +341,7 @@ internal object CubeEmbeds {
         val now = currentPrice?.let { " (now ${money(it, currency)})" }.orEmpty()
         setDescription(
             "I'll DM you when **${card.name}** is **$dir ${money(watch.threshold, currency)}**$now.\n" +
-                "Watch **#${watch.id}** · one-shot · remove with `/pricewatch remove id:${watch.id}`."
+                "Watch **#${watch.id}** · one-shot · remove with `${MtgCommandRef.PRICEWATCH_REMOVE} id:${watch.id}`."
         )
         setFooter("Manage card-price-watch DMs in /preferences notifications.")
     }
@@ -350,7 +351,7 @@ internal object CubeEmbeds {
         setAuthor(AUTHOR)
         setTitle("Your card price watches")
         if (watches.isEmpty()) {
-            setDescription("You're not watching any cards. Add one with `/pricewatch add`.")
+            setDescription("You're not watching any cards. Add one with `${MtgCommandRef.PRICEWATCH_ADD}`.")
             return@embed
         }
         setDescription(
@@ -359,7 +360,7 @@ internal object CubeEmbeds {
                 "• **#${w.id}** ${w.cardName} — ${w.directionEnum.name.lowercase()} ${money(w.threshold, cur)}"
             }
         )
-        setFooter("Remove one with /pricewatch remove id:<id>")
+        setFooter("Remove one with ${MtgCommandRef.PRICEWATCH_REMOVE} id:<id>")
     }
 
     /** Confirmation that a watch was removed. */
@@ -378,7 +379,7 @@ internal object CubeEmbeds {
         setAuthor(AUTHOR)
         setTitle(term.keyword)
         setDescription(term.text)
-        setFooter("Reminder text · use /card rulings for card-specific official rulings")
+        setFooter("Reminder text · use ${MtgCommandRef.CARD_RULINGS} for card-specific official rulings")
     }
 
     /** One combo as a `Cards: … → Produces: …` block with a Spellbook link, within the field cap. */

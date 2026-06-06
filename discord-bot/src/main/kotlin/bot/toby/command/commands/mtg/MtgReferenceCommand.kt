@@ -1,6 +1,7 @@
 package bot.toby.command.commands.mtg
 
 import bot.toby.helpers.stringOption
+import common.mtg.MtgCommandRef
 import common.mtg.MtgGlossary
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -22,7 +23,7 @@ class MtgReferenceCommand @Autowired constructor(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AbstractMtgCommand(dispatcher) {
 
-    override val name: String = "mtg"
+    override val name: String = MtgCommandRef.MTG
     override val description: String = "Magic quick reference — set info and keyword reminder text."
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -68,8 +69,8 @@ class MtgReferenceCommand @Autowired constructor(
     )
 
     companion object {
-        const val SUB_SET = "set"
-        const val SUB_RULE = "rule"
+        const val SUB_SET = MtgCommandRef.Reference.SET
+        const val SUB_RULE = MtgCommandRef.Reference.RULE
 
         const val OPT_CODE = "code"
         const val OPT_TERM = "term"

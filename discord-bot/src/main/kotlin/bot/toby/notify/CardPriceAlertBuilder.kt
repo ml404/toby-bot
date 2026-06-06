@@ -1,6 +1,7 @@
 package bot.toby.notify
 
 import common.mtg.CubeCard
+import common.mtg.MtgCommandRef
 import common.mtg.MtgCurrency
 import database.dto.user.CardPriceWatchDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -40,7 +41,7 @@ object CardPriceAlertBuilder {
             embed.addField("When you set this", money(it, currency), true)
         }
         embed.addField("Now", money(currentPrice, currency), true)
-        embed.setFooter("One-shot alert — use /pricewatch add to set another.")
+        embed.setFooter("One-shot alert — use ${MtgCommandRef.PRICEWATCH_ADD} to set another.")
         return MessageCreateBuilder().setEmbeds(embed.build()).build()
     }
 

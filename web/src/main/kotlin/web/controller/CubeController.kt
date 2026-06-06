@@ -1,5 +1,6 @@
 package web.controller
 
+import common.mtg.MtgCommandRef
 import common.mtg.MtgCurrency
 import database.dto.user.CardPriceWatchDto
 import database.service.user.CardPriceWatchService
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
@@ -59,6 +61,21 @@ class CubeController(
     private val sharedCubes: SharedCubeService,
     private val priceWatches: CardPriceWatchService,
 ) {
+
+    /**
+     * The Magic command names for the page copy, sourced from [MtgCommandRef]
+     * so the prose (e.g. "the website twin of `/card lookup`") can never drift
+     * from the actual Discord commands. Available to this controller's views as
+     * `${mtgCmd.cardLookup}` etc.
+     */
+    @ModelAttribute("mtgCmd")
+    fun mtgCommands(): Map<String, String> = mapOf(
+        "cardLookup" to MtgCommandRef.CARD_LOOKUP,
+        "deckLegality" to MtgCommandRef.DECK_LEGALITY,
+        "mtgSet" to MtgCommandRef.MTG_SET,
+        "mtgRule" to MtgCommandRef.MTG_RULE,
+        "pricewatchAdd" to MtgCommandRef.PRICEWATCH_ADD,
+    )
 
     @GetMapping
     fun page(

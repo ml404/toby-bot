@@ -1,5 +1,6 @@
 package web.template
 
+import common.mtg.MtgCommandRef
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.GenericApplicationContext
@@ -42,11 +43,24 @@ class MagicTemplateRenderTest {
         setTemplateResolver(resolver)
     }
 
+    // Mirrors CubeController.mtgCommands() — the page reads command names from
+    // this model attribute (sourced from MtgCommandRef) rather than hardcoding.
+    private val mtgCmd = mapOf(
+        "cardLookup" to MtgCommandRef.CARD_LOOKUP,
+        "deckLegality" to MtgCommandRef.DECK_LEGALITY,
+        "mtgSet" to MtgCommandRef.MTG_SET,
+        "mtgRule" to MtgCommandRef.MTG_RULE,
+        "pricewatchAdd" to MtgCommandRef.PRICEWATCH_ADD,
+    )
+
     private fun render(vars: Map<String, Any?>): String {
         val request = MockHttpServletRequest(servletContext)
         val response = MockHttpServletResponse()
         val exchange = webApp.buildExchange(request, response)
-        val ctx = WebContext(exchange).apply { vars.forEach { (k, v) -> setVariable(k, v) } }
+        val ctx = WebContext(exchange).apply {
+            setVariable("mtgCmd", mtgCmd)
+            vars.forEach { (k, v) -> setVariable(k, v) }
+        }
         return engine.process("magic", ctx)
     }
 
@@ -72,6 +86,19 @@ class MagicTemplateRenderTest {
         }
         // The logged-in price-watch form is present.
         assertTrue(html.contains("data-form=\"watch\"")) { "expected the price-watch form for a logged-in user" }
+    }
+
+    @Test
+    fun `command names render from the MtgCommandRef model attribute`() {
+        val html = render(mapOf("loggedIn" to true, "username" to "tester"))
+
+        // The page copy pulls the command names from the model (single source of
+        // truth), so a command rename can't leave the prose stale.
+        assertTrue(html.contains(MtgCommandRef.CARD_LOOKUP)) { "expected '${MtgCommandRef.CARD_LOOKUP}' in the card tab copy" }
+        assertTrue(html.contains(MtgCommandRef.DECK_LEGALITY)) { "expected '${MtgCommandRef.DECK_LEGALITY}' in the legality tab copy" }
+        assertTrue(html.contains(MtgCommandRef.MTG_SET)) { "expected '${MtgCommandRef.MTG_SET}' in the reference tab copy" }
+        assertTrue(html.contains(MtgCommandRef.MTG_RULE)) { "expected '${MtgCommandRef.MTG_RULE}' in the reference tab copy" }
+        assertTrue(html.contains(MtgCommandRef.PRICEWATCH_ADD)) { "expected '${MtgCommandRef.PRICEWATCH_ADD}' in the price-watch tab copy" }
     }
 
     @Test

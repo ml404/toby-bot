@@ -1,5 +1,7 @@
 package common.notification
 
+import common.mtg.MtgCommandRef
+
 /**
  * Catalogue of user-facing notification channels the bot routes through
  * [bot.toby.notify.NotificationRouter]. Each kind declares which
@@ -60,7 +62,7 @@ enum class NotificationChannelKind(
     ),
     CARD_PRICE_ALERT(
         displayName = "Card price watch",
-        description = "DM when a Magic card you're watching (/pricewatch add) crosses your target price.",
+        description = "DM when a Magic card you're watching (${MtgCommandRef.PRICEWATCH_ADD}) crosses your target price.",
         // DM-only and on by default — you opted in by creating the watch.
         perSurfaceDefaults = mapOf(Surface.DM to true),
     ),
