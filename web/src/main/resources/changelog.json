@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add colour-pair (guild) & pip-weighted colour balance to the cube report",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 638
+  },
+  {
+    "date": "June 2026",
     "title": "Add copy / download of the cube list on the web preview",
     "summary": "## Why",
     "emoji": "✨",
