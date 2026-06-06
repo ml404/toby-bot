@@ -89,6 +89,7 @@ class CubeWebService {
         manaCost = sc.card.manaCost,
         rarity = sc.card.rarity?.let { Rarity.parse(it).displayName },
         colors = MtgColor.entries.filter { it in sc.card.colors }.map { it.displayName },
+        oracleText = sc.card.oracleText,
     )
 
     /**
@@ -275,6 +276,8 @@ class CubeWebService {
                 manaValue = node.path("cmc").asDouble(0.0),
                 rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
                 manaCost = manaCostOf(node),
+                oracleText = oracleTextOf(node),
+                imageUrlBack = backImageOf(node),
             ),
             imageUrl = imageOf(node, "small"),
             imageUrlLarge = imageOf(node, "normal"),
@@ -324,6 +327,22 @@ class CubeWebService {
             faces[0].path("mana_cost").asText("").takeIf { it.isNotBlank() }?.let { return it }
         }
         return null
+    }
+
+    /**
+     * The card's rules text, or null. Single-faced cards carry `oracle_text`
+     * directly; double-faced cards put it on each face, combined with the
+     * face names.
+     */
+    private fun oracleTextOf(node: JsonNode): String? {
+        node.path("oracle_text").asText("").takeIf { it.isNotBlank() }?.let { return it }
+        val faces = node.path("card_faces")
+        if (!faces.isArray) return null
+        val parts = faces.mapNotNull { face ->
+            val text = face.path("oracle_text").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            face.path("name").asText("").takeIf { it.isNotBlank() }?.let { "$it\n$text" } ?: text
+        }
+        return parts.joinToString("\n\n").takeIf { it.isNotBlank() }
     }
 
     private fun fetchPool(query: String): CubeResult<List<ScryfallCard>> {
@@ -580,6 +599,7 @@ data class CardLookupView(
     val manaCost: String?,
     val rarity: String?,
     val colors: List<String>,
+    val oracleText: String? = null,
 )
 
 /** One card's change between two compared lists (copy counts from → to). */

@@ -817,7 +817,8 @@ class ModerationWebService(
                 }
                 id
             }
-            ConfigDto.Configurations.ACTIVITY_TRACKING -> {
+            ConfigDto.Configurations.ACTIVITY_TRACKING,
+            ConfigDto.Configurations.CARD_MENTIONS -> {
                 val v = rawValue.trim().lowercase()
                 if (v != "true" && v != "false") return "Value must be true or false."
                 v

@@ -423,6 +423,14 @@
         fact('Rarity', card.rarity);
         fact('Colour identity', (card.colors && card.colors.length) ? card.colors.join(', ') : 'Colourless');
 
+        if (card.oracleText) {
+            const oracle = document.createElement('p');
+            oracle.className = 'cube-cardlookup-oracle';
+            // Oracle text carries real newlines (and DFC face breaks); keep them.
+            oracle.textContent = card.oracleText;
+            facts.appendChild(oracle);
+        }
+
         const link = document.createElement('a');
         link.className = 'btn btn-secondary cube-cardlookup-link';
         link.href = scryfallCardUrl(card.name);

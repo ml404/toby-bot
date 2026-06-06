@@ -230,7 +230,32 @@ class ScryfallCubeFetcher @Autowired constructor(
             imageUrl = imageUrl(card),
             rarity = card.get("rarity")?.asString?.takeIf { it.isNotBlank() },
             manaCost = manaCost(card),
+            oracleText = oracleText(card),
+            imageUrlBack = backImageUrl(card),
         )
+    }
+
+    /**
+     * The card's rules text, or null. Single-faced cards carry `oracle_text`
+     * directly; double-faced cards put it on each face, so both are combined
+     * with their face names.
+     */
+    fun oracleText(card: JsonObject): String? {
+        card.get("oracle_text")?.asString?.takeIf { it.isNotBlank() }?.let { return it }
+        val faces = card.getAsJsonArray("card_faces") ?: return null
+        val parts = faces.mapNotNull { face ->
+            val obj = face.asJsonObject
+            val text = obj.get("oracle_text")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            obj.get("name")?.asString?.let { "**$it**\n$text" } ?: text
+        }
+        return parts.joinToString("\n\n").takeIf { it.isNotBlank() }
+    }
+
+    /** The back-face `normal` image for a double-faced card, or null. */
+    fun backImageUrl(card: JsonObject): String? {
+        val faces = card.getAsJsonArray("card_faces") ?: return null
+        if (faces.size() < 2) return null
+        return faces[1].asJsonObject.getAsJsonObject("image_uris")?.get("normal")?.asString?.takeIf { it.isNotBlank() }
     }
 
     /**
