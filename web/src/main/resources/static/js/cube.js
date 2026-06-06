@@ -330,6 +330,12 @@
         doc.querySelectorAll('[data-panel]').forEach(function (panel) {
             panel.hidden = panel.getAttribute('data-panel') !== name;
         });
+        // The as-fan calculator works off manual numbers, so the shared "Your
+        // cube" source (and its cue) don't apply — hide them on that tab so the
+        // tool stands on its own.
+        doc.querySelectorAll('[data-needs-cube]').forEach(function (el) {
+            el.hidden = name === 'asfan';
+        });
     }
 
     function wireTabs(doc) {

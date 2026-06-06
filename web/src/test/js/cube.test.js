@@ -182,6 +182,7 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
     function setUpTabs() {
         host = document.createElement('div');
         host.innerHTML =
+            '<section class="cube-source-card" data-needs-cube></section>' +
             '<button role="tab" data-tab="generate" aria-selected="true"></button>' +
             '<button role="tab" data-tab="preview" aria-selected="false"></button>' +
             '<button role="tab" data-tab="asfan" aria-selected="false"></button>' +
@@ -217,6 +218,19 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
 
         expect(document.querySelector('[data-panel="generate"]').hidden).toBe(false);
         expect(document.querySelector('[data-panel="preview"]').hidden).toBe(true);
+    });
+
+    test('the as-fan tab hides the standalone "Your cube" source; other tabs show it', () => {
+        setUpTabs();
+        const source = document.querySelector('[data-needs-cube]');
+
+        window.location.hash = '#asfan';
+        window.dispatchEvent(new window.Event('hashchange'));
+        expect(source.hidden).toBe(true);
+
+        window.location.hash = '#preview';
+        window.dispatchEvent(new window.Event('hashchange'));
+        expect(source.hidden).toBe(false);
     });
 });
 
