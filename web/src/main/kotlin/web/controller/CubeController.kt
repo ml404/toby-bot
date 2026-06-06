@@ -37,21 +37,22 @@ import web.util.discordIdOrNull
 import web.util.displayName
 
 /**
- * Public web surface for the MTG cube tool — the same as-fan maths and
- * pack generation as the `/cube` Discord command, no login required (like
- * `/dnd` and `/utils`). GET renders the page. The `/api/...` GET endpoints
- * take a Scryfall query; the POST variants take the user's own pasted card
- * list (too large for a query string) — both return the same JSON.
+ * Public web surface for the Magic toolkit — the same as-fan maths, pack
+ * generation, card lookups, legality, reference and price watches as the
+ * Discord commands, no login required (like `/dnd` and `/utils`). The page
+ * itself is served at `/magic` by [MagicPageController]; this controller
+ * carries the shared-cube deep links and the `/magic/api/...` JSON endpoints.
+ * The `/api/...` GET endpoints take a Scryfall query; the POST variants take
+ * the user's own pasted card list (too large for a query string).
  *
  * Saving a list is account-bound: the `/api/lists` endpoints require a
  * logged-in Discord user and persist per-user via [CubeListService], so a
- * saved cube follows the user across devices (unlike the rest of the page,
- * which is anonymous). A logged-in user can also publish an immutable
- * shareable snapshot via [SharedCubeService]; anyone can open it at
- * `/cube/c/{token}` (no login).
+ * saved cube follows the user across devices. A logged-in user can also
+ * publish an immutable shareable snapshot via [SharedCubeService]; anyone can
+ * open it at `/magic/c/{token}` (no login).
  */
 @Controller
-@RequestMapping("/cube")
+@RequestMapping("/magic")
 class CubeController(
     private val cubeWebService: CubeWebService,
     private val cubeLists: CubeListService,
@@ -350,7 +351,7 @@ class CubeController(
         }
         val name = request.name.trim().ifEmpty { "Shared cube" }.take(MAX_NAME_LENGTH)
         val row = sharedCubes.create(discordId, name, request.cards)
-        return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/cube/c/${row.token}", name = row.name))
+        return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/magic/c/${row.token}", name = row.name))
     }
 
     private companion object {

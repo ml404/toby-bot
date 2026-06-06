@@ -139,8 +139,8 @@ class HomeFeatureCardsTemplateTest {
                 "so the Magic tooling is discoverable from the landing page."
         )
         assertTrue(
-            html.contains("href=\"/cube\""),
-            "the Magic toolkit feature-card must link to `/cube`."
+            html.contains("href=\"/magic\""),
+            "the Magic toolkit feature-card must link to `/magic`."
         )
         val tabletopMarker = html.indexOf(">Tabletop &amp; Tools<")
         val ctaMarker = html.indexOf("Ready to add")

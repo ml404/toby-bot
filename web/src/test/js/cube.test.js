@@ -94,19 +94,19 @@ describe('packsToText', () => {
 describe('URL builders', () => {
     test('asfanUrl carries the three calculator params', () => {
         expect(Cube.asfanUrl({ total: 60, cubeSize: 540, packSize: 15 }))
-            .toBe('/cube/api/asfan?total=60&cubeSize=540&packSize=15');
+            .toBe('/magic/api/asfan?total=60&cubeSize=540&packSize=15');
     });
 
     test('previewUrl url-encodes the query', () => {
         expect(Cube.previewUrl({ query: 't:dragon c:r', packSize: 15 }))
-            .toBe('/cube/api/preview?query=t%3Adragon+c%3Ar&packSize=15');
+            .toBe('/magic/api/preview?query=t%3Adragon+c%3Ar&packSize=15');
     });
 
     test('generateUrl encodes the boolean balanced flag', () => {
         expect(Cube.generateUrl({ query: 'set:vow', packs: 24, packSize: 15, balanced: true }))
-            .toBe('/cube/api/generate?query=set%3Avow&packs=24&packSize=15&balanced=true');
+            .toBe('/magic/api/generate?query=set%3Avow&packs=24&packSize=15&balanced=true');
         expect(Cube.generateUrl({ query: 'set:vow', packs: 8, packSize: 15, balanced: false }))
-            .toBe('/cube/api/generate?query=set%3Avow&packs=8&packSize=15&balanced=false');
+            .toBe('/magic/api/generate?query=set%3Avow&packs=8&packSize=15&balanced=false');
     });
 });
 
@@ -324,7 +324,7 @@ describe('collapsible result sections', () => {
 describe('deep-link hash activates the matching tab on in-page navigation', () => {
     // wire() ran at require time and registered a hashchange listener on the
     // window; here we stand up the tab markup and fire a hashchange to prove a
-    // /cube#preview deep-link (clicked while already on /cube) switches tabs.
+    // /magic#preview deep-link (clicked while already on /magic) switches tabs.
     // Append to a throwaway container (not innerHTML on body) so the shared
     // zoom/lightbox overlays wire() created at require time survive.
     let host;
@@ -391,7 +391,7 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
 
 describe('card lookup (cardUrl / renderCardLookup)', () => {
     test('cardUrl encodes the name', () => {
-        expect(Cube.cardUrl('Urza, Lord High Artificer')).toBe('/cube/api/card?name=' + encodeURIComponent('Urza, Lord High Artificer'));
+        expect(Cube.cardUrl('Urza, Lord High Artificer')).toBe('/magic/api/card?name=' + encodeURIComponent('Urza, Lord High Artificer'));
     });
 
     test('renderCardLookup shows the large image, facts, mana symbols and a Scryfall link', () => {
@@ -468,7 +468,7 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
 describe('combos (combosUrl / renderCombos)', () => {
     test('combosUrl encodes the name', () => {
         expect(Cube.combosUrl("Thassa's Oracle"))
-            .toBe('/cube/api/combos?name=' + encodeURIComponent("Thassa's Oracle"));
+            .toBe('/magic/api/combos?name=' + encodeURIComponent("Thassa's Oracle"));
     });
 
     test('renderCombos lists each combo with pieces, payoff and a link', () => {
@@ -497,7 +497,7 @@ describe('combos (combosUrl / renderCombos)', () => {
 describe('rulings (rulingsUrl / renderRulings)', () => {
     test('rulingsUrl encodes the name', () => {
         expect(Cube.rulingsUrl('Urza, Lord High Artificer'))
-            .toBe('/cube/api/rulings?name=' + encodeURIComponent('Urza, Lord High Artificer'));
+            .toBe('/magic/api/rulings?name=' + encodeURIComponent('Urza, Lord High Artificer'));
     });
 
     test('renderRulings lists each ruling with its date', () => {
@@ -525,8 +525,8 @@ describe('rulings (rulingsUrl / renderRulings)', () => {
 
 describe('reference (set + rule lookup)', () => {
     test('setUrl and ruleUrl encode their query', () => {
-        expect(Cube.setUrl('vow')).toBe('/cube/api/set?code=vow');
-        expect(Cube.ruleUrl('double strike')).toBe('/cube/api/rule?term=' + encodeURIComponent('double strike'));
+        expect(Cube.setUrl('vow')).toBe('/magic/api/set?code=vow');
+        expect(Cube.ruleUrl('double strike')).toBe('/magic/api/rule?term=' + encodeURIComponent('double strike'));
     });
 
     test('renderSet shows the headline facts and a Scryfall link', () => {
@@ -747,7 +747,7 @@ describe('samplePackRequest (open a sample pack from the preview source)', () =>
     test('a pasted list becomes a POST body with packs=1', () => {
         const req = Cube.samplePackRequest({ mode: 'list', list: '40 Bolt' }, '20');
         expect(req.method).toBe('POST');
-        expect(req.url).toBe('/cube/api/generate');
+        expect(req.url).toBe('/magic/api/generate');
         expect(req.body).toEqual({ list: '40 Bolt', packs: 1, packSize: 20, balanced: true });
     });
 
@@ -1070,26 +1070,26 @@ describe('hover-to-enlarge', () => {
 
 describe('deleteListUrl', () => {
     test('encodes the saved-list name into the delete query', () => {
-        expect(Cube.deleteListUrl('My Cube')).toBe('/cube/api/lists?name=My%20Cube');
-        expect(Cube.deleteListUrl('Pauper / Peasant')).toBe('/cube/api/lists?name=Pauper%20%2F%20Peasant');
+        expect(Cube.deleteListUrl('My Cube')).toBe('/magic/api/lists?name=My%20Cube');
+        expect(Cube.deleteListUrl('Pauper / Peasant')).toBe('/magic/api/lists?name=Pauper%20%2F%20Peasant');
     });
 });
 
 describe('absoluteUrl', () => {
     test('joins the page origin with the relative share path', () => {
-        expect(Cube.absoluteUrl('https://toby-bot.co.uk', '/cube/c/abc123'))
-            .toBe('https://toby-bot.co.uk/cube/c/abc123');
+        expect(Cube.absoluteUrl('https://toby-bot.co.uk', '/magic/c/abc123'))
+            .toBe('https://toby-bot.co.uk/magic/c/abc123');
     });
 
     test('tolerates a missing origin', () => {
-        expect(Cube.absoluteUrl(null, '/cube/c/abc123')).toBe('/cube/c/abc123');
+        expect(Cube.absoluteUrl(null, '/magic/c/abc123')).toBe('/magic/c/abc123');
     });
 });
 
 describe('queryShareUrl', () => {
     test('builds a ?q= deep link, encoding the query', () => {
         expect(Cube.queryShareUrl('https://toby-bot.co.uk', 't:dragon c:r'))
-            .toBe('https://toby-bot.co.uk/cube?q=t%3Adragon%20c%3Ar');
+            .toBe('https://toby-bot.co.uk/magic?q=t%3Adragon%20c%3Ar');
     });
 });
 

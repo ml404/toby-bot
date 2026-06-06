@@ -510,7 +510,7 @@ class CubeControllerTest {
 
         assertEquals(HttpStatus.OK, response.statusCode)
         assertEquals("tok123", response.body!!.token)
-        assertEquals("/cube/c/tok123", response.body!!.url)
+        assertEquals("/magic/c/tok123", response.body!!.url)
     }
 
     @Test

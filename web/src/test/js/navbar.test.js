@@ -198,11 +198,11 @@ describe('navbar fragment', () => {
             /<div class="nav-dropdown">[\s\S]*?Magic[\s\S]*?<\/div>\s*<\/div>/
         );
         expect(magic).not.toBeNull();
-        expect(magic[0]).toMatch(/href="\/cube#card"[^>]*>[^<]*Card lookup/);
-        expect(magic[0]).toMatch(/href="\/cube#legality"[^>]*>[^<]*Deck legality/);
-        expect(magic[0]).toMatch(/href="\/cube#reference"[^>]*>[^<]*Sets/);
+        expect(magic[0]).toMatch(/href="\/magic#card"[^>]*>[^<]*Card lookup/);
+        expect(magic[0]).toMatch(/href="\/magic#legality"[^>]*>[^<]*Deck legality/);
+        expect(magic[0]).toMatch(/href="\/magic#reference"[^>]*>[^<]*Sets/);
         // The cube-builder entries are still there.
-        expect(magic[0]).toMatch(/href="\/cube#generate"[^>]*>[^<]*Pack generator/);
+        expect(magic[0]).toMatch(/href="\/magic#generate"[^>]*>[^<]*Pack generator/);
     });
 
     test('Market and Titles are no longer top-level nav-links siblings', () => {

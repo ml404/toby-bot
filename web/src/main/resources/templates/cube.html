@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - Magic toolkit', '/css/cube.css')}"></head>
+<head th:replace="~{fragments/headSeo :: headSeo(
+        'TobyBot — Magic toolkit',
+        'Build and balance Magic: The Gathering draft cubes, look up any card''s details, rulings and combos, check deck legality, browse set &amp; keyword reference, and set card price alerts.',
+        null,
+        '/css/cube.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
