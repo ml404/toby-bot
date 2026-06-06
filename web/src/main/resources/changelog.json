@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add /cube card &lt;name&gt; single-card lookup",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 640
+  },
+  {
+    "date": "June 2026",
     "title": "Add \"open a sample pack\" to the web cube preview",
     "summary": "## Why",
     "emoji": "✨",
