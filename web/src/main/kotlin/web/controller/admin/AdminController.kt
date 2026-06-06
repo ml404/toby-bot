@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AdminInstallsService
 import web.service.BotOwnerAuthorizer
+import web.service.InstallChartsService
 import web.util.discordIdOrNull
 import web.util.displayName
 
@@ -27,6 +28,7 @@ import web.util.displayName
 @RequestMapping("/admin")
 class AdminController(
     private val adminInstallsService: AdminInstallsService,
+    private val installChartsService: InstallChartsService,
     private val botOwnerAuthorizer: BotOwnerAuthorizer,
 ) {
 
@@ -40,7 +42,10 @@ class AdminController(
             ra.addFlashAttribute("error", "Not authorized.")
             return "redirect:/"
         }
-        model.addAttribute("installs", adminInstallsService.listInstalls())
+        val rows = adminInstallsService.listInstalls()
+        model.addAttribute("installs", rows)
+        model.addAttribute("stats", adminInstallsService.buildStats(rows))
+        model.addAttribute("chart", installChartsService.build(rows))
         model.addAttribute("username", user.displayName())
         return "admin-installs"
     }

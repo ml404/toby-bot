@@ -5,6 +5,7 @@ import bot.toby.voice.VoiceCompanyTracker
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
+import database.service.activity.InstallEventService
 import database.service.casino.CasinoBotSuspicionService
 import io.mockk.every
 import io.mockk.mockk
@@ -26,6 +27,7 @@ class GuildLeaveCleanupHandlerTest {
     private val antiAutoclickNotifier: AntiAutoclickNotifier = mockk(relaxed = true)
     private val casinoBotSuspicionService: CasinoBotSuspicionService = mockk(relaxed = true)
     private val voiceCompanyTracker: VoiceCompanyTracker = mockk(relaxed = true)
+    private val installEventService: InstallEventService = mockk(relaxed = true)
 
     private val handler = GuildLeaveCleanupHandler(
         pokerTableRegistry,
@@ -35,6 +37,7 @@ class GuildLeaveCleanupHandlerTest {
         antiAutoclickNotifier,
         casinoBotSuspicionService,
         voiceCompanyTracker,
+        installEventService,
     )
 
     private fun leaveEvent(guildId: Long): GuildLeaveEvent {
@@ -46,6 +49,7 @@ class GuildLeaveCleanupHandlerTest {
     fun `guild leave evicts the leaving guild from every per-guild cache`() {
         handler.onGuildLeave(leaveEvent(42L))
 
+        verify(exactly = 1) { installEventService.recordLeave(42L, any()) }
         verify(exactly = 1) { pokerTableRegistry.evictGuild(42L) }
         verify(exactly = 1) { blackjackTableRegistry.evictGuild(42L) }
         verify(exactly = 1) { casinoHoldemTableRegistry.evictGuild(42L) }

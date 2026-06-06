@@ -6,71 +6,199 @@
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <style>
-    .installs-table {
-        width: 100%;
-        border-collapse: collapse;
+    /* ---- stats strip ---- */
+    .installs-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--space-4);
+        margin-bottom: var(--space-6);
+    }
+    .stat-card {
         background: var(--bg-elevated);
         border: 1px solid var(--border);
         border-radius: var(--radius-lg);
-        overflow: hidden;
+        padding: var(--space-4) var(--space-5);
+    }
+    .stat-eyebrow {
+        font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--text-muted); margin-bottom: 6px;
+    }
+    .stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; }
+    .stat-sub { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+    .stat-pos { color: #3fb950; }
+    .stat-neg { color: #f85149; }
+
+    /* ---- chart ---- */
+    .chart-card {
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-5);
+        margin-bottom: var(--space-6);
+    }
+    .chart-head { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-4); }
+    .chart-legend { display: flex; gap: var(--space-4); font-size: 0.82rem; color: var(--text-muted); }
+    .legend-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+    .legend-installs { background: #3fb950; }
+    .legend-removals { background: #f85149; }
+    .chart-bars { display: flex; align-items: flex-end; gap: var(--space-2); }
+    .chart-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+    .chart-col-bars { display: flex; align-items: flex-end; gap: 3px; height: 130px; width: 100%; justify-content: center; }
+    .chart-bar { width: 14px; max-width: 45%; border-radius: 3px 3px 0 0; transition: opacity .15s; min-height: 2px; }
+    .chart-bar:hover { opacity: 0.75; }
+    .chart-bar-installs { background: #3fb950; }
+    .chart-bar-removals { background: #f85149; }
+    .chart-bar-empty { background: var(--border); min-height: 0; }
+    .chart-col-label {
+        font-size: 0.68rem; color: var(--text-muted); margin-top: 14px;
+        white-space: nowrap; transform: rotate(-35deg); transform-origin: top center; height: 20px;
+    }
+    .chart-caption { font-size: 0.78rem; color: var(--text-muted); margin-top: var(--space-5); }
+
+    /* ---- table ---- */
+    .installs-scroll { overflow-x: auto; }
+    .installs-table {
+        width: 100%; border-collapse: collapse;
+        background: var(--bg-elevated); border: 1px solid var(--border);
+        border-radius: var(--radius-lg); overflow: hidden;
     }
     .installs-table th, .installs-table td {
-        padding: var(--space-3) var(--space-4);
-        text-align: left;
-        border-bottom: 1px solid var(--border);
-        vertical-align: middle;
-        white-space: nowrap;
+        padding: var(--space-3) var(--space-4); text-align: left;
+        border-bottom: 1px solid var(--border); vertical-align: top;
     }
     .installs-table th {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: var(--text-muted);
+        font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em;
+        color: var(--text-muted); white-space: nowrap;
     }
     .installs-table tr:last-child td { border-bottom: none; }
+    .installs-table tbody tr:hover { background: rgba(255,255,255,0.02); }
     .installs-guild { display: flex; align-items: center; gap: var(--space-3); }
-    .installs-icon, .installs-icon-placeholder {
-        width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto;
-    }
+    .installs-icon, .installs-icon-placeholder { width: 36px; height: 36px; border-radius: 50%; flex: 0 0 auto; }
     .installs-icon-placeholder {
-        background: var(--accent); color: #fff;
-        font-weight: 700; font-size: 0.9rem;
+        background: var(--accent); color: #fff; font-weight: 700; font-size: 0.95rem;
         display: flex; align-items: center; justify-content: center;
     }
+    .installs-name { font-weight: 600; }
+    .installs-sub { font-size: 0.75rem; color: var(--text-muted); }
     .installs-owner-id { color: var(--text-muted); font-size: 0.85rem; }
-    .installs-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .installs-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .meta-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .chip {
+        display: inline-block; padding: 1px 8px; border-radius: 999px;
+        font-size: 0.7rem; background: var(--bg); border: 1px solid var(--border);
+        color: var(--text-muted); white-space: nowrap;
+    }
+    .chip-boost { color: #ff73fa; border-color: rgba(255,115,250,0.4); }
+    .chip-feature { color: var(--accent); border-color: rgba(88,166,255,0.4); }
     .mode-badge {
-        display: inline-block;
-        padding: 2px 10px;
-        border-radius: var(--radius-pill, 999px);
-        font-size: 0.78rem; font-weight: 600;
-        text-transform: capitalize;
+        display: inline-block; padding: 2px 10px; border-radius: 999px;
+        font-size: 0.76rem; font-weight: 600; text-transform: capitalize; white-space: nowrap;
     }
     .mode-express { background: rgba(46, 160, 67, 0.18); color: #3fb950; }
     .mode-custom  { background: rgba(88, 166, 255, 0.18); color: #58a6ff; }
     .mode-legacy  { background: var(--bg); color: var(--text-muted); border: 1px dashed var(--border-strong); }
-    .installs-scroll { overflow-x: auto; }
+
     .empty-hero {
-        background: var(--bg-elevated);
-        border: 1px dashed var(--border-strong);
-        border-radius: var(--radius-lg);
-        padding: 48px 24px; text-align: center; color: var(--text-muted);
+        background: var(--bg-elevated); border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg); padding: 48px 24px; text-align: center; color: var(--text-muted);
     }
     .empty-hero h2 { color: var(--text); margin-bottom: 10px; }
     .empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+    .chart-empty { text-align: center; color: var(--text-muted); padding: 32px 16px; font-size: 0.9rem; }
 </style>
 
 <main id="main" class="container">
     <h1 class="mb-3">Installs</h1>
     <p class="muted mb-5">
-        Every server TobyBot is currently in
-        (<span th:text="${#lists.size(installs)}">0</span> total). Install mode and
-        date come from the setup wizard; servers that joined before the wizard or
-        skipped it show as <em>legacy/unknown</em>.
+        Every server TobyBot is currently in, with adoption and churn metrics.
     </p>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
+    <!-- ===================== summary stats strip ===================== -->
+    <div class="installs-stats">
+        <div class="stat-card">
+            <div class="stat-eyebrow">Total installs</div>
+            <div class="stat-value" th:text="${stats.totalInstalls}">0</div>
+            <div class="stat-sub">servers right now</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-eyebrow">Members reached</div>
+            <div class="stat-value" th:text="${#numbers.formatInteger(stats.totalMembers, 1, 'COMMA')}">0</div>
+            <div class="stat-sub"><span th:text="${#numbers.formatInteger(stats.avgMembers, 1, 'COMMA')}">0</span> avg / server</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-eyebrow">Setup mode</div>
+            <div class="stat-value" th:text="${stats.expressCount + stats.customCount}">0</div>
+            <div class="stat-sub">
+                <span th:text="${stats.expressCount}">0</span> express ·
+                <span th:text="${stats.customCount}">0</span> custom ·
+                <span th:text="${stats.legacyCount}">0</span> legacy
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-eyebrow">New installs</div>
+            <div class="stat-value" th:text="${stats.installsLast30Days}">0</div>
+            <div class="stat-sub"><span th:text="${stats.installsLast7Days}">0</span> in last 7 days · 30-day total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-eyebrow">Net growth</div>
+            <div class="stat-value"
+                 th:classappend="${stats.netGrowth >= 0 ? 'stat-pos' : 'stat-neg'}"
+                 th:text="${(stats.netGrowth >= 0 ? '+' : '') + stats.netGrowth}">0</div>
+            <div class="stat-sub" th:if="${stats.hasLedgerData}">
+                <span th:text="${stats.lifetimeJoins}">0</span> joined ·
+                <span th:text="${stats.lifetimeLeaves}">0</span> left (lifetime)
+            </div>
+            <div class="stat-sub" th:unless="${stats.hasLedgerData}">no event history yet</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-eyebrow">Churn (30 days)</div>
+            <div class="stat-value">
+                <span class="stat-pos" th:text="'+' + ${stats.joinsLast30Days}">+0</span>
+                <span class="stat-neg" th:text="'&minus;' + ${stats.leavesLast30Days}">&minus;0</span>
+            </div>
+            <div class="stat-sub">joined · left in last 30 days</div>
+        </div>
+    </div>
+
+    <!-- ===================== growth + churn chart ===================== -->
+    <div class="chart-card">
+        <div class="chart-head">
+            <strong>Installs &amp; removals per month</strong>
+            <div class="chart-legend">
+                <span><span class="legend-dot legend-installs"></span>Installs</span>
+                <span><span class="legend-dot legend-removals"></span>Removals</span>
+            </div>
+        </div>
+
+        <div th:if="${chart.isEmpty}" class="chart-empty">
+            Not enough history yet — install dates and removal events will populate this chart over time.
+        </div>
+
+        <div th:unless="${chart.isEmpty}">
+            <div class="chart-bars">
+                <div class="chart-col" th:each="b : ${chart.buckets}">
+                    <div class="chart-col-bars"
+                         th:title="${b.label + ': ' + b.installs + ' installed, ' + b.removals + ' left (net ' + (b.net >= 0 ? '+' : '') + b.net + ')'}">
+                        <div th:class="${b.installs > 0 ? 'chart-bar chart-bar-installs' : 'chart-bar chart-bar-empty'}"
+                             th:style="'height:' + ${b.installsHeightPct} + '%'"></div>
+                        <div th:class="${b.removals > 0 ? 'chart-bar chart-bar-removals' : 'chart-bar chart-bar-empty'}"
+                             th:style="'height:' + ${b.removalsHeightPct} + '%'"></div>
+                    </div>
+                    <div class="chart-col-label" th:text="${b.label}">Jan 2026</div>
+                </div>
+            </div>
+        </div>
+
+        <p class="chart-caption">
+            Installs are counted from each server's setup-wizard completion date (historical);
+            removals come from the live JOIN/LEAVE event ledger, which only records events from
+            its deploy onward — so removals for older months read as zero.
+        </p>
+    </div>
+
+    <!-- ===================== per-install table ===================== -->
     <div class="installs-scroll" th:if="${not #lists.isEmpty(installs)}">
         <table class="installs-table">
             <thead>
@@ -80,6 +208,7 @@
                 <th scope="col" class="installs-num">Members</th>
                 <th scope="col">Mode</th>
                 <th scope="col">Installed</th>
+                <th scope="col">Details</th>
             </tr>
             </thead>
             <tbody>
@@ -95,15 +224,17 @@
                              class="installs-icon-placeholder"
                              aria-hidden="true"
                              th:text="${#strings.substring(row.guildName, 0, 1).toUpperCase()}">G</div>
-                        <span th:text="${row.guildName}" th:title="${row.guildId}">Server</span>
+                        <div>
+                            <div class="installs-name" th:text="${row.guildName}">Server</div>
+                            <div class="installs-sub" th:text="${row.guildId}">000</div>
+                        </div>
                     </div>
                 </td>
                 <td>
                     <span th:if="${row.ownerName != null}" th:text="${row.ownerName}">Owner</span>
-                    <span th:unless="${row.ownerName != null}" class="installs-owner-id"
-                          th:text="${row.ownerId}">000</span>
+                    <span th:unless="${row.ownerName != null}" class="installs-owner-id" th:text="${row.ownerId}">000</span>
                 </td>
-                <td class="installs-num" th:text="${row.memberCount}">0</td>
+                <td class="installs-num" th:text="${#numbers.formatInteger(row.memberCount, 1, 'COMMA')}">0</td>
                 <td>
                     <span class="mode-badge"
                           th:classappend="${row.installMode == 'express' ? 'mode-express' : (row.installMode == 'custom' ? 'mode-custom' : 'mode-legacy')}"
@@ -111,7 +242,22 @@
                 </td>
                 <td>
                     <span th:if="${row.installedAtMillis != null}" th:text="${row.installedAtDisplay}">date</span>
-                    <span th:unless="${row.installedAtMillis != null}" class="muted">—</span>
+                    <span th:unless="${row.installedAtMillis != null}" class="muted">&mdash;</span>
+                    <div class="installs-sub" th:if="${row.daysSinceInstall != null}"
+                         th:text="${row.daysSinceInstall + ' days ago'}">x days ago</div>
+                </td>
+                <td>
+                    <div class="meta-chips">
+                        <span class="chip" th:if="${row.serverAgeDays != null}"
+                              th:title="'Server created ' + ${row.serverCreatedDisplay}"
+                              th:text="'age ' + ${#numbers.formatInteger(row.serverAgeDays, 1, 'COMMA')} + 'd'">age</span>
+                        <span class="chip" th:if="${row.channelCount > 0}" th:text="${row.channelCount} + ' ch'">ch</span>
+                        <span class="chip" th:if="${row.roleCount > 0}" th:text="${row.roleCount} + ' roles'">roles</span>
+                        <span class="chip" th:if="${row.locale != null}" th:text="${row.locale}">locale</span>
+                        <span class="chip chip-boost" th:if="${row.boostTier > 0}"
+                              th:text="'Tier ' + ${row.boostTier} + ' (' + ${row.boostCount} + ')'">boost</span>
+                        <span class="chip chip-feature" th:each="f : ${row.features}" th:text="${f}">feature</span>
+                    </div>
                 </td>
             </tr>
             </tbody>
