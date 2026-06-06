@@ -166,6 +166,60 @@ describe('renderPacks', () => {
     });
 });
 
+describe('deep-link hash activates the matching tab on in-page navigation', () => {
+    // wire() ran at require time and registered a hashchange listener on the
+    // window; here we stand up the tab markup and fire a hashchange to prove a
+    // /cube#preview deep-link (clicked while already on /cube) switches tabs.
+    // Append to a throwaway container (not innerHTML on body) so the shared
+    // zoom/lightbox overlays wire() created at require time survive.
+    let host;
+    afterEach(() => {
+        window.location.hash = '';
+        if (host && host.parentNode) host.parentNode.removeChild(host);
+        host = null;
+    });
+
+    function setUpTabs() {
+        host = document.createElement('div');
+        host.innerHTML =
+            '<button role="tab" data-tab="generate" aria-selected="true"></button>' +
+            '<button role="tab" data-tab="preview" aria-selected="false"></button>' +
+            '<button role="tab" data-tab="asfan" aria-selected="false"></button>' +
+            '<section data-panel="generate"></section>' +
+            '<section data-panel="preview" hidden></section>' +
+            '<section data-panel="asfan" hidden></section>';
+        document.body.appendChild(host);
+    }
+
+    test('a hashchange to #preview reveals the preview panel and selects its tab', () => {
+        setUpTabs();
+        window.location.hash = '#preview';
+        window.dispatchEvent(new window.Event('hashchange'));
+
+        expect(document.querySelector('[data-panel="preview"]').hidden).toBe(false);
+        expect(document.querySelector('[data-panel="generate"]').hidden).toBe(true);
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('true');
+    });
+
+    test('a hashchange to #asfan reveals the as-fan panel', () => {
+        setUpTabs();
+        window.location.hash = '#asfan';
+        window.dispatchEvent(new window.Event('hashchange'));
+
+        expect(document.querySelector('[data-panel="asfan"]').hidden).toBe(false);
+        expect(document.querySelector('[data-tab="asfan"]').getAttribute('aria-selected')).toBe('true');
+    });
+
+    test('an unknown hash leaves the tabs untouched', () => {
+        setUpTabs();
+        window.location.hash = '#nonsense';
+        window.dispatchEvent(new window.Event('hashchange'));
+
+        expect(document.querySelector('[data-panel="generate"]').hidden).toBe(false);
+        expect(document.querySelector('[data-panel="preview"]').hidden).toBe(true);
+    });
+});
+
 describe('manaSymbolUrls', () => {
     test('maps each {sym} to a Scryfall symbol SVG, stripping braces and slashes', () => {
         const urls = Cube.manaSymbolUrls('{1}{W/U}{R}');

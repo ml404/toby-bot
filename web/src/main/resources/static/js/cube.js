@@ -358,6 +358,20 @@
         if (fromHash) activateTab(doc, fromHash);
     }
 
+    /**
+     * Re-activate the matching tab when only the URL hash changes — i.e. a
+     * deep-link like /cube#preview clicked while already on /cube (e.g. from
+     * the navbar dropdown), where no reload fires wireTabs again. Registered
+     * unconditionally so it's live even if wireTabs bailed for lack of tabs.
+     */
+    function wireHashChange(doc) {
+        if (!root || !root.addEventListener) return;
+        root.addEventListener('hashchange', function () {
+            const name = tabIdFromHash(root.location && root.location.hash);
+            if (name) activateTab(doc, name);
+        });
+    }
+
     function wireExamples(doc) {
         doc.querySelectorAll('[data-example]').forEach(function (chip) {
             chip.addEventListener('click', function () {
@@ -1071,6 +1085,7 @@
 
     function wire(doc) {
         wireTabs(doc);
+        wireHashChange(doc);
         wireSource(doc);
         wireSavedLists(doc);
         wireShare(doc);
