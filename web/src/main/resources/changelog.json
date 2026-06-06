@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Prefix the Magic commands with \"mtg\" so they're obviously MTG in Discord",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 660
+  },
+  {
+    "date": "June 2026",
     "title": "Fix stale /cube command mentions + add a single source of truth for command names",
     "summary": "## What",
     "emoji": "✨",
