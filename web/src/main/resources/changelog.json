@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Reframe the Magic tools as a \"Magic toolkit\" at /magic (+ SEO)",
+    "summary": "The Magic web surface was a single tabbed page at `/cube` titled \"Cube workshop\" — a good hub pattern, but the title mislabelled the card/legality/reference/price-watch tabs as cube-only, and the `/cube` slug carries no \"magic\"/\"mtg\" keyword.",
+    "emoji": "✨",
+    "prNumber": 657
+  },
+  {
+    "date": "June 2026",
     "title": "Split the /cube super-command into focused MTG commands",
     "summary": "`/cube` had grown to **13 subcommands** spanning cube-building, card lookups, reference, and price watches. This breaks it into five themed top-level commands, so each is small and discoverable:",
     "emoji": "✨",
