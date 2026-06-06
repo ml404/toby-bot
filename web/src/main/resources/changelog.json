@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add \"open a sample pack\" to the web cube preview",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 639
+  },
+  {
+    "date": "June 2026",
     "title": "Add colour-pair (guild) & pip-weighted colour balance to the cube report",
     "summary": "## Why",
     "emoji": "✨",
