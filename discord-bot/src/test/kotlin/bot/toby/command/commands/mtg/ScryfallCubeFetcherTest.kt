@@ -112,6 +112,19 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard reads the mana cost, single-faced and from the front of a DFC`() {
+        val single = fetcher.parseCard(
+            obj("""{"name":"Bolt","color_identity":["R"],"type_line":"Instant","mana_cost":"{R}"}""")
+        )!!
+        assertEquals("{R}", single.manaCost)
+        val dfc = fetcher.parseCard(
+            obj("""{"name":"Huntmaster // Ravager","color_identity":["R","G"],"type_line":"Creature","mana_cost":"",
+               "card_faces":[{"mana_cost":"{2}{R}{G}"},{"mana_cost":""}]}""")
+        )!!
+        assertEquals("{2}{R}{G}", dfc.manaCost)
+    }
+
+    @Test
     fun `parseCard treats a card with no colour identity as colourless`() {
         val card = fetcher.parseCard(obj("""{"name":"Sol Ring","color_identity":[],"type_line":"Artifact"}"""))!!
         assertEquals(CardCategory.COLORLESS, card.category)

@@ -11,12 +11,16 @@ class CubeAnalyticsTest {
         typeLine: String = "Creature",
         manaValue: Double = 1.0,
         rarity: String? = "common",
+        colors: Set<MtgColor> = emptySet(),
+        manaCost: String? = null,
     ) = CubeCard(
         name = name,
+        colors = colors,
         isLand = CubeCard.isLandType(typeLine),
         typeLine = typeLine,
         manaValue = manaValue,
         rarity = rarity,
+        manaCost = manaCost,
     )
 
     // --- mana curve ----------------------------------------------------
@@ -146,6 +150,49 @@ class CubeAnalyticsTest {
         assertTrue(CubeAnalytics.duplicates(pool).isEmpty())
     }
 
+    // --- colour pairs (guilds) -----------------------------------------
+
+    @Test
+    fun `colorPairs counts two-colour cards by guild, in guild order, present only`() {
+        val pool = listOf(
+            card("Teferi", colors = setOf(MtgColor.WHITE, MtgColor.BLUE)),
+            card("Dovin", colors = setOf(MtgColor.WHITE, MtgColor.BLUE)),
+            card("Hadana", colors = setOf(MtgColor.GREEN, MtgColor.BLUE)), // Simic
+            card("Bolt", colors = setOf(MtgColor.RED)), // mono — ignored
+            card("Niv", colors = MtgColor.entries.toSet()), // 5c — ignored
+        )
+        val pairs = CubeAnalytics.colorPairs(pool)
+        // Codes are WUBRG-canonical, so Simic {G,U} renders as "UG".
+        assertEquals(listOf("Azorius (WU)", "Simic (UG)"), pairs.map { it.pair }) // guild order
+        assertEquals(2, pairs.first { it.pair.startsWith("Azorius") }.count)
+    }
+
+    // --- colour pips ---------------------------------------------------
+
+    @Test
+    fun `colorPips counts coloured pips from mana costs, hybrid counts both`() {
+        val pool = listOf(
+            card("A", manaCost = "{1}{W}{W}"),       // W,W
+            card("B", manaCost = "{U}{B}"),          // U,B
+            card("C", manaCost = "{W/U}"),           // hybrid → W and U
+            card("D", manaCost = "{2}{R/P}"),        // Phyrexian red → R (generic/P ignored)
+            card("E", manaCost = null),              // no cost — skipped
+            card("Forest", typeLine = "Basic Land — Forest", manaCost = ""), // no pips
+        )
+        val pips = CubeAnalytics.colorPips(pool).associate { it.color to it.count }
+        assertEquals(3, pips["White"]) // WW + hybrid W
+        assertEquals(2, pips["Blue"]) // B's U + hybrid U
+        assertEquals(1, pips["Black"])
+        assertEquals(1, pips["Red"])
+        assertEquals(null, pips["Green"]) // absent → not listed
+    }
+
+    @Test
+    fun `colorPips lists colours in WUBRG order`() {
+        val pool = listOf(card("X", manaCost = "{G}{R}{W}"))
+        assertEquals(listOf("White", "Red", "Green"), CubeAnalytics.colorPips(pool).map { it.color })
+    }
+
     // --- analyze (aggregate) -------------------------------------------
 
     @Test
@@ -171,6 +218,8 @@ class CubeAnalyticsTest {
         assertTrue(a.types.isEmpty())
         assertTrue(a.rarities.isEmpty())
         assertTrue(a.duplicates.isEmpty())
+        assertTrue(a.colorPairs.isEmpty())
+        assertTrue(a.colorPips.isEmpty())
         assertEquals(8, a.curve.size) // still the eight empty buckets
         assertTrue(a.curve.all { it.count == 0 })
     }

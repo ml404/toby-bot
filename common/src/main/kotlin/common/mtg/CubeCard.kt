@@ -59,6 +59,12 @@ data class CubeCard(
      * to a [Rarity] — so this stays a dumb value type, like [imageUrl].
      */
     val rarity: String? = null,
+    /**
+     * Raw Scryfall `mana_cost` string (e.g. `{1}{W}{W}`), or null. Kept raw —
+     * [common.mtg.CubeAnalytics] counts its colour pips for the pip-weighted
+     * colour balance — so this stays a dumb value type.
+     */
+    val manaCost: String? = null,
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory

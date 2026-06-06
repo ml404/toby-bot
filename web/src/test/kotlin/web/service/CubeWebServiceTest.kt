@@ -40,6 +40,22 @@ class CubeWebServiceTest {
         assertEquals(2, view.duplicates.first().count)
     }
 
+    @Test
+    fun `analyticsView maps colour pairs and pip-weighted balance`() {
+        val pool = listOf(
+            CubeCard("Teferi", setOf(MtgColor.WHITE, MtgColor.BLUE), typeLine = "Creature", manaValue = 3.0, manaCost = "{1}{W}{U}"),
+            CubeCard("Dovin", setOf(MtgColor.WHITE, MtgColor.BLUE), typeLine = "Creature", manaValue = 3.0, manaCost = "{2}{W}{U}"),
+            CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, manaCost = "{R}"),
+        )
+        val view = service.analyticsView(pool, packSize = 3)
+        assertEquals(listOf("Azorius (WU)"), view.colorPairs.map { it.pair })
+        assertEquals(2, view.colorPairs.first().count)
+        val pips = view.colorPips.associate { it.color to it.count }
+        assertEquals(2, pips["White"]) // one W per Azorius card
+        assertEquals(2, pips["Blue"])
+        assertEquals(1, pips["Red"])
+    }
+
     // --- asFan ---------------------------------------------------------
 
     @Test
@@ -186,6 +202,7 @@ class CubeWebServiceTest {
         )
         val parsed = service.parseScryfall(root).first()
         assertEquals("{2}{R}{G}", parsed.manaCost) // falls back to the front face
+        assertEquals("{2}{R}{G}", parsed.card.manaCost) // …and is kept on the domain card too
         assertEquals("b-lg.jpg", parsed.imageUrlBack)
     }
 

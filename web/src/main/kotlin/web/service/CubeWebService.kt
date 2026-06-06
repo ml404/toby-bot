@@ -107,6 +107,8 @@ class CubeWebService {
             types = a.types.map { TypeCountView(it.type.displayName, it.count, it.asFan) },
             rarities = a.rarities.map { RarityCountView(it.rarity.displayName, it.count, it.asFan) },
             duplicates = a.duplicates.map { DuplicateView(it.name, it.count) },
+            colorPairs = a.colorPairs.map { ColorPairView(it.pair, it.count) },
+            colorPips = a.colorPips.map { ColorPipView(it.color, it.count) },
         )
     }
 
@@ -204,6 +206,7 @@ class CubeWebService {
                     typeLine = typeLine,
                     manaValue = node.path("cmc").asDouble(0.0),
                     rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
+                    manaCost = manaCostOf(node),
                 ),
                 imageUrl = imageOf(node, "small"),
                 imageUrlLarge = imageOf(node, "normal"),
@@ -478,6 +481,8 @@ data class CurveBucketView(val label: String, val count: Int)
 data class TypeCountView(val type: String, val count: Int, val asFan: Double)
 data class RarityCountView(val rarity: String, val count: Int, val asFan: Double)
 data class DuplicateView(val name: String, val count: Int)
+data class ColorPairView(val pair: String, val count: Int)
+data class ColorPipView(val color: String, val count: Int)
 data class AnalyticsView(
     val curve: List<CurveBucketView>,
     val averageManaValue: Double,
@@ -485,6 +490,8 @@ data class AnalyticsView(
     val types: List<TypeCountView>,
     val rarities: List<RarityCountView>,
     val duplicates: List<DuplicateView>,
+    val colorPairs: List<ColorPairView>,
+    val colorPips: List<ColorPipView>,
 )
 
 data class PreviewData(

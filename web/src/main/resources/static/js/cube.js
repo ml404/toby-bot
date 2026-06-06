@@ -270,6 +270,26 @@
         return container;
     }
 
+    /** The two-colour guild breakdown (archetype support). */
+    function renderColorPairs(container, pairs) {
+        container.replaceChildren();
+        const max = pairs.reduce(function (m, p) { return Math.max(m, p.count); }, 0);
+        pairs.forEach(function (p) {
+            container.appendChild(statRow(p.pair, String(p.count), max > 0 ? p.count / max : 0, NEUTRAL_BAR));
+        });
+        return container;
+    }
+
+    /** The pip-weighted colour balance, each bar tinted with its colour swatch. */
+    function renderColorPips(container, pips) {
+        container.replaceChildren();
+        const max = pips.reduce(function (m, p) { return Math.max(m, p.count); }, 0);
+        pips.forEach(function (p) {
+            container.appendChild(statRow(p.color, String(p.count), max > 0 ? p.count / max : 0, categoryColor(p.color)));
+        });
+        return container;
+    }
+
     /** A singleton-violation warning; hidden when the cube has no non-basic duplicates. */
     function renderDuplicates(el, duplicates) {
         if (!el) return;
@@ -296,6 +316,8 @@
         if (els.curve) renderManaCurve(els.curve, analytics.curve || []);
         if (els.types) renderTypeBreakdown(els.types, analytics.types || []);
         if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
+        if (els.pairs) renderColorPairs(els.pairs, analytics.colorPairs || []);
+        if (els.pips) renderColorPips(els.pips, analytics.colorPips || []);
         show(els.breakdown);
     }
 
@@ -987,6 +1009,8 @@
         const curve = q(doc, '[data-curve="preview"]');
         const types = q(doc, '[data-types="preview"]');
         const rarity = q(doc, '[data-rarity="preview"]');
+        const pairs = q(doc, '[data-pairs="preview"]');
+        const pips = q(doc, '[data-pips="preview"]');
         const actions = q(doc, '[data-actions="preview"]');
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
@@ -1041,7 +1065,7 @@
                     lastGroups = json.groups || [];
                     show(actions);
                     renderNotFound(notFound, json.notFound);
-                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity });
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1325,6 +1349,8 @@
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,
+        renderColorPairs: renderColorPairs,
+        renderColorPips: renderColorPips,
         renderDuplicates: renderDuplicates,
         renderAnalytics: renderAnalytics,
         renderGroups: renderGroups,
