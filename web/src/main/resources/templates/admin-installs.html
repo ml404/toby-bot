@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Installs', null)}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<style>
+    .installs-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+    }
+    .installs-table th, .installs-table td {
+        padding: var(--space-3) var(--space-4);
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .installs-table th {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--text-muted);
+    }
+    .installs-table tr:last-child td { border-bottom: none; }
+    .installs-guild { display: flex; align-items: center; gap: var(--space-3); }
+    .installs-icon, .installs-icon-placeholder {
+        width: 32px; height: 32px; border-radius: 50%; flex: 0 0 auto;
+    }
+    .installs-icon-placeholder {
+        background: var(--accent); color: #fff;
+        font-weight: 700; font-size: 0.9rem;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .installs-owner-id { color: var(--text-muted); font-size: 0.85rem; }
+    .installs-num { text-align: right; font-variant-numeric: tabular-nums; }
+    .mode-badge {
+        display: inline-block;
+        padding: 2px 10px;
+        border-radius: var(--radius-pill, 999px);
+        font-size: 0.78rem; font-weight: 600;
+        text-transform: capitalize;
+    }
+    .mode-express { background: rgba(46, 160, 67, 0.18); color: #3fb950; }
+    .mode-custom  { background: rgba(88, 166, 255, 0.18); color: #58a6ff; }
+    .mode-legacy  { background: var(--bg); color: var(--text-muted); border: 1px dashed var(--border-strong); }
+    .installs-scroll { overflow-x: auto; }
+    .empty-hero {
+        background: var(--bg-elevated);
+        border: 1px dashed var(--border-strong);
+        border-radius: var(--radius-lg);
+        padding: 48px 24px; text-align: center; color: var(--text-muted);
+    }
+    .empty-hero h2 { color: var(--text); margin-bottom: 10px; }
+    .empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+</style>
+
+<main id="main" class="container">
+    <h1 class="mb-3">Installs</h1>
+    <p class="muted mb-5">
+        Every server TobyBot is currently in
+        (<span th:text="${#lists.size(installs)}">0</span> total). Install mode and
+        date come from the setup wizard; servers that joined before the wizard or
+        skipped it show as <em>legacy/unknown</em>.
+    </p>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <div class="installs-scroll" th:if="${not #lists.isEmpty(installs)}">
+        <table class="installs-table">
+            <thead>
+            <tr>
+                <th scope="col">Server</th>
+                <th scope="col">Owner</th>
+                <th scope="col" class="installs-num">Members</th>
+                <th scope="col">Mode</th>
+                <th scope="col">Installed</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="row : ${installs}">
+                <td>
+                    <div class="installs-guild">
+                        <img th:if="${row.iconUrl != null}"
+                             th:src="${row.iconUrl}"
+                             th:alt="${row.guildName} + ' icon'"
+                             class="installs-icon"
+                             onerror="this.style.display='none'">
+                        <div th:unless="${row.iconUrl != null}"
+                             class="installs-icon-placeholder"
+                             aria-hidden="true"
+                             th:text="${#strings.substring(row.guildName, 0, 1).toUpperCase()}">G</div>
+                        <span th:text="${row.guildName}" th:title="${row.guildId}">Server</span>
+                    </div>
+                </td>
+                <td>
+                    <span th:if="${row.ownerName != null}" th:text="${row.ownerName}">Owner</span>
+                    <span th:unless="${row.ownerName != null}" class="installs-owner-id"
+                          th:text="${row.ownerId}">000</span>
+                </td>
+                <td class="installs-num" th:text="${row.memberCount}">0</td>
+                <td>
+                    <span class="mode-badge"
+                          th:classappend="${row.installMode == 'express' ? 'mode-express' : (row.installMode == 'custom' ? 'mode-custom' : 'mode-legacy')}"
+                          th:text="${row.installMode}">mode</span>
+                </td>
+                <td>
+                    <span th:if="${row.installedAtMillis != null}" th:text="${row.installedAtDisplay}">date</span>
+                    <span th:unless="${row.installedAtMillis != null}" class="muted">—</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(installs)}">
+        <span class="emoji" aria-hidden="true">&#128229;</span>
+        <h2>No installs yet</h2>
+        <p>TobyBot isn't in any servers right now.</p>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

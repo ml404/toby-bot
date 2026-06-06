@@ -7,8 +7,12 @@ import jakarta.servlet.http.HttpServletRequest
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.springframework.security.oauth2.core.user.OAuth2User
+import web.service.BotOwnerAuthorizer
 
 /**
  * The controller advice exposes the anchored guild id + name to every
@@ -23,7 +27,8 @@ import org.junit.jupiter.api.Test
 internal class DefaultGuildModelAdviceTest {
 
     private val jda: JDA = mockk()
-    private val advice = DefaultGuildModelAdvice(jda)
+    private val botOwnerAuthorizer = BotOwnerAuthorizer("777")
+    private val advice = DefaultGuildModelAdvice(jda, botOwnerAuthorizer)
 
     private fun requestWith(vararg cookies: Cookie): HttpServletRequest = mockk {
         every { this@mockk.cookies } returns if (cookies.isEmpty()) null else cookies
@@ -67,5 +72,22 @@ internal class DefaultGuildModelAdviceTest {
     fun `currentDefaultGuildName returns null when cookie malformed`() {
         val req = requestWith(Cookie(DefaultGuildCookie.COOKIE_NAME, "garbage"))
         assertNull(advice.currentDefaultGuildName(req))
+    }
+
+    @Test
+    fun `isBotOwner is true for a configured operator id`() {
+        val user = mockk<OAuth2User> { every { getAttribute<String>("id") } returns "777" }
+        assertTrue(advice.isBotOwner(user))
+    }
+
+    @Test
+    fun `isBotOwner is false for a non-operator id`() {
+        val user = mockk<OAuth2User> { every { getAttribute<String>("id") } returns "123" }
+        assertFalse(advice.isBotOwner(user))
+    }
+
+    @Test
+    fun `isBotOwner is false for an anonymous (null) user`() {
+        assertFalse(advice.isBotOwner(null))
     }
 }
