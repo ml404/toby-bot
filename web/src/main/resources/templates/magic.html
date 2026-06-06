@@ -342,7 +342,7 @@
                  data-panel="card" hidden>
             <p class="cube-panel-intro">
                 Look up any Magic card by name and see its image and details — the website twin of
-                the <code>/cube card</code> Discord command.
+                the <code th:text="${mtgCmd.cardLookup}">/card lookup</code> Discord command.
             </p>
             <form class="cube-form" data-form="card" autocomplete="off">
                 <label>Card name
@@ -359,7 +359,7 @@
                  data-panel="legality" hidden>
             <p class="cube-panel-intro">
                 Paste a decklist and pick a format to see whether it's legal — every banned or
-                not-in-format card is flagged. The website twin of <code>/cube legality</code>.
+                not-in-format card is flagged. The website twin of <code th:text="${mtgCmd.deckLegality}">/deck legality</code>.
             </p>
             <form class="cube-form" data-form="legality" autocomplete="off">
                 <label>Decklist
@@ -388,7 +388,7 @@
                  data-panel="reference" hidden>
             <p class="cube-panel-intro">
                 Quick reference — look up a Magic set by its code, or a keyword's reminder text.
-                The website twin of <code>/cube set</code> and <code>/cube rule</code>.
+                The website twin of <code th:text="${mtgCmd.mtgSet}">/mtg set</code> and <code th:text="${mtgCmd.mtgRule}">/mtg rule</code>.
             </p>
             <form class="cube-form" data-form="set" autocomplete="off">
                 <label>Set code
@@ -414,7 +414,7 @@
                  data-panel="watch" hidden>
             <p class="cube-panel-intro">
                 Get DM'd on Discord when a card's market price crosses your target — the website twin
-                of <code>/cube watch-add</code>. Prices are checked periodically; alerts are one-shot.
+                of <code th:text="${mtgCmd.pricewatchAdd}">/pricewatch add</code>. Prices are checked periodically; alerts are one-shot.
             </p>
             <div th:if="${loggedIn}" data-watch-block>
                 <form class="cube-form cube-watch-form" data-form="watch" autocomplete="off">

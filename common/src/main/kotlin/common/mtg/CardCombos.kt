@@ -3,7 +3,7 @@ package common.mtg
 /**
  * The combos a card takes part in, from the Commander Spellbook database — the
  * pieces ("uses"), the payoff ("produces"), and a link to the full write-up.
- * A pure value type shared by the bot's `/cube combos` command and the web
+ * A pure value type shared by the bot's `/card combos` command and the web
  * card-lookup tool, both of which fetch from Commander Spellbook (over their
  * own HTTP clients) and map the JSON into this. Presentation-only.
  *

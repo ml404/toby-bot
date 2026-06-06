@@ -2,6 +2,7 @@ package bot.toby.command.commands.mtg
 
 import bot.toby.helpers.stringOption
 import common.mtg.CubeCard
+import common.mtg.MtgCommandRef
 import common.mtg.DeckLegality
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -24,7 +25,7 @@ class DeckCommand @Autowired constructor(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AbstractMtgCommand(dispatcher) {
 
-    override val name: String = "deck"
+    override val name: String = MtgCommandRef.DECK
     override val description: String = "Analyse a Magic deck — check its legality in a format."
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -65,7 +66,7 @@ class DeckCommand @Autowired constructor(
     )
 
     companion object {
-        const val SUB_LEGALITY = "legality"
+        const val SUB_LEGALITY = MtgCommandRef.Deck.LEGALITY
 
         const val OPT_FORMAT = "format"
         const val OPT_SAVED = "saved"

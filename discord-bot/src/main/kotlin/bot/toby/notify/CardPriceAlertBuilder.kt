@@ -1,6 +1,7 @@
 package bot.toby.notify
 
 import common.mtg.CubeCard
+import common.mtg.MtgCommandRef
 import common.mtg.MtgCurrency
 import database.dto.user.CardPriceWatchDto
 import net.dv8tion.jda.api.EmbedBuilder
@@ -11,7 +12,7 @@ import java.awt.Color
 /**
  * Renders the DM sent when a [CardPriceWatchDto] fires — a card-price-watch
  * alert. The watch is one-shot, so this is a "your target was hit" notice;
- * the footer nudges the user to re-arm with `/cube watch-add`.
+ * the footer nudges the user to re-arm with `/pricewatch add`.
  */
 object CardPriceAlertBuilder {
 
@@ -40,7 +41,7 @@ object CardPriceAlertBuilder {
             embed.addField("When you set this", money(it, currency), true)
         }
         embed.addField("Now", money(currentPrice, currency), true)
-        embed.setFooter("One-shot alert — use /cube watch-add to set another.")
+        embed.setFooter("One-shot alert — use ${MtgCommandRef.PRICEWATCH_ADD} to set another.")
         return MessageCreateBuilder().setEmbeds(embed.build()).build()
     }
 

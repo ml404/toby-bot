@@ -5,6 +5,7 @@ import bot.toby.helpers.intOption
 import bot.toby.helpers.stringOption
 import common.mtg.AsFan
 import common.mtg.CubeAnalytics
+import common.mtg.MtgCommandRef
 import common.mtg.MtgCurrency
 import common.mtg.PackGenerator
 import core.command.CommandContext
@@ -40,7 +41,7 @@ class CubeCommand @Autowired constructor(
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : AbstractMtgCommand(dispatcher) {
 
-    override val name: String = "cube"
+    override val name: String = MtgCommandRef.CUBE
     override val description: String = "Magic: The Gathering cube tools — as-fan maths and randomised draft packs."
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
@@ -178,10 +179,10 @@ class CubeCommand @Autowired constructor(
     )
 
     companion object {
-        const val SUB_ASFAN = "asfan"
-        const val SUB_PREVIEW = "preview"
-        const val SUB_GENERATE = "generate"
-        const val SUB_SAVED = "saved"
+        const val SUB_ASFAN = MtgCommandRef.Cube.ASFAN
+        const val SUB_PREVIEW = MtgCommandRef.Cube.PREVIEW
+        const val SUB_GENERATE = MtgCommandRef.Cube.GENERATE
+        const val SUB_SAVED = MtgCommandRef.Cube.SAVED
 
         const val OPT_TOTAL = "total"
         const val OPT_CUBE_SIZE = "cube-size"

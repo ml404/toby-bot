@@ -2,13 +2,13 @@ package common.mtg
 
 /**
  * A small built-in glossary of Magic keywords and their reminder text — the
- * data behind `/cube rule` and its web twin. Curated (evergreen keywords plus
+ * data behind `/mtg rule` and its web twin. Curated (evergreen keywords plus
  * a handful of the most-asked-about non-evergreen ones) rather than fetched, so
  * it needs no external service and answers instantly. Beginner-friendly, which
  * broadens the bot's appeal beyond cube builders.
  *
  * Reminder text is paraphrased from the comprehensive rules / Oracle reminder
- * text; it's a quick refresher, not a rules ruling (use `/cube rulings` for
+ * text; it's a quick refresher, not a rules ruling (use `/card rulings` for
  * card-specific official rulings).
  */
 object MtgGlossary {
