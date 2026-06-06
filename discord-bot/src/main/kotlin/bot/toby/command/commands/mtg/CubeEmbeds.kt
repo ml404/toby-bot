@@ -32,7 +32,7 @@ internal object CubeEmbeds {
     val OK_COLOR: Color = Color(199, 161, 79)
     val ERROR_COLOR: Color = Color(237, 66, 69)
 
-    private const val AUTHOR = "🃏  Cube workshop" // 🃏
+    private const val AUTHOR = "🃏  Magic toolkit" // 🃏
 
     /** Keep the "couldn't find" field under Discord's 1024-char field cap. */
     private const val NOT_FOUND_LIMIT = 1000
