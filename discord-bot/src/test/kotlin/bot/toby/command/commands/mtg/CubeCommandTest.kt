@@ -7,7 +7,6 @@ import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
 import bot.toby.command.DefaultCommandContext
 import common.mtg.CubeCard
 import common.mtg.MtgColor
-import database.dto.user.CardPriceWatchDto
 import database.dto.user.CubeListDto
 import database.service.user.CubeListService
 import io.mockk.coEvery
@@ -34,7 +33,6 @@ class CubeCommandTest : CommandTest {
     private lateinit var fetcher: ScryfallCubeFetcher
     private lateinit var cubeListService: CubeListService
     private lateinit var configService: database.service.guild.ConfigService
-    private lateinit var priceWatchService: database.service.user.CardPriceWatchService
     private lateinit var command: CubeCommand
 
     @BeforeEach
@@ -43,9 +41,10 @@ class CubeCommandTest : CommandTest {
         fetcher = mockk()
         cubeListService = mockk(relaxed = true)
         configService = mockk(relaxed = true) // null config → USD default
-        priceWatchService = mockk(relaxed = true)
-        // Unconfined so the launched IO coroutine resolves synchronously in tests.
-        command = CubeCommand(fetcher, cubeListService, configService, priceWatchService, Dispatchers.Unconfined)
+        // A real resolver over the mocked fetcher, so the fetch-based mocking
+        // below drives pool resolution exactly as in production.
+        val resolver = MtgPoolResolver(fetcher, cubeListService)
+        command = CubeCommand(resolver, cubeListService, configService, Dispatchers.Unconfined)
         every { requestingUserDto.discordId } returns 100L
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
@@ -54,13 +53,14 @@ class CubeCommandTest : CommandTest {
     private fun intOpt(value: Int): OptionMapping = mockk { every { asInt } returns value }
     private fun strOpt(value: String): OptionMapping = mockk { every { asString } returns value }
     private fun boolOpt(value: Boolean): OptionMapping = mockk { every { asBoolean } returns value }
-    private fun numOpt(value: Double): OptionMapping = mockk { every { asDouble } returns value }
-    private fun longOpt(value: Long): OptionMapping = mockk { every { asLong } returns value }
 
     private fun run() = command.handle(DefaultCommandContext(event), requestingUserDto, deleteDelay = 0)
 
     private fun pool(n: Int): List<CubeCard> =
         (1..n).map { CubeCard("Card $it", colors = setOf(MtgColor.entries[it % 5])) }
+
+    private fun savedCube(name: String, cards: String) =
+        CubeListDto(discordId = 100L, name = name, cards = cards, createdAt = Instant.EPOCH, updatedAt = Instant.EPOCH)
 
     // --- asfan ---------------------------------------------------------
 
@@ -76,10 +76,8 @@ class CubeCommandTest : CommandTest {
         run()
 
         verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
-        val embed = slot.captured
-        assertEquals("As-fan", embed.title)
-        // (60 / 540) × 15 = 1.67
-        assertTrue(embed.description!!.contains("1.67"), "description was: ${embed.description}")
+        assertEquals("As-fan", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("1.67"), "description was: ${slot.captured.description}")
     }
 
     @Test
@@ -110,7 +108,6 @@ class CubeCommandTest : CommandTest {
         run()
 
         assertEquals("Cube preview", slot.captured.title)
-        // The cube report is wired in: the analytics fields ride along.
         assertTrue(slot.captured.fields.any { it.name == "Card types" })
         coVerify(exactly = 1) { fetcher.fetch(any(), any()) }
     }
@@ -122,20 +119,39 @@ class CubeCommandTest : CommandTest {
         every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
         every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        // Guild has CUBE_CURRENCY = eur (guild id "1" from CommandTest mocks).
-        every {
-            configService.getConfigByName("CUBE_CURRENCY", "1")
-        } returns mockk { every { value } returns "eur" }
-        val priced = listOf(
-            CubeCard("Bolt", setOf(MtgColor.RED), priceUsd = "2.00", priceEur = "1.50"),
-            CubeCard("Bear", setOf(MtgColor.GREEN), priceUsd = "0.50", priceEur = "0.40"),
+        every { configService.getConfigByName("CUBE_CURRENCY", "1") } returns mockk { every { value } returns "eur" }
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(
+                CubeCard("Bolt", setOf(MtgColor.RED), priceUsd = "2.00", priceEur = "1.50"),
+                CubeCard("Bear", setOf(MtgColor.GREEN), priceUsd = "0.50", priceEur = "0.40"),
+            ),
         )
-        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(priced)
 
         run()
 
         val value = slot.captured.fields.first { it.name == "Cube value" }.value!!
         assertTrue(value.contains("€1.90"), "expected EUR total, got: $value")
+    }
+
+    @Test
+    fun `preview reports the most and least valuable cards`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(
+                CubeCard("Pricey", setOf(MtgColor.RED), priceUsd = "60.00"),
+                CubeCard("Cheap", setOf(MtgColor.BLUE), priceUsd = "0.25"),
+            ),
+        )
+
+        run()
+
+        val value = slot.captured.fields.first { it.name == "Top & bottom value" }.value!!
+        assertTrue(value.contains("Pricey ($60.00)"), value)
+        assertTrue(value.contains("Cheap ($0.25)"), value)
     }
 
     @Test
@@ -150,6 +166,35 @@ class CubeCommandTest : CommandTest {
         run()
 
         assertEquals("Couldn't build that cube", slot.captured.title)
+    }
+
+    @Test
+    fun `preview surfaces the capped-pool note when the query overflows`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("t:creature")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(50), capped = true)
+
+        run()
+
+        assertTrue(slot.captured.description!!.contains("only the first 750"), "note was: ${slot.captured.description}")
+    }
+
+    @Test
+    fun `an unexpected failure resolves the interaction with an error embed`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        coEvery { fetcher.fetch(any(), any()) } throws RuntimeException("scryfall exploded")
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Something went wrong"))
     }
 
     // --- generate ------------------------------------------------------
@@ -195,27 +240,6 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `preview reports the most and least valuable cards`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
-        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(
-            listOf(
-                CubeCard("Pricey", setOf(MtgColor.RED), priceUsd = "60.00"),
-                CubeCard("Cheap", setOf(MtgColor.BLUE), priceUsd = "0.25"),
-            ),
-        )
-
-        run()
-
-        val value = slot.captured.fields.first { it.name == "Top & bottom value" }.value!!
-        assertTrue(value.contains("Pricey ($60.00)"), value)
-        assertTrue(value.contains("Cheap ($0.25)"), value)
-    }
-
-    @Test
     fun `generate reports when the pool is too small`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
@@ -248,39 +272,7 @@ class CubeCommandTest : CommandTest {
         assertEquals("Couldn't build that cube", slot.captured.title)
     }
 
-    @Test
-    fun `preview surfaces the capped-pool note when the query overflows`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("t:creature")
-        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(pool(50), capped = true)
-
-        run()
-
-        assertTrue(slot.captured.description!!.contains("only the first 750"), "note was: ${slot.captured.description}")
-    }
-
-    @Test
-    fun `an unexpected failure resolves the interaction with an error embed`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
-        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
-        coEvery { fetcher.fetch(any(), any()) } throws RuntimeException("scryfall exploded")
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Something went wrong"))
-    }
-
     // --- saved cubes ---------------------------------------------------
-
-    private fun savedCube(name: String, cards: String) =
-        CubeListDto(discordId = 100L, name = name, cards = cards, createdAt = Instant.EPOCH, updatedAt = Instant.EPOCH)
 
     @Test
     fun `generate from a saved cube resolves the names and deals packs`() {
@@ -306,29 +298,6 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `a saved cube's front-face name resolves a transform card`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
-        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
-        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
-        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
-        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
-        // The user pasted only the front face; Scryfall returns the full name.
-        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Archangel Avacyn")
-        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
-            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
-        )
-
-        run()
-
-        // Resolved (not "none matched"): a pack is dealt and attached.
-        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
-        assertTrue(slot.captured.title!!.contains("Generated 1 packs of 1"))
-    }
-
-    @Test
     fun `a saved cube with full DFC names requests Scryfall by front face`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
@@ -338,7 +307,6 @@ class CubeCommandTest : CommandTest {
         every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
         every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
         every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
-        // The cube stores the full "//" name (as exported from a deckbuilder).
         every { cubeListService.get(100L, "My Cube") } returns
             savedCube("My Cube", "Archangel Avacyn // Avacyn, the Purifier")
         val requested = slot<List<String>>()
@@ -348,31 +316,8 @@ class CubeCommandTest : CommandTest {
 
         run()
 
-        // Scryfall is asked for the front face only (the full "//" name 404s).
         assertEquals(listOf("Archangel Avacyn"), requested.captured)
-        // …and the returned full-name card still resolves into a dealt pack.
         verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
-    }
-
-    @Test
-    fun `a saved cube's back-face name also resolves a transform card`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_GENERATE
-        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Cube")
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
-        every { event.getOption(CubeCommand.OPT_PACKS) } returns intOpt(1)
-        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns intOpt(1)
-        every { event.getOption(CubeCommand.OPT_BALANCED) } returns null
-        every { cubeListService.get(100L, "My Cube") } returns savedCube("My Cube", "Avacyn, the Purifier")
-        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
-            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE))),
-        )
-
-        run()
-
-        verify(exactly = 1) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
-        assertTrue(slot.captured.title!!.contains("Generated 1 packs of 1"))
     }
 
     @Test
@@ -450,19 +395,6 @@ class CubeCommandTest : CommandTest {
         assertEquals("Couldn't build that cube", slot.captured.title)
     }
 
-    // --- metadata ------------------------------------------------------
-
-    @Test
-    fun `unknown subcommand replies with guidance`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-    }
-
     @Test
     fun `lists the user's saved cubes with their card counts`() {
         val slot = slot<MessageEmbed>()
@@ -479,203 +411,16 @@ class CubeCommandTest : CommandTest {
         assertEquals("Your saved cubes", slot.captured.title)
         val desc = slot.captured.description!!
         assertTrue(desc.contains("Vintage"), "description was: $desc")
-        // 3 Bolt + 1 Forest counts copies, not lines.
         assertTrue(desc.contains("4 cards"), "description was: $desc")
         assertTrue(desc.contains("Pauper"))
         assertTrue(desc.contains("1 card") && !desc.contains("1 cards"), "singular card count: $desc")
     }
 
     @Test
-    fun `saved with no saved cubes nudges the user to the website`() {
+    fun `unknown subcommand replies with guidance`() {
         val slot = slot<MessageEmbed>()
         every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_SAVED
-        every { cubeListService.listForUser(100L) } returns emptyList()
-
-        run()
-
-        assertEquals("Your saved cubes", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("haven't saved any"))
-    }
-
-    // --- card lookup ---------------------------------------------------
-
-    @Test
-    fun `card looks the name up and replies with a card panel`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_CARD
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Lightning Bolt")
-        coEvery { fetcher.fetchByNames(listOf("Lightning Bolt")) } returns ScryfallCubeFetcher.Result.Success(
-            listOf(CubeCard("Lightning Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, rarity = "common")),
-        )
-
-        run()
-
-        assertEquals("Lightning Bolt", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Instant"))
-    }
-
-    @Test
-    fun `card reports when the name doesn't resolve`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_CARD
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
-        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Failure("none")
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Notacard"))
-    }
-
-    @Test
-    fun `rulings looks the name up and replies with a rulings panel`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_RULINGS
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Doubling Season")
-        coEvery { fetcher.fetchRulings("Doubling Season") } returns common.mtg.CardRulings(
-            "Doubling Season", "https://scryfall.com/card",
-            listOf(common.mtg.CardRulings.Ruling("2021-03-19", "Tokens are doubled.")),
-        )
-
-        run()
-
-        assertEquals("Doubling Season — rulings", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Tokens are doubled."))
-    }
-
-    @Test
-    fun `rulings reports when the name doesn't resolve`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_RULINGS
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
-        coEvery { fetcher.fetchRulings(any()) } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Notacard"))
-    }
-
-    @Test
-    fun `legality checks a saved deck against the chosen format and flags banned cards`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_LEGALITY
-        every { event.getOption(CubeCommand.OPT_FORMAT) } returns strOpt("modern")
-        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Deck")
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
-        every { cubeListService.get(100L, "My Deck") } returns savedCube("My Deck", "Lightning Bolt\nLurrus")
-        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
-            listOf(
-                CubeCard("Lightning Bolt", setOf(MtgColor.RED), legalities = mapOf("modern" to "legal")),
-                CubeCard("Lurrus", legalities = mapOf("modern" to "banned")),
-            ),
-        )
-
-        run()
-
-        assertTrue(slot.captured.title!!.contains("Not Modern-legal"))
-        assertTrue(slot.captured.fields.any { it.name!!.contains("Banned") && it.value!!.contains("Lurrus") })
-    }
-
-    @Test
-    fun `legality without a format returns an error`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_LEGALITY
-        every { event.getOption(CubeCommand.OPT_FORMAT) } returns null
-        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Deck")
-        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("format"))
-    }
-
-    @Test
-    fun `combos looks the card up and replies with a combos panel`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_COMBOS
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Kiki-Jiki")
-        coEvery { fetcher.fetchCombos("Kiki-Jiki") } returns common.mtg.CardCombos(
-            "Kiki-Jiki, Mirror Breaker",
-            listOf(common.mtg.CardCombos.Combo("7", listOf("Kiki-Jiki", "Zealous Conscripts"), listOf("Infinite haste"), "u")),
-        )
-
-        run()
-
-        assertEquals("Kiki-Jiki, Mirror Breaker — combos", slot.captured.title)
-        assertTrue(slot.captured.fields.any { it.value!!.contains("Infinite haste") })
-    }
-
-    @Test
-    fun `combos reports when Commander Spellbook is unreachable`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_COMBOS
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Kiki-Jiki")
-        coEvery { fetcher.fetchCombos(any()) } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Commander Spellbook"))
-    }
-
-    @Test
-    fun `set looks up a set by code and replies with a set panel`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_SET
-        every { event.getOption(CubeCommand.OPT_CODE) } returns strOpt("vow")
-        coEvery { fetcher.fetchSet("vow") } returns common.mtg.MtgSet(
-            "VOW", "Innistrad: Crimson Vow", "expansion", "2021-11-19", 277, null, null,
-        )
-
-        run()
-
-        assertEquals("Innistrad: Crimson Vow (VOW)", slot.captured.title)
-    }
-
-    @Test
-    fun `set reports an unknown code`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_SET
-        every { event.getOption(CubeCommand.OPT_CODE) } returns strOpt("zzz")
-        coEvery { fetcher.fetchSet(any()) } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("zzz"))
-    }
-
-    @Test
-    fun `rule looks up a keyword in the glossary, no network`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_RULE
-        every { event.getOption(CubeCommand.OPT_TERM) } returns strOpt("trample")
-
-        run()
-
-        assertEquals("Trample", slot.captured.title)
-    }
-
-    @Test
-    fun `rule reports an unknown keyword`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_RULE
-        every { event.getOption(CubeCommand.OPT_TERM) } returns strOpt("zzznotaword")
+        every { event.subcommandName } returns null
 
         run()
 
@@ -683,94 +428,10 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `watch-add resolves the card, captures the price and confirms`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_WATCH_ADD
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Ragavan")
-        every { event.getOption(CubeCommand.OPT_DIRECTION) } returns strOpt("BELOW")
-        every { event.getOption(CubeCommand.OPT_PRICE) } returns numOpt(30.0)
-        every { event.getOption(CubeCommand.OPT_CURRENCY) } returns strOpt("usd")
-        coEvery { fetcher.fetchNamed("Ragavan") } returns CubeCard("Ragavan, Nimble Pilferer", priceUsd = "45.00")
-        every {
-            priceWatchService.create(100L, any(), "Ragavan, Nimble Pilferer", "usd", CardPriceWatchDto.Direction.BELOW, 30.0, 45.0)
-        } returns CardPriceWatchDto(id = 5, cardName = "Ragavan, Nimble Pilferer", currency = "usd", direction = "BELOW", threshold = 30.0)
-
-        run()
-
-        assertTrue(slot.captured.title!!.contains("Watching"))
-        verify(exactly = 1) { priceWatchService.create(100L, any(), "Ragavan, Nimble Pilferer", "usd", CardPriceWatchDto.Direction.BELOW, 30.0, 45.0) }
-    }
-
-    @Test
-    fun `watch-add reports when the card can't be found`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_WATCH_ADD
-        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
-        every { event.getOption(CubeCommand.OPT_DIRECTION) } returns strOpt("BELOW")
-        every { event.getOption(CubeCommand.OPT_PRICE) } returns numOpt(30.0)
-        every { event.getOption(CubeCommand.OPT_CURRENCY) } returns null
-        coEvery { fetcher.fetchNamed(any()) } returns null
-
-        run()
-
-        assertEquals("Couldn't build that cube", slot.captured.title)
-        verify(exactly = 0) { priceWatchService.create(any(), any(), any(), any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `watch-list shows the user's watches`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_WATCH_LIST
-        every { priceWatchService.listForUser(100L) } returns listOf(
-            CardPriceWatchDto(id = 1, cardName = "Ragavan", currency = "usd", direction = "BELOW", threshold = 30.0)
-        )
-
-        run()
-
-        assertEquals("Your card price watches", slot.captured.title)
-        assertTrue(slot.captured.description!!.contains("Ragavan"))
-    }
-
-    @Test
-    fun `watch-remove deletes by id`() {
-        val slot = slot<MessageEmbed>()
-        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
-        every { event.subcommandName } returns CubeCommand.SUB_WATCH_REMOVE
-        every { event.getOption(CubeCommand.OPT_WATCH_ID) } returns longOpt(5L)
-        every { priceWatchService.remove(5L, 100L) } returns true
-
-        run()
-
-        assertTrue(slot.captured.title!!.contains("Watch removed"))
-        verify(exactly = 1) { priceWatchService.remove(5L, 100L) }
-    }
-
-    @Test
-    fun `exposes the thirteen subcommands with their options`() {
+    fun `exposes the four cube subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(
-            setOf(
-                "asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos",
-                "set", "rule", "watch-add", "watch-list", "watch-remove",
-            ),
-            subs.keys,
-        )
-        assertTrue(subs.getValue("watch-add").options.first { it.name == "name" }.isRequired)
-        assertTrue(subs.getValue("watch-remove").options.first { it.name == "id" }.isRequired)
-        assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
-        assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
-        assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)
-        assertTrue(subs.getValue("combos").options.first { it.name == "name" }.isRequired)
-        assertTrue(subs.getValue("set").options.first { it.name == "code" }.isRequired)
-        assertTrue(subs.getValue("rule").options.first { it.name == "term" }.isRequired)
-        // The legality format option is required and offers the tracked formats as choices.
-        val format = subs.getValue("legality").options.first { it.name == "format" }
-        assertTrue(format.isRequired)
-        assertEquals(common.mtg.CubeCard.FORMATS.size, format.choices.size)
+        assertEquals(setOf("asfan", "preview", "generate", "saved"), subs.keys)
 
         val asfan = subs.getValue("asfan").options
         assertEquals(OptionType.INTEGER, asfan.first { it.name == "total" }.type)
@@ -781,7 +442,6 @@ class CubeCommandTest : CommandTest {
         val generate = subs.getValue("generate").options
         assertEquals(OptionType.STRING, generate.first { it.name == "query" }.type)
         assertEquals(OptionType.BOOLEAN, generate.first { it.name == "balanced" }.type)
-        // query and saved are both optional (one-of, validated at runtime).
         assertEquals(false, generate.first { it.name == "query" }.isRequired)
         assertEquals(false, generate.first { it.name == "saved" }.isRequired)
     }
