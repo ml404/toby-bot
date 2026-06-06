@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add inline [[card]] Magic lookups in chat",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 645
+  },
+  {
+    "date": "June 2026",
     "title": "Harden the cube feature after an audit pass",
     "summary": "## Why",
     "emoji": "✨",
