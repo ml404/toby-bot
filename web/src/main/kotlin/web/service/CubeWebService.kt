@@ -10,6 +10,7 @@ import common.mtg.CubeCard
 import common.mtg.CubeDiff
 import common.mtg.CardCombos
 import common.mtg.DeckLegality
+import common.mtg.MtgGlossary
 import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.MtgColor
@@ -158,6 +159,49 @@ class CubeWebService {
             Thread.currentThread().interrupt()
             CubeResult.error("Request interrupted.")
         }
+    }
+
+    /** Looks up a Magic set by code via Scryfall's `/sets/:code` — the web twin of `/cube set`. */
+    fun set(code: String): CubeResult<SetView> {
+        val trimmed = code.trim().lowercase()
+        if (trimmed.isEmpty()) return CubeResult.error("Enter a set code (e.g. vow).")
+        val url = "$SETS_ENDPOINT/" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        return try {
+            val response = scryfallGet(url)
+            when (response.statusCode()) {
+                200 -> {
+                    val node = jackson.readTree(response.body())
+                    val name = node.path("name").asText("").takeIf { it.isNotBlank() }
+                        ?: return CubeResult.error("Scryfall returned an unexpected set.")
+                    CubeResult.ok(
+                        SetView(
+                            code = node.path("code").asText(trimmed).uppercase(),
+                            name = name,
+                            setType = node.path("set_type").asText("").replace('_', ' '),
+                            releasedAt = node.path("released_at").asText("").takeIf { it.isNotBlank() },
+                            cardCount = node.path("card_count").asInt(0),
+                            iconUrl = node.path("icon_svg_uri").asText("").takeIf { it.isNotBlank() },
+                            scryfallUri = node.path("scryfall_uri").asText("").takeIf { it.isNotBlank() },
+                        )
+                    )
+                }
+                404 -> CubeResult.error("No set found with code “$trimmed”.")
+                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+            }
+        } catch (e: IOException) {
+            CubeResult.error("Could not reach Scryfall: ${e.message}")
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CubeResult.error("Request interrupted.")
+        }
+    }
+
+    /** Looks a keyword up in the built-in glossary (pure, no network) — the web twin of `/cube rule`. */
+    fun rule(term: String): CubeResult<RuleView> {
+        if (term.trim().isEmpty()) return CubeResult.error("Enter a keyword (e.g. trample).")
+        return MtgGlossary.lookup(term)
+            ?.let { CubeResult.ok(RuleView(it.keyword, it.text)) }
+            ?: CubeResult.error("No glossary entry for “${term.trim()}”. Try an evergreen keyword like trample or flying.")
     }
 
     /** Maps a Commander Spellbook variants response into combo views. */
@@ -659,6 +703,7 @@ class CubeWebService {
         const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
+        const val SETS_ENDPOINT = "https://api.scryfall.com/sets"
         const val SPELLBOOK_ENDPOINT = "https://backend.commanderspellbook.com/variants/"
         const val MAX_COMBOS = 5
         const val MAX_CARDS = 750
@@ -808,6 +853,20 @@ data class CombosView(val name: String, val combos: List<ComboView>)
 
 /** One combo: its pieces, payoff, and Commander Spellbook link. */
 data class ComboView(val id: String, val uses: List<String>, val produces: List<String>, val url: String)
+
+/** A Magic set's headline facts, looked up by code. */
+data class SetView(
+    val code: String,
+    val name: String,
+    val setType: String,
+    val releasedAt: String?,
+    val cardCount: Int,
+    val iconUrl: String?,
+    val scryfallUri: String?,
+)
+
+/** A keyword glossary entry. */
+data class RuleView(val keyword: String, val text: String)
 
 /** The outcome of checking a pasted decklist against a format. */
 data class LegalityData(

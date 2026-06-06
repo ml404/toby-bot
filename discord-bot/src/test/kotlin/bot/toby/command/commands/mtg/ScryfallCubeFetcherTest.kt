@@ -420,6 +420,51 @@ class ScryfallCubeFetcherTest {
         assertTrue(rulings!!.rulings.isEmpty())
     }
 
+    // --- set lookup ----------------------------------------------------
+
+    @Test
+    fun `parseSet maps the headline facts and uppercases the code`() {
+        val set = fetcher.parseSet(
+            obj("""{"code":"vow","name":"Innistrad: Crimson Vow","set_type":"expansion",
+               "released_at":"2021-11-19","card_count":277,
+               "icon_svg_uri":"https://img/vow.svg","scryfall_uri":"https://scryfall.com/sets/vow"}""")
+        )!!
+        assertEquals("VOW", set.code)
+        assertEquals("Innistrad: Crimson Vow", set.name)
+        assertEquals("expansion", set.setType)
+        assertEquals("2021-11-19", set.releasedAt)
+        assertEquals(277, set.cardCount)
+        assertEquals("https://img/vow.svg", set.iconUrl)
+    }
+
+    @Test
+    fun `parseSet returns null without a code or name`() {
+        assertNull(fetcher.parseSet(obj("""{"name":"No Code"}""")))
+        assertNull(fetcher.parseSet(obj("""{"code":"x"}""")))
+    }
+
+    @Test
+    fun `fetchSet resolves a set by code`() = runBlocking {
+        val engine = MockEngine { request ->
+            assertTrue(request.url.toString().contains("/sets/vow"))
+            respond(
+                """{"code":"vow","name":"Innistrad: Crimson Vow","set_type":"expansion","card_count":277}""",
+                HttpStatusCode.OK, jsonHeaders,
+            )
+        }
+        val set = fetcherWith(engine).fetchSet("VOW")
+        assertEquals("VOW", set?.code)
+        assertEquals(277, set?.cardCount)
+    }
+
+    @Test
+    fun `fetchSet returns null on a 404 or blank code`() = runBlocking {
+        assertNull(fetcherWith(MockEngine { respondError(HttpStatusCode.NotFound) }).fetchSet("zzz"))
+        val engine = MockEngine { respond("{}", HttpStatusCode.OK, jsonHeaders) }
+        assertNull(fetcherWith(engine).fetchSet("  "))
+        assertEquals(0, engine.requestHistory.size)
+    }
+
     // --- combos (Commander Spellbook) ----------------------------------
 
     @Test

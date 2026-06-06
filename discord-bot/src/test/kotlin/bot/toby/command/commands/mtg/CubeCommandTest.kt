@@ -625,14 +625,72 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the eight subcommands with their options`() {
+    fun `set looks up a set by code and replies with a set panel`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_SET
+        every { event.getOption(CubeCommand.OPT_CODE) } returns strOpt("vow")
+        coEvery { fetcher.fetchSet("vow") } returns common.mtg.MtgSet(
+            "VOW", "Innistrad: Crimson Vow", "expansion", "2021-11-19", 277, null, null,
+        )
+
+        run()
+
+        assertEquals("Innistrad: Crimson Vow (VOW)", slot.captured.title)
+    }
+
+    @Test
+    fun `set reports an unknown code`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_SET
+        every { event.getOption(CubeCommand.OPT_CODE) } returns strOpt("zzz")
+        coEvery { fetcher.fetchSet(any()) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("zzz"))
+    }
+
+    @Test
+    fun `rule looks up a keyword in the glossary, no network`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_RULE
+        every { event.getOption(CubeCommand.OPT_TERM) } returns strOpt("trample")
+
+        run()
+
+        assertEquals("Trample", slot.captured.title)
+    }
+
+    @Test
+    fun `rule reports an unknown keyword`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_RULE
+        every { event.getOption(CubeCommand.OPT_TERM) } returns strOpt("zzznotaword")
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+    }
+
+    @Test
+    fun `exposes the ten subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos"), subs.keys)
+        assertEquals(
+            setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality", "combos", "set", "rule"),
+            subs.keys,
+        )
         assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
         assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
         assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)
         assertTrue(subs.getValue("combos").options.first { it.name == "name" }.isRequired)
+        assertTrue(subs.getValue("set").options.first { it.name == "code" }.isRequired)
+        assertTrue(subs.getValue("rule").options.first { it.name == "term" }.isRequired)
         // The legality format option is required and offers the tracked formats as choices.
         val format = subs.getValue("legality").options.first { it.name == "format" }
         assertTrue(format.isRequired)

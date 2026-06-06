@@ -4,6 +4,8 @@ import common.discord.embed
 import common.discord.field
 import common.mtg.CardCombos
 import common.mtg.CardRulings
+import common.mtg.MtgGlossary
+import common.mtg.MtgSet
 import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
@@ -305,6 +307,30 @@ internal object CubeEmbeds {
             field("Combo ${i + 1}", comboField(combo), inline = false)
         }
         setFooter("Source: Commander Spellbook")
+    }
+
+    /** A set's headline facts for `/cube set`: type, release date, card count, with the set icon. */
+    fun setEmbed(set: MtgSet): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("${set.name} (${set.code})")
+        set.scryfallUri?.let { setUrl(it) }
+        // Scryfall set icons are SVG, which Discord can't render as a thumbnail,
+        // so they're linked in the footer rather than set as the image.
+        val facts = buildList {
+            if (set.setType.isNotBlank()) add("**Type** · ${set.setType.replaceFirstChar { it.uppercase() }}")
+            set.releasedAt?.let { add("**Released** · $it") }
+            add("**Cards** · ${set.cardCount}")
+        }.joinToString("\n")
+        setDescription(facts)
+        setFooter("Source: Scryfall")
+    }
+
+    /** A keyword's reminder text for `/cube rule`. */
+    fun ruleEmbed(term: MtgGlossary.Term): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle(term.keyword)
+        setDescription(term.text)
+        setFooter("Reminder text · use /cube rulings for card-specific official rulings")
     }
 
     /** One combo as a `Cards: … → Produces: …` block with a Spellbook link, within the field cap. */

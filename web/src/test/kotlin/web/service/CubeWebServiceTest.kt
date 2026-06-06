@@ -224,6 +224,26 @@ class CubeWebServiceTest {
         assertTrue(result.error.contains("card name"))
     }
 
+    // --- set / rule reference ------------------------------------------
+
+    @Test
+    fun `set rejects a blank code without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.set("  "))
+        assertTrue(result.error.contains("set code"))
+    }
+
+    @Test
+    fun `rule resolves a keyword from the built-in glossary`() {
+        val result = assertInstanceOf(CubeResult.Success::class.java, service.rule("trample"))
+        assertEquals("Trample", (result.value as web.service.RuleView).keyword)
+    }
+
+    @Test
+    fun `rule reports an unknown keyword and a blank term`() {
+        assertInstanceOf(CubeResult.Failure::class.java, service.rule("zzz"))
+        assertInstanceOf(CubeResult.Failure::class.java, service.rule("  "))
+    }
+
     // --- diff (compare two lists) --------------------------------------
 
     @Test

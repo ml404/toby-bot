@@ -159,6 +159,12 @@
                 <span class="cube-tab-label">Legality</span>
                 <span class="cube-tab-sub">Check a deck</span>
             </button>
+            <button type="button" id="tab-reference" class="cube-tab" role="tab"
+                    data-tab="reference" aria-controls="panel-reference" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">📖</span>
+                <span class="cube-tab-label">Reference</span>
+                <span class="cube-tab-sub">Sets &amp; keywords</span>
+            </button>
         </div>
 
         <!-- Generate -->
@@ -355,6 +361,32 @@
             </form>
             <p class="cube-status" data-status="legality" aria-live="polite"></p>
             <div class="cube-legality" data-result="legality" hidden></div>
+        </section>
+
+        <!-- Reference: set lookup + keyword glossary -->
+        <section id="panel-reference" class="cube-panel" role="tabpanel" aria-labelledby="tab-reference"
+                 data-panel="reference" hidden>
+            <p class="cube-panel-intro">
+                Quick reference — look up a Magic set by its code, or a keyword's reminder text.
+                The website twin of <code>/cube set</code> and <code>/cube rule</code>.
+            </p>
+            <form class="cube-form" data-form="set" autocomplete="off">
+                <label>Set code
+                    <input type="text" name="code" placeholder="e.g. vow, mh3, neo" autocomplete="off" required>
+                </label>
+                <button type="submit" class="btn cube-submit">Look up set</button>
+            </form>
+            <p class="cube-status" data-status="set" aria-live="polite"></p>
+            <div class="cube-setinfo" data-result="set" hidden></div>
+
+            <form class="cube-form" data-form="rule" autocomplete="off" style="margin-top: var(--space-4);">
+                <label>Keyword
+                    <input type="text" name="term" placeholder="e.g. trample, deathtouch, flying" autocomplete="off" required>
+                </label>
+                <button type="submit" class="btn cube-submit">Explain keyword</button>
+            </form>
+            <p class="cube-status" data-status="rule" aria-live="polite"></p>
+            <div class="cube-rule" data-result="rule" hidden></div>
         </section>
     </div>
 </main>

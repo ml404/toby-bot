@@ -9,6 +9,7 @@ import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import common.mtg.MtgSet
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.get
@@ -260,6 +261,44 @@ class ScryfallCubeFetcher @Autowired constructor(
         }
     }
 
+    /**
+     * Looks up a Magic set by its code (e.g. "vow") via Scryfall's `/sets/:code`.
+     * Returns null when the code is unknown, blank, or Scryfall is unreachable.
+     */
+    suspend fun fetchSet(code: String): MtgSet? = withContext(dispatcher) {
+        val trimmed = code.trim().lowercase()
+        if (trimmed.isEmpty()) return@withContext null
+        val url = "$SETS_ENDPOINT/" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        try {
+            val response = client.get(url) {
+                header(HttpHeaders.Accept, "application/json")
+                timeout { requestTimeoutMillis = TIMEOUT_MS }
+            }
+            if (response.status.value != 200) return@withContext null
+            parseSet(JsonParser.parseString(response.bodyAsText()).asJsonObject)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error("Scryfall set lookup failed for '$trimmed': $e")
+            null
+        }
+    }
+
+    /** Maps a Scryfall set object to [MtgSet], or null without a code/name. */
+    fun parseSet(set: JsonObject): MtgSet? {
+        val code = set.get("code")?.asString?.takeIf { it.isNotBlank() } ?: return null
+        val name = set.get("name")?.asString?.takeIf { it.isNotBlank() } ?: return null
+        return MtgSet(
+            code = code.uppercase(),
+            name = name,
+            setType = set.get("set_type")?.asString?.replace('_', ' ') ?: "",
+            releasedAt = set.get("released_at")?.asString?.takeIf { it.isNotBlank() },
+            cardCount = set.get("card_count")?.asInt ?: 0,
+            iconUrl = set.get("icon_svg_uri")?.asString?.takeIf { it.isNotBlank() },
+            scryfallUri = set.get("scryfall_uri")?.asString?.takeIf { it.isNotBlank() },
+        )
+    }
+
     /** Maps a Commander Spellbook variants response into [CardCombos.Combo]s. */
     fun parseCombos(root: JsonObject): List<CardCombos.Combo> =
         root.getAsJsonArray("results")?.mapNotNull { element ->
@@ -400,6 +439,7 @@ class ScryfallCubeFetcher @Autowired constructor(
         private const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         private const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
         private const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
+        private const val SETS_ENDPOINT = "https://api.scryfall.com/sets"
         private const val SPELLBOOK_ENDPOINT = "https://backend.commanderspellbook.com/variants/"
 
         /** Cap on how many combos a single `/cube combos` lookup returns. */
