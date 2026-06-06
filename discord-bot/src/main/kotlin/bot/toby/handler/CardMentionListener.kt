@@ -71,6 +71,8 @@ class CardMentionListener @Autowired constructor(
                 if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
                 card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
                 add("**Colour identity** · $colours")
+                CubeEmbeds.priceLine(card)?.let { add("**Price** · $it") }
+                if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
             }.joinToString("\n")
             setDescription(facts + (card.oracleText?.let { "\n\n${CubeEmbeds.oracleBlock(it)}" }.orEmpty()))
         }

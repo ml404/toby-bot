@@ -40,6 +40,8 @@ object CubeAnalytics {
         val duplicates: List<Duplicate>,
         val colorPairs: List<ColorPairCount>,
         val colorPips: List<ColorPipCount>,
+        /** Sum of the priced cards' USD value, or null when none are priced. */
+        val totalValueUsd: Double?,
     )
 
     /** The highest mana-value bucket; everything at or above it folds into "7+". */
@@ -70,7 +72,12 @@ object CubeAnalytics {
         duplicates = duplicates(cards),
         colorPairs = colorPairs(cards),
         colorPips = colorPips(cards),
+        totalValueUsd = totalValueUsd(cards),
     )
+
+    /** Sum of the priced cards' USD value, or null when none of the pool is priced. */
+    fun totalValueUsd(cards: List<CubeCard>): Double? =
+        cards.mapNotNull { it.priceUsd?.toDoubleOrNull() }.takeIf { it.isNotEmpty() }?.sum()
 
     /**
      * Two-colour cards grouped by guild, in guild order, present pairs only —

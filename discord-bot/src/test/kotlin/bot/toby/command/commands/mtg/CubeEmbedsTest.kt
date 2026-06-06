@@ -22,7 +22,8 @@ class CubeEmbedsTest {
         land: Boolean = false,
         colors: Set<MtgColor> = emptySet(),
         manaCost: String? = null,
-    ) = CubeCard(name = name, colors = colors, isLand = land, typeLine = typeLine, manaValue = mv, rarity = rarity, manaCost = manaCost)
+        priceUsd: String? = null,
+    ) = CubeCard(name = name, colors = colors, isLand = land, typeLine = typeLine, manaValue = mv, rarity = rarity, manaCost = manaCost, priceUsd = priceUsd)
 
     private fun preview(pool: List<CubeCard>, packSize: Int = 5) = CubeEmbeds.previewEmbed(
         query = "test",
@@ -154,6 +155,52 @@ class CubeEmbedsTest {
         val desc = CubeEmbeds.cardEmbed(card).description!!
         assertTrue(desc.contains("Colour identity** · Colourless"))
         assertFalse(desc.contains("Rarity"))
+    }
+
+    @Test
+    fun `cardEmbed shows price and legality when present, omits them otherwise`() {
+        val priced = CubeCard(
+            name = "Ragavan, Nimble Pilferer",
+            colors = setOf(MtgColor.RED),
+            typeLine = "Legendary Creature — Monkey Pirate",
+            manaValue = 1.0,
+            rarity = "mythic",
+            priceUsd = "60.00",
+            priceEur = "55.50",
+            priceTix = "12.00",
+            legalFormats = listOf("Modern", "Legacy"),
+        )
+        val desc = CubeEmbeds.cardEmbed(priced).description!!
+        assertTrue(desc.contains("Price** · \$60.00 · €55.50 · 12.00 tix"), "price line: $desc")
+        assertTrue(desc.contains("Legal** · Modern, Legacy"), "legal line: $desc")
+
+        val bare = CubeCard(name = "Token", typeLine = "Token", manaValue = 0.0)
+        val bareDesc = CubeEmbeds.cardEmbed(bare).description!!
+        assertFalse(bareDesc.contains("Price"))
+        assertFalse(bareDesc.contains("Legal"))
+    }
+
+    @Test
+    fun `priceLine joins present currencies only and is null when unpriced`() {
+        assertEquals("\$1.50", CubeEmbeds.priceLine(CubeCard(name = "A", priceUsd = "1.50")))
+        assertEquals(
+            "\$1.50 · €1.20 · 0.03 tix",
+            CubeEmbeds.priceLine(CubeCard(name = "B", priceUsd = "1.50", priceEur = "1.20", priceTix = "0.03")),
+        )
+        assertNull(CubeEmbeds.priceLine(CubeCard(name = "C")))
+    }
+
+    @Test
+    fun `previewEmbed shows the cube's total USD value only when cards are priced`() {
+        val priced = listOf(
+            card("Bolt", "Instant", 1.0, "common", priceUsd = "2.00"),
+            card("Bear", "Creature — Bear", 2.0, "common", priceUsd = "0.50"),
+        )
+        val value = field(preview(priced), "Cube value")
+        assertNotNull(value)
+        assertTrue(value!!.value!!.contains("2.50"), "total value: ${value.value}")
+
+        assertNull(field(preview(listOf(card("Token", "Token", 0.0, null))), "Cube value"))
     }
 
     @Test

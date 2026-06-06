@@ -116,6 +116,24 @@ class CardMentionListenerTest {
     }
 
     @Test
+    fun `a card-mention embed includes the price and legal formats when present`() {
+        message("[[Ragavan]]")
+        coEvery { fetcher.fetchNamed("Ragavan") } returns CubeCard(
+            "Ragavan, Nimble Pilferer", setOf(MtgColor.RED), typeLine = "Legendary Creature — Monkey Pirate",
+            manaValue = 1.0, imageUrl = "https://img/ragavan.jpg", rarity = "mythic",
+            priceUsd = "60.00", priceTix = "12.00", legalFormats = listOf("Modern", "Legacy"),
+        )
+
+        listener.onMessageReceived(event)
+
+        val captured = mutableListOf<Collection<MessageEmbed>>()
+        verify { event.channel.sendMessageEmbeds(capture(captured)) }
+        val desc = captured.first().toList().first().description!!
+        assertTrue(desc.contains("Price** · \$60.00 · 12.00 tix"), "price line: $desc")
+        assertTrue(desc.contains("Legal** · Modern, Legacy"), "legal line: $desc")
+    }
+
+    @Test
     fun `a double-faced card mention adds a second embed for the back face`() {
         message("[[Delver of Secrets]]")
         coEvery { fetcher.fetchNamed("Delver of Secrets") } returns CubeCard(

@@ -1110,6 +1110,14 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     letter-spacing: 0.04em;
 }
 
+/* Total cube value (sum of priced cards), shown under the analytics breakdown. */
+.cube-total-value {
+    margin: var(--space-2) 0 0;
+    color: var(--heading);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 /* Singleton-violation warning (non-basic duplicates), matching .cube-notfound. */
 .cube-dup-warning {
     margin: var(--space-2) 0 0;

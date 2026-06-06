@@ -334,7 +334,16 @@
         if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
         if (els.pairs) renderColorPairs(els.pairs, analytics.colorPairs || []);
         if (els.pips) renderColorPips(els.pips, analytics.colorPips || []);
+        renderTotalValue(els.value, analytics.totalValueUsd);
         show(els.breakdown);
+    }
+
+    /** "≈ $123.45 in priced cards (USD)" — hidden when nothing in the pool is priced. */
+    function renderTotalValue(el, totalValueUsd) {
+        if (!el) return;
+        if (totalValueUsd == null) { el.hidden = true; el.textContent = ''; return; }
+        el.textContent = '≈ $' + Number(totalValueUsd).toFixed(2) + ' in priced cards (USD)';
+        el.hidden = false;
     }
 
     /** As-fan bars only (the secondary "balance" view under a generate). */
@@ -368,6 +377,18 @@
     /** GET URL for the single-card lookup. */
     function cardUrl(name) {
         return '/cube/api/card?name=' + encodeURIComponent(name);
+    }
+
+    /**
+     * A card's market prices as a compact one-liner ("$1.50 · €1.20 · 0.03 tix"),
+     * present currencies only, or '' when Scryfall has no price for it. Pure.
+     */
+    function priceLine(card) {
+        const parts = [];
+        if (card.priceUsd) parts.push('$' + card.priceUsd);
+        if (card.priceEur) parts.push('€' + card.priceEur);
+        if (card.priceTix) parts.push(card.priceTix + ' tix');
+        return parts.join(' · ');
     }
 
     /** Renders a looked-up card: its (large) image beside a list of facts. */
@@ -422,6 +443,8 @@
         fact('Mana value', card.manaValue);
         fact('Rarity', card.rarity);
         fact('Colour identity', (card.colors && card.colors.length) ? card.colors.join(', ') : 'Colourless');
+        fact('Price', priceLine(card));
+        fact('Legal', (card.legalFormats && card.legalFormats.length) ? card.legalFormats.join(', ') : '');
 
         if (card.oracleText) {
             const oracle = document.createElement('p');
@@ -1193,6 +1216,7 @@
         const rarity = q(doc, '[data-rarity="preview"]');
         const pairs = q(doc, '[data-pairs="preview"]');
         const pips = q(doc, '[data-pips="preview"]');
+        const value = q(doc, '[data-value="preview"]');
         const actions = q(doc, '[data-actions="preview"]');
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
@@ -1269,7 +1293,7 @@
                     lastGroups = json.groups || [];
                     show(actions);
                     renderNotFound(notFound, json.notFound);
-                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips });
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1555,7 +1579,9 @@
         renderDistribution: renderDistribution,
         renderDiff: renderDiff,
         cardUrl: cardUrl,
+        priceLine: priceLine,
         renderCardLookup: renderCardLookup,
+        renderTotalValue: renderTotalValue,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,

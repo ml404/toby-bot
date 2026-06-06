@@ -65,6 +65,7 @@ internal object CubeEmbeds {
         field("Rarity", rarityTable(analytics.rarities), inline = false)
         if (analytics.colorPairs.isNotEmpty()) field("Colour pairs", pairTable(analytics.colorPairs), inline = false)
         if (analytics.colorPips.isNotEmpty()) field("Colour pips", pipTable(analytics.colorPips), inline = false)
+        analytics.totalValueUsd?.let { field("Cube value", "≈ $${format(it)} (priced cards, USD)", inline = false) }
         addDuplicatesField(analytics.duplicates)
         addNotFoundField(notFound)
     }
@@ -191,10 +192,22 @@ internal object CubeEmbeds {
             add("**Mana value** · ${formatMv(card.manaValue)}")
             card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
             add("**Colour identity** · $colours")
+            priceLine(card)?.let { add("**Price** · $it") }
+            if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
         }.joinToString("\n")
         val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
         setDescription(facts + oracle)
     }
+
+    /**
+     * The card's market prices as a compact one-liner (`$1.50 · €1.20 · 0.03 tix`),
+     * present currencies only, or null when Scryfall has no price for it.
+     */
+    fun priceLine(card: CubeCard): String? = buildList {
+        card.priceUsd?.let { add("$$it") }
+        card.priceEur?.let { add("€$it") }
+        card.priceTix?.let { add("$it tix") }
+    }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
     /** Mana value without a trailing `.0` (whole numbers are the norm). */
     private fun formatMv(mv: Double): String =

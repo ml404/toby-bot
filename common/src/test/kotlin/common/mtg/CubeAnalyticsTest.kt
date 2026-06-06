@@ -13,6 +13,7 @@ class CubeAnalyticsTest {
         rarity: String? = "common",
         colors: Set<MtgColor> = emptySet(),
         manaCost: String? = null,
+        priceUsd: String? = null,
     ) = CubeCard(
         name = name,
         colors = colors,
@@ -21,6 +22,7 @@ class CubeAnalyticsTest {
         manaValue = manaValue,
         rarity = rarity,
         manaCost = manaCost,
+        priceUsd = priceUsd,
     )
 
     // --- mana curve ----------------------------------------------------
@@ -208,6 +210,26 @@ class CubeAnalyticsTest {
         assertEquals(listOf("White", "Red", "Green"), CubeAnalytics.colorPips(pool).map { it.color })
     }
 
+    // --- total value ---------------------------------------------------
+
+    @Test
+    fun `totalValueUsd sums priced cards and ignores unpriced or unparseable ones`() {
+        val pool = listOf(
+            card("A", priceUsd = "1.50"),
+            card("B", priceUsd = "2.25"),
+            card("C", priceUsd = null),      // unpriced — ignored
+            card("D", priceUsd = ""),        // blank — ignored
+            card("E", priceUsd = "n/a"),     // not a number — ignored
+        )
+        assertEquals(3.75, CubeAnalytics.totalValueUsd(pool)!!, 1e-9)
+    }
+
+    @Test
+    fun `totalValueUsd is null when nothing in the pool is priced`() {
+        val pool = listOf(card("A"), card("B", priceUsd = ""))
+        assertEquals(null, CubeAnalytics.totalValueUsd(pool))
+    }
+
     // --- analyze (aggregate) -------------------------------------------
 
     @Test
@@ -223,6 +245,16 @@ class CubeAnalyticsTest {
         assertEquals(1.5, a.averageManaValue, 1e-9)
         assertEquals(setOf("Creature", "Instant", "Land"), a.types.map { it.type.displayName }.toSet())
         assertTrue(a.duplicates.isEmpty())
+        assertEquals(null, a.totalValueUsd) // none of these cards carry a price
+    }
+
+    @Test
+    fun `analyze carries the total USD value when cards are priced`() {
+        val pool = listOf(
+            card("Bolt", "Instant", 1.0, priceUsd = "2.00"),
+            card("Bear", "Creature — Bear", 2.0, priceUsd = "0.50"),
+        )
+        assertEquals(2.50, CubeAnalytics.analyze(pool, packSize = 2).totalValueUsd!!, 1e-9)
     }
 
     @Test
@@ -237,5 +269,6 @@ class CubeAnalyticsTest {
         assertTrue(a.colorPips.isEmpty())
         assertEquals(8, a.curve.size) // still the eight empty buckets
         assertTrue(a.curve.all { it.count == 0 })
+        assertEquals(null, a.totalValueUsd)
     }
 }

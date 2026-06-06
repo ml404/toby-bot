@@ -418,6 +418,56 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
         Cube.renderCardLookup(container, { name: 'Sol Ring', imageUrlLarge: 'n.jpg', typeLine: 'Artifact', manaValue: 1, manaCost: '{1}', rarity: null, colors: [] });
         expect(container.querySelector('.cube-cardlookup-facts').textContent).toContain('Colourless');
     });
+
+    test('renderCardLookup shows price and legal formats when present', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, {
+            name: 'Ragavan, Nimble Pilferer', imageUrlLarge: 'n.jpg', typeLine: 'Legendary Creature',
+            manaValue: 1, manaCost: '{R}', rarity: 'Mythic', colors: ['Red'],
+            priceUsd: '60.00', priceEur: '55.50', priceTix: '12.00',
+            legalFormats: ['Modern', 'Legacy'],
+        });
+        const text = container.querySelector('.cube-cardlookup-facts').textContent;
+        expect(text).toContain('$60.00 · €55.50 · 12.00 tix');
+        expect(text).toContain('Modern, Legacy');
+    });
+
+    test('renderCardLookup omits price and legal lines when the card has neither', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, { name: 'Token', imageUrlLarge: 'n.jpg', typeLine: 'Token', manaValue: 0, rarity: null, colors: [] });
+        const text = container.querySelector('.cube-cardlookup-facts').textContent;
+        expect(text).not.toContain('Price');
+        expect(text).not.toContain('Legal');
+    });
+});
+
+describe('priceLine (pure)', () => {
+    test('joins present currencies only', () => {
+        expect(Cube.priceLine({ priceUsd: '1.50' })).toBe('$1.50');
+        expect(Cube.priceLine({ priceUsd: '1.50', priceEur: '1.20', priceTix: '0.03' })).toBe('$1.50 · €1.20 · 0.03 tix');
+        expect(Cube.priceLine({ priceEur: '1.20' })).toBe('€1.20');
+    });
+
+    test('is empty when the card has no prices', () => {
+        expect(Cube.priceLine({})).toBe('');
+    });
+});
+
+describe('renderTotalValue', () => {
+    test('shows the rounded USD total and reveals the element', () => {
+        const el = document.createElement('p');
+        el.hidden = true;
+        Cube.renderTotalValue(el, 123.456);
+        expect(el.hidden).toBe(false);
+        expect(el.textContent).toBe('≈ $123.46 in priced cards (USD)');
+    });
+
+    test('hides the element when nothing is priced (null)', () => {
+        const el = document.createElement('p');
+        Cube.renderTotalValue(el, null);
+        expect(el.hidden).toBe(true);
+        expect(el.textContent).toBe('');
+    });
 });
 
 describe('renderDiff (compare two lists)', () => {
@@ -577,6 +627,8 @@ describe('cube report analytics renderers', () => {
         const rarity = document.createElement('div');
         const pairs = document.createElement('div');
         const pips = document.createElement('div');
+        const value = document.createElement('p');
+        value.hidden = true;
         Cube.renderAnalytics(
             {
                 curve: [{ label: '0', count: 1 }, { label: '1', count: 2 }],
@@ -587,8 +639,9 @@ describe('cube report analytics renderers', () => {
                 duplicates: [{ name: 'Sol Ring', count: 2 }],
                 colorPairs: [{ pair: 'Azorius (WU)', count: 4 }],
                 colorPips: [{ color: 'White', count: 6 }],
+                totalValueUsd: 42.5,
             },
-            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value },
         );
         expect(breakdown.hidden).toBe(false);
         expect(avgMv.textContent).toContain('Average mana value 2.50');
@@ -599,6 +652,8 @@ describe('cube report analytics renderers', () => {
         expect(pairs.querySelector('.cube-bar-label').textContent).toBe('Azorius (WU)');
         expect(pips.querySelector('.cube-bar-label').textContent).toBe('White');
         expect(dupes.hidden).toBe(false);
+        expect(value.hidden).toBe(false);
+        expect(value.textContent).toContain('$42.50');
     });
 
     test('renderAnalytics tolerates a missing payload and an all-land pool', () => {
