@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add operator-only /admin/installs page showing who installed the bot",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 662
+  },
+  {
+    "date": "June 2026",
     "title": "Reprioritise the Magic toolkit page as a multi-tool hub (not cube-first)",
     "summary": "## Why",
     "emoji": "✨",
