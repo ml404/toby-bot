@@ -8,7 +8,11 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality', 'reference', 'watch'];
+    const TABS = ['card', 'legality', 'watch', 'reference', 'generate', 'preview', 'asfan', 'compare'];
+
+    // The tab shown on load when there's no #hash deep-link. The toolkit leads
+    // with the broadly-useful card lookup rather than the niche cube builder.
+    const DEFAULT_TAB = 'card';
 
     // Tools that work off their own inputs, not the shared "Your cube" source.
     const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality', 'reference', 'watch'];
@@ -907,8 +911,10 @@
                 }
             });
         });
+        // Normalise the initial state: a #hash deep-link wins, else the default
+        // tab — this also hides the cube-only scaffolding when defaulting to card.
         const fromHash = tabIdFromHash(root.location && root.location.hash);
-        if (fromHash) activateTab(doc, fromHash);
+        activateTab(doc, fromHash || DEFAULT_TAB);
     }
 
     /**

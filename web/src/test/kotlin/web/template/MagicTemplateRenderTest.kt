@@ -89,6 +89,29 @@ class MagicTemplateRenderTest {
     }
 
     @Test
+    fun `the toolkit leads with card lookup, not the cube builder`() {
+        val html = render(mapOf("loggedIn" to false))
+
+        // Card lookup is the default tab; the cube builder is no longer the
+        // landing tool now the page is a multi-tool hub.
+        assertTrue(
+            html.contains(Regex("""data-tab="card"[^>]*aria-selected="true"""")),
+        ) { "expected the Card lookup tab to be selected by default" }
+        assertTrue(
+            html.contains(Regex("""data-tab="generate"[^>]*aria-selected="false"""")),
+        ) { "expected the Generate tab to NOT be selected by default" }
+        // The card panel is the visible one; generate is hidden initially.
+        assertTrue(html.contains(Regex("""id="panel-card"[^>]*data-panel="card">"""))) {
+            "expected the card panel to be visible (no hidden attribute) by default"
+        }
+        // The cube-only onboarding (steps + explainer) is gated behind data-needs-cube
+        // and hidden by default, rather than greeting every visitor in the hero.
+        assertTrue(html.contains(Regex("""class="cube-onboarding" data-needs-cube hidden"""))) {
+            "expected the cube onboarding to be hidden behind data-needs-cube by default"
+        }
+    }
+
+    @Test
     fun `command names render from the MtgCommandRef model attribute`() {
         val html = render(mapOf("loggedIn" to true, "username" to "tester"))
 
