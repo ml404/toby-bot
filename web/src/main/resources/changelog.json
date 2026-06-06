@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add a Compare tab: diff two card lists on the web",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 641
+  },
+  {
+    "date": "June 2026",
     "title": "Add /cube card &lt;name&gt; single-card lookup",
     "summary": "## Why",
     "emoji": "✨",
