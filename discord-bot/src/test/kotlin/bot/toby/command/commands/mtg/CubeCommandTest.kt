@@ -103,6 +103,8 @@ class CubeCommandTest : CommandTest {
         run()
 
         assertEquals("Cube preview", slot.captured.title)
+        // The cube report is wired in: the analytics fields ride along.
+        assertTrue(slot.captured.fields.any { it.name == "Card types" })
         coVerify(exactly = 1) { fetcher.fetch(any(), any()) }
     }
 
