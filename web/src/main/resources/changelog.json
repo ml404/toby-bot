@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add card rulings lookup to the MTG tools (Discord + web)",
+    "summary": "Rounds out the \"card bot\" feature set: look up a Magic card's **official rulings** (the rules team's clarifications for tricky interactions) on both Discord and the web — the last of the three hot features picked earlier (prices ✅, legality ✅, rulings — this PR).",
+    "emoji": "✨",
+    "prNumber": 648
+  },
+  {
+    "date": "June 2026",
     "title": "Add card prices, format legality and cube value to the MTG tools",
     "summary": "Surfaces Scryfall **market prices** (USD / EUR / MTGO tix) and current **format legality** across every Magic card surface, plus a cube-wide **total value** — three of the most-requested \"card bot\" features, which broadens install appeal for trading/deckbuilding communities.",
     "emoji": "🛡️",
