@@ -7,6 +7,7 @@ import common.mtg.AsFan
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
+import common.mtg.DeckLegality
 import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.PackGenerator
@@ -69,7 +70,8 @@ class CubeCommand @Autowired constructor(
             SUB_SAVED -> launchHandling(ctx) { handleSaved(ctx, requestingUserDto, deleteDelay) }
             SUB_CARD -> launchHandling(ctx) { handleCard(ctx, deleteDelay) }
             SUB_RULINGS -> launchHandling(ctx) { handleRulings(ctx, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card or rulings."), deleteDelay)
+            SUB_LEGALITY -> launchHandling(ctx) { handleLegality(ctx, requestingUserDto, deleteDelay) }
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card, rulings or legality."), deleteDelay)
         }
     }
 
@@ -275,6 +277,23 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Checks a saved cube / queried pool against a format's banned & legality list. */
+    private suspend fun handleLegality(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
+        val formatKey = ctx.event.stringOption(OPT_FORMAT)?.trim()?.lowercase()
+        val format = CubeCard.FORMATS.firstOrNull { it.first == formatKey }
+        if (format == null) {
+            reply(ctx, CubeEmbeds.errorEmbed("Pick a `format` to check against (e.g. Modern, Commander)."), deleteDelay)
+            return
+        }
+        when (val resolved = resolvePool(ctx, requestingUserDto)) {
+            is PoolResult.Failed -> reply(ctx, CubeEmbeds.errorEmbed(resolved.message), deleteDelay)
+            is PoolResult.Ready -> {
+                val report = DeckLegality.check(resolved.pool, format.first)
+                reply(ctx, CubeEmbeds.legalityEmbed(report, format.second, resolved.label, resolved.notFound), deleteDelay)
+            }
+        }
+    }
+
     private fun reply(ctx: CommandContext, embed: MessageEmbed, deleteDelay: Int) {
         ctx.event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -313,6 +332,14 @@ class CubeCommand @Autowired constructor(
             .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Lightning Bolt).", true)),
         SubcommandData(SUB_RULINGS, "Look up a Magic card's official rulings by name.")
             .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Doubling Season).", true)),
+        SubcommandData(SUB_LEGALITY, "Check whether a saved cube/deck is legal in a format (banned & not-legal cards).")
+            .addOptions(
+                OptionData(OptionType.STRING, OPT_FORMAT, "Format to check against.", true)
+                    .addChoices(CubeCard.FORMATS.map { net.dv8tion.jda.api.interactions.commands.Command.Choice(it.second, it.first) }),
+                OptionData(OptionType.STRING, OPT_SAVED, "Name of a deck/cube you saved on the website.", false)
+                    .setAutoComplete(true),
+                OptionData(OptionType.STRING, OPT_QUERY, "Or a Scryfall search to check instead (e.g. set:mh3).", false),
+            ),
     )
 
     companion object {
@@ -322,9 +349,11 @@ class CubeCommand @Autowired constructor(
         const val SUB_SAVED = "saved"
         const val SUB_CARD = "card"
         const val SUB_RULINGS = "rulings"
+        const val SUB_LEGALITY = "legality"
 
         const val OPT_TOTAL = "total"
         const val OPT_NAME = "name"
+        const val OPT_FORMAT = "format"
         const val OPT_CUBE_SIZE = "cube-size"
         const val OPT_PACK_SIZE = "pack-size"
         const val OPT_QUERY = "query"

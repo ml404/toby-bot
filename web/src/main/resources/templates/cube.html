@@ -153,6 +153,12 @@
                 <span class="cube-tab-label">Card lookup</span>
                 <span class="cube-tab-sub">Find one card</span>
             </button>
+            <button type="button" id="tab-legality" class="cube-tab" role="tab"
+                    data-tab="legality" aria-controls="panel-legality" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">⚖️</span>
+                <span class="cube-tab-label">Legality</span>
+                <span class="cube-tab-sub">Check a deck</span>
+            </button>
         </div>
 
         <!-- Generate -->
@@ -320,6 +326,35 @@
             </form>
             <p class="cube-status" data-status="card" aria-live="polite"></p>
             <div class="cube-cardlookup-wrap" data-result="card" hidden></div>
+        </section>
+
+        <!-- Legality -->
+        <section id="panel-legality" class="cube-panel" role="tabpanel" aria-labelledby="tab-legality"
+                 data-panel="legality" hidden>
+            <p class="cube-panel-intro">
+                Paste a decklist and pick a format to see whether it's legal — every banned or
+                not-in-format card is flagged. The website twin of <code>/cube legality</code>.
+            </p>
+            <form class="cube-form" data-form="legality" autocomplete="off">
+                <label>Decklist
+                    <textarea name="list" rows="10" spellcheck="false"
+                              placeholder="One card per line:&#10;4 Ragavan, Nimble Pilferer&#10;4 Lightning Bolt&#10;20 Mountain"></textarea>
+                </label>
+                <label>Format
+                    <select name="format">
+                        <option value="standard">Standard</option>
+                        <option value="pioneer">Pioneer</option>
+                        <option value="modern" selected>Modern</option>
+                        <option value="legacy">Legacy</option>
+                        <option value="vintage">Vintage</option>
+                        <option value="pauper">Pauper</option>
+                        <option value="commander">Commander</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn cube-submit">Check legality</button>
+            </form>
+            <p class="cube-status" data-status="legality" aria-live="polite"></p>
+            <div class="cube-legality" data-result="legality" hidden></div>
         </section>
     </div>
 </main>

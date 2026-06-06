@@ -1279,6 +1279,58 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     }
 }
 
+/* Deck legality result. */
+.cube-legality {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+.cube-legality[hidden] {
+    display: none;
+}
+
+.cube-legality-headline {
+    margin: 0;
+    font-weight: 600;
+}
+
+.cube-legality-headline.is-legal {
+    color: #22c55e;
+}
+
+.cube-legality-headline.is-illegal {
+    color: #ef4444;
+}
+
+.cube-legality-h {
+    margin: 0 0 var(--space-1);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--heading);
+}
+
+.cube-legality-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: grid;
+    gap: 2px;
+    font-size: 0.85rem;
+}
+
+.cube-legality-banned .cube-legality-h {
+    color: #ef4444;
+}
+
+.cube-legality-notlegal .cube-legality-h {
+    color: #f59e0b;
+}
+
+.cube-legality-empty {
+    color: var(--text-muted);
+}
+
 /* Single-card lookup: image beside its facts. */
 .cube-cardlookup-wrap[hidden] {
     display: none;

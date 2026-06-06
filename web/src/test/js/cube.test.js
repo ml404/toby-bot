@@ -67,6 +67,7 @@ describe('tabIdFromHash', () => {
         expect(Cube.tabIdFromHash('#asfan')).toBe('asfan');
         expect(Cube.tabIdFromHash('#compare')).toBe('compare');
         expect(Cube.tabIdFromHash('#card')).toBe('card');
+        expect(Cube.tabIdFromHash('#legality')).toBe('legality');
     });
 
     test('returns null for anything else', () => {
@@ -599,6 +600,41 @@ describe('renderDiff (compare two lists)', () => {
         const same = document.createElement('div');
         Cube.renderDiff(same, { added: [], removed: [], changed: [], sizeA: 1, sizeB: 1 });
         expect(same.querySelector('.cube-diff-empty').textContent).toContain('No differences');
+    });
+});
+
+describe('renderLegality (deck legality verdict)', () => {
+    test('illegal deck shows the headline and bucketed offenders', () => {
+        const el = document.createElement('div');
+        Cube.renderLegality(el, {
+            format: 'Modern', legal: false, total: 60,
+            banned: ['Lurrus of the Dream-Den'], notLegal: ['Black Lotus'], restricted: [], unknown: [],
+        });
+        expect(el.querySelector('.cube-legality-headline').classList.contains('is-illegal')).toBe(true);
+        expect(el.querySelector('.cube-legality-headline').textContent).toContain('Not legal in Modern');
+        expect(el.querySelector('.cube-legality-banned').textContent).toContain('Lurrus of the Dream-Den');
+        expect(el.querySelector('.cube-legality-notlegal').textContent).toContain('Black Lotus');
+        expect(el.querySelector('.cube-legality-empty')).toBeNull();
+    });
+
+    test('legal deck shows a positive headline and the all-clear note', () => {
+        const el = document.createElement('div');
+        Cube.renderLegality(el, {
+            format: 'Modern', legal: true, total: 60,
+            banned: [], notLegal: [], restricted: [], unknown: [],
+        });
+        expect(el.querySelector('.cube-legality-headline').classList.contains('is-legal')).toBe(true);
+        expect(el.querySelector('.cube-legality-empty').textContent).toContain('Every card is legal in Modern');
+    });
+
+    test('restricted cards are flagged without an all-clear note', () => {
+        const el = document.createElement('div');
+        Cube.renderLegality(el, {
+            format: 'Vintage', legal: true, total: 60,
+            banned: [], notLegal: [], restricted: ['Sol Ring'], unknown: [],
+        });
+        expect(el.querySelector('.cube-legality-restricted').textContent).toContain('Sol Ring');
+        expect(el.querySelector('.cube-legality-empty')).toBeNull();
     });
 });
 

@@ -7,10 +7,10 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card'];
+    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card', 'legality'];
 
     // Tools that work off their own inputs, not the shared "Your cube" source.
-    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card'];
+    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality'];
 
     // Colour-pie palette for swatches/bars. Tuned to read on the dark
     // dashboard background while staying recognisably W/U/B/R/G + gold
@@ -614,6 +614,54 @@
             p.className = 'cube-diff-empty';
             p.textContent = 'No differences — the two lists match.';
             container.appendChild(p);
+        }
+        return container;
+    }
+
+    /** POST body builder isn't needed; the URL is constant. */
+    function legalityUrl() {
+        return '/cube/api/legality';
+    }
+
+    /**
+     * Renders a deck-legality verdict: a legal/illegal headline, then the
+     * offending cards bucketed (banned / not in format / restricted / unknown).
+     */
+    function renderLegality(container, data) {
+        container.replaceChildren();
+        const headline = document.createElement('p');
+        headline.className = 'cube-legality-headline ' + (data.legal ? 'is-legal' : 'is-illegal');
+        headline.textContent = (data.legal ? '✅ Legal in ' : '🚫 Not legal in ') + data.format +
+            ' — checked ' + data.total + ' card' + (data.total === 1 ? '' : 's');
+        container.appendChild(headline);
+
+        function bucket(title, names, kind) {
+            if (!names || !names.length) return;
+            const block = document.createElement('div');
+            block.className = 'cube-legality-group cube-legality-' + kind;
+            const h = document.createElement('h4');
+            h.className = 'cube-legality-h';
+            h.textContent = title + ' (' + names.length + ')';
+            block.appendChild(h);
+            const ul = document.createElement('ul');
+            ul.className = 'cube-legality-list';
+            names.forEach(function (name) {
+                const li = document.createElement('li');
+                li.textContent = name;
+                ul.appendChild(li);
+            });
+            block.appendChild(ul);
+            container.appendChild(block);
+        }
+        bucket('Banned', data.banned, 'banned');
+        bucket('Not in format', data.notLegal, 'notlegal');
+        bucket('Restricted (max 1)', data.restricted, 'restricted');
+        bucket('Unknown', data.unknown, 'unknown');
+        if (data.legal && (!data.restricted || !data.restricted.length)) {
+            const ok = document.createElement('p');
+            ok.className = 'cube-legality-empty';
+            ok.textContent = 'Every card is legal in ' + data.format + '.';
+            container.appendChild(ok);
         }
         return container;
     }
@@ -1299,6 +1347,33 @@
         });
     }
 
+    function wireLegality(doc) {
+        const form = q(doc, '[data-form="legality"]');
+        if (!form) return;
+        const status = statusFor(doc, 'legality');
+        const result = q(doc, '[data-result="legality"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = new FormData(form);
+            const list = (data.get('list') || '').trim();
+            const format = data.get('format') || 'modern';
+            if (!list) { setStatus(status, 'Paste a decklist to check.'); return; }
+            setStatus(status, 'Resolving your deck and checking legality…');
+            hide(result);
+            withBusy(form, true);
+            postJson(legalityUrl(), { list: list, format: format })
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'Could not check that deck.'); return; }
+                    setStatus(status, (json.note ? json.note : '') +
+                        (json.notFound && json.notFound.length ? ' Couldn’t find: ' + json.notFound.join(', ') : ''));
+                    renderLegality(result, json);
+                    show(result);
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
+    }
+
     function wireAsFan(doc) {
         const form = q(doc, '[data-form="asfan"]');
         if (!form) return;
@@ -1692,6 +1767,7 @@
         wireAsFan(doc);
         wireCompare(doc);
         wireCardLookup(doc);
+        wireLegality(doc);
         wirePreview(doc);
         wireGenerate(doc);
         wireCardFlip(doc);
@@ -1728,6 +1804,8 @@
         samplePackRequest: samplePackRequest,
         renderDistribution: renderDistribution,
         renderDiff: renderDiff,
+        legalityUrl: legalityUrl,
+        renderLegality: renderLegality,
         cardUrl: cardUrl,
         rulingsUrl: rulingsUrl,
         priceLine: priceLine,

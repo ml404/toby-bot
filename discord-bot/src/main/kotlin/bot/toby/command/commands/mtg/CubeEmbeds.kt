@@ -7,6 +7,7 @@ import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
+import common.mtg.DeckLegality
 import common.mtg.MtgColor
 import common.mtg.MtgCurrency
 import common.mtg.Rarity
@@ -227,6 +228,29 @@ internal object CubeEmbeds {
             ?: return null
         val (cur, amount) = total
         return "≈ ${cur.symbol}${format(amount)}${cur.suffix} (priced cards, ${cur.display})"
+    }
+
+    /**
+     * The deck-legality verdict for a format: a clear legal/illegal headline,
+     * then the offending cards bucketed (banned / not in format / restricted),
+     * each within the 1024-char field cap.
+     */
+    fun legalityEmbed(
+        report: DeckLegality.Report,
+        formatName: String,
+        label: String,
+        notFound: List<String> = emptyList(),
+    ): MessageEmbed = embed(color = if (report.legal) OK_COLOR else ERROR_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle(if (report.legal) "✅ Legal in $formatName" else "🚫 Not $formatName-legal")
+        setDescription("Checked **${report.total}** cards from `$label` against **$formatName**.")
+        if (report.banned.isNotEmpty()) field("⛔ Banned ${report.banned.size}", truncateField(report.banned.joinToString(", ")), inline = false)
+        if (report.notLegal.isNotEmpty()) field("🚫 Not in format ${report.notLegal.size}", truncateField(report.notLegal.joinToString(", ")), inline = false)
+        if (report.restricted.isNotEmpty()) field("⚠️ Restricted (max 1) ${report.restricted.size}", truncateField(report.restricted.joinToString(", ")), inline = false)
+        if (report.legal && report.restricted.isEmpty()) {
+            setFooter("Every card is legal in $formatName.")
+        }
+        addNotFoundField(notFound)
     }
 
     /** A two-line "most / least valuable card" block in the extremes' currency. */

@@ -285,11 +285,14 @@ class ScryfallCubeFetcher @Autowired constructor(
             priceUsd = price(card, "usd"),
             priceEur = price(card, "eur"),
             priceTix = price(card, "tix"),
-            legalFormats = CubeCard.legalFormatsOf { fmt ->
-                card.getAsJsonObject("legalities")?.get(fmt)?.asString
-            },
+            legalFormats = CubeCard.legalFormatsOf { fmt -> legality(card, fmt) },
+            legalities = CubeCard.legalitiesOf { fmt -> legality(card, fmt) },
         )
     }
+
+    /** A Scryfall `legalities` status for a format code, or null when absent. */
+    fun legality(card: JsonObject, format: String): String? =
+        card.getAsJsonObject("legalities")?.get(format)?.takeIf { !it.isJsonNull }?.asString
 
     /** A Scryfall `prices` entry (e.g. "usd"), or null when absent/blank. */
     fun price(card: JsonObject, key: String): String? =

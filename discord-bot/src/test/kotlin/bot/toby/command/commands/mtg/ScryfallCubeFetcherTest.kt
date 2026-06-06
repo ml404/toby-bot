@@ -168,9 +168,24 @@ class ScryfallCubeFetcherTest {
                  "vintage":"legal","pauper":"not_legal","commander":"legal"}}""")
         )!!
         assertEquals(listOf("Modern", "Legacy", "Vintage", "Commander"), card.legalFormats)
+        // The full raw status map drives the deck-legality checker.
+        assertEquals("not_legal", card.legalities["standard"])
+        assertEquals("legal", card.legalities["modern"])
 
         val noLegalities = fetcher.parseCard(obj("""{"name":"Token","color_identity":[],"type_line":"Token"}"""))!!
         assertTrue(noLegalities.legalFormats.isEmpty())
+        assertTrue(noLegalities.legalities.isEmpty())
+    }
+
+    @Test
+    fun `parseCard treats a banned status as kept in legalities but absent from legalFormats`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Lurrus","color_identity":["W","B"],"type_line":"Creature",
+               "legalities":{"modern":"banned","legacy":"banned","vintage":"restricted"}}""")
+        )!!
+        assertTrue(card.legalFormats.isEmpty()) // banned/restricted aren't "legal"
+        assertEquals("banned", card.legalities["modern"])
+        assertEquals("restricted", card.legalities["vintage"])
     }
 
     @Test

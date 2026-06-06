@@ -557,13 +557,54 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the six subcommands with their options`() {
+    fun `legality checks a saved deck against the chosen format and flags banned cards`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_LEGALITY
+        every { event.getOption(CubeCommand.OPT_FORMAT) } returns strOpt("modern")
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Deck")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+        every { cubeListService.get(100L, "My Deck") } returns savedCube("My Deck", "Lightning Bolt\nLurrus")
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(
+                CubeCard("Lightning Bolt", setOf(MtgColor.RED), legalities = mapOf("modern" to "legal")),
+                CubeCard("Lurrus", legalities = mapOf("modern" to "banned")),
+            ),
+        )
+
+        run()
+
+        assertTrue(slot.captured.title!!.contains("Not Modern-legal"))
+        assertTrue(slot.captured.fields.any { it.name!!.contains("Banned") && it.value!!.contains("Lurrus") })
+    }
+
+    @Test
+    fun `legality without a format returns an error`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_LEGALITY
+        every { event.getOption(CubeCommand.OPT_FORMAT) } returns null
+        every { event.getOption(CubeCommand.OPT_SAVED) } returns strOpt("My Deck")
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("format"))
+    }
+
+    @Test
+    fun `exposes the seven subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings"), subs.keys)
+        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings", "legality"), subs.keys)
         assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
         assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
         assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)
+        // The legality format option is required and offers the tracked formats as choices.
+        val format = subs.getValue("legality").options.first { it.name == "format" }
+        assertTrue(format.isRequired)
+        assertEquals(common.mtg.CubeCard.FORMATS.size, format.choices.size)
 
         val asfan = subs.getValue("asfan").options
         assertEquals(OptionType.INTEGER, asfan.first { it.name == "total" }.type)

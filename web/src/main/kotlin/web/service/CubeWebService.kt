@@ -8,6 +8,7 @@ import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.CubeDiff
+import common.mtg.DeckLegality
 import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.MtgColor
@@ -203,6 +204,37 @@ class CubeWebService {
         }
     }
 
+    /**
+     * Checks a pasted decklist against a format (the [DeckLegality] maths) —
+     * which cards are banned, not in the format, or restricted, and whether the
+     * deck is legal overall. Resolves the list against Scryfall for the per-card
+     * legality data.
+     */
+    fun checkLegality(list: String, format: String): CubeResult<LegalityData> {
+        val formatKey = format.trim().lowercase()
+        val display = CubeCard.FORMATS.firstOrNull { it.first == formatKey }
+            ?: return CubeResult.error("Unknown format. Pick one of: " + CubeCard.FORMATS.joinToString(", ") { it.second } + ".")
+        return when (val resolved = resolveList(list)) {
+            is CubeResult.Failure -> CubeResult.error(resolved.error)
+            is CubeResult.Success -> {
+                val report = DeckLegality.check(resolved.value.cards.map { it.card }, formatKey)
+                CubeResult.ok(
+                    LegalityData(
+                        format = display.second,
+                        legal = report.legal,
+                        total = report.total,
+                        banned = report.banned,
+                        notLegal = report.notLegal,
+                        restricted = report.restricted,
+                        unknown = report.unknown,
+                        notFound = resolved.value.notFound,
+                        note = resolved.value.note,
+                    )
+                )
+            }
+        }
+    }
+
     /** Draws a cube from a Scryfall query and deals balanced packs. */
     fun generate(query: String, packCount: Int, packSize: Int, balanced: Boolean): CubeResult<GenerateData> =
         when (val pool = fetchPool(query)) {
@@ -367,6 +399,7 @@ class CubeWebService {
                 priceEur = priceOf(node, "eur"),
                 priceTix = priceOf(node, "tix"),
                 legalFormats = CubeCard.legalFormatsOf { node.path("legalities").path(it).asText(null) },
+                legalities = CubeCard.legalitiesOf { node.path("legalities").path(it).asText(null) },
             ),
             imageUrl = imageOf(node, "small"),
             imageUrlLarge = imageOf(node, "normal"),
@@ -729,6 +762,19 @@ data class RulingsView(
 
 /** One published ruling: the ISO publish date and the note text. */
 data class RulingView(val publishedAt: String, val comment: String)
+
+/** The outcome of checking a pasted decklist against a format. */
+data class LegalityData(
+    val format: String,
+    val legal: Boolean,
+    val total: Int,
+    val banned: List<String>,
+    val notLegal: List<String>,
+    val restricted: List<String>,
+    val unknown: List<String>,
+    val notFound: List<String> = emptyList(),
+    val note: String? = null,
+)
 
 /** One card's change between two compared lists (copy counts from → to). */
 data class DiffLineView(val name: String, val from: Int, val to: Int)
