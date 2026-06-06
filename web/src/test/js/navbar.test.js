@@ -190,6 +190,21 @@ describe('navbar fragment', () => {
         expect(casino[0]).not.toMatch(/coming soon/i);
     });
 
+    test('Magic dropdown surfaces the card tools alongside the cube builder', () => {
+        // The card-centric tools (lookup, legality, reference) are generically
+        // useful, not cube-specific, so they're reachable from the global Magic
+        // menu via hash deep-links — not buried inside the cube page.
+        const magic = html.match(
+            /<div class="nav-dropdown">[\s\S]*?Magic[\s\S]*?<\/div>\s*<\/div>/
+        );
+        expect(magic).not.toBeNull();
+        expect(magic[0]).toMatch(/href="\/cube#card"[^>]*>[^<]*Card lookup/);
+        expect(magic[0]).toMatch(/href="\/cube#legality"[^>]*>[^<]*Deck legality/);
+        expect(magic[0]).toMatch(/href="\/cube#reference"[^>]*>[^<]*Sets/);
+        // The cube-builder entries are still there.
+        expect(magic[0]).toMatch(/href="\/cube#generate"[^>]*>[^<]*Pack generator/);
+    });
+
     test('Market and Titles are no longer top-level nav-links siblings', () => {
         // Regression: if someone re-introduces them at the top level the
         // navbar grows by two items and the dropdown becomes redundant.
