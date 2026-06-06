@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix stale /cube command mentions + add a single source of truth for command names",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 659
+  },
+  {
+    "date": "June 2026",
     "title": "Fix /magic 500 (Thymeleaf escaping) + render-test guard + rename cube.* → magic.*",
     "summary": "**Production hotfix + cleanup.** `/magic` was returning **500 Internal Server Error**.",
     "emoji": "✨",
