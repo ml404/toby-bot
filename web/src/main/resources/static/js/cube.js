@@ -7,10 +7,10 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan', 'compare'];
+    const TABS = ['generate', 'preview', 'asfan', 'compare', 'card'];
 
     // Tools that work off their own inputs, not the shared "Your cube" source.
-    const NO_SHARED_SOURCE = ['asfan', 'compare'];
+    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card'];
 
     // Colour-pie palette for swatches/bars. Tuned to read on the dark
     // dashboard background while staying recognisably W/U/B/R/G + gold
@@ -362,6 +362,77 @@
             rowEl.appendChild(value);
             container.appendChild(rowEl);
         });
+        return container;
+    }
+
+    /** GET URL for the single-card lookup. */
+    function cardUrl(name) {
+        return '/cube/api/card?name=' + encodeURIComponent(name);
+    }
+
+    /** Renders a looked-up card: its (large) image beside a list of facts. */
+    function renderCardLookup(container, card) {
+        container.replaceChildren();
+        const wrap = document.createElement('div');
+        wrap.className = 'cube-cardlookup';
+
+        const big = card.imageUrlLarge || card.imageUrl;
+        if (big) {
+            const img = document.createElement('img');
+            img.className = 'cube-cardlookup-img';
+            img.src = big;
+            img.alt = card.name;
+            wrap.appendChild(img);
+        }
+
+        const facts = document.createElement('div');
+        facts.className = 'cube-cardlookup-facts';
+        const h = document.createElement('h3');
+        h.textContent = card.name;
+        facts.appendChild(h);
+
+        function fact(label, value) {
+            if (value == null || value === '') return;
+            const p = document.createElement('p');
+            p.className = 'cube-cardlookup-fact';
+            const b = document.createElement('strong');
+            b.textContent = label + ' ';
+            p.appendChild(b);
+            p.appendChild(document.createTextNode(String(value)));
+            facts.appendChild(p);
+        }
+
+        fact('Type', card.typeLine);
+        const symbols = manaSymbolUrls(card.manaCost);
+        if (symbols.length) {
+            const p = document.createElement('p');
+            p.className = 'cube-cardlookup-fact';
+            const b = document.createElement('strong');
+            b.textContent = 'Mana cost ';
+            p.appendChild(b);
+            symbols.forEach(function (s) {
+                const sym = document.createElement('img');
+                sym.className = 'cube-mana-symbol';
+                sym.src = s.url;
+                sym.alt = s.symbol;
+                p.appendChild(sym);
+            });
+            facts.appendChild(p);
+        }
+        fact('Mana value', card.manaValue);
+        fact('Rarity', card.rarity);
+        fact('Colour identity', (card.colors && card.colors.length) ? card.colors.join(', ') : 'Colourless');
+
+        const link = document.createElement('a');
+        link.className = 'btn btn-secondary cube-cardlookup-link';
+        link.href = scryfallCardUrl(card.name);
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.textContent = 'View on Scryfall ↗';
+        facts.appendChild(link);
+
+        wrap.appendChild(facts);
+        container.appendChild(wrap);
         return container;
     }
 
@@ -1012,6 +1083,30 @@
         textarea.addEventListener('blur', function () { setTimeout(close, 150); });
     }
 
+    function wireCardLookup(doc) {
+        const form = q(doc, '[data-form="card"]');
+        if (!form) return;
+        const status = statusFor(doc, 'card');
+        const result = q(doc, '[data-result="card"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const name = (new FormData(form).get('name') || '').trim();
+            if (!name) { setStatus(status, 'Enter a card name.'); return; }
+            setStatus(status, 'Looking up…');
+            hide(result);
+            withBusy(form, true);
+            getJson(cardUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'No card found.'); return; }
+                    setStatus(status, '');
+                    renderCardLookup(result, json.card);
+                    show(result);
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
+    }
+
     function wireCompare(doc) {
         const form = q(doc, '[data-form="compare"]');
         if (!form) return;
@@ -1414,6 +1509,7 @@
         wireExamples(doc);
         wireAsFan(doc);
         wireCompare(doc);
+        wireCardLookup(doc);
         wirePreview(doc);
         wireGenerate(doc);
         wireCardFlip(doc);
@@ -1450,6 +1546,8 @@
         samplePackRequest: samplePackRequest,
         renderDistribution: renderDistribution,
         renderDiff: renderDiff,
+        cardUrl: cardUrl,
+        renderCardLookup: renderCardLookup,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,

@@ -1197,6 +1197,53 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     }
 }
 
+/* Single-card lookup: image beside its facts. */
+.cube-cardlookup-wrap[hidden] {
+    display: none;
+}
+
+.cube-cardlookup {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-3);
+    align-items: start;
+}
+
+.cube-cardlookup-img {
+    width: 240px;
+    max-width: 100%;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+}
+
+.cube-cardlookup-facts {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cube-cardlookup-facts h3 {
+    margin: 0 0 var(--space-1);
+    color: var(--heading);
+}
+
+.cube-cardlookup-fact {
+    margin: 0;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.cube-cardlookup-link {
+    align-self: start;
+    margin-top: var(--space-2);
+}
+
 @media (max-width: 600px) {
     .cube-hero h1 {
         font-size: 1.7rem;

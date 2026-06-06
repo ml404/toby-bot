@@ -56,6 +56,24 @@ class CubeWebServiceTest {
         assertEquals(1, pips["Red"])
     }
 
+    // --- card lookup ---------------------------------------------------
+
+    @Test
+    fun `cardOf and lookupView resolve a single named card's facts`() {
+        val node = mapper.readTree(
+            """{"name":"Ragavan, Nimble Pilferer","color_identity":["R"],
+               "type_line":"Legendary Creature — Monkey Pirate","cmc":1.0,"mana_cost":"{R}","rarity":"mythic",
+               "image_uris":{"small":"s.jpg","normal":"n.jpg"}}"""
+        )
+        val view = service.lookupView(service.cardOf(node)!!)
+        assertEquals("Ragavan, Nimble Pilferer", view.name)
+        assertEquals("n.jpg", view.imageUrlLarge)
+        assertEquals("{R}", view.manaCost)
+        assertEquals("Mythic", view.rarity)
+        assertEquals(listOf("Red"), view.colors)
+        assertEquals("Legendary Creature — Monkey Pirate", view.typeLine)
+    }
+
     // --- diff (compare two lists) --------------------------------------
 
     @Test

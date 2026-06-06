@@ -11,6 +11,7 @@ import common.mtg.CubeDiff
 import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
+import common.mtg.Rarity
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URI
@@ -43,6 +44,52 @@ class CubeWebService {
         } catch (e: IllegalArgumentException) {
             CubeResult.error(e.message ?: "Invalid as-fan inputs.")
         }
+
+    /**
+     * Looks a single card up by (fuzzy) name via Scryfall's `/cards/named`,
+     * for the web card-lookup tool — the website twin of `/cube card`.
+     */
+    fun card(name: String): CubeResult<CardLookupView> {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return CubeResult.error("Enter a card name to look up.")
+        val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        return try {
+            val response = http.send(
+                HttpRequest.newBuilder(URI.create(url))
+                    .header("User-Agent", "tobybot-web/1.0")
+                    .header("Accept", "application/json")
+                    .timeout(Duration.ofSeconds(10))
+                    .GET()
+                    .build(),
+                HttpResponse.BodyHandlers.ofString(),
+            )
+            when (response.statusCode()) {
+                200 -> cardOf(jackson.readTree(response.body()))
+                    ?.let { CubeResult.ok(lookupView(it)) }
+                    ?: CubeResult.error("Scryfall returned an unexpected card.")
+                404 -> CubeResult.error("No card found matching “$trimmed”.")
+                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+            }
+        } catch (e: IOException) {
+            CubeResult.error("Could not reach Scryfall: ${e.message}")
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CubeResult.error("Request interrupted.")
+        }
+    }
+
+    /** Maps a resolved card to the lookup view, resolving rarity + colours for display. */
+    internal fun lookupView(sc: ScryfallCard): CardLookupView = CardLookupView(
+        name = sc.card.name,
+        imageUrl = sc.imageUrl,
+        imageUrlLarge = sc.imageUrlLarge,
+        imageUrlBack = sc.imageUrlBack,
+        typeLine = sc.card.typeLine,
+        manaValue = sc.card.manaValue,
+        manaCost = sc.card.manaCost,
+        rarity = sc.card.rarity?.let { Rarity.parse(it).displayName },
+        colors = MtgColor.entries.filter { it in sc.card.colors }.map { it.displayName },
+    )
 
     /**
      * Compares two pasted card lists by name (the [CubeDiff] maths) — added,
@@ -210,26 +257,29 @@ class CubeWebService {
     fun parseScryfall(root: JsonNode): List<ScryfallCard> {
         val data = root.path("data")
         if (!data.isArray) return emptyList()
-        return data.mapNotNull { node ->
-            val name = node.path("name").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            val identity = node.path("color_identity").mapNotNull { it.asText(null) }
-            val typeLine = node.path("type_line").asText("")
-            ScryfallCard(
-                card = CubeCard(
-                    name = name,
-                    colors = MtgColor.parse(identity),
-                    isLand = CubeCard.isLandType(typeLine),
-                    typeLine = typeLine,
-                    manaValue = node.path("cmc").asDouble(0.0),
-                    rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
-                    manaCost = manaCostOf(node),
-                ),
-                imageUrl = imageOf(node, "small"),
-                imageUrlLarge = imageOf(node, "normal"),
-                imageUrlBack = backImageOf(node),
+        return data.mapNotNull { cardOf(it) }
+    }
+
+    /** Maps one Scryfall card object to a [ScryfallCard], or null if it has no name. */
+    fun cardOf(node: JsonNode): ScryfallCard? {
+        val name = node.path("name").asText("").takeIf { it.isNotBlank() } ?: return null
+        val identity = node.path("color_identity").mapNotNull { it.asText(null) }
+        val typeLine = node.path("type_line").asText("")
+        return ScryfallCard(
+            card = CubeCard(
+                name = name,
+                colors = MtgColor.parse(identity),
+                isLand = CubeCard.isLandType(typeLine),
+                typeLine = typeLine,
+                manaValue = node.path("cmc").asDouble(0.0),
+                rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
                 manaCost = manaCostOf(node),
-            )
-        }
+            ),
+            imageUrl = imageOf(node, "small"),
+            imageUrlLarge = imageOf(node, "normal"),
+            imageUrlBack = backImageOf(node),
+            manaCost = manaCostOf(node),
+        )
     }
 
     /**
@@ -423,6 +473,7 @@ class CubeWebService {
     private companion object {
         const val SEARCH_ENDPOINT = "https://api.scryfall.com/cards/search"
         const val COLLECTION_ENDPOINT = "https://api.scryfall.com/cards/collection"
+        const val NAMED_ENDPOINT = "https://api.scryfall.com/cards/named"
         const val MAX_CARDS = 750
         const val MAX_PAGES = 10
         const val COLLECTION_BATCH = 75
@@ -508,6 +559,19 @@ data class AnalyticsView(
     val duplicates: List<DuplicateView>,
     val colorPairs: List<ColorPairView>,
     val colorPips: List<ColorPipView>,
+)
+
+/** A single card looked up by name: image plus its key facts. */
+data class CardLookupView(
+    val name: String,
+    val imageUrl: String?,
+    val imageUrlLarge: String?,
+    val imageUrlBack: String?,
+    val typeLine: String,
+    val manaValue: Double,
+    val manaCost: String?,
+    val rarity: String?,
+    val colors: List<String>,
 )
 
 /** One card's change between two compared lists (copy counts from → to). */

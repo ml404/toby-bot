@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseBody
 import web.service.AnalyticsView
 import web.service.CardView
 import web.service.CategoryAsFan
+import web.service.CardLookupView
 import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.DiffLineView
@@ -122,6 +123,14 @@ class CubeController(
         @RequestBody request: CubeListGenerateRequest,
     ): ResponseEntity<CubeGenerateResponse> =
         generateResponse(cubeWebService.generateList(request.list, request.packs, request.packSize, request.balanced))
+
+    @GetMapping("/api/card", produces = ["application/json"])
+    @ResponseBody
+    fun card(@RequestParam("name") name: String): ResponseEntity<CubeCardResponse> =
+        when (val result = cubeWebService.card(name)) {
+            is CubeResult.Success -> ResponseEntity.ok(CubeCardResponse(true, null, result.value))
+            is CubeResult.Failure -> ResponseEntity.badRequest().body(CubeCardResponse(false, result.error, null))
+        }
 
     @PostMapping("/api/diff", consumes = ["application/json"], produces = ["application/json"])
     @ResponseBody
@@ -246,6 +255,8 @@ data class ShareCubeRequest(val name: String = "", val cards: String = "")
 data class ShareCubeResponse(val token: String, val url: String, val name: String)
 
 data class CubeListPreviewRequest(val list: String = "", val packSize: Int = 15)
+
+data class CubeCardResponse(val ok: Boolean, val error: String?, val card: CardLookupView?)
 
 data class CubeDiffRequest(val listA: String = "", val listB: String = "")
 

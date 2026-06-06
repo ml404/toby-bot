@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.Model
 import web.service.AnalyticsView
+import web.service.CardLookupView
 import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
@@ -135,6 +136,25 @@ class CubeControllerTest {
         // The cube report flows through the response.
         assertEquals(1.5, response.body!!.analytics!!.averageManaValue)
         assertEquals("Creature", response.body!!.analytics!!.types.first().type)
+    }
+
+    @Test
+    fun `card returns 200 with the looked-up card`() {
+        every { service.card("Ragavan") } returns CubeResult.ok(
+            CardLookupView("Ragavan, Nimble Pilferer", "s.jpg", "n.jpg", null, "Legendary Creature", 1.0, "{R}", "Mythic", listOf("Red"))
+        )
+        val response = controller.card("Ragavan")
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals("Ragavan, Nimble Pilferer", response.body!!.card!!.name)
+    }
+
+    @Test
+    fun `card returns 400 when nothing matches`() {
+        every { service.card(any()) } returns CubeResult.error("No card found matching “zzz”.")
+        val response = controller.card("zzz")
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
     }
 
     @Test
