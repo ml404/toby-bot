@@ -21,6 +21,7 @@ import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
 import web.service.CubeResult
+import web.service.DiffLineView
 import web.service.CubeWebService
 import web.service.GenerateData
 import web.service.PreviewData
@@ -121,6 +122,20 @@ class CubeController(
         @RequestBody request: CubeListGenerateRequest,
     ): ResponseEntity<CubeGenerateResponse> =
         generateResponse(cubeWebService.generateList(request.list, request.packs, request.packSize, request.balanced))
+
+    @PostMapping("/api/diff", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun diff(@RequestBody request: CubeDiffRequest): ResponseEntity<CubeDiffResponse> =
+        when (val result = cubeWebService.diff(request.listA, request.listB)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubeDiffResponse(
+                    true, null, result.value.added, result.value.removed, result.value.changed,
+                    result.value.sizeA, result.value.sizeB,
+                )
+            )
+            is CubeResult.Failure ->
+                ResponseEntity.badRequest().body(CubeDiffResponse(false, result.error, emptyList(), emptyList(), emptyList(), 0, 0))
+        }
 
     private fun previewResponse(result: CubeResult<PreviewData>): ResponseEntity<CubePreviewResponse> =
         when (result) {
@@ -231,6 +246,18 @@ data class ShareCubeRequest(val name: String = "", val cards: String = "")
 data class ShareCubeResponse(val token: String, val url: String, val name: String)
 
 data class CubeListPreviewRequest(val list: String = "", val packSize: Int = 15)
+
+data class CubeDiffRequest(val listA: String = "", val listB: String = "")
+
+data class CubeDiffResponse(
+    val ok: Boolean,
+    val error: String?,
+    val added: List<DiffLineView>,
+    val removed: List<DiffLineView>,
+    val changed: List<DiffLineView>,
+    val sizeA: Int,
+    val sizeB: Int,
+)
 
 data class CubeListGenerateRequest(
     val list: String = "",

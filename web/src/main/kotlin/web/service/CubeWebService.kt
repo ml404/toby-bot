@@ -7,6 +7,7 @@ import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
+import common.mtg.CubeDiff
 import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
@@ -42,6 +43,21 @@ class CubeWebService {
         } catch (e: IllegalArgumentException) {
             CubeResult.error(e.message ?: "Invalid as-fan inputs.")
         }
+
+    /**
+     * Compares two pasted card lists by name (the [CubeDiff] maths) — added,
+     * removed and count-changed cards. Pure: no Scryfall, so it's instant.
+     */
+    fun diff(listA: String, listB: String): CubeResult<DiffData> {
+        val a = CardListParser.parse(listA)
+        val b = CardListParser.parse(listB)
+        if (a.isEmpty() && b.isEmpty()) return CubeResult.error("Paste a card list into both sides to compare.")
+        val d = CubeDiff.diff(a, b)
+        fun lines(list: List<CubeDiff.Line>) = list.map { DiffLineView(it.name, it.from, it.to) }
+        return CubeResult.ok(
+            DiffData(lines(d.added), lines(d.removed), lines(d.changed), d.sizeA, d.sizeB)
+        )
+    }
 
     /** As-fan distribution of a Scryfall query's cards, no pack generation. */
     fun preview(query: String, packSize: Int): CubeResult<PreviewData> {
@@ -492,6 +508,18 @@ data class AnalyticsView(
     val duplicates: List<DuplicateView>,
     val colorPairs: List<ColorPairView>,
     val colorPips: List<ColorPipView>,
+)
+
+/** One card's change between two compared lists (copy counts from → to). */
+data class DiffLineView(val name: String, val from: Int, val to: Int)
+
+/** The outcome of comparing two card lists by name. */
+data class DiffData(
+    val added: List<DiffLineView>,
+    val removed: List<DiffLineView>,
+    val changed: List<DiffLineView>,
+    val sizeA: Int,
+    val sizeB: Int,
 )
 
 data class PreviewData(

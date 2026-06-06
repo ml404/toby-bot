@@ -24,6 +24,8 @@ import web.service.ColorPipView
 import web.service.CubeResult
 import web.service.CubeWebService
 import web.service.CurveBucketView
+import web.service.DiffData
+import web.service.DiffLineView
 import web.service.DuplicateView
 import web.service.GenerateData
 import web.service.PreviewData
@@ -133,6 +135,32 @@ class CubeControllerTest {
         // The cube report flows through the response.
         assertEquals(1.5, response.body!!.analytics!!.averageManaValue)
         assertEquals("Creature", response.body!!.analytics!!.types.first().type)
+    }
+
+    @Test
+    fun `diff returns 200 with the comparison`() {
+        every { service.diff("A list", "B list") } returns CubeResult.ok(
+            DiffData(
+                added = listOf(DiffLineView("Shock", 0, 1)),
+                removed = emptyList(),
+                changed = listOf(DiffLineView("Forest", 3, 5)),
+                sizeA = 4, sizeB = 6,
+            )
+        )
+        val response = controller.diff(CubeDiffRequest("A list", "B list"))
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals("Shock", response.body!!.added.first().name)
+        assertEquals(5, response.body!!.changed.first().to)
+        assertEquals(4, response.body!!.sizeA)
+    }
+
+    @Test
+    fun `diff returns 400 on failure`() {
+        every { service.diff(any(), any()) } returns CubeResult.error("Paste a card list into both sides to compare.")
+        val response = controller.diff(CubeDiffRequest("", ""))
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
     }
 
     @Test

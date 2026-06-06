@@ -56,6 +56,26 @@ class CubeWebServiceTest {
         assertEquals(1, pips["Red"])
     }
 
+    // --- diff (compare two lists) --------------------------------------
+
+    @Test
+    fun `diff compares two pasted lists by name`() {
+        val result = service.diff("Bolt\nCounterspell\n3 Forest", "Bolt\nShock\n5 Forest")
+        val data = (result as CubeResult.Success<DiffData>).value
+        assertEquals(listOf("Shock"), data.added.map { it.name })
+        assertEquals(listOf("Counterspell"), data.removed.map { it.name })
+        assertEquals(listOf("Forest"), data.changed.map { it.name })
+        assertEquals(3, data.changed.first().from)
+        assertEquals(5, data.changed.first().to)
+        assertEquals(5, data.sizeA) // Bolt + Counterspell + 3 Forest
+        assertEquals(7, data.sizeB) // Bolt + Shock + 5 Forest
+    }
+
+    @Test
+    fun `diff rejects two empty lists`() {
+        assertInstanceOf(CubeResult.Failure::class.java, service.diff("", "   "))
+    }
+
     // --- asFan ---------------------------------------------------------
 
     @Test
