@@ -1114,7 +1114,7 @@
      * Discord user via `/magic/api/lists`, so they follow the user across
      * devices. The saved-cube picker is a datalist-backed typeahead — type to
      * filter your cube names, pick one to load it. The controls only exist in
-     * the DOM for a logged-in user (see cube.html), so this no-ops otherwise.
+     * the DOM for a logged-in user (see magic.html), so this no-ops otherwise.
      */
     function wireSavedLists(doc) {
         const textarea = doc.querySelector('textarea[name="list"]');
