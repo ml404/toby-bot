@@ -96,6 +96,7 @@ class CubeWebService {
      * removed and count-changed cards. Pure: no Scryfall, so it's instant.
      */
     fun diff(listA: String, listB: String): CubeResult<DiffData> {
+        if (listA.length > MAX_LIST_LENGTH || listB.length > MAX_LIST_LENGTH) return CubeResult.error(TOO_LARGE)
         val a = CardListParser.parse(listA)
         val b = CardListParser.parse(listB)
         if (a.isEmpty() && b.isEmpty()) return CubeResult.error("Paste a card list into both sides to compare.")
@@ -388,6 +389,7 @@ class CubeWebService {
      * don't resolve are reported in [ResolvedPool.notFound].
      */
     private fun resolveList(text: String): CubeResult<ResolvedPool> {
+        if (text.length > MAX_LIST_LENGTH) return CubeResult.error(TOO_LARGE)
         val entries = parseList(text)
         if (entries.isEmpty()) return CubeResult.error("Paste at least one card name, one per line.")
 
@@ -477,6 +479,12 @@ class CubeWebService {
         const val MAX_CARDS = 750
         const val MAX_PAGES = 10
         const val COLLECTION_BATCH = 75
+
+        // Bound pasted-list text on the compute endpoints (preview / generate /
+        // diff) the way the controller already bounds saved/shared text, so an
+        // unauthenticated POST can't force a huge parse/allocation.
+        const val MAX_LIST_LENGTH = 100_000
+        const val TOO_LARGE = "That list is too large (max 100,000 characters)."
     }
 }
 

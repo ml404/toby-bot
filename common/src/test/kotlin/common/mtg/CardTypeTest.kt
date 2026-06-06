@@ -46,6 +46,13 @@ class CardTypeTest {
     fun `unknown or empty type lines fall through to Other`() {
         assertEquals(CardType.OTHER, CardType.of(""))
         assertEquals(CardType.OTHER, CardType.of("Tribal — Goblin"))
+        assertEquals(CardType.OTHER, CardType.of("Kindred — Goblin")) // the renamed "Tribal"
         assertEquals(CardType.OTHER, CardType.of("Plane — Mirrodin"))
+    }
+
+    @Test
+    fun `a Kindred card with a real body still classifies by that body`() {
+        assertEquals(CardType.CREATURE, CardType.of("Kindred Creature — Elf"))
+        assertEquals(CardType.INSTANT, CardType.of("Kindred Instant — Arcane"))
     }
 }

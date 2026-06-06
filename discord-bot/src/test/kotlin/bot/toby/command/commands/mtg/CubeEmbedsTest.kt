@@ -76,6 +76,26 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `previewEmbed stays within Discord's 25-field limit when fully loaded`() {
+        // A pool that fires every conditional field: curve, types, rarity,
+        // colour pairs, colour pips, duplicates — plus a notFound list.
+        val pool = listOf(
+            card("Teferi", "Creature", 3.0, "rare", colors = setOf(MtgColor.WHITE, MtgColor.BLUE), manaCost = "{1}{W}{U}"),
+            card("Teferi", "Creature", 3.0, "rare", colors = setOf(MtgColor.WHITE, MtgColor.BLUE), manaCost = "{1}{W}{U}"),
+            card("Bolt", "Instant", 1.0, "common", colors = setOf(MtgColor.RED), manaCost = "{R}"),
+            card("Forest", "Basic Land — Forest", 0.0, "common", land = true),
+        )
+        val embed = CubeEmbeds.previewEmbed(
+            query = "q", poolSize = pool.size, packSize = 5,
+            counts = AsFan.categoryCounts(pool), distribution = AsFan.distribution(pool, 5),
+            analytics = CubeAnalytics.analyze(pool, 5), notFound = listOf("Missing One"),
+        )
+        assertTrue(embed.fields.size <= 25, "previewEmbed emitted ${embed.fields.size} fields (Discord caps at 25)")
+        assertTrue(embed.fields.any { it.name == "Colour pairs" })
+        assertTrue(embed.fields.any { it.name == "Colour pips" })
+    }
+
+    @Test
     fun `previewEmbed shows a duplicates field only when a non-basic repeats`() {
         val singleton = listOf(
             card("Sol Ring", "Artifact", 1.0, "uncommon"),
