@@ -204,6 +204,7 @@ class ScryfallCubeFetcher @Autowired constructor(
             typeLine = typeLine,
             manaValue = manaValue,
             imageUrl = imageUrl(card),
+            rarity = card.get("rarity")?.asString?.takeIf { it.isNotBlank() },
         )
     }
 
