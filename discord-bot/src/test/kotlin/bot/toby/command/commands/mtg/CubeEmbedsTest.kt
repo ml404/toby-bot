@@ -79,6 +79,35 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `cardEmbed shows the card's image and key facts`() {
+        val card = CubeCard(
+            name = "Ragavan, Nimble Pilferer",
+            colors = setOf(MtgColor.RED),
+            typeLine = "Legendary Creature — Monkey Pirate",
+            manaValue = 1.0,
+            imageUrl = "https://img/ragavan.jpg",
+            rarity = "mythic",
+        )
+        val embed = CubeEmbeds.cardEmbed(card)
+
+        assertEquals("Ragavan, Nimble Pilferer", embed.title)
+        assertEquals("https://img/ragavan.jpg", embed.image?.url)
+        val desc = embed.description!!
+        assertTrue(desc.contains("Legendary Creature — Monkey Pirate"))
+        assertTrue(desc.contains("Mana value** · 1"), "MV without trailing .0: $desc")
+        assertTrue(desc.contains("Rarity** · Mythic"))
+        assertTrue(desc.contains("Colour identity** · Red"))
+    }
+
+    @Test
+    fun `cardEmbed describes a colourless card and omits rarity when unknown`() {
+        val card = CubeCard(name = "Sol Ring", typeLine = "Artifact", manaValue = 1.0)
+        val desc = CubeEmbeds.cardEmbed(card).description!!
+        assertTrue(desc.contains("Colour identity** · Colourless"))
+        assertFalse(desc.contains("Rarity"))
+    }
+
+    @Test
     fun `packsFile lists each card, appending its image link when present`() {
         val packs = listOf(
             listOf(

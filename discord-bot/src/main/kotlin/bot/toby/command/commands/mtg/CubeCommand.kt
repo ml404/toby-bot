@@ -63,7 +63,8 @@ class CubeCommand @Autowired constructor(
             SUB_PREVIEW -> launchHandling(ctx) { handlePreview(ctx, requestingUserDto, deleteDelay) }
             SUB_GENERATE -> launchHandling(ctx) { handleGenerate(ctx, requestingUserDto) }
             SUB_SAVED -> launchHandling(ctx) { handleSaved(ctx, requestingUserDto, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate or saved."), deleteDelay)
+            SUB_CARD -> launchHandling(ctx) { handleCard(ctx, deleteDelay) }
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved or card."), deleteDelay)
         }
     }
 
@@ -221,6 +222,26 @@ class CubeCommand @Autowired constructor(
         reply(ctx, CubeEmbeds.savedCubesEmbed(saved), deleteDelay)
     }
 
+    /** Looks up a single card by name on Scryfall and shows its image + facts. */
+    private suspend fun handleCard(ctx: CommandContext, deleteDelay: Int) {
+        val name = ctx.event.stringOption(OPT_NAME)?.trim()
+        if (name.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to look up."), deleteDelay)
+            return
+        }
+        when (val res = fetcher.fetchByNames(listOf(MtgNames.requestName(name)))) {
+            is ScryfallCubeFetcher.Result.Failure ->
+                reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+            is ScryfallCubeFetcher.Result.Success -> {
+                // Prefer the card whose full/face name matches what was typed.
+                val card = res.cards.firstOrNull { MtgNames.matchKeys(it.name).contains(MtgNames.lookupKey(name)) }
+                    ?: res.cards.firstOrNull()
+                if (card == null) reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+                else reply(ctx, CubeEmbeds.cardEmbed(card), deleteDelay)
+            }
+        }
+    }
+
     private fun reply(ctx: CommandContext, embed: MessageEmbed, deleteDelay: Int) {
         ctx.event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -255,6 +276,8 @@ class CubeCommand @Autowired constructor(
                 OptionData(OptionType.BOOLEAN, OPT_BALANCED, "Level colours/lands across packs (default true).", false),
             ),
         SubcommandData(SUB_SAVED, "List the cubes you've saved on the website."),
+        SubcommandData(SUB_CARD, "Look up a single Magic card by name.")
+            .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Lightning Bolt).", true)),
     )
 
     companion object {
@@ -262,8 +285,10 @@ class CubeCommand @Autowired constructor(
         const val SUB_PREVIEW = "preview"
         const val SUB_GENERATE = "generate"
         const val SUB_SAVED = "saved"
+        const val SUB_CARD = "card"
 
         const val OPT_TOTAL = "total"
+        const val OPT_NAME = "name"
         const val OPT_CUBE_SIZE = "cube-size"
         const val OPT_PACK_SIZE = "pack-size"
         const val OPT_QUERY = "query"

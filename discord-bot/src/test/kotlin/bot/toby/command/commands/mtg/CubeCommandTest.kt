@@ -424,11 +424,45 @@ class CubeCommandTest : CommandTest {
         assertTrue(slot.captured.description!!.contains("haven't saved any"))
     }
 
+    // --- card lookup ---------------------------------------------------
+
     @Test
-    fun `exposes the four subcommands with their options`() {
+    fun `card looks the name up and replies with a card panel`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_CARD
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Lightning Bolt")
+        coEvery { fetcher.fetchByNames(listOf("Lightning Bolt")) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Lightning Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, rarity = "common")),
+        )
+
+        run()
+
+        assertEquals("Lightning Bolt", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Instant"))
+    }
+
+    @Test
+    fun `card reports when the name doesn't resolve`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_CARD
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
+        coEvery { fetcher.fetchByNames(any()) } returns ScryfallCubeFetcher.Result.Failure("none")
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Notacard"))
+    }
+
+    @Test
+    fun `exposes the five subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate", "saved"), subs.keys)
+        assertEquals(setOf("asfan", "preview", "generate", "saved", "card"), subs.keys)
+        assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
+        assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
 
         val asfan = subs.getValue("asfan").options
         assertEquals(OptionType.INTEGER, asfan.first { it.name == "total" }.type)
