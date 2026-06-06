@@ -4,6 +4,7 @@ import common.discord.embed
 import common.discord.field
 import common.mtg.CardCategory
 import common.mtg.CardListParser
+import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import database.dto.user.CubeListDto
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -38,13 +39,14 @@ internal object CubeEmbeds {
             field("Maths", "($typeCount ÷ $cubeSize) × $packSize = ${format(value)}", inline = false)
         }
 
-    /** As-fan breakdown of a whole fetched pool — no pack generation. */
+    /** As-fan breakdown of a whole fetched pool, plus the cube report — no pack generation. */
     fun previewEmbed(
         query: String,
         poolSize: Int,
         packSize: Int,
         counts: Map<CardCategory, Int>,
         distribution: Map<CardCategory, Double>,
+        analytics: CubeAnalytics.Analytics,
         notFound: List<String> = emptyList(),
         note: String? = null,
     ): MessageEmbed = embed(color = OK_COLOR) {
@@ -55,6 +57,11 @@ internal object CubeEmbeds {
                 note.orEmpty().let { if (it.isNotEmpty()) "\nℹ️ $it" else "" }
         )
         field("Distribution", distributionTable(counts, distribution), inline = false)
+        // The "cube report": curve (skipped for an all-land pool), types, rarity.
+        if (analytics.nonLandCount > 0) field("Mana curve", curveLine(analytics), inline = false)
+        field("Card types", typeTable(analytics.types), inline = false)
+        field("Rarity", rarityTable(analytics.rarities), inline = false)
+        addDuplicatesField(analytics.duplicates)
         addNotFoundField(notFound)
     }
 
@@ -90,14 +97,39 @@ internal object CubeEmbeds {
      */
     private fun net.dv8tion.jda.api.EmbedBuilder.addNotFoundField(notFound: List<String>) {
         if (notFound.isEmpty()) return
-        val joined = notFound.joinToString(", ")
-        val value = if (joined.length <= NOT_FOUND_LIMIT) {
-            joined
-        } else {
-            joined.take(NOT_FOUND_LIMIT).substringBeforeLast(", ") + " … (+more)"
-        }
-        field("⚠️ Couldn't find ${notFound.size}", value, inline = false)
+        field("⚠️ Couldn't find ${notFound.size}", truncateField(notFound.joinToString(", ")), inline = false)
     }
+
+    /**
+     * Lists non-basic cards that appear more than once — a singleton cube
+     * shouldn't have any — only when there are some, so a legal cube stays
+     * clean.
+     */
+    private fun net.dv8tion.jda.api.EmbedBuilder.addDuplicatesField(duplicates: List<CubeAnalytics.Duplicate>) {
+        if (duplicates.isEmpty()) return
+        val joined = duplicates.joinToString(", ") { "${it.name} ×${it.count}" }
+        field("⚠️ Duplicates ${duplicates.size}", truncateField(joined), inline = false)
+    }
+
+    /** Keeps a comma-joined field value under Discord's 1024-char field cap. */
+    private fun truncateField(joined: String): String =
+        if (joined.length <= NOT_FOUND_LIMIT) joined
+        else joined.take(NOT_FOUND_LIMIT).substringBeforeLast(", ") + " … (+more)"
+
+    /** Compact one-line mana curve plus the average mana value. */
+    private fun curveLine(analytics: CubeAnalytics.Analytics): String =
+        "`" + analytics.curve.joinToString(" ") { "${it.label}:${it.count}" } + "`" +
+            "  ·  avg MV ${format(analytics.averageManaValue)}"
+
+    /** A `type — count (as-fan)` table, in type order, present types only. */
+    private fun typeTable(types: List<CubeAnalytics.TypeCount>): String =
+        types.joinToString("\n") { "${it.type.displayName} — ${it.count} (${format(it.asFan)}/pack)" }
+            .ifEmpty { "—" }
+
+    /** A `rarity — count (as-fan)` table, common→mythic, present rarities only. */
+    private fun rarityTable(rarities: List<CubeAnalytics.RarityCount>): String =
+        rarities.joinToString("\n") { "${it.rarity.displayName} — ${it.count} (${format(it.asFan)}/pack)" }
+            .ifEmpty { "—" }
 
     /** Keep the saved-cube listing under Discord's 4096-char description cap. */
     private const val SAVED_LIST_LIMIT = 25

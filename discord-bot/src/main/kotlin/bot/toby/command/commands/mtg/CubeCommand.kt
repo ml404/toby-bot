@@ -5,6 +5,7 @@ import bot.toby.helpers.intOption
 import bot.toby.helpers.stringOption
 import common.mtg.AsFan
 import common.mtg.CardListParser
+import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.MtgNames
 import common.mtg.PackGenerator
@@ -172,6 +173,7 @@ class CubeCommand @Autowired constructor(
                     packSize = packSize,
                     counts = AsFan.categoryCounts(pool),
                     distribution = AsFan.distribution(pool, packSize),
+                    analytics = CubeAnalytics.analyze(pool, packSize),
                     notFound = resolved.notFound,
                     note = resolved.note,
                 )
