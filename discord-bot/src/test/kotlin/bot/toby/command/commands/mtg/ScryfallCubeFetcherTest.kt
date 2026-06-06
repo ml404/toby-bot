@@ -145,6 +145,35 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard reads prices, treating a JSON null or absent price as null`() {
+        val priced = fetcher.parseCard(
+            obj("""{"name":"Ragavan","color_identity":["R"],"type_line":"Legendary Creature",
+               "prices":{"usd":"60.00","eur":null,"tix":"12.00"}}""")
+        )!!
+        assertEquals("60.00", priced.priceUsd)
+        assertEquals(null, priced.priceEur) // a JSON null price → null, not "null"
+        assertEquals("12.00", priced.priceTix)
+
+        val unpriced = fetcher.parseCard(obj("""{"name":"Token","color_identity":[],"type_line":"Token"}"""))!!
+        assertEquals(null, unpriced.priceUsd)
+        assertEquals(null, unpriced.priceEur)
+        assertEquals(null, unpriced.priceTix)
+    }
+
+    @Test
+    fun `parseCard reads the legal formats from Scryfall legalities, in FORMATS order`() {
+        val card = fetcher.parseCard(
+            obj("""{"name":"Ragavan","color_identity":["R"],"type_line":"Legendary Creature",
+               "legalities":{"standard":"not_legal","pioneer":"not_legal","modern":"legal","legacy":"legal",
+                 "vintage":"legal","pauper":"not_legal","commander":"legal"}}""")
+        )!!
+        assertEquals(listOf("Modern", "Legacy", "Vintage", "Commander"), card.legalFormats)
+
+        val noLegalities = fetcher.parseCard(obj("""{"name":"Token","color_identity":[],"type_line":"Token"}"""))!!
+        assertTrue(noLegalities.legalFormats.isEmpty())
+    }
+
+    @Test
     fun `parseCard treats a card with no colour identity as colourless`() {
         val card = fetcher.parseCard(obj("""{"name":"Sol Ring","color_identity":[],"type_line":"Artifact"}"""))!!
         assertEquals(CardCategory.COLORLESS, card.category)

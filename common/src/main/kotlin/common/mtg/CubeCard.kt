@@ -76,6 +76,16 @@ data class CubeCard(
      * `image_uris.normal`), or null for single-faced cards. Presentation-only.
      */
     val imageUrlBack: String? = null,
+    /** Scryfall market prices (raw strings, e.g. "1.50"), or null when unpriced. Presentation-only. */
+    val priceUsd: String? = null,
+    val priceEur: String? = null,
+    val priceTix: String? = null,
+    /**
+     * The play formats this card is currently legal in (Scryfall `legalities`
+     * entries with status "legal"), display-cased, in [CubeCard.FORMATS] order.
+     * Presentation-only.
+     */
+    val legalFormats: List<String> = emptyList(),
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory
@@ -86,7 +96,33 @@ data class CubeCard(
             else -> CardCategory.ofColor(colors.first())
         }
 
+    /** This card's raw price string in [currency] (e.g. "1.50"), or null when unpriced. */
+    fun price(currency: MtgCurrency): String? = when (currency) {
+        MtgCurrency.USD -> priceUsd
+        MtgCurrency.EUR -> priceEur
+        MtgCurrency.TIX -> priceTix
+    }
+
     companion object {
+        /**
+         * Play formats surfaced on a card panel, as `scryfall key to Display`,
+         * in the order shown. Both parsers map Scryfall `legalities` through
+         * this so the bot and web list the same formats consistently.
+         */
+        val FORMATS: List<Pair<String, String>> = listOf(
+            "standard" to "Standard",
+            "pioneer" to "Pioneer",
+            "modern" to "Modern",
+            "legacy" to "Legacy",
+            "vintage" to "Vintage",
+            "pauper" to "Pauper",
+            "commander" to "Commander",
+        )
+
+        /** The display-cased formats this card is legal in, from a Scryfall `legalities` map (key→status). */
+        fun legalFormatsOf(statusByFormat: (String) -> String?): List<String> =
+            FORMATS.filter { (key, _) -> statusByFormat(key) == "legal" }.map { it.second }
+
         /**
          * Whether a Scryfall `type_line` denotes a land, judged by the
          * **front face** only. A modal/transform card's combined type line

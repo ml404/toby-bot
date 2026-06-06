@@ -7,11 +7,14 @@ import common.mtg.AsFan
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
+import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.PackGenerator
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.CommandContext
+import database.dto.guild.ConfigDto
 import database.dto.user.UserDto
+import database.service.guild.ConfigService
 import database.service.user.CubeListService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -47,6 +50,7 @@ import kotlin.random.Random
 class CubeCommand @Autowired constructor(
     private val fetcher: ScryfallCubeFetcher,
     private val cubeListService: CubeListService,
+    private val configService: ConfigService,
     // Mirrors the /dnd command: IO-bound subcommands run on this dispatcher
     // (tests pass Dispatchers.Unconfined so the launched work resolves
     // synchronously).
@@ -144,6 +148,16 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /**
+     * The currency this guild's "cube value" is reported in — its
+     * [ConfigDto.Configurations.CUBE_CURRENCY] config, or [MtgCurrency.DEFAULT]
+     * (USD) when unset or unrecognised.
+     */
+    private fun currencyFor(ctx: CommandContext): MtgCurrency =
+        MtgCurrency.fromCode(
+            configService.getConfigByName(ConfigDto.Configurations.CUBE_CURRENCY.configValue, ctx.guild.id)?.value
+        ) ?: MtgCurrency.DEFAULT
+
     /** A user-facing note when the pool was truncated to the Scryfall fetch ceiling. */
     private fun capNote(capped: Boolean): String? =
         if (capped) "Matched more than ${ScryfallCubeFetcher.DEFAULT_MAX_CARDS} cards; only the first ${ScryfallCubeFetcher.DEFAULT_MAX_CARDS} were used."
@@ -177,6 +191,7 @@ class CubeCommand @Autowired constructor(
                     analytics = CubeAnalytics.analyze(pool, packSize),
                     notFound = resolved.notFound,
                     note = resolved.note,
+                    currency = currencyFor(ctx),
                 )
                 reply(ctx, embed, deleteDelay)
             }

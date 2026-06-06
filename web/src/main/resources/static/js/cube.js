@@ -334,7 +334,42 @@
         if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
         if (els.pairs) renderColorPairs(els.pairs, analytics.colorPairs || []);
         if (els.pips) renderColorPips(els.pips, analytics.colorPips || []);
+        const totals = analytics.totalValues || [];
+        const code = (els.valueCurrency && els.valueCurrency.value) || 'usd';
+        renderTotalValue(els.value, totals, code);
+        // Only offer the currency switch when something in the pool is priced.
+        if (els.valueCurrency) els.valueCurrency.hidden = totals.length === 0;
         show(els.breakdown);
+    }
+
+    // Market currencies, mirroring common.mtg.MtgCurrency. The `code` matches
+    // the AnalyticsView total-value entries and the currency-toggle option
+    // values; symbol/suffix format an amount ($1.50 / €1.50 / 1.50 tix).
+    const CURRENCIES = [
+        { code: 'usd', display: 'USD', symbol: '$', suffix: '' },
+        { code: 'eur', display: 'EUR', symbol: '€', suffix: '' },
+        { code: 'tix', display: 'Tix', symbol: '', suffix: ' tix' },
+    ];
+
+    function currencyMeta(code) {
+        return CURRENCIES.filter(function (c) { return c.code === code; })[0] || CURRENCIES[0];
+    }
+
+    /** The total-value line for [code] from a totals list, or '' when nothing is priced in it. Pure. */
+    function totalValueText(totalValues, code) {
+        const match = (totalValues || []).filter(function (t) { return t.currency === code; })[0];
+        if (!match) return '';
+        const m = currencyMeta(code);
+        return '≈ ' + m.symbol + Number(match.amount).toFixed(2) + m.suffix + ' in priced cards (' + m.display + ')';
+    }
+
+    /** Renders the cube's total value in the [code] currency; hides when nothing is priced in it. */
+    function renderTotalValue(el, totalValues, code) {
+        if (!el) return;
+        const text = totalValueText(totalValues, code);
+        if (!text) { el.hidden = true; el.textContent = ''; return; }
+        el.textContent = text;
+        el.hidden = false;
     }
 
     /** As-fan bars only (the secondary "balance" view under a generate). */
@@ -368,6 +403,18 @@
     /** GET URL for the single-card lookup. */
     function cardUrl(name) {
         return '/cube/api/card?name=' + encodeURIComponent(name);
+    }
+
+    /**
+     * A card's market prices as a compact one-liner ("$1.50 · €1.20 · 0.03 tix"),
+     * present currencies only, or '' when Scryfall has no price for it. Pure.
+     */
+    function priceLine(card) {
+        const parts = [];
+        if (card.priceUsd) parts.push('$' + card.priceUsd);
+        if (card.priceEur) parts.push('€' + card.priceEur);
+        if (card.priceTix) parts.push(card.priceTix + ' tix');
+        return parts.join(' · ');
     }
 
     /** Renders a looked-up card: its (large) image beside a list of facts. */
@@ -422,6 +469,8 @@
         fact('Mana value', card.manaValue);
         fact('Rarity', card.rarity);
         fact('Colour identity', (card.colors && card.colors.length) ? card.colors.join(', ') : 'Colourless');
+        fact('Price', priceLine(card));
+        fact('Legal', (card.legalFormats && card.legalFormats.length) ? card.legalFormats.join(', ') : '');
 
         if (card.oracleText) {
             const oracle = document.createElement('p');
@@ -1193,7 +1242,18 @@
         const rarity = q(doc, '[data-rarity="preview"]');
         const pairs = q(doc, '[data-pairs="preview"]');
         const pips = q(doc, '[data-pips="preview"]');
+        const value = q(doc, '[data-value="preview"]');
+        const valueCurrency = q(doc, '[data-value-currency="preview"]');
         const actions = q(doc, '[data-actions="preview"]');
+        let lastTotalValues = [];
+
+        // Switching currency re-renders the total line from the cached totals —
+        // no refetch, since every currency's total is already in the payload.
+        if (valueCurrency) {
+            valueCurrency.addEventListener('change', function () {
+                renderTotalValue(value, lastTotalValues, valueCurrency.value);
+            });
+        }
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
         const sampleBtn = q(doc, '[data-sample-pack="preview"]');
@@ -1269,7 +1329,8 @@
                     lastGroups = json.groups || [];
                     show(actions);
                     renderNotFound(notFound, json.notFound);
-                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips });
+                    lastTotalValues = (json.analytics && json.analytics.totalValues) || [];
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, valueCurrency: valueCurrency });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1555,7 +1616,10 @@
         renderDistribution: renderDistribution,
         renderDiff: renderDiff,
         cardUrl: cardUrl,
+        priceLine: priceLine,
+        totalValueText: totalValueText,
         renderCardLookup: renderCardLookup,
+        renderTotalValue: renderTotalValue,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,

@@ -232,8 +232,18 @@ class ScryfallCubeFetcher @Autowired constructor(
             manaCost = manaCost(card),
             oracleText = oracleText(card),
             imageUrlBack = backImageUrl(card),
+            priceUsd = price(card, "usd"),
+            priceEur = price(card, "eur"),
+            priceTix = price(card, "tix"),
+            legalFormats = CubeCard.legalFormatsOf { fmt ->
+                card.getAsJsonObject("legalities")?.get(fmt)?.asString
+            },
         )
     }
+
+    /** A Scryfall `prices` entry (e.g. "usd"), or null when absent/blank. */
+    fun price(card: JsonObject, key: String): String? =
+        card.getAsJsonObject("prices")?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
 
     /**
      * The card's rules text, or null. Single-faced cards carry `oracle_text`

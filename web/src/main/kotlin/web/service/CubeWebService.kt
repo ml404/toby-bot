@@ -90,6 +90,10 @@ class CubeWebService {
         rarity = sc.card.rarity?.let { Rarity.parse(it).displayName },
         colors = MtgColor.entries.filter { it in sc.card.colors }.map { it.displayName },
         oracleText = sc.card.oracleText,
+        priceUsd = sc.card.priceUsd,
+        priceEur = sc.card.priceEur,
+        priceTix = sc.card.priceTix,
+        legalFormats = sc.card.legalFormats,
     )
 
     /**
@@ -174,6 +178,7 @@ class CubeWebService {
             duplicates = a.duplicates.map { DuplicateView(it.name, it.count) },
             colorPairs = a.colorPairs.map { ColorPairView(it.pair, it.count) },
             colorPips = a.colorPips.map { ColorPipView(it.color, it.count) },
+            totalValues = a.totalValues.map { TotalValueView(it.currency.code, it.currency.display, it.amount) },
         )
     }
 
@@ -278,6 +283,10 @@ class CubeWebService {
                 manaCost = manaCostOf(node),
                 oracleText = oracleTextOf(node),
                 imageUrlBack = backImageOf(node),
+                priceUsd = priceOf(node, "usd"),
+                priceEur = priceOf(node, "eur"),
+                priceTix = priceOf(node, "tix"),
+                legalFormats = CubeCard.legalFormatsOf { node.path("legalities").path(it).asText(null) },
             ),
             imageUrl = imageOf(node, "small"),
             imageUrlLarge = imageOf(node, "normal"),
@@ -328,6 +337,10 @@ class CubeWebService {
         }
         return null
     }
+
+    /** A Scryfall `prices` entry (e.g. "usd"), or null when absent/blank. */
+    private fun priceOf(node: JsonNode, key: String): String? =
+        node.path("prices").path(key).asText("").takeIf { it.isNotBlank() }
 
     /**
      * The card's rules text, or null. Single-faced cards carry `oracle_text`
@@ -528,7 +541,7 @@ data class ScryfallCard(
     val manaCost: String? = null,
 ) {
     fun toView(): CardView =
-        CardView(card.name, imageUrl, imageUrlLarge, card.typeLine, card.manaValue, manaCost, imageUrlBack)
+        CardView(card.name, imageUrl, imageUrlLarge, card.typeLine, card.manaValue, manaCost, imageUrlBack, priceUsd = card.priceUsd)
 }
 
 /**
@@ -547,6 +560,8 @@ data class CardView(
     val manaCost: String? = null,
     val imageUrlBack: String? = null,
     val count: Int = 1,
+    /** Scryfall USD market price (raw string, e.g. "1.50"), or null when unpriced. */
+    val priceUsd: String? = null,
 )
 
 /** A colour/land bucket plus the actual cards it contains. */
@@ -586,7 +601,12 @@ data class AnalyticsView(
     val duplicates: List<DuplicateView>,
     val colorPairs: List<ColorPairView>,
     val colorPips: List<ColorPipView>,
+    /** Cube market value per currency (code, display name, amount), present currencies only. */
+    val totalValues: List<TotalValueView> = emptyList(),
 )
+
+/** One currency's summed cube value: Scryfall code ("usd"), display ("USD"), amount. */
+data class TotalValueView(val currency: String, val display: String, val amount: Double)
 
 /** A single card looked up by name: image plus its key facts. */
 data class CardLookupView(
@@ -600,6 +620,12 @@ data class CardLookupView(
     val rarity: String?,
     val colors: List<String>,
     val oracleText: String? = null,
+    /** Scryfall market prices (raw strings), or null when unpriced. */
+    val priceUsd: String? = null,
+    val priceEur: String? = null,
+    val priceTix: String? = null,
+    /** Play formats this card is currently legal in, display-cased, in [CubeCard.FORMATS] order. */
+    val legalFormats: List<String> = emptyList(),
 )
 
 /** One card's change between two compared lists (copy counts from → to). */

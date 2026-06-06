@@ -418,6 +418,83 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
         Cube.renderCardLookup(container, { name: 'Sol Ring', imageUrlLarge: 'n.jpg', typeLine: 'Artifact', manaValue: 1, manaCost: '{1}', rarity: null, colors: [] });
         expect(container.querySelector('.cube-cardlookup-facts').textContent).toContain('Colourless');
     });
+
+    test('renderCardLookup shows price and legal formats when present', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, {
+            name: 'Ragavan, Nimble Pilferer', imageUrlLarge: 'n.jpg', typeLine: 'Legendary Creature',
+            manaValue: 1, manaCost: '{R}', rarity: 'Mythic', colors: ['Red'],
+            priceUsd: '60.00', priceEur: '55.50', priceTix: '12.00',
+            legalFormats: ['Modern', 'Legacy'],
+        });
+        const text = container.querySelector('.cube-cardlookup-facts').textContent;
+        expect(text).toContain('$60.00 · €55.50 · 12.00 tix');
+        expect(text).toContain('Modern, Legacy');
+    });
+
+    test('renderCardLookup omits price and legal lines when the card has neither', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, { name: 'Token', imageUrlLarge: 'n.jpg', typeLine: 'Token', manaValue: 0, rarity: null, colors: [] });
+        const text = container.querySelector('.cube-cardlookup-facts').textContent;
+        expect(text).not.toContain('Price');
+        expect(text).not.toContain('Legal');
+    });
+});
+
+describe('priceLine (pure)', () => {
+    test('joins present currencies only', () => {
+        expect(Cube.priceLine({ priceUsd: '1.50' })).toBe('$1.50');
+        expect(Cube.priceLine({ priceUsd: '1.50', priceEur: '1.20', priceTix: '0.03' })).toBe('$1.50 · €1.20 · 0.03 tix');
+        expect(Cube.priceLine({ priceEur: '1.20' })).toBe('€1.20');
+    });
+
+    test('is empty when the card has no prices', () => {
+        expect(Cube.priceLine({})).toBe('');
+    });
+});
+
+describe('totalValueText (pure, per currency)', () => {
+    const totals = [
+        { currency: 'usd', display: 'USD', amount: 123.456 },
+        { currency: 'eur', display: 'EUR', amount: 100 },
+        { currency: 'tix', display: 'Tix', amount: 4.2 },
+    ];
+
+    test('formats the chosen currency with its symbol/suffix', () => {
+        expect(Cube.totalValueText(totals, 'usd')).toBe('≈ $123.46 in priced cards (USD)');
+        expect(Cube.totalValueText(totals, 'eur')).toBe('≈ €100.00 in priced cards (EUR)');
+        expect(Cube.totalValueText(totals, 'tix')).toBe('≈ 4.20 tix in priced cards (Tix)');
+    });
+
+    test('is empty when the chosen currency has no total', () => {
+        expect(Cube.totalValueText([{ currency: 'usd', display: 'USD', amount: 1 }], 'eur')).toBe('');
+        expect(Cube.totalValueText([], 'usd')).toBe('');
+    });
+});
+
+describe('renderTotalValue', () => {
+    const totals = [{ currency: 'usd', display: 'USD', amount: 123.456 }, { currency: 'eur', display: 'EUR', amount: 99 }];
+
+    test('shows the rounded total for the chosen currency and reveals the element', () => {
+        const el = document.createElement('p');
+        el.hidden = true;
+        Cube.renderTotalValue(el, totals, 'usd');
+        expect(el.hidden).toBe(false);
+        expect(el.textContent).toBe('≈ $123.46 in priced cards (USD)');
+
+        Cube.renderTotalValue(el, totals, 'eur');
+        expect(el.textContent).toBe('≈ €99.00 in priced cards (EUR)');
+    });
+
+    test('hides the element when the chosen currency is unpriced or totals are empty', () => {
+        const el = document.createElement('p');
+        Cube.renderTotalValue(el, totals, 'tix'); // not in the totals
+        expect(el.hidden).toBe(true);
+        expect(el.textContent).toBe('');
+
+        Cube.renderTotalValue(el, [], 'usd');
+        expect(el.hidden).toBe(true);
+    });
 });
 
 describe('renderDiff (compare two lists)', () => {
@@ -577,6 +654,11 @@ describe('cube report analytics renderers', () => {
         const rarity = document.createElement('div');
         const pairs = document.createElement('div');
         const pips = document.createElement('div');
+        const value = document.createElement('p');
+        value.hidden = true;
+        const valueCurrency = document.createElement('select');
+        valueCurrency.innerHTML = '<option value="usd">USD</option><option value="eur">EUR</option>';
+        valueCurrency.hidden = true;
         Cube.renderAnalytics(
             {
                 curve: [{ label: '0', count: 1 }, { label: '1', count: 2 }],
@@ -587,8 +669,9 @@ describe('cube report analytics renderers', () => {
                 duplicates: [{ name: 'Sol Ring', count: 2 }],
                 colorPairs: [{ pair: 'Azorius (WU)', count: 4 }],
                 colorPips: [{ color: 'White', count: 6 }],
+                totalValues: [{ currency: 'usd', display: 'USD', amount: 42.5 }, { currency: 'eur', display: 'EUR', amount: 38 }],
             },
-            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips },
+            { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, valueCurrency: valueCurrency },
         );
         expect(breakdown.hidden).toBe(false);
         expect(avgMv.textContent).toContain('Average mana value 2.50');
@@ -599,6 +682,21 @@ describe('cube report analytics renderers', () => {
         expect(pairs.querySelector('.cube-bar-label').textContent).toBe('Azorius (WU)');
         expect(pips.querySelector('.cube-bar-label').textContent).toBe('White');
         expect(dupes.hidden).toBe(false);
+        // Total value renders in the select's currency (USD), and the switch is revealed.
+        expect(value.hidden).toBe(false);
+        expect(value.textContent).toContain('$42.50');
+        expect(valueCurrency.hidden).toBe(false);
+    });
+
+    test('renderAnalytics hides the currency switch when nothing is priced', () => {
+        const value = document.createElement('p');
+        const valueCurrency = document.createElement('select');
+        Cube.renderAnalytics(
+            { curve: [], averageManaValue: 0, nonLandCount: 0, types: [], rarities: [], duplicates: [], totalValues: [] },
+            { dupes: document.createElement('p'), breakdown: document.createElement('details'), value: value, valueCurrency: valueCurrency },
+        );
+        expect(value.hidden).toBe(true);
+        expect(valueCurrency.hidden).toBe(true);
     });
 
     test('renderAnalytics tolerates a missing payload and an all-land pool', () => {

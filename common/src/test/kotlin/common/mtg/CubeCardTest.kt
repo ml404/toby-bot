@@ -63,6 +63,58 @@ class CubeCardTest {
     }
 
     @Test
+    fun `prices and legalFormats default empty and round-trip when set`() {
+        val plain = CubeCard(name = "Placeholder")
+        assertEquals(null, plain.priceUsd)
+        assertEquals(null, plain.priceEur)
+        assertEquals(null, plain.priceTix)
+        assertTrue(plain.legalFormats.isEmpty())
+        val card = CubeCard(
+            name = "Ragavan",
+            priceUsd = "60.00",
+            priceEur = "55.50",
+            priceTix = "12.0",
+            legalFormats = listOf("Modern", "Legacy"),
+        )
+        assertEquals("60.00", card.priceUsd)
+        assertEquals("55.50", card.priceEur)
+        assertEquals("12.0", card.priceTix)
+        assertEquals(listOf("Modern", "Legacy"), card.legalFormats)
+    }
+
+    @Test
+    fun `price returns the field for each currency`() {
+        val card = CubeCard(name = "X", priceUsd = "1.50", priceEur = "1.20", priceTix = "0.03")
+        assertEquals("1.50", card.price(MtgCurrency.USD))
+        assertEquals("1.20", card.price(MtgCurrency.EUR))
+        assertEquals("0.03", card.price(MtgCurrency.TIX))
+        val bare = CubeCard(name = "Y")
+        assertEquals(null, bare.price(MtgCurrency.USD))
+        assertEquals(null, bare.price(MtgCurrency.EUR))
+        assertEquals(null, bare.price(MtgCurrency.TIX))
+    }
+
+    @Test
+    fun `legalFormatsOf keeps only legal formats, display-cased, in FORMATS order`() {
+        val status = mapOf(
+            "standard" to "not_legal",
+            "modern" to "legal",
+            "legacy" to "legal",
+            "vintage" to "restricted",
+            "commander" to "legal",
+            "pauper" to "banned",
+        )
+        // FORMATS order is standard, pioneer, modern, legacy, vintage, pauper, commander.
+        assertEquals(listOf("Modern", "Legacy", "Commander"), CubeCard.legalFormatsOf { status[it] })
+    }
+
+    @Test
+    fun `legalFormatsOf is empty when nothing is legal or the map is unknown`() {
+        assertTrue(CubeCard.legalFormatsOf { null }.isEmpty())
+        assertTrue(CubeCard.legalFormatsOf { "banned" }.isEmpty())
+    }
+
+    @Test
     fun `mono-coloured card maps to its colour bucket`() {
         assertEquals(
             CardCategory.RED,

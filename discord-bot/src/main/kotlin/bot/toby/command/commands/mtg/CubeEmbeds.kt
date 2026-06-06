@@ -7,6 +7,7 @@ import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import common.mtg.MtgCurrency
 import common.mtg.Rarity
 import database.dto.user.CubeListDto
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -51,6 +52,7 @@ internal object CubeEmbeds {
         analytics: CubeAnalytics.Analytics,
         notFound: List<String> = emptyList(),
         note: String? = null,
+        currency: MtgCurrency = MtgCurrency.DEFAULT,
     ): MessageEmbed = embed(color = OK_COLOR) {
         setAuthor(AUTHOR)
         setTitle("Cube preview")
@@ -65,6 +67,7 @@ internal object CubeEmbeds {
         field("Rarity", rarityTable(analytics.rarities), inline = false)
         if (analytics.colorPairs.isNotEmpty()) field("Colour pairs", pairTable(analytics.colorPairs), inline = false)
         if (analytics.colorPips.isNotEmpty()) field("Colour pips", pipTable(analytics.colorPips), inline = false)
+        cubeValue(analytics, currency)?.let { field("Cube value", it, inline = false) }
         addDuplicatesField(analytics.duplicates)
         addNotFoundField(notFound)
     }
@@ -191,10 +194,36 @@ internal object CubeEmbeds {
             add("**Mana value** · ${formatMv(card.manaValue)}")
             card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
             add("**Colour identity** · $colours")
+            priceLine(card)?.let { add("**Price** · $it") }
+            if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
         }.joinToString("\n")
         val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
         setDescription(facts + oracle)
     }
+
+    /**
+     * The cube's total value line in the requested [currency]
+     * (`≈ $123.45 (priced cards, USD)`), falling back to the first currency
+     * anything in the pool is priced in when the chosen one has no prices, or
+     * null when nothing in the pool is priced at all.
+     */
+    fun cubeValue(analytics: CubeAnalytics.Analytics, currency: MtgCurrency): String? {
+        val total = analytics.totalValueIn(currency)?.let { currency to it }
+            ?: analytics.totalValues.firstOrNull()?.let { it.currency to it.amount }
+            ?: return null
+        val (cur, amount) = total
+        return "≈ ${cur.symbol}${format(amount)}${cur.suffix} (priced cards, ${cur.display})"
+    }
+
+    /**
+     * The card's market prices as a compact one-liner (`$1.50 · €1.20 · 0.03 tix`),
+     * present currencies only, or null when Scryfall has no price for it.
+     */
+    fun priceLine(card: CubeCard): String? = buildList {
+        card.priceUsd?.let { add("$$it") }
+        card.priceEur?.let { add("€$it") }
+        card.priceTix?.let { add("$it tix") }
+    }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
     /** Mana value without a trailing `.0` (whole numbers are the norm). */
     private fun formatMv(mv: Double): String =

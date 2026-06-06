@@ -1110,6 +1110,27 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     letter-spacing: 0.04em;
 }
 
+/* Total cube value (sum of priced cards), shown under the analytics breakdown,
+   with a currency switch sitting alongside it. */
+.cube-total-value-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.cube-total-value {
+    margin: 0;
+    color: var(--heading);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.cube-total-currency select {
+    font-size: 0.85rem;
+}
+
 /* Singleton-violation warning (non-basic duplicates), matching .cube-notfound. */
 .cube-dup-warning {
     margin: var(--space-2) 0 0;

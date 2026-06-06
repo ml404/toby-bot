@@ -56,6 +56,21 @@ class CubeWebServiceTest {
         assertEquals(1, pips["Red"])
     }
 
+    @Test
+    fun `analyticsView carries per-currency totals, empty when nothing is priced`() {
+        val priced = listOf(
+            CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, priceUsd = "2.50", priceEur = "2.00"),
+            CubeCard("Bear", setOf(MtgColor.GREEN), typeLine = "Creature", manaValue = 2.0, priceUsd = "0.50", priceEur = "0.40"),
+        )
+        val totals = service.analyticsView(priced, packSize = 2).totalValues.associate { it.currency to it }
+        assertEquals(3.0, totals["usd"]!!.amount, 1e-9)
+        assertEquals("USD", totals["usd"]!!.display)
+        assertEquals(2.4, totals["eur"]!!.amount, 1e-9)
+
+        val unpriced = listOf(CubeCard("Token", typeLine = "Token"))
+        assertTrue(service.analyticsView(unpriced, packSize = 1).totalValues.isEmpty())
+    }
+
     // --- card lookup ---------------------------------------------------
 
     @Test
@@ -64,6 +79,8 @@ class CubeWebServiceTest {
             """{"name":"Ragavan, Nimble Pilferer","color_identity":["R"],
                "type_line":"Legendary Creature — Monkey Pirate","cmc":1.0,"mana_cost":"{R}","rarity":"mythic",
                "oracle_text":"Whenever Ragavan deals combat damage, create a Treasure.",
+               "prices":{"usd":"60.00","eur":"55.50","tix":"12.00"},
+               "legalities":{"standard":"not_legal","modern":"legal","legacy":"legal","vintage":"legal","commander":"legal","pauper":"not_legal","pioneer":"not_legal"},
                "image_uris":{"small":"s.jpg","normal":"n.jpg"}}"""
         )
         val view = service.lookupView(service.cardOf(node)!!)
@@ -74,6 +91,35 @@ class CubeWebServiceTest {
         assertEquals(listOf("Red"), view.colors)
         assertEquals("Legendary Creature — Monkey Pirate", view.typeLine)
         assertTrue(view.oracleText!!.contains("create a Treasure"))
+        assertEquals("60.00", view.priceUsd)
+        assertEquals("55.50", view.priceEur)
+        assertEquals("12.00", view.priceTix)
+        assertEquals(listOf("Modern", "Legacy", "Vintage", "Commander"), view.legalFormats)
+    }
+
+    @Test
+    fun `cardOf leaves prices null and legalFormats empty when Scryfall omits them`() {
+        val node = mapper.readTree(
+            """{"name":"Token","color_identity":[],"type_line":"Token"}"""
+        )
+        val card = service.cardOf(node)!!.card
+        assertEquals(null, card.priceUsd)
+        assertEquals(null, card.priceEur)
+        assertEquals(null, card.priceTix)
+        assertTrue(card.legalFormats.isEmpty())
+    }
+
+    @Test
+    fun `parseScryfall reads prices onto the card and the tile shows the USD price`() {
+        val root = mapper.readTree(
+            """{"data":[{"name":"Bolt","color_identity":["R"],"type_line":"Instant","cmc":1.0,
+               "prices":{"usd":"1.25","eur":null,"tix":"0.03"}}]}"""
+        )
+        val parsed = service.parseScryfall(root).first()
+        assertEquals("1.25", parsed.card.priceUsd)
+        assertEquals(null, parsed.card.priceEur) // a JSON null price stays null
+        assertEquals("0.03", parsed.card.priceTix)
+        assertEquals("1.25", parsed.toView().priceUsd) // surfaced on the grid tile
     }
 
     // --- diff (compare two lists) --------------------------------------
