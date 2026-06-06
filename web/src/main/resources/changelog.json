@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add a combo finder via Commander Spellbook (Discord + web)",
+    "summary": "Look up the combos a Magic card is part of — the pieces it needs and the payoff — from the Commander Spellbook database.",
+    "emoji": "✨",
+    "prNumber": 652
+  },
+  {
+    "date": "June 2026",
     "title": "Add a deck legality checker (Discord + web)",
     "summary": "First of the four features picked from the \"what's next\" list. Paste a decklist (or check a saved cube) against a format and find out whether it's legal — every **banned**, **not-in-format**, and **restricted** card is flagged.",
     "emoji": "✨",
