@@ -129,6 +129,19 @@
     }
 
     /**
+     * The request to deal ONE balanced pack from a preview's source — reuses
+     * the generate endpoint (packs=1). GET for a Scryfall search, POST for a
+     * pasted list. Pure so it's unit-testable.
+     */
+    function samplePackRequest(src, packSize) {
+        const ps = Number(packSize) || 15;
+        if (src.mode === 'list') {
+            return { method: 'POST', url: '/cube/api/generate', body: { list: src.list, packs: 1, packSize: ps, balanced: true } };
+        }
+        return { method: 'GET', url: generateUrl({ query: src.query, packs: 1, packSize: ps, balanced: true }) };
+    }
+
+    /**
      * A card as a thumbnail tile linking to its Scryfall page. Falls back
      * to a captioned placeholder box when Scryfall has no image for it.
      * Images lazy-load so a 500-card preview doesn't fetch everything at once.
@@ -1014,6 +1027,8 @@
         const actions = q(doc, '[data-actions="preview"]');
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
+        const sampleBtn = q(doc, '[data-sample-pack="preview"]');
+        const sample = q(doc, '[data-sample="preview"]');
         let lastGroups = [];
 
         if (copyBtn) {
@@ -1042,6 +1057,26 @@
             });
         }
 
+        if (sampleBtn) {
+            sampleBtn.addEventListener('click', function () {
+                const src = activeSource(doc);
+                const srcErr = sourceError(src);
+                if (srcErr) { setStatus(status, srcErr); return; }
+                const req = samplePackRequest(src, new FormData(form).get('packSize'));
+                sampleBtn.disabled = true;
+                if (sample) hide(sample);
+                const pending = req.method === 'POST' ? postJson(req.url, req.body) : getJson(req.url);
+                pending
+                    .then(function (json) {
+                        if (!json.ok) { setStatus(status, json.error || 'Could not deal a pack.'); return; }
+                        renderPacks(sample, json.packs);
+                        show(sample);
+                    })
+                    .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                    .then(function () { sampleBtn.disabled = false; });
+            });
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const packSize = new FormData(form).get('packSize');
@@ -1049,7 +1084,7 @@
             const err = sourceError(src);
             if (err) { setStatus(status, err); return; }
             setStatus(status, src.mode === 'list' ? 'Resolving your list…' : 'Fetching cards from Scryfall…');
-            hide(groups); hide(notFound); hide(dupes); hide(breakdown); hide(actions);
+            hide(groups); hide(notFound); hide(dupes); hide(breakdown); hide(actions); hide(sample);
             withBusy(form, true);
             setSpinner(doc, 'preview', true);
             const request = src.mode === 'list'
@@ -1345,6 +1380,7 @@
         asfanUrl: asfanUrl,
         previewUrl: previewUrl,
         generateUrl: generateUrl,
+        samplePackRequest: samplePackRequest,
         renderDistribution: renderDistribution,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,

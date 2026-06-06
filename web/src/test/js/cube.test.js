@@ -385,6 +385,27 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
     });
 });
 
+describe('samplePackRequest (open a sample pack from the preview source)', () => {
+    test('a Scryfall search becomes a GET to generate with packs=1', () => {
+        const req = Cube.samplePackRequest({ mode: 'search', query: 'cube:vintage' }, '15');
+        expect(req.method).toBe('GET');
+        expect(req.url).toBe(Cube.generateUrl({ query: 'cube:vintage', packs: 1, packSize: 15, balanced: true }));
+        expect(req.url).toContain('packs=1');
+    });
+
+    test('a pasted list becomes a POST body with packs=1', () => {
+        const req = Cube.samplePackRequest({ mode: 'list', list: '40 Bolt' }, '20');
+        expect(req.method).toBe('POST');
+        expect(req.url).toBe('/cube/api/generate');
+        expect(req.body).toEqual({ list: '40 Bolt', packs: 1, packSize: 20, balanced: true });
+    });
+
+    test('a missing/invalid pack size falls back to 15', () => {
+        expect(Cube.samplePackRequest({ mode: 'list', list: 'x' }, '').body.packSize).toBe(15);
+        expect(Cube.samplePackRequest({ mode: 'list', list: 'x' }, undefined).body.packSize).toBe(15);
+    });
+});
+
 describe('cube list export (groupsToList / cubeListText)', () => {
     const groups = [
         { category: 'Red', count: 2, asFan: 2, cards: [{ name: 'Lightning Bolt', count: 1 }, { name: 'Shock', count: 1 }] },
