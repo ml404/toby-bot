@@ -627,6 +627,12 @@ describe('manaSymbolUrls', () => {
         expect(Cube.manaSymbolUrls(null)).toEqual([]);
         expect(Cube.manaSymbolUrls('')).toEqual([]);
     });
+
+    test('ignores an unterminated brace rather than throwing', () => {
+        expect(Cube.manaSymbolUrls('{R')).toEqual([]); // no closing brace → no match
+        // A trailing unterminated token is dropped; the valid ones still parse.
+        expect(Cube.manaSymbolUrls('{W}{U}{B').map((u) => u.symbol)).toEqual(['{W}', '{U}']);
+    });
 });
 
 describe('cardTile enrichments (via renderGroups)', () => {

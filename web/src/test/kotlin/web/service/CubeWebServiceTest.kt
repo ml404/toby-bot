@@ -94,6 +94,15 @@ class CubeWebServiceTest {
         assertInstanceOf(CubeResult.Failure::class.java, service.diff("", "   "))
     }
 
+    @Test
+    fun `diff and previewList reject an oversized list without parsing it`() {
+        val huge = "a\n".repeat(60_000) // > 100k chars
+        val diff = service.diff(huge, "Bolt") as CubeResult.Failure
+        assertTrue(diff.error.contains("too large"))
+        val preview = service.previewList(huge, 15) as CubeResult.Failure
+        assertTrue(preview.error.contains("too large"))
+    }
+
     // --- asFan ---------------------------------------------------------
 
     @Test

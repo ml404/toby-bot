@@ -158,13 +158,15 @@ class CubeAnalyticsTest {
             card("Teferi", colors = setOf(MtgColor.WHITE, MtgColor.BLUE)),
             card("Dovin", colors = setOf(MtgColor.WHITE, MtgColor.BLUE)),
             card("Hadana", colors = setOf(MtgColor.GREEN, MtgColor.BLUE)), // Simic
+            // A dual land counts toward its pair — it's fixing for that archetype.
+            card("Hallowed Fountain", typeLine = "Land — Plains Island", colors = setOf(MtgColor.WHITE, MtgColor.BLUE)),
             card("Bolt", colors = setOf(MtgColor.RED)), // mono — ignored
             card("Niv", colors = MtgColor.entries.toSet()), // 5c — ignored
         )
         val pairs = CubeAnalytics.colorPairs(pool)
         // Codes are WUBRG-canonical, so Simic {G,U} renders as "UG".
         assertEquals(listOf("Azorius (WU)", "Simic (UG)"), pairs.map { it.pair }) // guild order
-        assertEquals(2, pairs.first { it.pair.startsWith("Azorius") }.count)
+        assertEquals(3, pairs.first { it.pair.startsWith("Azorius") }.count) // 2 spells + the dual land
     }
 
     // --- colour pips ---------------------------------------------------
@@ -181,10 +183,23 @@ class CubeAnalyticsTest {
         )
         val pips = CubeAnalytics.colorPips(pool).associate { it.color to it.count }
         assertEquals(3, pips["White"]) // WW + hybrid W
-        assertEquals(2, pips["Blue"]) // B's U + hybrid U
+        assertEquals(2, pips["Blue"]) // U from card B + U from the hybrid
         assertEquals(1, pips["Black"])
         assertEquals(1, pips["Red"])
         assertEquals(null, pips["Green"]) // absent → not listed
+    }
+
+    @Test
+    fun `colorPips ignores generic, colourless, snow, variable and two-brid generic`() {
+        val pool = listOf(
+            card("Genericish", manaCost = "{2}{C}{S}{X}{W}"), // only the W is a coloured pip
+            card("Twobrid", manaCost = "{2/W}{2/U}"),         // two-brid → the W and U halves count
+        )
+        val pips = CubeAnalytics.colorPips(pool).associate { it.color to it.count }
+        assertEquals(2, pips["White"]) // {W} + {2/W}
+        assertEquals(1, pips["Blue"]) // {2/U}
+        assertEquals(null, pips["Black"])
+        assertEquals(null, pips["Green"])
     }
 
     @Test
