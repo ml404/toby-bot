@@ -13,7 +13,7 @@ import org.thymeleaf.templatemode.TemplateMode
 import org.thymeleaf.web.servlet.JakartaServletWebApplication
 
 /**
- * Renders the real `templates/cube.html` (the Magic toolkit page) against a
+ * Renders the real `templates/magic.html` (the Magic toolkit page) against a
  * Spring-backed Thymeleaf engine — no Docker, no Spring Boot context.
  *
  * Regression guard for a production 500: the page's `headSeo(...)` call had an
@@ -24,7 +24,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication
  * template and never caught it. This test actually processes the template, so
  * any broken Thymeleaf expression in the page or its fragments fails here.
  */
-class CubeTemplateRenderTest {
+class MagicTemplateRenderTest {
 
     private val servletContext = MockServletContext()
     private val webApp = JakartaServletWebApplication.buildApplication(servletContext)
@@ -47,7 +47,7 @@ class CubeTemplateRenderTest {
         val response = MockHttpServletResponse()
         val exchange = webApp.buildExchange(request, response)
         val ctx = WebContext(exchange).apply { vars.forEach { (k, v) -> setVariable(k, v) } }
-        return engine.process("cube", ctx)
+        return engine.process("magic", ctx)
     }
 
     @Test

@@ -3,7 +3,7 @@
 // page's only real logic; pin them so the page can't silently hit the
 // wrong endpoint, lose a tab deep-link, or stop showing the actual cards.
 
-const Cube = require('../../main/resources/static/js/cube');
+const Cube = require('../../main/resources/static/js/magic');
 
 describe('formatAsFan', () => {
     test('formats to two decimal places', () => {
@@ -1036,7 +1036,7 @@ describe('zoomPosition', () => {
 
 describe('hover-to-enlarge', () => {
     test('hovering a card shows the large image + stat line; leaving hides it', () => {
-        // cube.js wires the jsdom document on import, creating the overlay.
+        // magic.js wires the jsdom document on import, creating the overlay.
         const card = document.createElement('a');
         card.className = 'cube-card';
         card.setAttribute('data-large', 'https://img/big.jpg');

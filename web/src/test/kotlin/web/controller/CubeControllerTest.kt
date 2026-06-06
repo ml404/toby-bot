@@ -85,7 +85,7 @@ class CubeControllerTest {
         val model = mockk<Model>(relaxed = true)
         val user = mockk<OAuth2User> { every { getAttribute<String>("username") } returns "matt" }
 
-        assertEquals("cube", controller.page(user, model))
+        assertEquals("magic", controller.page(user, model))
 
         verify(exactly = 1) { model.addAttribute("username", "matt") }
     }
@@ -535,7 +535,7 @@ class CubeControllerTest {
         val model = mockk<Model>(relaxed = true)
         every { sharedCubes.get("tok123") } returns SharedCubeDto("tok123", discordId, "My Cube", "Bolt\nForest", Instant.EPOCH)
 
-        assertEquals("cube", controller.sharedPage("tok123", loggedIn(), model))
+        assertEquals("magic", controller.sharedPage("tok123", loggedIn(), model))
 
         verify { model.addAttribute("sharedName", "My Cube") }
         verify { model.addAttribute("sharedCards", "Bolt\nForest") }
@@ -546,7 +546,7 @@ class CubeControllerTest {
         val model = mockk<Model>(relaxed = true)
         every { sharedCubes.get("nope") } returns null
 
-        assertEquals("cube", controller.sharedPage("nope", null, model))
+        assertEquals("magic", controller.sharedPage("nope", null, model))
 
         verify { model.addAttribute("sharedMissing", true) }
     }

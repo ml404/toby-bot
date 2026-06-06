@@ -37,13 +37,13 @@ import web.util.discordIdOrNull
 import web.util.displayName
 
 /**
- * Public web surface for the Magic toolkit — the same as-fan maths, pack
- * generation, card lookups, legality, reference and price watches as the
- * Discord commands, no login required (like `/dnd` and `/utils`). The page
- * itself is served at `/magic` by [MagicPageController]; this controller
- * carries the shared-cube deep links and the `/magic/api/...` JSON endpoints.
- * The `/api/...` GET endpoints take a Scryfall query; the POST variants take
- * the user's own pasted card list (too large for a query string).
+ * Public web surface for the Magic toolkit at `/magic` — the same as-fan
+ * maths, pack generation, card lookups, legality, reference and price watches
+ * as the Discord commands, no login required (like `/dnd` and `/utils`). The
+ * page (the `magic` template) is served here along with the shared-cube deep
+ * links and the `/magic/api/...` JSON endpoints. The `/api/...` GET endpoints
+ * take a Scryfall query; the POST variants take the user's own pasted card
+ * list (too large for a query string).
  *
  * Saving a list is account-bound: the `/api/lists` endpoints require a
  * logged-in Discord user and persist per-user via [CubeListService], so a
@@ -68,7 +68,7 @@ class CubeController(
         model.addAttribute("username", user.displayName())
         // Drives the saved-lists UI: only logged-in users can save/load.
         model.addAttribute("loggedIn", user != null)
-        return "cube"
+        return "magic"
     }
 
     /** Opens a shared cube: same page, with the list pre-loaded. */
@@ -87,7 +87,7 @@ class CubeController(
         } else {
             model.addAttribute("sharedMissing", true)
         }
-        return "cube"
+        return "magic"
     }
 
     @GetMapping("/api/asfan", produces = ["application/json"])
