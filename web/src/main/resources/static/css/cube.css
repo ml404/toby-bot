@@ -142,7 +142,8 @@
 
 .cube-tabs {
     display: flex;
-    gap: 6px;
+    flex-direction: column;
+    gap: 12px;
     padding: 6px;
     margin-bottom: var(--space-5);
     background: var(--bg);
@@ -150,8 +151,28 @@
     border-radius: var(--radius-md);
 }
 
+/* Each tab group ("Build a cube" / "Card & deck tools" / "Reference") is a
+   labelled row of tabs. role="presentation" keeps the tablist→tab semantics. */
+.cube-tab-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cube-tab-group-label {
+    flex-basis: 100%;
+    margin: 0;
+    padding: 0 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
 .cube-tab {
-    flex: 1;
+    flex: 1 1 9rem;
+    max-width: 18rem;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1492,11 +1513,9 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
         font-size: 1.7rem;
     }
 
-    .cube-tabs {
-        flex-direction: column;
-    }
-
     .cube-tab {
+        flex: 1 1 100%;
+        max-width: none;
         flex-direction: row;
         gap: 8px;
     }

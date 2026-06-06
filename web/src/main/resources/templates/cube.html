@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
-<head th:replace="~{fragments/head :: head('TobyBot - MTG Cube workshop', '/css/cube.css')}"></head>
+<head th:replace="~{fragments/head :: head('TobyBot - Magic toolkit', '/css/cube.css')}"></head>
 <body>
 <a href="#main" class="skip-link">Skip to content</a>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -9,10 +9,11 @@
     <header class="cube-hero">
         <div class="cube-hero-inner">
             <p class="cube-eyebrow">Magic: The Gathering</p>
-            <h1>Cube workshop</h1>
+            <h1>Magic toolkit</h1>
             <p class="cube-lede">
-                Turn any pile of cards into a balanced draft. Tell it which cards you're using —
-                a Scryfall search or your own list — then preview the balance or deal the packs.
+                A grab-bag of Magic: The Gathering tools — build and balance a draft cube, look up any
+                card's details, rulings and combos, check a deck's format legality, browse set and
+                keyword reference, and set price-watch alerts. Pick a tool below.
             </p>
 
             <ol class="cube-steps" aria-label="How it works">
@@ -122,7 +123,9 @@
         </section>
 
         <p class="cube-tabs-hint" id="cube-tabs-hint" data-needs-cube>Then pick a tool:</p>
-        <div class="cube-tabs segmented" role="tablist" aria-label="Cube tools" aria-describedby="cube-tabs-hint">
+        <div class="cube-tabs" role="tablist" aria-label="Magic tools" aria-describedby="cube-tabs-hint">
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Build a cube</span>
             <button type="button" id="tab-generate" class="cube-tab" role="tab"
                     data-tab="generate" aria-controls="panel-generate" aria-selected="true">
                 <span class="cube-tab-icon" aria-hidden="true">🃏</span>
@@ -147,6 +150,9 @@
                 <span class="cube-tab-label">Compare</span>
                 <span class="cube-tab-sub">Diff two lists</span>
             </button>
+            </div>
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Card &amp; deck tools</span>
             <button type="button" id="tab-card" class="cube-tab" role="tab"
                     data-tab="card" aria-controls="panel-card" aria-selected="false" tabindex="-1">
                 <span class="cube-tab-icon" aria-hidden="true">🔍</span>
@@ -159,18 +165,22 @@
                 <span class="cube-tab-label">Legality</span>
                 <span class="cube-tab-sub">Check a deck</span>
             </button>
-            <button type="button" id="tab-reference" class="cube-tab" role="tab"
-                    data-tab="reference" aria-controls="panel-reference" aria-selected="false" tabindex="-1">
-                <span class="cube-tab-icon" aria-hidden="true">📖</span>
-                <span class="cube-tab-label">Reference</span>
-                <span class="cube-tab-sub">Sets &amp; keywords</span>
-            </button>
             <button type="button" id="tab-watch" class="cube-tab" role="tab"
                     data-tab="watch" aria-controls="panel-watch" aria-selected="false" tabindex="-1">
                 <span class="cube-tab-icon" aria-hidden="true">🔔</span>
                 <span class="cube-tab-label">Price watch</span>
                 <span class="cube-tab-sub">Alert on price</span>
             </button>
+            </div>
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Reference</span>
+            <button type="button" id="tab-reference" class="cube-tab" role="tab"
+                    data-tab="reference" aria-controls="panel-reference" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">📖</span>
+                <span class="cube-tab-label">Reference</span>
+                <span class="cube-tab-sub">Sets &amp; keywords</span>
+            </button>
+            </div>
         </div>
 
         <!-- Generate -->

@@ -1,5 +1,6 @@
-// MTG cube workshop page. A guided, tabbed tool (generate packs / preview
-// a cube / as-fan calculator) over the /cube/api/* JSON endpoints. The
+// Magic toolkit page (/cube). A tabbed hub — cube building (generate / preview
+// / as-fan / compare), card tools (lookup / legality / price watch) and
+// reference (sets / keywords) — over the /cube/api/* JSON endpoints. The
 // emphasis is on showing the actual CARDS: generated packs and the preview
 // both list real card names linked to Scryfall. Pure helpers (URL builders,
 // formatting, colours, card links, hash↔tab mapping, DOM renderers) are
