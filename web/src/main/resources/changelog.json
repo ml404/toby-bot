@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add copy / download of the cube list on the web preview",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 637
+  },
+  {
+    "date": "June 2026",
     "title": "Add the cube report to the web /cube preview",
     "summary": "## Why",
     "emoji": "✨",
