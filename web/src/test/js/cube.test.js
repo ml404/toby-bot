@@ -212,6 +212,109 @@ describe('collapsible result sections', () => {
         Cube.renderPacks(container, [[{ name: 'Bolt' }]]);
         expect(container.querySelector('[data-collapse-all]')).toBeNull();
     });
+
+    test('a single preview group also gets no collapse-all toggle', () => {
+        const container = document.createElement('div');
+        Cube.renderGroups(container, [
+            { category: 'Red', count: 1, asFan: 1, cards: [{ name: 'Bolt' }] },
+        ]);
+        expect(container.querySelector('[data-collapse-all]')).toBeNull();
+        expect(container.querySelectorAll('.cube-group')).toHaveLength(1);
+    });
+
+    test('each pack summary leads with an aria-hidden chevron', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        const summary = container.querySelector('.cube-pack > summary');
+        const chevron = summary.firstChild;
+        expect(chevron.className).toBe('cube-collapse-chevron');
+        expect(chevron.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    test('each group summary leads with a chevron, then the as-fan header', () => {
+        const container = document.createElement('div');
+        Cube.renderGroups(container, [
+            { category: 'Red', count: 2, asFan: 2, cards: [{ name: 'Bolt' }] },
+            { category: 'Land', count: 1, asFan: 0.5, cards: [{ name: 'Wastes' }] },
+        ]);
+        const summary = container.querySelector('.cube-group > summary');
+        expect(summary.firstChild.className).toBe('cube-collapse-chevron');
+        expect(summary.querySelector('.cube-group-head .cube-bar-value').textContent).toBe('2.00 / pack');
+    });
+
+    test('the collapse-all bar sits above the sections', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        expect(container.firstChild.className).toBe('cube-collapse-bar');
+        expect(container.firstChild.querySelector('[data-collapse-all]')).not.toBeNull();
+    });
+
+    test("the card grid is a direct child of the <details>, so collapsing hides the cards", () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        const pack = container.querySelector('.cube-pack');
+        const grid = pack.querySelector('.cube-card-grid');
+        expect(grid.parentElement).toBe(pack); // sibling of <summary>, inside <details>
+        expect(grid.previousElementSibling.tagName).toBe('SUMMARY');
+    });
+
+    test('preview groups get their own working Collapse all toggle', () => {
+        const container = document.createElement('div');
+        Cube.renderGroups(container, [
+            { category: 'Red', count: 1, asFan: 1, cards: [{ name: 'Bolt' }] },
+            { category: 'Blue', count: 1, asFan: 1, cards: [{ name: 'Counterspell' }] },
+        ]);
+        const btn = container.querySelector('[data-collapse-all]');
+        expect(btn).not.toBeNull();
+        btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        container.querySelectorAll('.cube-group').forEach((d) => expect(d.open).toBe(false));
+        expect(btn.textContent).toBe('Expand all');
+    });
+
+    test('Collapse all closes everything even from a mixed open/closed state', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }], [{ name: 'Island' }]]);
+        const packs = container.querySelectorAll('.cube-pack');
+        packs[0].open = false; // one already collapsed, the rest open
+        const btn = container.querySelector('[data-collapse-all]');
+
+        btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        // Any-open → collapse them all.
+        container.querySelectorAll('.cube-pack').forEach((d) => expect(d.open).toBe(false));
+        expect(btn.textContent).toBe('Expand all');
+
+        btn.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+        // None open → expand them all.
+        container.querySelectorAll('.cube-pack').forEach((d) => expect(d.open).toBe(true));
+        expect(btn.textContent).toBe('Collapse all');
+    });
+
+    test('the collapse-all button is a styled link-button carrying the data hook', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        const btn = container.querySelector('[data-collapse-all]');
+        expect(btn.tagName).toBe('BUTTON');
+        expect(btn.getAttribute('type')).toBe('button');
+        expect(btn.className).toContain('cube-link-btn');
+    });
+
+    test('re-rendering replaces the sections and leaves exactly one toggle', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }], [{ name: 'Island' }]]);
+        // Re-render with fewer packs (e.g. a new, smaller deal).
+        Cube.renderPacks(container, [[{ name: 'Swamp' }], [{ name: 'Plains' }]]);
+        expect(container.querySelectorAll('[data-collapse-all]')).toHaveLength(1);
+        expect(container.querySelectorAll('.cube-pack')).toHaveLength(2);
+        expect(container.querySelector('.cube-pack .cube-card-name').textContent).toBe('Swamp');
+    });
+
+    test('re-rendering down to a single section drops the toggle entirely', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        expect(container.querySelector('[data-collapse-all]')).not.toBeNull();
+        Cube.renderPacks(container, [[{ name: 'Swamp' }]]);
+        expect(container.querySelector('[data-collapse-all]')).toBeNull();
+    });
 });
 
 describe('deep-link hash activates the matching tab on in-page navigation', () => {
