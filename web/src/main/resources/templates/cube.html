@@ -45,8 +45,9 @@
     </header>
 
     <div class="cube-shell">
-        <!-- Shared card source, used by Preview and Generate -->
-        <section class="cube-source-card">
+        <!-- Shared card source, used by Preview and Generate (hidden on the
+             standalone As-fan calculator via data-needs-cube). -->
+        <section class="cube-source-card" data-needs-cube>
             <div class="cube-source-head">
                 <h2>Your cube</h2>
                 <span class="cube-source-note">Used by Preview &amp; Generate</span>
@@ -92,13 +93,20 @@
                     <span class="cube-card-count" data-card-count aria-live="polite">0 cards</span>
                     <button type="button" class="cube-link-btn" data-clear-list>Clear</button>
                 </div>
-                <div class="cube-saved" th:if="${loggedIn}">
-                    <input type="text" class="cube-saved-input" data-saved-lists list="cube-saved-options"
-                           autocomplete="off" placeholder="Find a saved cube…" aria-label="Saved cubes">
-                    <datalist id="cube-saved-options" data-saved-options></datalist>
-                    <button type="button" class="btn btn-secondary" data-save-list>Save</button>
-                    <button type="button" class="btn btn-secondary" data-delete-list>Delete</button>
-                    <button type="button" class="btn btn-secondary" data-share-list>Share</button>
+                <div class="cube-saved-block" th:if="${loggedIn}">
+                    <p class="cube-saved-help muted" id="cube-saved-help">
+                        Pick a saved cube to load it, or type a name and <strong>Save</strong> to keep
+                        the list above. <strong>Delete</strong> / <strong>Share</strong> act on the named cube.
+                    </p>
+                    <div class="cube-saved">
+                        <input type="text" class="cube-saved-input" data-saved-lists list="cube-saved-options"
+                               autocomplete="off" placeholder="Saved cube name…" aria-label="Saved cube name"
+                               aria-describedby="cube-saved-help">
+                        <datalist id="cube-saved-options" data-saved-options></datalist>
+                        <button type="button" class="btn btn-secondary" data-save-list>Save</button>
+                        <button type="button" class="btn btn-secondary" data-delete-list>Delete</button>
+                        <button type="button" class="btn btn-secondary" data-share-list>Share</button>
+                    </div>
                     <span class="cube-saved-status muted" data-saved-status aria-live="polite"></span>
                 </div>
                 <p class="cube-saved-login muted" th:unless="${loggedIn}">
@@ -113,7 +121,7 @@
             </div>
         </section>
 
-        <p class="cube-tabs-hint" id="cube-tabs-hint">Then pick a tool:</p>
+        <p class="cube-tabs-hint" id="cube-tabs-hint" data-needs-cube>Then pick a tool:</p>
         <div class="cube-tabs segmented" role="tablist" aria-label="Cube tools" aria-describedby="cube-tabs-hint">
             <button type="button" id="tab-generate" class="cube-tab" role="tab"
                     data-tab="generate" aria-controls="panel-generate" aria-selected="true">
