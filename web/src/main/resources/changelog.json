@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Cube UX: hide the source on the As-fan tab; clearer saved-cube picker",
+    "summary": "## Usability pass on the `/cube` workshop page",
+    "emoji": "✨",
+    "prNumber": 632
+  },
+  {
+    "date": "June 2026",
     "title": "Switch cube tab on hash change so navbar deep-links work in-page",
     "summary": "## Bug",
     "emoji": "✨",
