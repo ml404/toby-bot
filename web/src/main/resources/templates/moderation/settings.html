@@ -138,6 +138,26 @@
                             </select>
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
+                        <!-- Currency the /cube preview's "cube value" total is shown in.
+                             Null/absent reads as USD. -->
+                        <div class="config-row" data-key="CUBE_CURRENCY">
+                            <label>Cube value currency</label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="usd"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == null or overview.config['CUBE_CURRENCY'] == 'usd'}">
+                                    US Dollars ($)
+                                </option>
+                                <option value="eur"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'eur'}">
+                                    Euros (€)
+                                </option>
+                                <option value="tix"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'tix'}">
+                                    MTGO Tix
+                                </option>
+                            </select>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
                         <div class="config-row" data-key="DELETE_DELAY">
                             <label>Message delete delay (seconds)</label>
                             <input type="number" min="0" max="600"

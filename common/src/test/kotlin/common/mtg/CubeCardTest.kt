@@ -83,6 +83,18 @@ class CubeCardTest {
     }
 
     @Test
+    fun `price returns the field for each currency`() {
+        val card = CubeCard(name = "X", priceUsd = "1.50", priceEur = "1.20", priceTix = "0.03")
+        assertEquals("1.50", card.price(MtgCurrency.USD))
+        assertEquals("1.20", card.price(MtgCurrency.EUR))
+        assertEquals("0.03", card.price(MtgCurrency.TIX))
+        val bare = CubeCard(name = "Y")
+        assertEquals(null, bare.price(MtgCurrency.USD))
+        assertEquals(null, bare.price(MtgCurrency.EUR))
+        assertEquals(null, bare.price(MtgCurrency.TIX))
+    }
+
+    @Test
     fun `legalFormatsOf keeps only legal formats, display-cased, in FORMATS order`() {
         val status = mapOf(
             "standard" to "not_legal",

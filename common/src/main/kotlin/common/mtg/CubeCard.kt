@@ -96,6 +96,13 @@ data class CubeCard(
             else -> CardCategory.ofColor(colors.first())
         }
 
+    /** This card's raw price string in [currency] (e.g. "1.50"), or null when unpriced. */
+    fun price(currency: MtgCurrency): String? = when (currency) {
+        MtgCurrency.USD -> priceUsd
+        MtgCurrency.EUR -> priceEur
+        MtgCurrency.TIX -> priceTix
+    }
+
     companion object {
         /**
          * Play formats surfaced on a card panel, as `scryfall key to Display`,

@@ -823,6 +823,12 @@ class ModerationWebService(
                 if (v != "true" && v != "false") return "Value must be true or false."
                 v
             }
+            ConfigDto.Configurations.CUBE_CURRENCY -> {
+                // The /cube preview's "cube value" currency. Normalise to the
+                // MtgCurrency code so the bot reads it back cleanly.
+                common.mtg.MtgCurrency.fromCode(rawValue)?.code
+                    ?: return "Value must be one of usd, eur or tix."
+            }
             ConfigDto.Configurations.ACTIVITY_TRACKING_NOTIFIED ->
                 return "This flag is managed automatically and cannot be edited."
             ConfigDto.Configurations.JACKPOT_LOSS_TRIBUTE_PCT -> {

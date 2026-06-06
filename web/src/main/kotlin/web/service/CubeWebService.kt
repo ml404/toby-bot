@@ -178,7 +178,7 @@ class CubeWebService {
             duplicates = a.duplicates.map { DuplicateView(it.name, it.count) },
             colorPairs = a.colorPairs.map { ColorPairView(it.pair, it.count) },
             colorPips = a.colorPips.map { ColorPipView(it.color, it.count) },
-            totalValueUsd = a.totalValueUsd,
+            totalValues = a.totalValues.map { TotalValueView(it.currency.code, it.currency.display, it.amount) },
         )
     }
 
@@ -601,9 +601,12 @@ data class AnalyticsView(
     val duplicates: List<DuplicateView>,
     val colorPairs: List<ColorPairView>,
     val colorPips: List<ColorPipView>,
-    /** Total USD value of the priced cards in the pool, or null when none are priced. */
-    val totalValueUsd: Double? = null,
+    /** Cube market value per currency (code, display name, amount), present currencies only. */
+    val totalValues: List<TotalValueView> = emptyList(),
 )
+
+/** One currency's summed cube value: Scryfall code ("usd"), display ("USD"), amount. */
+data class TotalValueView(val currency: String, val display: String, val amount: Double)
 
 /** A single card looked up by name: image plus its key facts. */
 data class CardLookupView(

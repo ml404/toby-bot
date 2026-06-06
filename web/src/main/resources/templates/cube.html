@@ -236,7 +236,17 @@
                     <div class="cube-dist" data-pairs="preview"></div>
                     <h4 class="cube-analytics-h">Colour balance (mana pips)</h4>
                     <div class="cube-dist" data-pips="preview"></div>
-                    <p class="cube-total-value" data-value="preview" hidden></p>
+                    <div class="cube-total-value-row">
+                        <p class="cube-total-value" data-value="preview" hidden></p>
+                        <label class="cube-total-currency">
+                            <span class="sr-only">Cube value currency</span>
+                            <select data-value-currency="preview" hidden>
+                                <option value="usd">USD ($)</option>
+                                <option value="eur">EUR (€)</option>
+                                <option value="tix">MTGO Tix</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
             </details>
         </section>

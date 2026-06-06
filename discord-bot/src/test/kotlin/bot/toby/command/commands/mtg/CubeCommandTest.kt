@@ -32,6 +32,7 @@ class CubeCommandTest : CommandTest {
 
     private lateinit var fetcher: ScryfallCubeFetcher
     private lateinit var cubeListService: CubeListService
+    private lateinit var configService: database.service.guild.ConfigService
     private lateinit var command: CubeCommand
 
     @BeforeEach
@@ -39,8 +40,9 @@ class CubeCommandTest : CommandTest {
         setUpCommonMocks()
         fetcher = mockk()
         cubeListService = mockk(relaxed = true)
+        configService = mockk(relaxed = true) // null config → USD default
         // Unconfined so the launched IO coroutine resolves synchronously in tests.
-        command = CubeCommand(fetcher, cubeListService, Dispatchers.Unconfined)
+        command = CubeCommand(fetcher, cubeListService, configService, Dispatchers.Unconfined)
         every { requestingUserDto.discordId } returns 100L
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
@@ -106,6 +108,29 @@ class CubeCommandTest : CommandTest {
         // The cube report is wired in: the analytics fields ride along.
         assertTrue(slot.captured.fields.any { it.name == "Card types" })
         coVerify(exactly = 1) { fetcher.fetch(any(), any()) }
+    }
+
+    @Test
+    fun `preview reports the cube value in the guild's configured currency`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_PREVIEW
+        every { event.getOption(CubeCommand.OPT_QUERY) } returns strOpt("set:vow")
+        every { event.getOption(CubeCommand.OPT_PACK_SIZE) } returns null
+        // Guild has CUBE_CURRENCY = eur (guild id "1" from CommandTest mocks).
+        every {
+            configService.getConfigByName("CUBE_CURRENCY", "1")
+        } returns mockk { every { value } returns "eur" }
+        val priced = listOf(
+            CubeCard("Bolt", setOf(MtgColor.RED), priceUsd = "2.00", priceEur = "1.50"),
+            CubeCard("Bear", setOf(MtgColor.GREEN), priceUsd = "0.50", priceEur = "0.40"),
+        )
+        coEvery { fetcher.fetch(any(), any()) } returns ScryfallCubeFetcher.Result.Success(priced)
+
+        run()
+
+        val value = slot.captured.fields.first { it.name == "Cube value" }.value!!
+        assertTrue(value.contains("€1.90"), "expected EUR total, got: $value")
     }
 
     @Test

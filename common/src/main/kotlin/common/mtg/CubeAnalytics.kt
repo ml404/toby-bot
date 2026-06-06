@@ -30,6 +30,9 @@ object CubeAnalytics {
     /** Coloured mana pips of one colour across the whole cube (the true colour weight). */
     data class ColorPipCount(val color: String, val count: Int)
 
+    /** The cube's summed market value in one [MtgCurrency]. */
+    data class TotalValue(val currency: MtgCurrency, val amount: Double)
+
     /** The whole report, assembled once so the surfaces render identical numbers. */
     data class Analytics(
         val curve: List<ManaCurveBucket>,
@@ -40,9 +43,13 @@ object CubeAnalytics {
         val duplicates: List<Duplicate>,
         val colorPairs: List<ColorPairCount>,
         val colorPips: List<ColorPipCount>,
-        /** Sum of the priced cards' USD value, or null when none are priced. */
-        val totalValueUsd: Double?,
-    )
+        /** Summed market value per currency, present only for currencies something in the pool is priced in. */
+        val totalValues: List<TotalValue>,
+    ) {
+        /** The cube's total value in [currency], or null when nothing in the pool is priced in it. */
+        fun totalValueIn(currency: MtgCurrency): Double? =
+            totalValues.firstOrNull { it.currency == currency }?.amount
+    }
 
     /** The highest mana-value bucket; everything at or above it folds into "7+". */
     const val CURVE_TOP = 7
@@ -72,12 +79,21 @@ object CubeAnalytics {
         duplicates = duplicates(cards),
         colorPairs = colorPairs(cards),
         colorPips = colorPips(cards),
-        totalValueUsd = totalValueUsd(cards),
+        totalValues = totalValues(cards),
     )
 
-    /** Sum of the priced cards' USD value, or null when none of the pool is priced. */
-    fun totalValueUsd(cards: List<CubeCard>): Double? =
-        cards.mapNotNull { it.priceUsd?.toDoubleOrNull() }.takeIf { it.isNotEmpty() }?.sum()
+    /**
+     * The cube's summed market value in each [MtgCurrency], in enum order,
+     * including only currencies at least one card in the pool is priced in
+     * (so a cube with no MTGO prices simply omits the tix total).
+     */
+    fun totalValues(cards: List<CubeCard>): List<TotalValue> =
+        MtgCurrency.entries.mapNotNull { currency ->
+            cards.mapNotNull { it.price(currency)?.toDoubleOrNull() }
+                .takeIf { it.isNotEmpty() }
+                ?.sum()
+                ?.let { TotalValue(currency, it) }
+        }
 
     /**
      * Two-colour cards grouped by guild, in guild order, present pairs only —

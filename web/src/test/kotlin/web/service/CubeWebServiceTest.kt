@@ -57,15 +57,18 @@ class CubeWebServiceTest {
     }
 
     @Test
-    fun `analyticsView carries the total USD value, null when nothing is priced`() {
+    fun `analyticsView carries per-currency totals, empty when nothing is priced`() {
         val priced = listOf(
-            CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, priceUsd = "2.50"),
-            CubeCard("Bear", setOf(MtgColor.GREEN), typeLine = "Creature", manaValue = 2.0, priceUsd = "0.50"),
+            CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, priceUsd = "2.50", priceEur = "2.00"),
+            CubeCard("Bear", setOf(MtgColor.GREEN), typeLine = "Creature", manaValue = 2.0, priceUsd = "0.50", priceEur = "0.40"),
         )
-        assertEquals(3.0, service.analyticsView(priced, packSize = 2).totalValueUsd!!, 1e-9)
+        val totals = service.analyticsView(priced, packSize = 2).totalValues.associate { it.currency to it }
+        assertEquals(3.0, totals["usd"]!!.amount, 1e-9)
+        assertEquals("USD", totals["usd"]!!.display)
+        assertEquals(2.4, totals["eur"]!!.amount, 1e-9)
 
         val unpriced = listOf(CubeCard("Token", typeLine = "Token"))
-        assertEquals(null, service.analyticsView(unpriced, packSize = 1).totalValueUsd)
+        assertTrue(service.analyticsView(unpriced, packSize = 1).totalValues.isEmpty())
     }
 
     // --- card lookup ---------------------------------------------------

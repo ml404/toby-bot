@@ -14,6 +14,8 @@ class CubeAnalyticsTest {
         colors: Set<MtgColor> = emptySet(),
         manaCost: String? = null,
         priceUsd: String? = null,
+        priceEur: String? = null,
+        priceTix: String? = null,
     ) = CubeCard(
         name = name,
         colors = colors,
@@ -23,6 +25,8 @@ class CubeAnalyticsTest {
         rarity = rarity,
         manaCost = manaCost,
         priceUsd = priceUsd,
+        priceEur = priceEur,
+        priceTix = priceTix,
     )
 
     // --- mana curve ----------------------------------------------------
@@ -210,24 +214,42 @@ class CubeAnalyticsTest {
         assertEquals(listOf("White", "Red", "Green"), CubeAnalytics.colorPips(pool).map { it.color })
     }
 
-    // --- total value ---------------------------------------------------
+    // --- total value (per currency) ------------------------------------
 
     @Test
-    fun `totalValueUsd sums priced cards and ignores unpriced or unparseable ones`() {
+    fun `totalValues sums each currency, ignoring unpriced or unparseable cards`() {
         val pool = listOf(
-            card("A", priceUsd = "1.50"),
-            card("B", priceUsd = "2.25"),
+            card("A", priceUsd = "1.50", priceEur = "1.20", priceTix = "0.03"),
+            card("B", priceUsd = "2.25", priceEur = "2.00"),
             card("C", priceUsd = null),      // unpriced — ignored
             card("D", priceUsd = ""),        // blank — ignored
             card("E", priceUsd = "n/a"),     // not a number — ignored
         )
-        assertEquals(3.75, CubeAnalytics.totalValueUsd(pool)!!, 1e-9)
+        val totals = CubeAnalytics.totalValues(pool).associate { it.currency to it.amount }
+        assertEquals(3.75, totals[MtgCurrency.USD]!!, 1e-9)
+        assertEquals(3.20, totals[MtgCurrency.EUR]!!, 1e-9)
+        assertEquals(0.03, totals[MtgCurrency.TIX]!!, 1e-9)
     }
 
     @Test
-    fun `totalValueUsd is null when nothing in the pool is priced`() {
+    fun `totalValues lists currencies in enum order, omitting unpriced currencies`() {
+        // Only EUR is priced here, so USD and Tix are absent entirely.
+        val pool = listOf(card("A", priceEur = "5.00"))
+        val totals = CubeAnalytics.totalValues(pool)
+        assertEquals(listOf(MtgCurrency.EUR), totals.map { it.currency })
+    }
+
+    @Test
+    fun `totalValues is empty when nothing in the pool is priced`() {
         val pool = listOf(card("A"), card("B", priceUsd = ""))
-        assertEquals(null, CubeAnalytics.totalValueUsd(pool))
+        assertTrue(CubeAnalytics.totalValues(pool).isEmpty())
+    }
+
+    @Test
+    fun `Analytics totalValueIn resolves a currency or returns null`() {
+        val a = CubeAnalytics.analyze(listOf(card("A", priceUsd = "4.00")), packSize = 1)
+        assertEquals(4.00, a.totalValueIn(MtgCurrency.USD)!!, 1e-9)
+        assertEquals(null, a.totalValueIn(MtgCurrency.EUR))
     }
 
     // --- analyze (aggregate) -------------------------------------------
@@ -245,16 +267,18 @@ class CubeAnalyticsTest {
         assertEquals(1.5, a.averageManaValue, 1e-9)
         assertEquals(setOf("Creature", "Instant", "Land"), a.types.map { it.type.displayName }.toSet())
         assertTrue(a.duplicates.isEmpty())
-        assertEquals(null, a.totalValueUsd) // none of these cards carry a price
+        assertTrue(a.totalValues.isEmpty()) // none of these cards carry a price
     }
 
     @Test
-    fun `analyze carries the total USD value when cards are priced`() {
+    fun `analyze carries the per-currency totals when cards are priced`() {
         val pool = listOf(
-            card("Bolt", "Instant", 1.0, priceUsd = "2.00"),
-            card("Bear", "Creature — Bear", 2.0, priceUsd = "0.50"),
+            card("Bolt", "Instant", 1.0, priceUsd = "2.00", priceEur = "1.50"),
+            card("Bear", "Creature — Bear", 2.0, priceUsd = "0.50", priceEur = "0.40"),
         )
-        assertEquals(2.50, CubeAnalytics.analyze(pool, packSize = 2).totalValueUsd!!, 1e-9)
+        val a = CubeAnalytics.analyze(pool, packSize = 2)
+        assertEquals(2.50, a.totalValueIn(MtgCurrency.USD)!!, 1e-9)
+        assertEquals(1.90, a.totalValueIn(MtgCurrency.EUR)!!, 1e-9)
     }
 
     @Test
@@ -269,6 +293,6 @@ class CubeAnalyticsTest {
         assertTrue(a.colorPips.isEmpty())
         assertEquals(8, a.curve.size) // still the eight empty buckets
         assertTrue(a.curve.all { it.count == 0 })
-        assertEquals(null, a.totalValueUsd)
+        assertTrue(a.totalValues.isEmpty())
     }
 }

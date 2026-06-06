@@ -334,15 +334,41 @@
         if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
         if (els.pairs) renderColorPairs(els.pairs, analytics.colorPairs || []);
         if (els.pips) renderColorPips(els.pips, analytics.colorPips || []);
-        renderTotalValue(els.value, analytics.totalValueUsd);
+        const totals = analytics.totalValues || [];
+        const code = (els.valueCurrency && els.valueCurrency.value) || 'usd';
+        renderTotalValue(els.value, totals, code);
+        // Only offer the currency switch when something in the pool is priced.
+        if (els.valueCurrency) els.valueCurrency.hidden = totals.length === 0;
         show(els.breakdown);
     }
 
-    /** "≈ $123.45 in priced cards (USD)" — hidden when nothing in the pool is priced. */
-    function renderTotalValue(el, totalValueUsd) {
+    // Market currencies, mirroring common.mtg.MtgCurrency. The `code` matches
+    // the AnalyticsView total-value entries and the currency-toggle option
+    // values; symbol/suffix format an amount ($1.50 / €1.50 / 1.50 tix).
+    const CURRENCIES = [
+        { code: 'usd', display: 'USD', symbol: '$', suffix: '' },
+        { code: 'eur', display: 'EUR', symbol: '€', suffix: '' },
+        { code: 'tix', display: 'Tix', symbol: '', suffix: ' tix' },
+    ];
+
+    function currencyMeta(code) {
+        return CURRENCIES.filter(function (c) { return c.code === code; })[0] || CURRENCIES[0];
+    }
+
+    /** The total-value line for [code] from a totals list, or '' when nothing is priced in it. Pure. */
+    function totalValueText(totalValues, code) {
+        const match = (totalValues || []).filter(function (t) { return t.currency === code; })[0];
+        if (!match) return '';
+        const m = currencyMeta(code);
+        return '≈ ' + m.symbol + Number(match.amount).toFixed(2) + m.suffix + ' in priced cards (' + m.display + ')';
+    }
+
+    /** Renders the cube's total value in the [code] currency; hides when nothing is priced in it. */
+    function renderTotalValue(el, totalValues, code) {
         if (!el) return;
-        if (totalValueUsd == null) { el.hidden = true; el.textContent = ''; return; }
-        el.textContent = '≈ $' + Number(totalValueUsd).toFixed(2) + ' in priced cards (USD)';
+        const text = totalValueText(totalValues, code);
+        if (!text) { el.hidden = true; el.textContent = ''; return; }
+        el.textContent = text;
         el.hidden = false;
     }
 
@@ -1217,7 +1243,17 @@
         const pairs = q(doc, '[data-pairs="preview"]');
         const pips = q(doc, '[data-pips="preview"]');
         const value = q(doc, '[data-value="preview"]');
+        const valueCurrency = q(doc, '[data-value-currency="preview"]');
         const actions = q(doc, '[data-actions="preview"]');
+        let lastTotalValues = [];
+
+        // Switching currency re-renders the total line from the cached totals —
+        // no refetch, since every currency's total is already in the payload.
+        if (valueCurrency) {
+            valueCurrency.addEventListener('change', function () {
+                renderTotalValue(value, lastTotalValues, valueCurrency.value);
+            });
+        }
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
         const sampleBtn = q(doc, '[data-sample-pack="preview"]');
@@ -1293,7 +1329,8 @@
                     lastGroups = json.groups || [];
                     show(actions);
                     renderNotFound(notFound, json.notFound);
-                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value });
+                    lastTotalValues = (json.analytics && json.analytics.totalValues) || [];
+                    renderAnalytics(json.analytics, { dupes: dupes, breakdown: breakdown, avgMv: avgMv, curve: curve, types: types, rarity: rarity, pairs: pairs, pips: pips, value: value, valueCurrency: valueCurrency });
                 })
                 .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'preview', false); });
@@ -1580,6 +1617,7 @@
         renderDiff: renderDiff,
         cardUrl: cardUrl,
         priceLine: priceLine,
+        totalValueText: totalValueText,
         renderCardLookup: renderCardLookup,
         renderTotalValue: renderTotalValue,
         renderManaCurve: renderManaCurve,

@@ -281,6 +281,22 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts a known CUBE_CURRENCY and normalises it to a code`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.CUBE_CURRENCY
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "usd"))
+        assertNull(service.updateConfig(ownerId, guildId, key, "EUR")) // case-insensitive
+        assertNull(service.updateConfig(ownerId, guildId, key, "USD")) // display name resolves too
+        // Persisted as the normalised MtgCurrency code.
+        verify { configService.upsertConfig(key.configValue, "usd", guildId.toString()) }
+        verify { configService.upsertConfig(key.configValue, "eur", guildId.toString()) }
+
+        assertNotNull(service.updateConfig(ownerId, guildId, key, "gbp"))
+        assertNotNull(service.updateConfig(ownerId, guildId, key, ""))
+    }
+
+    @Test
     fun `updateConfig accepts per-guild cron HOUR keys in 0 to 23 and rejects others`() {
         mockMember(ownerId, isOwner = true)
         val keys = listOf(

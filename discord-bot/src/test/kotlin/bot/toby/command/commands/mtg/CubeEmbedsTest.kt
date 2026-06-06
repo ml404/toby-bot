@@ -23,16 +23,23 @@ class CubeEmbedsTest {
         colors: Set<MtgColor> = emptySet(),
         manaCost: String? = null,
         priceUsd: String? = null,
-    ) = CubeCard(name = name, colors = colors, isLand = land, typeLine = typeLine, manaValue = mv, rarity = rarity, manaCost = manaCost, priceUsd = priceUsd)
-
-    private fun preview(pool: List<CubeCard>, packSize: Int = 5) = CubeEmbeds.previewEmbed(
-        query = "test",
-        poolSize = pool.size,
-        packSize = packSize,
-        counts = AsFan.categoryCounts(pool),
-        distribution = AsFan.distribution(pool, packSize),
-        analytics = CubeAnalytics.analyze(pool, packSize),
+        priceEur: String? = null,
+        priceTix: String? = null,
+    ) = CubeCard(
+        name = name, colors = colors, isLand = land, typeLine = typeLine, manaValue = mv, rarity = rarity,
+        manaCost = manaCost, priceUsd = priceUsd, priceEur = priceEur, priceTix = priceTix,
     )
+
+    private fun preview(pool: List<CubeCard>, packSize: Int = 5, currency: common.mtg.MtgCurrency = common.mtg.MtgCurrency.USD) =
+        CubeEmbeds.previewEmbed(
+            query = "test",
+            poolSize = pool.size,
+            packSize = packSize,
+            counts = AsFan.categoryCounts(pool),
+            distribution = AsFan.distribution(pool, packSize),
+            analytics = CubeAnalytics.analyze(pool, packSize),
+            currency = currency,
+        )
 
     private fun field(embed: net.dv8tion.jda.api.entities.MessageEmbed, name: String) =
         embed.fields.firstOrNull { it.name == name }
@@ -191,16 +198,44 @@ class CubeEmbedsTest {
     }
 
     @Test
-    fun `previewEmbed shows the cube's total USD value only when cards are priced`() {
+    fun `previewEmbed shows the cube's total value only when cards are priced`() {
         val priced = listOf(
             card("Bolt", "Instant", 1.0, "common", priceUsd = "2.00"),
             card("Bear", "Creature — Bear", 2.0, "common", priceUsd = "0.50"),
         )
         val value = field(preview(priced), "Cube value")
         assertNotNull(value)
-        assertTrue(value!!.value!!.contains("2.50"), "total value: ${value.value}")
+        assertTrue(value!!.value!!.contains("$2.50"), "total value: ${value.value}")
+        assertTrue(value.value!!.contains("USD"))
 
         assertNull(field(preview(listOf(card("Token", "Token", 0.0, null))), "Cube value"))
+    }
+
+    @Test
+    fun `previewEmbed reports the cube value in the requested currency`() {
+        val priced = listOf(
+            card("Bolt", "Instant", 1.0, "common", priceUsd = "2.00", priceEur = "1.50", priceTix = "0.10"),
+            card("Bear", "Creature — Bear", 2.0, "common", priceUsd = "0.50", priceEur = "0.40", priceTix = "0.02"),
+        )
+        val eur = field(preview(priced, currency = common.mtg.MtgCurrency.EUR), "Cube value")!!.value!!
+        assertTrue(eur.contains("€1.90"), "EUR total: $eur")
+        assertTrue(eur.contains("EUR"))
+
+        val tix = field(preview(priced, currency = common.mtg.MtgCurrency.TIX), "Cube value")!!.value!!
+        assertTrue(tix.contains("0.12 tix"), "Tix total: $tix")
+    }
+
+    @Test
+    fun `cubeValue falls back to an available currency when the chosen one is unpriced`() {
+        // Only USD prices exist, but the guild's default is EUR: show USD rather than nothing.
+        val analytics = CubeAnalytics.analyze(listOf(card("Bolt", "Instant", 1.0, "common", priceUsd = "3.00")), 1)
+        val line = CubeEmbeds.cubeValue(analytics, common.mtg.MtgCurrency.EUR)
+        assertNotNull(line)
+        assertTrue(line!!.contains("$3.00"), "fallback line: $line")
+        assertTrue(line.contains("USD"))
+
+        // Nothing priced at all → no line regardless of currency.
+        assertNull(CubeEmbeds.cubeValue(CubeAnalytics.analyze(listOf(card("Token", "Token", 0.0, null)), 1), common.mtg.MtgCurrency.USD))
     }
 
     @Test
