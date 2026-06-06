@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add a deck legality checker (Discord + web)",
+    "summary": "First of the four features picked from the \"what's next\" list. Paste a decklist (or check a saved cube) against a format and find out whether it's legal — every **banned**, **not-in-format**, and **restricted** card is flagged.",
+    "emoji": "✨",
+    "prNumber": 651
+  },
+  {
+    "date": "June 2026",
     "title": "Surface cube value on generate, per-card prices in pack files, and value extremes",
     "summary": "Three follow-ups that round out the cube-value tooling — the gaps noted after the prices/currency work landed.",
     "emoji": "✨",
