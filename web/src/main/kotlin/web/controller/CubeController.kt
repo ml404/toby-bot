@@ -24,6 +24,7 @@ import web.service.CategoryGroup
 import web.service.CubeResult
 import web.service.DiffLineView
 import web.service.CubeWebService
+import web.service.RulingView
 import web.service.GenerateData
 import web.service.PreviewData
 import web.util.discordIdOrNull
@@ -130,6 +131,17 @@ class CubeController(
         when (val result = cubeWebService.card(name)) {
             is CubeResult.Success -> ResponseEntity.ok(CubeCardResponse(true, null, result.value))
             is CubeResult.Failure -> ResponseEntity.badRequest().body(CubeCardResponse(false, result.error, null))
+        }
+
+    @GetMapping("/api/rulings", produces = ["application/json"])
+    @ResponseBody
+    fun rulings(@RequestParam("name") name: String): ResponseEntity<CubeRulingsResponse> =
+        when (val result = cubeWebService.rulings(name)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubeRulingsResponse(true, null, result.value.name, result.value.scryfallUri, result.value.rulings)
+            )
+            is CubeResult.Failure ->
+                ResponseEntity.badRequest().body(CubeRulingsResponse(false, result.error, null, null, emptyList()))
         }
 
     @PostMapping("/api/diff", consumes = ["application/json"], produces = ["application/json"])
@@ -257,6 +269,14 @@ data class ShareCubeResponse(val token: String, val url: String, val name: Strin
 data class CubeListPreviewRequest(val list: String = "", val packSize: Int = 15)
 
 data class CubeCardResponse(val ok: Boolean, val error: String?, val card: CardLookupView?)
+
+data class CubeRulingsResponse(
+    val ok: Boolean,
+    val error: String?,
+    val name: String?,
+    val scryfallUri: String?,
+    val rulings: List<RulingView>,
+)
 
 data class CubeDiffRequest(val listA: String = "", val listB: String = "")
 

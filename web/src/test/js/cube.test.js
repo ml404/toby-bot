@@ -439,6 +439,46 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
         expect(text).not.toContain('Price');
         expect(text).not.toContain('Legal');
     });
+
+    test('renderCardLookup includes a Show rulings button carrying the card name, and a hidden box', () => {
+        const container = document.createElement('div');
+        Cube.renderCardLookup(container, { name: 'Doubling Season', imageUrlLarge: 'n.jpg', typeLine: 'Enchantment', manaValue: 5, rarity: 'Rare', colors: ['Green'] });
+        const btn = container.querySelector('[data-load-rulings]');
+        expect(btn).not.toBeNull();
+        expect(btn.getAttribute('data-card-name')).toBe('Doubling Season');
+        const box = container.querySelector('[data-rulings-result]');
+        expect(box).not.toBeNull();
+        expect(box.hidden).toBe(true);
+    });
+});
+
+describe('rulings (rulingsUrl / renderRulings)', () => {
+    test('rulingsUrl encodes the name', () => {
+        expect(Cube.rulingsUrl('Urza, Lord High Artificer'))
+            .toBe('/cube/api/rulings?name=' + encodeURIComponent('Urza, Lord High Artificer'));
+    });
+
+    test('renderRulings lists each ruling with its date', () => {
+        const container = document.createElement('div');
+        Cube.renderRulings(container, {
+            rulings: [
+                { publishedAt: '2021-03-19', comment: 'Tokens are doubled.' },
+                { publishedAt: '2022-01-01', comment: 'Counters too.' },
+            ],
+        });
+        expect(container.querySelector('.cube-rulings-h').textContent).toBe('Rulings');
+        const items = container.querySelectorAll('.cube-ruling');
+        expect(items).toHaveLength(2);
+        expect(items[0].querySelector('.cube-ruling-date').textContent).toBe('2021-03-19');
+        expect(items[0].querySelector('.cube-ruling-text').textContent).toBe('Tokens are doubled.');
+    });
+
+    test('renderRulings shows an empty state when there are none', () => {
+        const container = document.createElement('div');
+        Cube.renderRulings(container, { rulings: [] });
+        expect(container.querySelector('.cube-rulings-empty').textContent).toContain('No official rulings');
+        expect(container.querySelectorAll('.cube-ruling')).toHaveLength(0);
+    });
 });
 
 describe('priceLine (pure)', () => {

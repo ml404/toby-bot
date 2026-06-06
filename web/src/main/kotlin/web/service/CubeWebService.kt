@@ -78,6 +78,73 @@ class CubeWebService {
         }
     }
 
+    /**
+     * Looks a card up by (fuzzy) name and fetches its official rulings — the
+     * website twin of `/cube rulings`. Two calls: `/cards/named` to resolve the
+     * card (and its `rulings_uri`), then a GET of that uri. A resolved card
+     * with no rulings is a success with an empty list, not an error.
+     */
+    fun rulings(name: String): CubeResult<RulingsView> {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return CubeResult.error("Enter a card name to look up rulings.")
+        val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        return try {
+            val response = scryfallGet(url)
+            when (response.statusCode()) {
+                200 -> {
+                    val card = jackson.readTree(response.body())
+                    val cardName = card.path("name").asText("").takeIf { it.isNotBlank() }
+                        ?: return CubeResult.error("Scryfall returned an unexpected card.")
+                    val scryfallUri = card.path("scryfall_uri").asText("").takeIf { it.isNotBlank() }
+                    val rulingsUri = card.path("rulings_uri").asText("").takeIf { it.isNotBlank() }
+                    val rulings = rulingsUri?.let { fetchRulings(it) } ?: emptyList()
+                    CubeResult.ok(RulingsView(cardName, scryfallUri, rulings))
+                }
+                404 -> CubeResult.error("No card found matching “$trimmed”.")
+                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+            }
+        } catch (e: IOException) {
+            CubeResult.error("Could not reach Scryfall: ${e.message}")
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CubeResult.error("Request interrupted.")
+        }
+    }
+
+    /** GETs and parses a `rulings_uri`; an unreachable/non-200 rulings call yields no rulings. */
+    private fun fetchRulings(rulingsUri: String): List<RulingView> =
+        try {
+            val response = scryfallGet(rulingsUri)
+            if (response.statusCode() == 200) rulingsOf(jackson.readTree(response.body())) else emptyList()
+        } catch (e: IOException) {
+            emptyList()
+        } catch (e: InterruptedException) {
+            Thread.currentThread().interrupt()
+            emptyList()
+        }
+
+    /** Maps a Scryfall `/rulings` JSON tree into ruling views, skipping blank comments. */
+    fun rulingsOf(root: JsonNode): List<RulingView> {
+        val data = root.path("data")
+        if (!data.isArray) return emptyList()
+        return data.mapNotNull { node ->
+            val comment = node.path("comment").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            RulingView(node.path("published_at").asText(""), comment)
+        }
+    }
+
+    /** A short GET against Scryfall with the standard headers and timeout. */
+    private fun scryfallGet(url: String): HttpResponse<String> =
+        http.send(
+            HttpRequest.newBuilder(URI.create(url))
+                .header("User-Agent", "tobybot-web/1.0")
+                .header("Accept", "application/json")
+                .timeout(Duration.ofSeconds(10))
+                .GET()
+                .build(),
+            HttpResponse.BodyHandlers.ofString(),
+        )
+
     /** Maps a resolved card to the lookup view, resolving rarity + colours for display. */
     internal fun lookupView(sc: ScryfallCard): CardLookupView = CardLookupView(
         name = sc.card.name,
@@ -627,6 +694,16 @@ data class CardLookupView(
     /** Play formats this card is currently legal in, display-cased, in [CubeCard.FORMATS] order. */
     val legalFormats: List<String> = emptyList(),
 )
+
+/** A card's official rulings, looked up by name: the card, its Scryfall page, and the notes. */
+data class RulingsView(
+    val name: String,
+    val scryfallUri: String?,
+    val rulings: List<RulingView>,
+)
+
+/** One published ruling: the ISO publish date and the note text. */
+data class RulingView(val publishedAt: String, val comment: String)
 
 /** One card's change between two compared lists (copy counts from → to). */
 data class DiffLineView(val name: String, val from: Int, val to: Int)

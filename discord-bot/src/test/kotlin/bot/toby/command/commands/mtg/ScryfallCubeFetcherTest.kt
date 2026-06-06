@@ -310,6 +310,101 @@ class ScryfallCubeFetcherTest {
         assertNull(fetcherWith(MockEngine { throw IOException("down") }).fetchNamed("Bolt"))
     }
 
+    // --- rulings -------------------------------------------------------
+
+    @Test
+    fun `parseRulings maps the data array, skipping blank comments`() {
+        val rulings = fetcher.parseRulings(
+            obj("""{"data":[
+              {"published_at":"2021-03-19","comment":"First."},
+              {"published_at":"2022-02-02","comment":""},
+              {"comment":"No date."}
+            ]}""")
+        )
+        assertEquals(2, rulings.size)
+        assertEquals("2021-03-19", rulings[0].publishedAt)
+        assertEquals("First.", rulings[0].comment)
+        assertEquals("", rulings[1].publishedAt) // missing date → blank
+        assertEquals("No date.", rulings[1].comment)
+    }
+
+    @Test
+    fun `parseRulings tolerates a missing data array`() {
+        assertTrue(fetcher.parseRulings(obj("""{"object":"error"}""")).isEmpty())
+    }
+
+    @Test
+    fun `fetchRulings resolves the card then its rulings`() = runBlocking {
+        val engine = MockEngine { request ->
+            if (request.url.toString().contains("/rulings")) {
+                respond(
+                    """{"data":[{"published_at":"2021-03-19","comment":"It works like this."}]}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+            } else {
+                respond(
+                    """{"name":"Doubling Season","scryfall_uri":"https://scryfall.com/card",
+                       "rulings_uri":"https://api.scryfall.com/cards/abc/rulings"}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+            }
+        }
+        val rulings = fetcherWith(engine).fetchRulings("doubling season")
+        assertEquals("Doubling Season", rulings?.cardName)
+        assertEquals("https://scryfall.com/card", rulings?.scryfallUri)
+        assertEquals(1, rulings?.rulings?.size)
+        assertEquals("It works like this.", rulings?.rulings?.first()?.comment)
+        // Two calls: the fuzzy named lookup, then the rulings uri.
+        assertEquals(2, engine.requestHistory.size)
+    }
+
+    @Test
+    fun `fetchRulings returns an empty list when the card has no rulings`() = runBlocking {
+        val engine = MockEngine { request ->
+            if (request.url.toString().contains("/rulings")) {
+                respond("""{"data":[]}""", HttpStatusCode.OK, jsonHeaders)
+            } else {
+                respond(
+                    """{"name":"Plains","scryfall_uri":"https://scryfall.com/p","rulings_uri":"https://api.scryfall.com/cards/p/rulings"}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+            }
+        }
+        val rulings = fetcherWith(engine).fetchRulings("Plains")
+        assertEquals("Plains", rulings?.cardName)
+        assertTrue(rulings!!.rulings.isEmpty())
+    }
+
+    @Test
+    fun `fetchRulings returns null when no card matches (404)`() = runBlocking {
+        val rulings = fetcherWith(MockEngine { respondError(HttpStatusCode.NotFound) }).fetchRulings("zzznotacard")
+        assertNull(rulings)
+    }
+
+    @Test
+    fun `fetchRulings returns null for a blank name without calling the network`() = runBlocking {
+        val engine = MockEngine { respond("{}", HttpStatusCode.OK, jsonHeaders) }
+        assertNull(fetcherWith(engine).fetchRulings("   "))
+        assertEquals(0, engine.requestHistory.size)
+    }
+
+    @Test
+    fun `fetchRulings yields no rulings when the rulings call errors but the card resolved`() = runBlocking {
+        val engine = MockEngine { request ->
+            if (request.url.toString().contains("/rulings")) {
+                respondError(HttpStatusCode.InternalServerError)
+            } else {
+                respond(
+                    """{"name":"Bolt","scryfall_uri":"u","rulings_uri":"https://api.scryfall.com/cards/b/rulings"}""",
+                    HttpStatusCode.OK, jsonHeaders,
+                )
+            }
+        }
+        val rulings = fetcherWith(engine).fetchRulings("Bolt")
+        assertEquals("Bolt", rulings?.cardName)
+        assertTrue(rulings!!.rulings.isEmpty())
+    }
+
     // --- fetch ---------------------------------------------------------
 
     @Test

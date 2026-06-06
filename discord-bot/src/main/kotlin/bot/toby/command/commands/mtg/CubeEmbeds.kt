@@ -2,6 +2,7 @@ package bot.toby.command.commands.mtg
 
 import common.discord.embed
 import common.discord.field
+import common.mtg.CardRulings
 import common.mtg.CardCategory
 import common.mtg.CardListParser
 import common.mtg.CubeAnalytics
@@ -224,6 +225,51 @@ internal object CubeEmbeds {
         card.priceEur?.let { add("€$it") }
         card.priceTix?.let { add("$it tix") }
     }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+
+    /**
+     * The official rulings panel for `/cube rulings`: each ruling as a
+     * `> date — comment` block, oldest first, trimmed to stay within an embed
+     * description. Shows a friendly empty state when the card has no rulings.
+     */
+    fun rulingsEmbed(rulings: CardRulings): MessageEmbed = embed(color = OK_COLOR) {
+        setAuthor(AUTHOR)
+        setTitle("${rulings.cardName} — rulings")
+        rulings.scryfallUri?.let { setUrl(it) }
+        if (rulings.rulings.isEmpty()) {
+            setDescription("No official rulings have been published for this card.")
+            return@embed
+        }
+        setDescription(rulingsBlock(rulings.rulings))
+        setFooter("${rulings.rulings.size} ruling${if (rulings.rulings.size == 1) "" else "s"} · source: Scryfall")
+    }
+
+    /**
+     * Joins rulings into one description, each headed by its date, dropping
+     * any that would overflow the embed description cap (so a heavily-ruled
+     * card like a planeswalker doesn't blow the 4096-char limit).
+     */
+    fun rulingsBlock(rulings: List<CardRulings.Ruling>): String {
+        val out = StringBuilder()
+        var shown = 0
+        for (r in rulings) {
+            val head = r.publishedAt.takeIf { it.isNotBlank() }?.let { "**$it**\n" }.orEmpty()
+            val entry = "$head${r.comment}"
+            // +2 for the blank line between entries.
+            if (out.length + entry.length + 2 > RULINGS_LIMIT) break
+            if (out.isNotEmpty()) out.append("\n\n")
+            out.append(entry)
+            shown++
+        }
+        if (shown < rulings.size) {
+            val more = "\n\n…and ${rulings.size - shown} more (see Scryfall)."
+            if (out.length + more.length <= RULINGS_DESC_CAP) out.append(more)
+        }
+        return out.toString()
+    }
+
+    /** Leave headroom under Discord's 4096-char description cap for the "…and N more" line. */
+    private const val RULINGS_LIMIT = 3800
+    private const val RULINGS_DESC_CAP = 4096
 
     /** Mana value without a trailing `.0` (whole numbers are the norm). */
     private fun formatMv(mv: Double): String =
