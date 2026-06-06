@@ -37,6 +37,7 @@
                     <p class="settings-nav-heading">Server</p>
                     <a href="#settings-section-server-features" class="settings-nav-link">Server features</a>
                     <a href="#settings-section-messages" class="settings-nav-link">Messages &amp; leaderboards</a>
+                    <a href="#settings-section-magic" class="settings-nav-link">Magic: The Gathering</a>
                 </div>
                 <div class="settings-nav-group">
                     <p class="settings-nav-heading">Economy</p>
@@ -122,42 +123,6 @@
                 <details id="settings-section-messages" class="config-section">
                     <summary>Messages &amp; leaderboards</summary>
                     <div class="config-grid">
-                        <!-- Opt-out: inline [[card]] lookups are on unless explicitly
-                             set to "false", so a null/absent value reads as Enabled. -->
-                        <div class="config-row" data-key="CARD_MENTIONS">
-                            <label>Inline [[card]] Magic lookups</label>
-                            <select th:disabled="${!isOwner}">
-                                <option value="true"
-                                        th:selected="${overview.config['CARD_MENTIONS'] == null or overview.config['CARD_MENTIONS'] == 'true'}">
-                                    Enabled
-                                </option>
-                                <option value="false"
-                                        th:selected="${overview.config['CARD_MENTIONS'] == 'false'}">
-                                    Disabled
-                                </option>
-                            </select>
-                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                        </div>
-                        <!-- Currency the /cube preview's "cube value" total is shown in.
-                             Null/absent reads as USD. -->
-                        <div class="config-row" data-key="CUBE_CURRENCY">
-                            <label>Cube value currency</label>
-                            <select th:disabled="${!isOwner}">
-                                <option value="usd"
-                                        th:selected="${overview.config['CUBE_CURRENCY'] == null or overview.config['CUBE_CURRENCY'] == 'usd'}">
-                                    US Dollars ($)
-                                </option>
-                                <option value="eur"
-                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'eur'}">
-                                    Euros (€)
-                                </option>
-                                <option value="tix"
-                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'tix'}">
-                                    MTGO Tix
-                                </option>
-                            </select>
-                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                        </div>
                         <div class="config-row" data-key="DELETE_DELAY">
                             <label>Message delete delay (seconds)</label>
                             <input type="number" min="0" max="600"
@@ -229,6 +194,48 @@
                                 <button type="submit" class="btn config-create-channel-btn"
                                         th:disabled="${!isOwner}">Create</button>
                             </form>
+                        </div>
+                    </div>
+                </details>
+
+                <details id="settings-section-magic" class="config-section">
+                    <summary>Magic: The Gathering</summary>
+                    <div class="config-grid">
+                        <!-- Opt-out: inline [[card]] lookups are on unless explicitly
+                             set to "false", so a null/absent value reads as Enabled. -->
+                        <div class="config-row" data-key="CARD_MENTIONS">
+                            <label>Inline [[card]] Magic lookups</label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="true"
+                                        th:selected="${overview.config['CARD_MENTIONS'] == null or overview.config['CARD_MENTIONS'] == 'true'}">
+                                    Enabled
+                                </option>
+                                <option value="false"
+                                        th:selected="${overview.config['CARD_MENTIONS'] == 'false'}">
+                                    Disabled
+                                </option>
+                            </select>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <!-- Currency the /cube preview's "cube value" total is shown in.
+                             Null/absent reads as USD. -->
+                        <div class="config-row" data-key="CUBE_CURRENCY">
+                            <label>Cube value currency</label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="usd"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == null or overview.config['CUBE_CURRENCY'] == 'usd'}">
+                                    US Dollars ($)
+                                </option>
+                                <option value="eur"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'eur'}">
+                                    Euros (€)
+                                </option>
+                                <option value="tix"
+                                        th:selected="${overview.config['CUBE_CURRENCY'] == 'tix'}">
+                                    MTGO Tix
+                                </option>
+                            </select>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
                     </div>
                 </details>

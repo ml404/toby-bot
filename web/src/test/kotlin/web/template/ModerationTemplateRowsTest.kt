@@ -230,6 +230,32 @@ class ModerationTemplateRowsTest {
     }
 
     @Test
+    fun `settings template has a dedicated Magic section holding both Magic config keys`() {
+        // The two Magic keys (inline [[card]] lookups + cube value currency)
+        // used to be buried in the generic "Messages & leaderboards" section.
+        // They now live in their own <details><summary>Magic: The Gathering</summary>
+        // block — mirroring how each game gets its own section — so they're
+        // grouped and discoverable.
+        val start = settingsHtml.indexOf("<summary>Magic: The Gathering</summary>")
+        assertTrue(start >= 0, "expected a <details><summary>Magic: The Gathering</summary> section")
+        val sectionEnd = settingsHtml.indexOf("</details>", start)
+        assertTrue(sectionEnd > start, "Magic section not terminated")
+        val sectionHtml = settingsHtml.substring(start, sectionEnd)
+        for (key in listOf("CARD_MENTIONS", "CUBE_CURRENCY")) {
+            assertTrue(
+                sectionHtml.contains("data-key=\"$key\""),
+                "$key should live inside the Magic: The Gathering section",
+            )
+        }
+        // The section is reachable from the sticky left-rail nav, like every
+        // other section (the rail anchor must match the section id).
+        assertTrue(
+            settingsHtml.contains("href=\"#settings-section-magic\""),
+            "expected a left-rail link to #settings-section-magic",
+        )
+    }
+
+    @Test
     fun `settings template groups sections under server economy and casino pillars`() {
         // The three top-level <h2 class="config-pillar"> headers anchor
         // the visual grouping of the otherwise-flat accordion sections.
