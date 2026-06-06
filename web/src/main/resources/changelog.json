@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix /magic 500 (Thymeleaf escaping) + render-test guard + rename cube.* → magic.*",
+    "summary": "**Production hotfix + cleanup.** `/magic` was returning **500 Internal Server Error**.",
+    "emoji": "✨",
+    "prNumber": 658
+  },
+  {
+    "date": "June 2026",
     "title": "Reframe the Magic tools as a \"Magic toolkit\" at /magic (+ SEO)",
     "summary": "The Magic web surface was a single tabbed page at `/cube` titled \"Cube workshop\" — a good hub pattern, but the title mislabelled the card/legality/reference/price-watch tabs as cube-only, and the `/cube` slug carries no \"magic\"/\"mtg\" keyword.",
     "emoji": "✨",
