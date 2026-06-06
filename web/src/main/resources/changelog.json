@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add card prices, format legality and cube value to the MTG tools",
+    "summary": "Surfaces Scryfall **market prices** (USD / EUR / MTGO tix) and current **format legality** across every Magic card surface, plus a cube-wide **total value** — three of the most-requested \"card bot\" features, which broadens install appeal for trading/deckbuilding communities.",
+    "emoji": "🛡️",
+    "prNumber": 647
+  },
+  {
+    "date": "June 2026",
     "title": "Richer, configurable card lookups: oracle text, DFC backs, opt-out toggle",
     "summary": "## Why",
     "emoji": "🛡️",
