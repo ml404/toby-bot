@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Switch cube tab on hash change so navbar deep-links work in-page",
+    "summary": "## Bug",
+    "emoji": "✨",
+    "prNumber": 631
+  },
+  {
+    "date": "June 2026",
     "title": "Richer cube preview cards: mana cost, DFC backs, copy counts",
     "summary": "## Why",
     "emoji": "✨",
