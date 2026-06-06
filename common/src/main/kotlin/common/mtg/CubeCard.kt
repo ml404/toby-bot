@@ -65,6 +65,17 @@ data class CubeCard(
      * colour balance — so this stays a dumb value type.
      */
     val manaCost: String? = null,
+    /**
+     * The card's rules text (Scryfall `oracle_text`), or null. Presentation-
+     * only — shown on a card lookup / `[[mention]]`, ignored by the maths.
+     * For a double-faced card both faces are combined.
+     */
+    val oracleText: String? = null,
+    /**
+     * The back-face image for a double-faced card (Scryfall second face
+     * `image_uris.normal`), or null for single-faced cards. Presentation-only.
+     */
+    val imageUrlBack: String? = null,
 ) {
     /** Which as-fan bucket this card falls into. Lands first, then by colour count. */
     val category: CardCategory

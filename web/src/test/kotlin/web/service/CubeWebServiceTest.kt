@@ -63,6 +63,7 @@ class CubeWebServiceTest {
         val node = mapper.readTree(
             """{"name":"Ragavan, Nimble Pilferer","color_identity":["R"],
                "type_line":"Legendary Creature — Monkey Pirate","cmc":1.0,"mana_cost":"{R}","rarity":"mythic",
+               "oracle_text":"Whenever Ragavan deals combat damage, create a Treasure.",
                "image_uris":{"small":"s.jpg","normal":"n.jpg"}}"""
         )
         val view = service.lookupView(service.cardOf(node)!!)
@@ -72,6 +73,7 @@ class CubeWebServiceTest {
         assertEquals("Mythic", view.rarity)
         assertEquals(listOf("Red"), view.colors)
         assertEquals("Legendary Creature — Monkey Pirate", view.typeLine)
+        assertTrue(view.oracleText!!.contains("create a Treasure"))
     }
 
     // --- diff (compare two lists) --------------------------------------

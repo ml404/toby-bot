@@ -33,6 +33,9 @@ class ConfigDto(
         VOLUME("DEFAULT_VOLUME"),
         MOVE("DEFAULT_MOVE_CHANNEL"),
         DELETE_DELAY("DELETE_MESSAGE_DELAY"),
+        // Inline [[card]] Magic lookups. Opt-out: enabled unless explicitly
+        // set to "false" for the guild.
+        CARD_MENTIONS("CARD_MENTIONS"),
         LEADERBOARD_CHANNEL("LEADERBOARD_CHANNEL"),
         // Per-guild UTC hour (0-23) at which MonthlyLeaderboardJob posts the
         // monthly leaderboard on the 1st of the month. Defaults to 12 (noon

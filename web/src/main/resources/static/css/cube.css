@@ -1239,6 +1239,17 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     flex-wrap: wrap;
 }
 
+.cube-cardlookup-oracle {
+    margin: var(--space-2) 0 0;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    line-height: 1.45;
+    white-space: pre-wrap;
+}
+
 .cube-cardlookup-link {
     align-self: start;
     margin-top: var(--space-2);

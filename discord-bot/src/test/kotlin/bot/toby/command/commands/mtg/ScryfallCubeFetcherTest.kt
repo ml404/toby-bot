@@ -125,6 +125,26 @@ class ScryfallCubeFetcherTest {
     }
 
     @Test
+    fun `parseCard reads oracle text and the back-face image`() {
+        val single = fetcher.parseCard(
+            obj("""{"name":"Bolt","color_identity":["R"],"type_line":"Instant","oracle_text":"Deals 3 damage."}""")
+        )!!
+        assertEquals("Deals 3 damage.", single.oracleText)
+        assertEquals(null, single.imageUrlBack)
+
+        val dfc = fetcher.parseCard(
+            obj("""{"name":"Delver // Aberration","color_identity":["U"],"type_line":"Creature","oracle_text":"",
+               "card_faces":[
+                 {"name":"Delver of Secrets","oracle_text":"Look at the top card.","image_uris":{"normal":"front.jpg"}},
+                 {"name":"Insectile Aberration","oracle_text":"Flying.","image_uris":{"normal":"back.jpg"}}]}""")
+        )!!
+        // Both faces' text combined, each headed by its face name.
+        assertTrue(dfc.oracleText!!.contains("Look at the top card."))
+        assertTrue(dfc.oracleText!!.contains("Insectile Aberration"))
+        assertEquals("back.jpg", dfc.imageUrlBack)
+    }
+
+    @Test
     fun `parseCard treats a card with no colour identity as colourless`() {
         val card = fetcher.parseCard(obj("""{"name":"Sol Ring","color_identity":[],"type_line":"Artifact"}"""))!!
         assertEquals(CardCategory.COLORLESS, card.category)

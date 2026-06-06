@@ -134,6 +134,7 @@ class CubeEmbedsTest {
             manaValue = 1.0,
             imageUrl = "https://img/ragavan.jpg",
             rarity = "mythic",
+            oracleText = "Whenever Ragavan deals combat damage, create a Treasure.",
         )
         val embed = CubeEmbeds.cardEmbed(card)
 
@@ -144,6 +145,7 @@ class CubeEmbedsTest {
         assertTrue(desc.contains("Mana value** · 1"), "MV without trailing .0: $desc")
         assertTrue(desc.contains("Rarity** · Mythic"))
         assertTrue(desc.contains("Colour identity** · Red"))
+        assertTrue(desc.contains("create a Treasure"), "oracle text shown: $desc")
     }
 
     @Test

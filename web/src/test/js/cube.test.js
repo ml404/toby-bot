@@ -399,6 +399,7 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
             imageUrl: 's.jpg', imageUrlLarge: 'n.jpg',
             typeLine: 'Legendary Creature — Monkey Pirate',
             manaValue: 1, manaCost: '{R}', rarity: 'Mythic', colors: ['Red'],
+            oracleText: 'Whenever Ragavan deals combat damage, create a Treasure.',
         });
         expect(container.querySelector('.cube-cardlookup-img').getAttribute('src')).toBe('n.jpg');
         expect(container.querySelector('h3').textContent).toBe('Ragavan, Nimble Pilferer');
@@ -406,6 +407,7 @@ describe('card lookup (cardUrl / renderCardLookup)', () => {
         expect(text).toContain('Legendary Creature — Monkey Pirate');
         expect(text).toContain('Mythic');
         expect(text).toContain('Red');
+        expect(container.querySelector('.cube-cardlookup-oracle').textContent).toContain('create a Treasure');
         // The mana cost renders as a Scryfall symbol image.
         expect(container.querySelector('.cube-mana-symbol').getAttribute('src')).toBe('https://svgs.scryfall.io/card-symbols/R.svg');
         expect(container.querySelector('.cube-cardlookup-link').getAttribute('href')).toBe(Cube.scryfallCardUrl('Ragavan, Nimble Pilferer'));

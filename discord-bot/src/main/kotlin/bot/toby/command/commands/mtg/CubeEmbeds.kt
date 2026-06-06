@@ -186,19 +186,25 @@ internal object CubeEmbeds {
         card.imageUrl?.let { setImage(it) }
         val colours = if (card.colors.isEmpty()) "Colourless"
         else MtgColor.entries.filter { it in card.colors }.joinToString(", ") { it.displayName }
-        setDescription(
-            buildList {
-                if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
-                add("**Mana value** · ${formatMv(card.manaValue)}")
-                card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
-                add("**Colour identity** · $colours")
-            }.joinToString("\n")
-        )
+        val facts = buildList {
+            if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
+            add("**Mana value** · ${formatMv(card.manaValue)}")
+            card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
+            add("**Colour identity** · $colours")
+        }.joinToString("\n")
+        val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
+        setDescription(facts + oracle)
     }
 
     /** Mana value without a trailing `.0` (whole numbers are the norm). */
     private fun formatMv(mv: Double): String =
         if (mv % 1.0 == 0.0) mv.toInt().toString() else format(mv)
+
+    /** Oracle rules text, trimmed to stay well within an embed description. */
+    fun oracleBlock(oracleText: String): String =
+        if (oracleText.length <= ORACLE_LIMIT) oracleText else oracleText.take(ORACLE_LIMIT).trimEnd() + "…"
+
+    private const val ORACLE_LIMIT = 1500
 
     /** A `category — count (as-fan)` table, in colour-pie order, present buckets only. */
     private fun distributionTable(
