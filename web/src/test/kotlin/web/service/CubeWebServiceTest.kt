@@ -122,6 +122,36 @@ class CubeWebServiceTest {
         assertEquals("1.25", parsed.toView().priceUsd) // surfaced on the grid tile
     }
 
+    // --- rulings -------------------------------------------------------
+
+    @Test
+    fun `rulingsOf maps the data array, skipping blank comments`() {
+        val root = mapper.readTree(
+            """{"data":[
+              {"published_at":"2021-03-19","comment":"First ruling."},
+              {"published_at":"2022-01-01","comment":""},
+              {"published_at":"2023-06-06","comment":"Third ruling."}
+            ]}"""
+        )
+        val rulings = service.rulingsOf(root)
+        assertEquals(2, rulings.size)
+        assertEquals("2021-03-19", rulings.first().publishedAt)
+        assertEquals("First ruling.", rulings.first().comment)
+        assertEquals("Third ruling.", rulings[1].comment)
+    }
+
+    @Test
+    fun `rulingsOf tolerates a missing or non-array data field`() {
+        assertTrue(service.rulingsOf(mapper.readTree("""{"object":"error"}""")).isEmpty())
+        assertTrue(service.rulingsOf(mapper.readTree("""{"data":{}}""")).isEmpty())
+    }
+
+    @Test
+    fun `rulings rejects a blank name without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.rulings("  "))
+        assertTrue(result.error.contains("card name"))
+    }
+
     // --- diff (compare two lists) --------------------------------------
 
     @Test

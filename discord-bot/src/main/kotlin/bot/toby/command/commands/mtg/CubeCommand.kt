@@ -68,7 +68,8 @@ class CubeCommand @Autowired constructor(
             SUB_GENERATE -> launchHandling(ctx) { handleGenerate(ctx, requestingUserDto) }
             SUB_SAVED -> launchHandling(ctx) { handleSaved(ctx, requestingUserDto, deleteDelay) }
             SUB_CARD -> launchHandling(ctx) { handleCard(ctx, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved or card."), deleteDelay)
+            SUB_RULINGS -> launchHandling(ctx) { handleRulings(ctx, deleteDelay) }
+            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate, saved, card or rulings."), deleteDelay)
         }
     }
 
@@ -257,6 +258,19 @@ class CubeCommand @Autowired constructor(
         }
     }
 
+    /** Looks up a single card's official rulings on Scryfall. */
+    private suspend fun handleRulings(ctx: CommandContext, deleteDelay: Int) {
+        val name = ctx.event.stringOption(OPT_NAME)?.trim()
+        if (name.isNullOrEmpty()) {
+            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to look up rulings for."), deleteDelay)
+            return
+        }
+        when (val rulings = fetcher.fetchRulings(name)) {
+            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+            else -> reply(ctx, CubeEmbeds.rulingsEmbed(rulings), deleteDelay)
+        }
+    }
+
     private fun reply(ctx: CommandContext, embed: MessageEmbed, deleteDelay: Int) {
         ctx.event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
@@ -293,6 +307,8 @@ class CubeCommand @Autowired constructor(
         SubcommandData(SUB_SAVED, "List the cubes you've saved on the website."),
         SubcommandData(SUB_CARD, "Look up a single Magic card by name.")
             .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Lightning Bolt).", true)),
+        SubcommandData(SUB_RULINGS, "Look up a Magic card's official rulings by name.")
+            .addOptions(OptionData(OptionType.STRING, OPT_NAME, "The card's name (e.g. Doubling Season).", true)),
     )
 
     companion object {
@@ -301,6 +317,7 @@ class CubeCommand @Autowired constructor(
         const val SUB_GENERATE = "generate"
         const val SUB_SAVED = "saved"
         const val SUB_CARD = "card"
+        const val SUB_RULINGS = "rulings"
 
         const val OPT_TOTAL = "total"
         const val OPT_NAME = "name"

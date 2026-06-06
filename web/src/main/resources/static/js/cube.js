@@ -405,6 +405,11 @@
         return '/cube/api/card?name=' + encodeURIComponent(name);
     }
 
+    /** GET URL for a card's official rulings. */
+    function rulingsUrl(name) {
+        return '/cube/api/rulings?name=' + encodeURIComponent(name);
+    }
+
     /**
      * A card's market prices as a compact one-liner ("$1.50 · €1.20 · 0.03 tix"),
      * present currencies only, or '' when Scryfall has no price for it. Pure.
@@ -488,8 +493,60 @@
         link.textContent = 'View on Scryfall ↗';
         facts.appendChild(link);
 
+        // On-demand rulings: a button that fetches /cube/api/rulings for this
+        // card and renders them into the box below (wired in wireCardLookup).
+        const rulingsBtn = document.createElement('button');
+        rulingsBtn.type = 'button';
+        rulingsBtn.className = 'btn btn-secondary cube-rulings-btn';
+        rulingsBtn.setAttribute('data-load-rulings', '');
+        rulingsBtn.setAttribute('data-card-name', card.name);
+        rulingsBtn.textContent = 'Show rulings';
+        facts.appendChild(rulingsBtn);
+
         wrap.appendChild(facts);
         container.appendChild(wrap);
+
+        const rulingsBox = document.createElement('div');
+        rulingsBox.className = 'cube-rulings';
+        rulingsBox.setAttribute('data-rulings-result', '');
+        rulingsBox.hidden = true;
+        container.appendChild(rulingsBox);
+        return container;
+    }
+
+    /** Renders a card's official rulings (date + note each), or a friendly empty state. */
+    function renderRulings(container, data) {
+        container.replaceChildren();
+        const h = document.createElement('h4');
+        h.className = 'cube-rulings-h';
+        h.textContent = 'Rulings';
+        container.appendChild(h);
+        const rulings = (data && data.rulings) || [];
+        if (!rulings.length) {
+            const p = document.createElement('p');
+            p.className = 'cube-rulings-empty';
+            p.textContent = 'No official rulings have been published for this card.';
+            container.appendChild(p);
+            return container;
+        }
+        const ul = document.createElement('ul');
+        ul.className = 'cube-rulings-list';
+        rulings.forEach(function (r) {
+            const li = document.createElement('li');
+            li.className = 'cube-ruling';
+            if (r.publishedAt) {
+                const date = document.createElement('span');
+                date.className = 'cube-ruling-date';
+                date.textContent = r.publishedAt;
+                li.appendChild(date);
+            }
+            const text = document.createElement('span');
+            text.className = 'cube-ruling-text';
+            text.textContent = r.comment;
+            li.appendChild(text);
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
         return container;
     }
 
@@ -1145,6 +1202,27 @@
         if (!form) return;
         const status = statusFor(doc, 'card');
         const result = q(doc, '[data-result="card"]');
+
+        // Delegated so it survives each re-render of the lookup result: the
+        // "Show rulings" button fetches that card's rulings on demand.
+        result.addEventListener('click', function (e) {
+            const btn = e.target.closest && e.target.closest('[data-load-rulings]');
+            if (!btn) return;
+            const name = btn.getAttribute('data-card-name');
+            const box = result.querySelector('[data-rulings-result]');
+            if (!name || !box) return;
+            btn.disabled = true;
+            btn.textContent = 'Loading rulings…';
+            getJson(rulingsUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { btn.disabled = false; btn.textContent = json.error || 'No rulings found.'; return; }
+                    renderRulings(box, json);
+                    box.hidden = false;
+                    btn.hidden = true;
+                })
+                .catch(function () { btn.disabled = false; btn.textContent = 'Show rulings'; });
+        });
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const name = (new FormData(form).get('name') || '').trim();
@@ -1616,9 +1694,11 @@
         renderDistribution: renderDistribution,
         renderDiff: renderDiff,
         cardUrl: cardUrl,
+        rulingsUrl: rulingsUrl,
         priceLine: priceLine,
         totalValueText: totalValueText,
         renderCardLookup: renderCardLookup,
+        renderRulings: renderRulings,
         renderTotalValue: renderTotalValue,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,

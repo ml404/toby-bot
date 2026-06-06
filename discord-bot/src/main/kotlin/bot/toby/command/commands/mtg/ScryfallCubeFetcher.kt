@@ -5,6 +5,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import common.logging.DiscordLogger
+import common.mtg.CardRulings
 import common.mtg.CubeCard
 import common.mtg.MtgColor
 import io.ktor.client.HttpClient
@@ -181,6 +182,55 @@ class ScryfallCubeFetcher @Autowired constructor(
             null
         }
     }
+
+    /**
+     * Resolves a card by (fuzzy) name and fetches its official rulings in two
+     * steps: `/cards/named?fuzzy=` to find the card (and its `rulings_uri`),
+     * then a GET of that uri. Returns null when no card matches or Scryfall is
+     * unreachable; a [CardRulings] with an empty list when the card exists but
+     * has no published rulings. Suspends on [Dispatchers.IO].
+     */
+    suspend fun fetchRulings(name: String): CardRulings? = withContext(dispatcher) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return@withContext null
+        val namedUrl = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        try {
+            val cardResp = client.get(namedUrl) {
+                header(HttpHeaders.Accept, "application/json")
+                timeout { requestTimeoutMillis = TIMEOUT_MS }
+            }
+            if (cardResp.status.value != 200) return@withContext null
+            val card = JsonParser.parseString(cardResp.bodyAsText()).asJsonObject
+            val cardName = card.get("name")?.asString?.takeIf { it.isNotBlank() } ?: return@withContext null
+            val scryfallUri = card.get("scryfall_uri")?.asString
+            val rulingsUri = card.get("rulings_uri")?.asString
+                ?: return@withContext CardRulings(cardName, scryfallUri, emptyList())
+
+            val rulingsResp = client.get(rulingsUri) {
+                header(HttpHeaders.Accept, "application/json")
+                timeout { requestTimeoutMillis = TIMEOUT_MS }
+            }
+            val rulings = if (rulingsResp.status.value == 200) {
+                parseRulings(JsonParser.parseString(rulingsResp.bodyAsText()).asJsonObject)
+            } else {
+                emptyList()
+            }
+            CardRulings(cardName, scryfallUri, rulings)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error("Scryfall rulings lookup failed for '$trimmed': $e")
+            null
+        }
+    }
+
+    /** Maps a Scryfall `/rulings` JSON tree into [CardRulings.Ruling]s, oldest first as returned. */
+    fun parseRulings(root: JsonObject): List<CardRulings.Ruling> =
+        root.getAsJsonArray("data")?.mapNotNull { element ->
+            val obj = element.asJsonObject
+            val comment = obj.get("comment")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            CardRulings.Ruling(obj.get("published_at")?.asString.orEmpty(), comment)
+        } ?: emptyList()
 
     /** One `/cards/collection` POST for up to 75 names. */
     private suspend fun fetchCollectionBatch(chunk: List<String>): BatchResult {

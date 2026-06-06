@@ -31,6 +31,8 @@ import web.service.DuplicateView
 import web.service.GenerateData
 import web.service.PreviewData
 import web.service.RarityCountView
+import web.service.RulingView
+import web.service.RulingsView
 import web.service.TypeCountView
 import java.time.Instant
 
@@ -155,6 +157,31 @@ class CubeControllerTest {
         val response = controller.card("zzz")
         assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
         assertFalse(response.body!!.ok)
+    }
+
+    @Test
+    fun `rulings returns 200 with the looked-up rulings`() {
+        every { service.rulings("Doubling Season") } returns CubeResult.ok(
+            RulingsView(
+                "Doubling Season", "https://scryfall.com/card",
+                listOf(RulingView("2021-03-19", "If two replacement effects apply, you choose the order.")),
+            )
+        )
+        val response = controller.rulings("Doubling Season")
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals("Doubling Season", response.body!!.name)
+        assertEquals(1, response.body!!.rulings.size)
+        assertEquals("2021-03-19", response.body!!.rulings.first().publishedAt)
+    }
+
+    @Test
+    fun `rulings returns 400 when nothing matches`() {
+        every { service.rulings(any()) } returns CubeResult.error("No card found matching “zzz”.")
+        val response = controller.rulings("zzz")
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+        assertTrue(response.body!!.rulings.isEmpty())
     }
 
     @Test

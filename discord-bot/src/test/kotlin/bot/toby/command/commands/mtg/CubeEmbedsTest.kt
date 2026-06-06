@@ -239,6 +239,44 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `rulingsEmbed lists each ruling with its date, linking to Scryfall`() {
+        val rulings = common.mtg.CardRulings(
+            cardName = "Doubling Season",
+            scryfallUri = "https://scryfall.com/card/dd",
+            rulings = listOf(
+                common.mtg.CardRulings.Ruling("2021-03-19", "Tokens are doubled."),
+                common.mtg.CardRulings.Ruling("2022-01-01", "Counters are doubled too."),
+            ),
+        )
+        val embed = CubeEmbeds.rulingsEmbed(rulings)
+        assertEquals("Doubling Season — rulings", embed.title)
+        assertEquals("https://scryfall.com/card/dd", embed.url)
+        val desc = embed.description!!
+        assertTrue(desc.contains("Tokens are doubled."))
+        assertTrue(desc.contains("Counters are doubled too."))
+        assertTrue(desc.contains("2021-03-19"))
+        assertTrue(embed.footer!!.text!!.contains("2 rulings"))
+    }
+
+    @Test
+    fun `rulingsEmbed shows an empty state when the card has no rulings`() {
+        val rulings = common.mtg.CardRulings("Plains", "https://scryfall.com/p", emptyList())
+        val embed = CubeEmbeds.rulingsEmbed(rulings)
+        assertTrue(embed.description!!.contains("No official rulings"))
+        assertNull(embed.footer)
+    }
+
+    @Test
+    fun `rulingsBlock drops overflow rulings and notes how many were hidden`() {
+        // 60 long rulings can't all fit under the description cap — the block
+        // must stop early and append an "…and N more" pointer.
+        val many = (1..60).map { common.mtg.CardRulings.Ruling("2020-01-0$it", "x".repeat(200)) }
+        val block = CubeEmbeds.rulingsBlock(many)
+        assertTrue(block.length <= 4096, "block exceeded the embed description cap: ${block.length}")
+        assertTrue(block.contains("more (see Scryfall)"), "expected an overflow pointer: $block")
+    }
+
+    @Test
     fun `packsFile lists each card, appending its image link when present`() {
         val packs = listOf(
             listOf(

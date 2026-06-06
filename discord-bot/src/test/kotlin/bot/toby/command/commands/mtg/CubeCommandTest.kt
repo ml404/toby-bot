@@ -482,12 +482,44 @@ class CubeCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes the five subcommands with their options`() {
+    fun `rulings looks the name up and replies with a rulings panel`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_RULINGS
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Doubling Season")
+        coEvery { fetcher.fetchRulings("Doubling Season") } returns common.mtg.CardRulings(
+            "Doubling Season", "https://scryfall.com/card",
+            listOf(common.mtg.CardRulings.Ruling("2021-03-19", "Tokens are doubled.")),
+        )
+
+        run()
+
+        assertEquals("Doubling Season — rulings", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Tokens are doubled."))
+    }
+
+    @Test
+    fun `rulings reports when the name doesn't resolve`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CubeCommand.SUB_RULINGS
+        every { event.getOption(CubeCommand.OPT_NAME) } returns strOpt("Notacard")
+        coEvery { fetcher.fetchRulings(any()) } returns null
+
+        run()
+
+        assertEquals("Couldn't build that cube", slot.captured.title)
+        assertTrue(slot.captured.description!!.contains("Notacard"))
+    }
+
+    @Test
+    fun `exposes the six subcommands with their options`() {
         assertEquals("cube", command.name)
         val subs = command.subCommands.associateBy { it.name }
-        assertEquals(setOf("asfan", "preview", "generate", "saved", "card"), subs.keys)
+        assertEquals(setOf("asfan", "preview", "generate", "saved", "card", "rulings"), subs.keys)
         assertEquals(OptionType.STRING, subs.getValue("card").options.first { it.name == "name" }.type)
         assertTrue(subs.getValue("card").options.first { it.name == "name" }.isRequired)
+        assertTrue(subs.getValue("rulings").options.first { it.name == "name" }.isRequired)
 
         val asfan = subs.getValue("asfan").options
         assertEquals(OptionType.INTEGER, asfan.first { it.name == "total" }.type)
