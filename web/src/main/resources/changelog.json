@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add a web single-card lookup (Card lookup tab)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 642
+  },
+  {
+    "date": "June 2026",
     "title": "Add a Compare tab: diff two card lists on the web",
     "summary": "## Why",
     "emoji": "✨",
