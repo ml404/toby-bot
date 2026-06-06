@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import common.mtg.AsFan
 import common.mtg.CardCategory
 import common.mtg.CardListParser
+import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.MtgNames
 import common.mtg.MtgColor
@@ -91,9 +92,23 @@ class CubeWebService {
         poolSize = pool.size,
         packSize = packSize,
         groups = groups(pool, packSize),
+        analytics = analyticsView(pool.map { it.card }, packSize),
         notFound = notFound,
         note = note,
     )
+
+    /** The shared cube report, mapped to JSON-friendly views (enum → displayName). */
+    internal fun analyticsView(cards: List<CubeCard>, packSize: Int): AnalyticsView {
+        val a = CubeAnalytics.analyze(cards, packSize)
+        return AnalyticsView(
+            curve = a.curve.map { CurveBucketView(it.label, it.count) },
+            averageManaValue = a.averageManaValue,
+            nonLandCount = a.nonLandCount,
+            types = a.types.map { TypeCountView(it.type.displayName, it.count, it.asFan) },
+            rarities = a.rarities.map { RarityCountView(it.rarity.displayName, it.count, it.asFan) },
+            duplicates = a.duplicates.map { DuplicateView(it.name, it.count) },
+        )
+    }
 
     private fun buildGenerate(
         label: String,
@@ -458,11 +473,26 @@ data class ResolvedPool(
 /** Outcome of matching list entries to fetched cards: the pool + unresolved names. */
 data class MatchResult(val pool: List<ScryfallCard>, val notFound: List<String>)
 
+/** The "cube report" the preview renders: curve, types, rarity, averages, duplicates. */
+data class CurveBucketView(val label: String, val count: Int)
+data class TypeCountView(val type: String, val count: Int, val asFan: Double)
+data class RarityCountView(val rarity: String, val count: Int, val asFan: Double)
+data class DuplicateView(val name: String, val count: Int)
+data class AnalyticsView(
+    val curve: List<CurveBucketView>,
+    val averageManaValue: Double,
+    val nonLandCount: Int,
+    val types: List<TypeCountView>,
+    val rarities: List<RarityCountView>,
+    val duplicates: List<DuplicateView>,
+)
+
 data class PreviewData(
     val query: String,
     val poolSize: Int,
     val packSize: Int,
     val groups: List<CategoryGroup>,
+    val analytics: AnalyticsView,
     val notFound: List<String> = emptyList(),
     val note: String? = null,
 )

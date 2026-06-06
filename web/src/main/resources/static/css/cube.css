@@ -1089,6 +1089,42 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     font-size: 0.9rem;
 }
 
+/* The cube report: average MV, mana curve, type and rarity breakdowns. */
+.cube-analytics {
+    display: grid;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.cube-avg-mv {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.cube-analytics-h {
+    margin: var(--space-2) 0 0;
+    color: var(--heading);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Singleton-violation warning (non-basic duplicates), matching .cube-notfound. */
+.cube-dup-warning {
+    margin: var(--space-2) 0 0;
+    padding: 8px 12px;
+    background: var(--warn-soft);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 0.85rem;
+}
+
+.cube-dup-warning[hidden] {
+    display: none;
+}
+
 @media (max-width: 600px) {
     .cube-hero h1 {
         font-size: 1.7rem;

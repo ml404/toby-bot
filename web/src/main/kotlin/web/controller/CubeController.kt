@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
+import web.service.AnalyticsView
 import web.service.CardView
 import web.service.CategoryAsFan
 import web.service.CategoryGroup
@@ -124,10 +125,13 @@ class CubeController(
     private fun previewResponse(result: CubeResult<PreviewData>): ResponseEntity<CubePreviewResponse> =
         when (result) {
             is CubeResult.Success -> ResponseEntity.ok(
-                CubePreviewResponse(true, null, result.value.poolSize, result.value.groups, result.value.notFound, result.value.note)
+                CubePreviewResponse(
+                    true, null, result.value.poolSize, result.value.groups,
+                    result.value.analytics, result.value.notFound, result.value.note,
+                )
             )
             is CubeResult.Failure ->
-                ResponseEntity.badRequest().body(CubePreviewResponse(false, result.error, 0, emptyList(), emptyList(), null))
+                ResponseEntity.badRequest().body(CubePreviewResponse(false, result.error, 0, emptyList(), null, emptyList(), null))
         }
 
     private fun generateResponse(result: CubeResult<GenerateData>): ResponseEntity<CubeGenerateResponse> =
@@ -246,6 +250,7 @@ data class CubePreviewResponse(
     val error: String?,
     val poolSize: Int,
     val groups: List<CategoryGroup>,
+    val analytics: AnalyticsView? = null,
     val notFound: List<String> = emptyList(),
     val note: String? = null,
 )

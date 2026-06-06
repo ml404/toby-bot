@@ -14,6 +14,32 @@ class CubeWebServiceTest {
     private val service = CubeWebService()
     private val mapper = ObjectMapper()
 
+    // --- analyticsView (the cube report, mapped to JSON views) ---------
+
+    @Test
+    fun `analyticsView maps the shared report to display-name views`() {
+        val pool = listOf(
+            CubeCard("Bolt", setOf(MtgColor.RED), typeLine = "Instant", manaValue = 1.0, rarity = "common"),
+            CubeCard("Bear", setOf(MtgColor.GREEN), typeLine = "Creature — Bear", manaValue = 2.0, rarity = "common"),
+            CubeCard("Sol Ring", typeLine = "Artifact", manaValue = 1.0, rarity = "uncommon"),
+            CubeCard("Sol Ring", typeLine = "Artifact", manaValue = 1.0, rarity = "uncommon"),
+            CubeCard("Forest", isLand = true, typeLine = "Basic Land — Forest", rarity = "common"),
+            CubeCard("Forest", isLand = true, typeLine = "Basic Land — Forest", rarity = "common"),
+        )
+        val view = service.analyticsView(pool, packSize = 6)
+
+        assertEquals(8, view.curve.size) // always the 0..7+ buckets
+        assertEquals(listOf("0", "1", "2", "3", "4", "5", "6", "7+"), view.curve.map { it.label })
+        assertEquals(3, view.curve.first { it.label == "1" }.count) // Bolt + two Sol Rings
+        assertEquals(1, view.curve.first { it.label == "2" }.count) // Bear
+        assertEquals(4, view.nonLandCount)
+        assertEquals(setOf("Creature", "Instant", "Artifact", "Land"), view.types.map { it.type }.toSet())
+        assertEquals(setOf("Common", "Uncommon"), view.rarities.map { it.rarity }.toSet())
+        // Two Sol Rings = a non-basic duplicate; the basics are allowed.
+        assertEquals(listOf("Sol Ring"), view.duplicates.map { it.name })
+        assertEquals(2, view.duplicates.first().count)
+    }
+
     // --- asFan ---------------------------------------------------------
 
     @Test
