@@ -1125,6 +1125,78 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     display: none;
 }
 
+/* Compare two lists: side-by-side inputs and a Added/Removed/Changed diff. */
+.cube-compare-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3);
+    align-items: start;
+}
+
+.cube-compare-col {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cube-compare-form .cube-submit {
+    grid-column: 1 / -1;
+    justify-self: start;
+}
+
+.cube-diff {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+}
+
+.cube-diff[hidden] {
+    display: none;
+}
+
+.cube-diff-h {
+    margin: 0 0 var(--space-1);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--heading);
+}
+
+.cube-diff-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 2px;
+}
+
+.cube-diff-line {
+    font-size: 0.85rem;
+    font-family: var(--font-mono, monospace);
+}
+
+.cube-diff-add {
+    color: #22c55e;
+}
+
+.cube-diff-remove {
+    color: #ef4444;
+}
+
+.cube-diff-change {
+    color: var(--mtg-gold);
+}
+
+.cube-diff-empty {
+    color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+    .cube-compare-form {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 600px) {
     .cube-hero h1 {
         font-size: 1.7rem;

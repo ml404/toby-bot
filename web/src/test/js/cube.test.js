@@ -61,10 +61,11 @@ describe('scryfallCardUrl', () => {
 });
 
 describe('tabIdFromHash', () => {
-    test('recognises the three tab hashes', () => {
+    test('recognises the tab hashes', () => {
         expect(Cube.tabIdFromHash('#generate')).toBe('generate');
         expect(Cube.tabIdFromHash('#preview')).toBe('preview');
         expect(Cube.tabIdFromHash('#asfan')).toBe('asfan');
+        expect(Cube.tabIdFromHash('#compare')).toBe('compare');
     });
 
     test('returns null for anything else', () => {
@@ -382,6 +383,32 @@ describe('deep-link hash activates the matching tab on in-page navigation', () =
         window.location.hash = '#preview';
         window.dispatchEvent(new window.Event('hashchange'));
         expect(source.hidden).toBe(false);
+    });
+});
+
+describe('renderDiff (compare two lists)', () => {
+    test('renders Added / Removed / Count-changed sections with prefixes', () => {
+        const container = document.createElement('div');
+        Cube.renderDiff(container, {
+            added: [{ name: 'Shock', from: 0, to: 1 }],
+            removed: [{ name: 'Counterspell', from: 1, to: 0 }],
+            changed: [{ name: 'Forest', from: 3, to: 5 }],
+            sizeA: 5, sizeB: 7,
+        });
+        expect(container.querySelectorAll('.cube-diff-group')).toHaveLength(3);
+        expect(container.querySelector('.cube-diff-add').textContent).toBe('+ Shock');
+        expect(container.querySelector('.cube-diff-remove').textContent).toBe('− Counterspell');
+        expect(container.querySelector('.cube-diff-change').textContent).toBe('~ Forest (3 → 5)');
+    });
+
+    test('omits empty sections and notes when the lists are identical', () => {
+        const onlyAdds = document.createElement('div');
+        Cube.renderDiff(onlyAdds, { added: [{ name: 'A', from: 0, to: 1 }], removed: [], changed: [], sizeA: 0, sizeB: 1 });
+        expect(onlyAdds.querySelectorAll('.cube-diff-group')).toHaveLength(1);
+
+        const same = document.createElement('div');
+        Cube.renderDiff(same, { added: [], removed: [], changed: [], sizeA: 1, sizeB: 1 });
+        expect(same.querySelector('.cube-diff-empty').textContent).toContain('No differences');
     });
 });
 

@@ -141,6 +141,12 @@
                 <span class="cube-tab-label">As-fan calculator</span>
                 <span class="cube-tab-sub">Quick maths</span>
             </button>
+            <button type="button" id="tab-compare" class="cube-tab" role="tab"
+                    data-tab="compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔀</span>
+                <span class="cube-tab-label">Compare</span>
+                <span class="cube-tab-sub">Diff two lists</span>
+            </button>
         </div>
 
         <!-- Generate -->
@@ -257,6 +263,28 @@
                 </div>
                 <p class="cube-asfan-sentence" data-asfan-sentence></p>
             </div>
+        </section>
+
+        <!-- Compare two lists -->
+        <section id="panel-compare" class="cube-panel" role="tabpanel" aria-labelledby="tab-compare"
+                 data-panel="compare" hidden>
+            <p class="cube-panel-intro">
+                Paste two card lists to see what changed — handy for iterating a cube. Compares by
+                name (counts included), no Scryfall lookup needed.
+            </p>
+            <form class="cube-form cube-compare-form" data-form="compare" autocomplete="off">
+                <label class="cube-compare-col">List A (before)
+                    <textarea name="listA" rows="8" spellcheck="false"
+                              placeholder="One card per line:&#10;1 Lightning Bolt&#10;10 Forest"></textarea>
+                </label>
+                <label class="cube-compare-col">List B (after)
+                    <textarea name="listB" rows="8" spellcheck="false"
+                              placeholder="The new version of the list"></textarea>
+                </label>
+                <button type="submit" class="btn cube-submit">Compare</button>
+            </form>
+            <p class="cube-status" data-status="compare" aria-live="polite"></p>
+            <div class="cube-diff" data-result="compare" hidden></div>
         </section>
     </div>
 </main>

@@ -7,7 +7,10 @@
 (function (root) {
     'use strict';
 
-    const TABS = ['generate', 'preview', 'asfan'];
+    const TABS = ['generate', 'preview', 'asfan', 'compare'];
+
+    // Tools that work off their own inputs, not the shared "Your cube" source.
+    const NO_SHARED_SOURCE = ['asfan', 'compare'];
 
     // Colour-pie palette for swatches/bars. Tuned to read on the dark
     // dashboard background while staying recognisably W/U/B/R/G + gold
@@ -362,6 +365,43 @@
         return container;
     }
 
+    /** Renders a cube diff: Added / Removed / Count-changed sections of card names. */
+    function renderDiff(container, data) {
+        container.replaceChildren();
+        function section(title, lines, sign) {
+            if (!lines || !lines.length) return;
+            const block = document.createElement('div');
+            block.className = 'cube-diff-group';
+            const h = document.createElement('h4');
+            h.className = 'cube-diff-h';
+            h.textContent = title + ' (' + lines.length + ')';
+            block.appendChild(h);
+            const ul = document.createElement('ul');
+            ul.className = 'cube-diff-list';
+            const prefix = sign === 'add' ? '+ ' : (sign === 'remove' ? '− ' : '~ ');
+            lines.forEach(function (line) {
+                const li = document.createElement('li');
+                li.className = 'cube-diff-line cube-diff-' + sign;
+                li.textContent = prefix + line.name +
+                    (sign === 'change' ? ' (' + line.from + ' → ' + line.to + ')' : '');
+                ul.appendChild(li);
+            });
+            block.appendChild(ul);
+            container.appendChild(block);
+        }
+        section('Added', data.added, 'add');
+        section('Removed', data.removed, 'remove');
+        section('Count changed', data.changed, 'change');
+        const total = (data.added || []).length + (data.removed || []).length + (data.changed || []).length;
+        if (total === 0) {
+            const p = document.createElement('p');
+            p.className = 'cube-diff-empty';
+            p.textContent = 'No differences — the two lists match.';
+            container.appendChild(p);
+        }
+        return container;
+    }
+
     /** A chevron that rotates when its parent <details> is open. */
     function collapseChevron() {
         const c = document.createElement('span');
@@ -509,11 +549,11 @@
         doc.querySelectorAll('[data-panel]').forEach(function (panel) {
             panel.hidden = panel.getAttribute('data-panel') !== name;
         });
-        // The as-fan calculator works off manual numbers, so the shared "Your
-        // cube" source (and its cue) don't apply — hide them on that tab so the
-        // tool stands on its own.
+        // Some tools (as-fan, compare) work off their own inputs, so the shared
+        // "Your cube" source (and its cue) don't apply — hide them there.
+        const usesSource = NO_SHARED_SOURCE.indexOf(name) < 0;
         doc.querySelectorAll('[data-needs-cube]').forEach(function (el) {
-            el.hidden = name === 'asfan';
+            el.hidden = !usesSource;
         });
     }
 
@@ -972,6 +1012,32 @@
         textarea.addEventListener('blur', function () { setTimeout(close, 150); });
     }
 
+    function wireCompare(doc) {
+        const form = q(doc, '[data-form="compare"]');
+        if (!form) return;
+        const status = statusFor(doc, 'compare');
+        const result = q(doc, '[data-result="compare"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = new FormData(form);
+            const listA = (data.get('listA') || '').trim();
+            const listB = (data.get('listB') || '').trim();
+            if (!listA && !listB) { setStatus(status, 'Paste a card list into both sides to compare.'); return; }
+            setStatus(status, 'Comparing…');
+            hide(result);
+            withBusy(form, true);
+            postJson('/cube/api/diff', { listA: listA, listB: listB })
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'Could not compare.'); return; }
+                    setStatus(status, 'List A: ' + json.sizeA + ' cards · List B: ' + json.sizeB + ' cards');
+                    renderDiff(result, json);
+                    show(result);
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
+    }
+
     function wireAsFan(doc) {
         const form = q(doc, '[data-form="asfan"]');
         if (!form) return;
@@ -1347,6 +1413,7 @@
         wireCopyQuery(doc);
         wireExamples(doc);
         wireAsFan(doc);
+        wireCompare(doc);
         wirePreview(doc);
         wireGenerate(doc);
         wireCardFlip(doc);
@@ -1382,6 +1449,7 @@
         generateUrl: generateUrl,
         samplePackRequest: samplePackRequest,
         renderDistribution: renderDistribution,
+        renderDiff: renderDiff,
         renderManaCurve: renderManaCurve,
         renderTypeBreakdown: renderTypeBreakdown,
         renderRarity: renderRarity,
