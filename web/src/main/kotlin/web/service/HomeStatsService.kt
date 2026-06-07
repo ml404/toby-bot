@@ -12,6 +12,8 @@ import java.util.concurrent.atomic.AtomicReference
 /**
  * Live numbers for the homepage. Counts:
  *  - **servers**: how many guilds the bot is currently in (JDA cache size)
+ *  - **members**: total members reached across every guild (sum of the
+ *    cached member counts) — the headline social-proof number
  *  - **commands**: total slash-command count across every category
  *  - **games / minigames**: derived from [GameCatalog] so the stats strip,
  *    hero text, and casino feature card all stay in lockstep when a game
@@ -31,6 +33,8 @@ class HomeStatsService(
 
     data class HomeStats(
         val serverCount: Int,
+        /** Total members reached across all guilds — public social proof. */
+        val memberCount: Long,
         val commandCount: Int,
         /** Grand total — casino + pvp. The numbers strip and hero stats
          *  strip "Games" tiles read this. */
@@ -61,8 +65,9 @@ class HomeStatsService(
         return fresh
     }
 
-    private fun compute(): HomeStats = HomeStats(
-        serverCount = jda.guildCache.size().toInt(),
+    private fun compute(): HomeStats = jda.guildCache.let { guildCache -> HomeStats(
+        serverCount = guildCache.size().toInt(),
+        memberCount = guildCache.sumOf { it.memberCount.toLong() },
         commandCount = commandManager.run {
             musicCommands.size +
                 dndCommands.size +
@@ -82,7 +87,7 @@ class HomeStatsService(
         configKeyCount = ConfigDto.Configurations.values().size,
         achievementCount = AchievementCatalog.all.count { !it.hidden },
         notificationKindCount = NotificationChannelKind.entries.size,
-    )
+    ) }
 
     companion object {
         private val TTL_NANOS = 60_000_000_000L
