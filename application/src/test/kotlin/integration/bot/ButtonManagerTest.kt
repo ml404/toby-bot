@@ -9,6 +9,7 @@ import bot.toby.install.button.InstallCustomButton
 import bot.toby.install.button.InstallExpressButton
 import bot.toby.install.button.InstallFeaturesButton
 import bot.toby.install.button.InstallFinishButton
+import bot.toby.install.button.InstallHelpButton
 import bot.toby.install.button.InstallSkipButton
 import bot.toby.install.button.InstallToggleButton
 import bot.toby.lavaplayer.GuildMusicManager
@@ -125,6 +126,7 @@ class ButtonManagerTest {
             InstallBackButton::class.java,
             InstallFeaturesButton::class.java,
             InstallToggleButton::class.java,
+            InstallHelpButton::class.java,
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))
