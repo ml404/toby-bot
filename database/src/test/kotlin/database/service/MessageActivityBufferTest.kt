@@ -126,6 +126,8 @@ class MessageActivityBufferTest {
             }
             increments.add(Triple(guildId, dayStart, delta))
         }
+
+        override fun findLastActiveByGuild(): Map<Long, LocalDate> = emptyMap()
     }
 
     private fun noopScheduler(): ScheduledExecutorService =

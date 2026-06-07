@@ -45,6 +45,7 @@ class AdminControllerTest {
                 botJoinedAtMillis = null, serverCreatedMillis = null, boostTier = 0, boostCount = 0,
                 locale = null, channelCount = 0, roleCount = 0, features = emptyList(),
                 daysSinceInstall = null, serverAgeDays = null,
+                healthIssues = emptyList(), lastActiveMillis = null, isDormant = false,
             )
         )
         every { adminInstallsService.listInstalls() } returns rows
@@ -55,6 +56,7 @@ class AdminControllerTest {
         assertEquals("admin-installs", view)
         verify { model.addAttribute("installs", rows) }
         verify { adminInstallsService.buildStats(rows) }
+        verify { adminInstallsService.buildInsights(rows) }
         verify { installChartsService.build(rows) }
     }
 

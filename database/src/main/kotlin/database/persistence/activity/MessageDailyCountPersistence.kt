@@ -19,4 +19,12 @@ interface MessageDailyCountPersistence {
      * delta. `updatedAt` is bumped on every call.
      */
     fun increment(guildId: Long, dayStart: LocalDate, delta: Long)
+
+    /**
+     * Most recent message-activity day per guild, across all guilds, in a
+     * single grouped query. Powers the operator dashboard's active-vs-quiet
+     * liveness split — guilds absent from the result have never recorded a
+     * message day.
+     */
+    fun findLastActiveByGuild(): Map<Long, LocalDate>
 }

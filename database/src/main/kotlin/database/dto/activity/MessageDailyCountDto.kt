@@ -33,6 +33,10 @@ import java.time.LocalDate
         query = "select m from MessageDailyCountDto m " +
                 "where m.guildId = :guildId and m.dayStart = :dayStart"
     ),
+    NamedQuery(
+        name = "MessageDailyCountDto.lastActiveByGuild",
+        query = "select m.guildId, max(m.dayStart) from MessageDailyCountDto m group by m.guildId"
+    ),
 )
 @Entity
 @Table(name = "message_daily_count", schema = "public")

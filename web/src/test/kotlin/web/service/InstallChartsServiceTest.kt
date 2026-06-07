@@ -37,6 +37,7 @@ class InstallChartsServiceTest {
             botJoinedAtMillis = null, serverCreatedMillis = null, boostTier = 0, boostCount = 0,
             locale = null, channelCount = 0, roleCount = 0, features = emptyList(),
             daysSinceInstall = null, serverAgeDays = null,
+            healthIssues = emptyList(), lastActiveMillis = null, isDormant = false,
         )
 
     private fun leave(iso: String) =

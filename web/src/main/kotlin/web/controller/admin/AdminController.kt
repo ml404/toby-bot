@@ -45,6 +45,7 @@ class AdminController(
         val rows = adminInstallsService.listInstalls()
         model.addAttribute("installs", rows)
         model.addAttribute("stats", adminInstallsService.buildStats(rows))
+        model.addAttribute("insights", adminInstallsService.buildInsights(rows))
         model.addAttribute("chart", installChartsService.build(rows))
         model.addAttribute("username", user.displayName())
         return "admin-installs"
