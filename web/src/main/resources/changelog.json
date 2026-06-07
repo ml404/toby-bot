@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Polish the web MTG combo lookup (chips, labels, numbered cards)",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 669
+  },
+  {
+    "date": "June 2026",
     "title": "Fix shared /magic?q= links landing on the hidden Card lookup tab",
     "summary": "## Problem",
     "emoji": "✨",
