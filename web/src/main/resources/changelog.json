@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add install metrics, churn tracking and UI polish to /admin/installs",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 663
+  },
+  {
+    "date": "June 2026",
     "title": "Add operator-only /admin/installs page showing who installed the bot",
     "summary": "## Why",
     "emoji": "✨",
