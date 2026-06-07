@@ -239,7 +239,7 @@ class CubeWebService {
         manaValue = sc.card.manaValue,
         manaCost = sc.card.manaCost,
         rarity = sc.card.rarity?.let { Rarity.parse(it).displayName },
-        colors = MtgColor.entries.filter { it in sc.card.colors }.map { it.displayName },
+        colors = MtgColor.displayNames(sc.card.colors),
         oracleText = sc.card.oracleText,
         priceUsd = sc.card.priceUsd,
         priceEur = sc.card.priceEur,

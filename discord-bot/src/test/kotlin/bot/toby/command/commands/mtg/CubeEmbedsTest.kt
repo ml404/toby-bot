@@ -188,6 +188,15 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `colorIdentityLine lists colours in WUBRG order or Colourless when none`() {
+        assertEquals(
+            "White, Blue",
+            CubeEmbeds.colorIdentityLine(CubeCard("Teferi", colors = setOf(MtgColor.BLUE, MtgColor.WHITE))),
+        )
+        assertEquals("Colourless", CubeEmbeds.colorIdentityLine(CubeCard("Sol Ring")))
+    }
+
+    @Test
     fun `priceLine joins present currencies only and is null when unpriced`() {
         assertEquals("\$1.50", CubeEmbeds.priceLine(CubeCard(name = "A", priceUsd = "1.50")))
         assertEquals(

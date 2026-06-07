@@ -27,5 +27,14 @@ enum class MtgColor(val symbol: Char, val displayName: String) {
          */
         fun parse(symbols: Iterable<String>): Set<MtgColor> =
             symbols.mapNotNull { it.trim().firstOrNull()?.let(::fromSymbol) }.toSet()
+
+        /**
+         * The display names of [colors] in canonical WUBRG order, present
+         * colours only — the one place the colour ordering lives, shared by
+         * every surface that lists a card's colour identity (the bot's card
+         * panel and inline mentions, the web lookup) so they can't drift.
+         */
+        fun displayNames(colors: Collection<MtgColor>): List<String> =
+            entries.filter { it in colors }.map { it.displayName }
     }
 }

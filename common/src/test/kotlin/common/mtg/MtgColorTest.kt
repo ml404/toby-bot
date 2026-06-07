@@ -51,4 +51,19 @@ class MtgColorTest {
     fun `parse of an empty array is an empty set`() {
         assertTrue(MtgColor.parse(emptyList()).isEmpty())
     }
+
+    @Test
+    fun `displayNames lists present colours in canonical WUBRG order`() {
+        // Input order shouldn't matter — output is always WUBRG.
+        assertEquals(
+            listOf("White", "Blue", "Red"),
+            MtgColor.displayNames(setOf(MtgColor.RED, MtgColor.WHITE, MtgColor.BLUE)),
+        )
+        assertEquals(listOf("Green"), MtgColor.displayNames(setOf(MtgColor.GREEN)))
+    }
+
+    @Test
+    fun `displayNames of no colours is empty`() {
+        assertTrue(MtgColor.displayNames(emptySet()).isEmpty())
+    }
 }
