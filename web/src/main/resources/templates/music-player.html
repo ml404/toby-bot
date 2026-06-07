@@ -8,7 +8,10 @@
 <main id="main" class="container music-dashboard">
 
     <header class="music-header">
-        <h1>🎵 <span th:text="${guildName}">Server</span></h1>
+        <div class="music-header-titles">
+            <span class="section-eyebrow">Music player</span>
+            <h1>🎵 <span th:text="${guildName}">Server</span></h1>
+        </div>
         <a class="btn-tertiary" href="/music-player/guilds?pick=true">← All servers</a>
     </header>
 
@@ -17,7 +20,7 @@
     <section class="music-grid">
 
         <!-- Now Playing -->
-        <article class="now-playing-card" aria-labelledby="now-playing-heading">
+        <article class="now-playing-card" id="now-playing-card" data-reveal aria-labelledby="now-playing-heading">
             <h2 id="now-playing-heading" class="sr-only">Now playing</h2>
             <div class="now-playing-empty" id="now-playing-empty">
                 <span class="emoji" aria-hidden="true">⏸️</span>
@@ -27,6 +30,7 @@
                 <img class="now-playing-art" id="now-playing-art" alt="">
                 <div class="now-playing-meta">
                     <span class="source-badge" id="source-badge">Music</span>
+                    <div class="now-playing-eq" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
                     <h3 class="now-playing-title" id="now-playing-title">—</h3>
                     <p class="now-playing-author" id="now-playing-author">—</p>
                     <div class="now-playing-requester" id="now-playing-requester" hidden>
@@ -56,7 +60,7 @@
         </article>
 
         <!-- Add Track / Queue -->
-        <article class="queue-card" aria-labelledby="queue-heading">
+        <article class="queue-card" data-reveal aria-labelledby="queue-heading">
             <h2 id="queue-heading">Up next</h2>
             <form id="add-track-form" class="add-track-form" autocomplete="off">
                 <input id="add-track-input" type="text" placeholder="URL or search term — Spotify / YouTube / SoundCloud / Bandcamp / Apple Music / Deezer" required>
@@ -80,7 +84,7 @@
         </article>
 
         <!-- Playlists -->
-        <article class="playlists-card" aria-labelledby="playlists-heading">
+        <article class="playlists-card" data-reveal aria-labelledby="playlists-heading">
             <h2 id="playlists-heading">Saved playlists</h2>
             <form id="save-playlist-form" class="save-playlist-form" autocomplete="off">
                 <input id="save-playlist-name" type="text" maxlength="80" placeholder="Name your playlist" required>
@@ -91,7 +95,7 @@
         </article>
 
         <!-- Voice channel members -->
-        <article class="voice-card" aria-labelledby="voice-heading">
+        <article class="voice-card" data-reveal aria-labelledby="voice-heading">
             <h2 id="voice-heading">🔈 In the voice channel</h2>
             <p id="voice-channel-name" class="voice-channel-name" hidden></p>
             <p id="voice-channel-empty" class="voice-channel-empty">

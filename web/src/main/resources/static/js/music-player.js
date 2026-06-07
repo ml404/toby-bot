@@ -13,6 +13,7 @@
     const $ = (id) => document.getElementById(id);
 
     const els = {
+        card: $('now-playing-card'),
         emptyState: $('now-playing-empty'),
         content: $('now-playing-content'),
         art: $('now-playing-art'),
@@ -51,6 +52,13 @@
 
     let lastPaused = false;
     let lastDurationMs = 0;
+
+    // Toggles the accent glow + bouncing equalizer on the now-playing
+    // hero card. Active only when a track is loaded AND not paused, so the
+    // flourish always mirrors what the listener is actually hearing.
+    function setPlayingFlourish(active) {
+        if (els.card) els.card.classList.toggle('is-playing', !!active);
+    }
 
     // ---- HTTP helpers --------------------------------------------------
 
@@ -149,6 +157,7 @@
         if (!track) {
             els.content.hidden = true;
             els.emptyState.hidden = false;
+            setPlayingFlourish(false);
             els.title.textContent = '—';
             els.author.textContent = '—';
             els.requester.textContent = '';
@@ -186,6 +195,7 @@
         els.timeTotal.textContent = track.isStream ? 'LIVE' : formatMs(lastDurationMs);
         lastPaused = !!paused;
         els.btnPause.textContent = paused ? '▶️' : '⏸️';
+        setPlayingFlourish(!paused);
     }
 
     function renderProgress(positionMs) {
@@ -639,6 +649,9 @@
             const payload = JSON.parse(ev.data);
             lastPaused = !!payload.paused;
             els.btnPause.textContent = lastPaused ? '▶️' : '⏸️';
+            // Only flip the flourish when a track is actually loaded — a
+            // pause event with the empty state showing shouldn't light up.
+            setPlayingFlourish(!lastPaused && !els.content.hidden);
         });
         eventSource.addEventListener('volumeChanged', (ev) => {
             const payload = JSON.parse(ev.data);

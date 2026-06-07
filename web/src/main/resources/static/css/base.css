@@ -193,6 +193,35 @@ a:hover { color: var(--accent-hover); }
 .btn-primary[hidden],
 .btn-secondary[hidden] { display: none; }
 
+/* Tertiary — the quietest button in the family. Lower emphasis than
+   `.btn-secondary`: filled with the input surface, muted label, subtle
+   border, lifting to an accent-soft wash on hover. Used for "← All
+   servers" back links, playlist Load, search Clear, etc. Defined here
+   (above `.btn-danger`) so the `.btn-tertiary.btn-danger` combo on the
+   playlist Delete button still resolves to the danger palette by source
+   order. */
+.btn-tertiary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    background: var(--bg-input);
+    color: var(--text-muted);
+    border: 1px solid var(--border-strong);
+    padding: 8px 14px;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
+    text-decoration: none;
+    font-family: inherit;
+}
+.btn-tertiary:hover:not(:disabled) { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+.btn-tertiary:active:not(:disabled) { transform: translateY(1px); }
+.btn-tertiary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-tertiary[hidden] { display: none; }
+
 /* Green accent variant for confirm-style actions (blackjack's Stand,
    future "Lock in" / "Confirm" controls). Same shape as `.btn-primary`,
    different colour token. */
