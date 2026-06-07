@@ -2,6 +2,7 @@ package bot.toby.install
 
 import database.dto.guild.ConfigDto
 import database.dto.guild.ConfigDto.Configurations
+import database.service.activity.InstallEventService
 import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.just
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test
 internal class InstallWelcomeHandlerTest {
 
     private lateinit var configService: ConfigService
+    private lateinit var installEventService: InstallEventService
     private lateinit var handler: InstallWelcomeHandler
     private lateinit var event: GuildJoinEvent
     private lateinit var guild: Guild
@@ -39,7 +41,8 @@ internal class InstallWelcomeHandlerTest {
     @BeforeEach
     fun setUp() {
         configService = mockk(relaxed = true)
-        handler = InstallWelcomeHandler(configService)
+        installEventService = mockk(relaxed = true)
+        handler = InstallWelcomeHandler(configService, installEventService)
 
         event = mockk(relaxed = true)
         guild = mockk(relaxed = true)
@@ -50,6 +53,7 @@ internal class InstallWelcomeHandlerTest {
 
         every { event.guild } returns guild
         every { guild.id } returns "100"
+        every { guild.idLong } returns 100L
         every { guild.name } returns "Test Guild"
         every { guild.selfMember } returns selfMember
         every { systemChannel.name } returns "general"
@@ -59,6 +63,32 @@ internal class InstallWelcomeHandlerTest {
         every { fallbackChannel.sendMessageEmbeds(any<MessageEmbed>()) } returns messageAction
         every { messageAction.addComponents(any<ActionRow>()) } returns messageAction
         every { messageAction.queue() } just runs
+    }
+
+    @Test
+    fun `records the JOIN event even when the welcome is skipped (already installed)`() {
+        // The ledger captures every lifecycle transition independently of
+        // the welcome message — re-invites still count as a JOIN.
+        every { configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "100") } returns
+            ConfigDto(Configurations.INSTALL_MODE.configValue, "express", "100")
+
+        handler.onGuildJoin(event)
+
+        verify(exactly = 1) { installEventService.recordJoin(100L, any()) }
+    }
+
+    @Test
+    fun `records the JOIN event when posting a fresh welcome`() {
+        every { configService.getConfigByName(any(), any()) } returns null
+        every { guild.systemChannel } returns systemChannel
+        every {
+            selfMember.hasPermission(systemChannel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
+        } returns true
+
+        handler.onGuildJoin(event)
+
+        verify(exactly = 1) { installEventService.recordJoin(100L, any()) }
+        verify(exactly = 1) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 
     @Test

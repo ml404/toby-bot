@@ -11,6 +11,7 @@ import org.springframework.ui.Model
 import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.service.AdminInstallsService
 import web.service.BotOwnerAuthorizer
+import web.service.InstallChartsService
 
 class AdminControllerTest {
 
@@ -18,13 +19,15 @@ class AdminControllerTest {
     private val strangerId = 123L
 
     private lateinit var adminInstallsService: AdminInstallsService
+    private lateinit var installChartsService: InstallChartsService
     private lateinit var controller: AdminController
     private val botOwnerAuthorizer = BotOwnerAuthorizer(ownerId.toString())
 
     @BeforeEach
     fun setup() {
         adminInstallsService = mockk(relaxed = true)
-        controller = AdminController(adminInstallsService, botOwnerAuthorizer)
+        installChartsService = mockk(relaxed = true)
+        controller = AdminController(adminInstallsService, installChartsService, botOwnerAuthorizer)
     }
 
     private fun userWithId(id: Long): OAuth2User = mockk {
@@ -39,6 +42,9 @@ class AdminControllerTest {
                 guildId = "10", guildName = "Alpha", iconUrl = null,
                 ownerId = "1", ownerName = "Alice", memberCount = 5,
                 installMode = "express", installedAtMillis = 1700000000000L,
+                botJoinedAtMillis = null, serverCreatedMillis = null, boostTier = 0, boostCount = 0,
+                locale = null, channelCount = 0, roleCount = 0, features = emptyList(),
+                daysSinceInstall = null, serverAgeDays = null,
             )
         )
         every { adminInstallsService.listInstalls() } returns rows
@@ -48,6 +54,8 @@ class AdminControllerTest {
 
         assertEquals("admin-installs", view)
         verify { model.addAttribute("installs", rows) }
+        verify { adminInstallsService.buildStats(rows) }
+        verify { installChartsService.build(rows) }
     }
 
     @Test

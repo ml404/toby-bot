@@ -6,6 +6,7 @@ import common.logging.DiscordLogger
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
+import database.service.activity.InstallEventService
 import database.service.casino.CasinoBotSuspicionService
 import net.dv8tion.jda.api.events.guild.GuildLeaveEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -31,6 +32,7 @@ class GuildLeaveCleanupHandler(
     private val antiAutoclickNotifier: AntiAutoclickNotifier,
     private val casinoBotSuspicionService: CasinoBotSuspicionService,
     private val voiceCompanyTracker: VoiceCompanyTracker,
+    private val installEventService: InstallEventService,
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -38,6 +40,11 @@ class GuildLeaveCleanupHandler(
     override fun onGuildLeave(event: GuildLeaveEvent) {
         val guildId = event.guild.idLong
         logger.info { "Guild $guildId left — evicting per-guild caches" }
+        // Record the LEAVE for the operator churn dashboard before the
+        // cache eviction fan-out (order is irrelevant, but keeping it first
+        // means the metric is captured even if an evict call later throws).
+        runCatching { installEventService.recordLeave(guildId) }
+            .onFailure { logger.error { "Failed to record LEAVE for guild $guildId: ${it.message}" } }
         runCatching { pokerTableRegistry.evictGuild(guildId) }
         runCatching { blackjackTableRegistry.evictGuild(guildId) }
         runCatching { casinoHoldemTableRegistry.evictGuild(guildId) }

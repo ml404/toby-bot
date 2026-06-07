@@ -2,6 +2,7 @@ package bot.toby.install
 
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto.Configurations
+import database.service.activity.InstallEventService
 import database.service.guild.ConfigService
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
@@ -23,12 +24,19 @@ import org.springframework.stereotype.Service
 @Service
 class InstallWelcomeHandler(
     private val configService: ConfigService,
+    private val installEventService: InstallEventService,
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
     override fun onGuildJoin(event: GuildJoinEvent) {
         val guild = event.guild
+        // Record the JOIN unconditionally (even on re-invite) so the
+        // operator churn dashboard sees every lifecycle transition. Kept
+        // separate from the welcome try/catch so a ledger write failure
+        // never suppresses the welcome, and vice-versa.
+        runCatching { installEventService.recordJoin(guild.idLong) }
+            .onFailure { logger.error { "Failed to record JOIN for guild ${guild.id}: ${it.message}" } }
         try {
             postWelcomeOrDmOwner(guild)
         } catch (e: Exception) {
