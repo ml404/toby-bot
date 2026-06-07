@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Onboarding: fix the new-user first-play dead-end + richer /help",
+    "summary": "Follow-up to #674. That pass made onboarding *tell* users to \"try `/blackjack solo` right now\" — this pass makes sure that actually works, and makes `/help` genuinely useful.",
+    "emoji": "✨",
+    "prNumber": 675
+  },
+  {
+    "date": "June 2026",
     "title": "Improve first-time onboarding: in-Discord /help overview, value-forward copy, re-welcome on re-invite",
     "summary": "## Why",
     "emoji": "✨",
