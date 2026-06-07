@@ -44,6 +44,7 @@ class AdminInstallsTemplateRenderTest {
     private fun render(
         installs: List<AdminInstallsService.InstallRow>,
         stats: AdminInstallsService.InstallStats = statsFor(installs),
+        insights: AdminInstallsService.InstallInsights = insightsFor(installs),
         chart: InstallChartsService.InstallChartView = emptyChart(),
     ): String {
         val request = MockHttpServletRequest(servletContext)
@@ -52,6 +53,7 @@ class AdminInstallsTemplateRenderTest {
         val ctx = WebContext(exchange).apply {
             setVariable("installs", installs)
             setVariable("stats", stats)
+            setVariable("insights", insights)
             setVariable("chart", chart)
             setVariable("username", "operator")
             setVariable("isBotOwner", true)
@@ -70,6 +72,18 @@ class AdminInstallsTemplateRenderTest {
             installsLast7Days = 1, installsLast30Days = 2,
             lifetimeJoins = 0, lifetimeLeaves = 0, netGrowth = 0,
             joinsLast30Days = 0, leavesLast30Days = 0, hasLedgerData = false,
+            brokenInstalls = installs.count { !it.isHealthy },
+            activeInstalls = installs.count { !it.isDormant },
+            dormantInstalls = installs.count { it.isDormant },
+        )
+
+    private fun insightsFor(installs: List<AdminInstallsService.InstallRow>) =
+        AdminInstallsService.InstallInsights(
+            total = installs.size,
+            featureAdoption = listOf(AdminInstallsService.LabeledCount("Activity tracking", 1)),
+            sizeBuckets = listOf(AdminInstallsService.LabeledCount("Small (<50)", installs.size)),
+            localeDistribution = listOf(AdminInstallsService.LabeledCount("English (US)", installs.size)),
+            boostDistribution = listOf(AdminInstallsService.LabeledCount("No boost", installs.size)),
         )
 
     private fun emptyChart() = InstallChartsService.InstallChartView(
@@ -96,6 +110,8 @@ class AdminInstallsTemplateRenderTest {
         features: List<String> = emptyList(),
         daysSinceInstall: Long? = 42L,
         serverAgeDays: Long? = 365L,
+        healthIssues: List<String> = emptyList(),
+        isDormant: Boolean = false,
     ) = AdminInstallsService.InstallRow(
         guildId = guildId, guildName = name, iconUrl = icon,
         ownerId = ownerId, ownerName = ownerName, memberCount = 7,
@@ -104,6 +120,7 @@ class AdminInstallsTemplateRenderTest {
         boostTier = boostTier, boostCount = if (boostTier > 0) 10 else 0,
         locale = "English (US)", channelCount = 12, roleCount = 8,
         features = features, daysSinceInstall = daysSinceInstall, serverAgeDays = serverAgeDays,
+        healthIssues = healthIssues, lastActiveMillis = installedAt, isDormant = isDormant,
     )
 
     @Test
@@ -155,6 +172,29 @@ class AdminInstallsTemplateRenderTest {
         assertTrue(html.contains("chart-bar-installs")) { "install bar missing:\n$html" }
         assertTrue(html.contains("chart-bar-removals")) { "removal bar missing:\n$html" }
         assertTrue(html.contains("Jun 2026")) { "month label missing:\n$html" }
+    }
+
+    @Test
+    fun `health issues and quiet badge render on the row`() {
+        val html = render(listOf(
+            row("90", "India", healthIssues = listOf("Cannot post", "No Manage Roles"), isDormant = true),
+        ))
+        assertTrue(html.contains("Cannot post")) { "health chip missing:\n$html" }
+        assertTrue(html.contains("No Manage Roles")) { "manage-roles chip missing:\n$html" }
+        assertTrue(html.contains("chip-warn")) { "warn chip class missing:\n$html" }
+        assertTrue(html.contains(">quiet<")) { "quiet badge missing:\n$html" }
+    }
+
+    @Test
+    fun `insights panels render feature adoption, size, locale and boost bars`() {
+        val html = render(listOf(row("a1", "J")))
+        assertTrue(html.contains("Feature adoption")) { "feature panel missing:\n$html" }
+        assertTrue(html.contains("Server size")) { "size panel missing:\n$html" }
+        assertTrue(html.contains("Top locales")) { "locale panel missing:\n$html" }
+        assertTrue(html.contains("Boost tier")) { "boost panel missing:\n$html" }
+        assertTrue(html.contains("bar-fill")) { "bar fill missing:\n$html" }
+        // health + activity stat cards
+        assertTrue(html.contains("Health") && html.contains("Activity")) { "health/activity stat cards missing:\n$html" }
     }
 
     @Test

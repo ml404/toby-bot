@@ -2,6 +2,7 @@ package web.service
 
 import database.dto.activity.InstallEventType
 import database.dto.guild.ConfigDto
+import database.persistence.activity.MessageDailyCountPersistence
 import database.service.activity.InstallEventService
 import database.service.guild.ConfigService
 import io.mockk.every
@@ -30,6 +31,7 @@ class AdminInstallsServiceTest {
     private lateinit var jda: JDA
     private lateinit var configService: ConfigService
     private lateinit var installEventService: InstallEventService
+    private lateinit var messageDailyCounts: MessageDailyCountPersistence
     private lateinit var service: AdminInstallsService
 
     @BeforeEach
@@ -37,7 +39,9 @@ class AdminInstallsServiceTest {
         jda = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         installEventService = mockk(relaxed = true)
-        service = AdminInstallsService(jda, configService, installEventService, clock)
+        messageDailyCounts = mockk(relaxed = true)
+        every { messageDailyCounts.findLastActiveByGuild() } returns emptyMap()
+        service = AdminInstallsService(jda, configService, installEventService, messageDailyCounts, clock)
     }
 
     /** Strict guild mock — detail accessors are intentionally left unstubbed
@@ -52,6 +56,7 @@ class AdminInstallsServiceTest {
         icon: String? = null,
     ): Guild = mockk {
         every { this@mockk.id } returns id
+        every { idLong } returns id.toLong()
         every { this@mockk.name } returns name
         every { iconUrl } returns icon
         every { memberCount } returns members
@@ -160,6 +165,7 @@ class AdminInstallsServiceTest {
         }
         val richGuild = mockk<Guild> {
             every { id } returns "10"
+            every { idLong } returns 10L
             every { name } returns "Rich"
             every { iconUrl } returns null
             every { memberCount } returns 100
@@ -239,12 +245,126 @@ class AdminInstallsServiceTest {
         assertEquals(false, stats.hasLedgerData)
     }
 
-    private fun rowOf(mode: String, installedAt: Long?, members: Int): AdminInstallsService.InstallRow =
+    private fun rowOf(
+        mode: String = "express",
+        installedAt: Long? = null,
+        members: Int = 0,
+        locale: String? = null,
+        boostTier: Int = 0,
+        healthIssues: List<String> = emptyList(),
+        isDormant: Boolean = false,
+    ): AdminInstallsService.InstallRow =
         AdminInstallsService.InstallRow(
             guildId = "g", guildName = "G", iconUrl = null, ownerId = "1", ownerName = null,
             memberCount = members, installMode = mode, installedAtMillis = installedAt,
-            botJoinedAtMillis = null, serverCreatedMillis = null, boostTier = 0, boostCount = 0,
-            locale = null, channelCount = 0, roleCount = 0, features = emptyList(),
+            botJoinedAtMillis = null, serverCreatedMillis = null, boostTier = boostTier, boostCount = 0,
+            locale = locale, channelCount = 0, roleCount = 0, features = emptyList(),
             daysSinceInstall = null, serverAgeDays = null,
+            healthIssues = healthIssues, lastActiveMillis = null, isDormant = isDormant,
         )
+
+    @Test
+    fun `health issues are flagged when the bot lacks post and manage-roles perms`() {
+        val self = mockk<net.dv8tion.jda.api.entities.SelfMember> {
+            every { hasPermission(net.dv8tion.jda.api.Permission.ADMINISTRATOR) } returns false
+            every { hasPermission(net.dv8tion.jda.api.Permission.MANAGE_ROLES) } returns false
+            every { hasPermission(any<net.dv8tion.jda.api.entities.channel.middleman.GuildChannel>(), *anyVararg()) } returns false
+        }
+        val g = mockk<Guild> {
+            every { id } returns "10"; every { idLong } returns 10L; every { name } returns "Locked"; every { iconUrl } returns null
+            every { memberCount } returns 5; every { ownerIdLong } returns 1L; every { ownerId } returns "1"
+            every { getMemberById(1L) } returns null
+            every { selfMember } returns self
+            every { systemChannel } returns null
+            every { textChannels } returns emptyList()
+            // detail accessors left to throw → defaults
+            every { timeCreated } throws RuntimeException("n/a")
+        }
+        stubGuilds(g)
+        every { configService.listAllConfig() } returns emptyList()
+
+        val row = service.listInstalls().single()
+
+        assertTrue(row.healthIssues.contains("Can't post"))
+        assertTrue(row.healthIssues.contains("No Manage Roles"))
+        assertEquals(false, row.isHealthy)
+    }
+
+    @Test
+    fun `administrator permission short-circuits all health checks`() {
+        val self = mockk<net.dv8tion.jda.api.entities.SelfMember> {
+            every { hasPermission(net.dv8tion.jda.api.Permission.ADMINISTRATOR) } returns true
+        }
+        val g = mockk<Guild> {
+            every { id } returns "10"; every { idLong } returns 10L; every { name } returns "Admin"; every { iconUrl } returns null
+            every { memberCount } returns 5; every { ownerIdLong } returns 1L; every { ownerId } returns "1"
+            every { getMemberById(1L) } returns null
+            every { selfMember } returns self
+            every { timeCreated } throws RuntimeException("n/a")
+        }
+        stubGuilds(g)
+        every { configService.listAllConfig() } returns emptyList()
+
+        assertTrue(service.listInstalls().single().isHealthy)
+    }
+
+    @Test
+    fun `guild with recent message activity is not dormant`() {
+        stubGuilds(guild("10", "Alpha", ownerId = 1L, ownerName = "A"))
+        every { configService.listAllConfig() } returns emptyList()
+        // clock is 2026-06-06; 3 days ago is well within the 30-day window.
+        every { messageDailyCounts.findLastActiveByGuild() } returns mapOf(10L to java.time.LocalDate.of(2026, 6, 3))
+
+        val row = service.listInstalls().single()
+
+        assertEquals(false, row.isDormant)
+        assertEquals(
+            java.time.LocalDate.of(2026, 6, 3).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
+            row.lastActiveMillis,
+        )
+    }
+
+    @Test
+    fun `guild with stale or missing activity is dormant`() {
+        stubGuilds(
+            guild("10", "Stale", ownerId = 1L, ownerName = "A"),
+            guild("20", "Never", ownerId = 2L, ownerName = "B"),
+        )
+        every { configService.listAllConfig() } returns emptyList()
+        every { messageDailyCounts.findLastActiveByGuild() } returns mapOf(10L to java.time.LocalDate.of(2026, 1, 1))
+
+        val byName = service.listInstalls().associateBy { it.guildName }
+        assertTrue(byName.getValue("Stale").isDormant)  // 5 months ago
+        assertTrue(byName.getValue("Never").isDormant)  // no row at all
+    }
+
+    @Test
+    fun `buildInsights counts feature adoption, size buckets and locale distribution`() {
+        every { configService.listAllConfig() } returns listOf(
+            cfg(ConfigDto.Configurations.ACTIVITY_TRACKING.configValue, "true", "10"),
+            cfg(ConfigDto.Configurations.LOTTERY_DAILY_ENABLED.configValue, "true", "10"),
+            cfg(ConfigDto.Configurations.WELCOME_ENABLED.configValue, "true", "20"),
+            // config for a guild not in the row set must be ignored
+            cfg(ConfigDto.Configurations.ACTIVITY_TRACKING.configValue, "true", "999"),
+        )
+        val rows = listOf(
+            rowOf(members = 10, locale = "English (US)", boostTier = 0).copy(guildId = "10"),
+            rowOf(members = 200, locale = "English (US)", boostTier = 2).copy(guildId = "20"),
+            rowOf(members = 9000, locale = "German", boostTier = 0).copy(guildId = "30"),
+        )
+
+        val insights = service.buildInsights(rows)
+
+        assertEquals(3, insights.total)
+        val activity = insights.featureAdoption.first { it.label == "Activity tracking" }
+        assertEquals(1, activity.count) // guild 10 only (999 ignored, no row)
+        assertEquals(1, insights.featureAdoption.first { it.label == "Welcome messages" }.count)
+        assertEquals(1, insights.sizeBuckets.first { it.label.startsWith("Small") }.count)
+        assertEquals(1, insights.sizeBuckets.first { it.label.startsWith("Medium") }.count)
+        assertEquals(1, insights.sizeBuckets.first { it.label.startsWith("Huge") }.count)
+        assertEquals("English (US)", insights.localeDistribution.first().label)
+        assertEquals(2, insights.localeDistribution.first().count)
+        assertEquals(2, insights.boostDistribution.first { it.label == "No boost" }.count)
+        assertEquals(1, insights.boostDistribution.first { it.label == "Tier 2" }.count)
+    }
 }

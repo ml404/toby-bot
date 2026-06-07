@@ -53,4 +53,16 @@ class DefaultMessageDailyCountPersistence : MessageDailyCountPersistence {
         query.setParameter("dayStart", dayStart)
         return query.resultList.firstOrNull()
     }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun findLastActiveByGuild(): Map<Long, LocalDate> {
+        val rows = entityManager
+            .createNamedQuery("MessageDailyCountDto.lastActiveByGuild")
+            .resultList as List<Array<Any?>>
+        return rows.mapNotNull { row ->
+            val guildId = (row[0] as? Number)?.toLong() ?: return@mapNotNull null
+            val day = row[1] as? LocalDate ?: return@mapNotNull null
+            guildId to day
+        }.toMap()
+    }
 }
