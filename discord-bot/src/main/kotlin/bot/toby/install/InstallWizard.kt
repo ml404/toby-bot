@@ -67,8 +67,8 @@ object InstallWizard {
                 "flip anything on later with `/setconfig`.\n" +
                 "**▸ Custom setup** — tune audio, channels, casino rules, lottery & more before you start.\n" +
                 "**▸ Skip for now** — dismiss this; run `/install` whenever you're ready.\n\n" +
-                "💡 Once you're set up, anyone can run `/help`, deal a hand with `/blackjack`, or queue a " +
-                "track with `/play`.\n" +
+                "💡 **No waiting required** — even before setup, anyone can play `/blackjack solo`, spin " +
+                "`/roulette`, or queue music with `/play`. Run `/help` to see everything I can do.\n" +
                 "_Only the server owner can use these buttons._"
         )
         .build()
@@ -90,7 +90,8 @@ object InstallWizard {
                 "**▸ Express setup** — re-confirm the quick defaults.\n" +
                 "**▸ Custom setup** — jump back into the tuning menus.\n" +
                 "**▸ Skip for now** — keep everything as it is.\n\n" +
-                "💡 Or jump straight back in with `/help`, `/blackjack`, or `/play`.\n" +
+                "💡 Or jump straight back in — anyone can play `/blackjack solo`, spin `/roulette`, or queue " +
+                "`/play`. Run `/help` for the full list.\n" +
                 "_Only the server owner can use these buttons._"
         )
         .build()
