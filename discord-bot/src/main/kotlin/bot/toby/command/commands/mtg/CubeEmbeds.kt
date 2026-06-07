@@ -199,16 +199,25 @@ internal object CubeEmbeds {
         setAuthor(AUTHOR)
         setTitle(card.name)
         card.imageUrl?.let { setImage(it) }
-        val facts = buildList {
-            if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
-            add("**Mana value** · ${formatMv(card.manaValue)}")
-            card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
-            add("**Colour identity** · ${colorIdentityLine(card)}")
-            priceLine(card)?.let { add("**Price** · $it") }
-            if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
-        }.joinToString("\n")
+        val facts = cardFactLines(card, includeManaValue = true).joinToString("\n")
         val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
         setDescription(facts + oracle)
+    }
+
+    /**
+     * The fact lines on a card panel — type, (optionally) mana value, rarity,
+     * colour identity, price and legal formats — in display order, present
+     * fields only. Shared by [cardEmbed] (the `/mtgcard` lookup) and the inline
+     * `[[card]]` mentions so the two panels can't drift. The compact inline
+     * mention omits the mana value via [includeManaValue].
+     */
+    fun cardFactLines(card: CubeCard, includeManaValue: Boolean): List<String> = buildList {
+        if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
+        if (includeManaValue) add("**Mana value** · ${formatMv(card.manaValue)}")
+        card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
+        add("**Colour identity** · ${colorIdentityLine(card)}")
+        priceLine(card)?.let { add("**Price** · $it") }
+        if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
     }
 
     /**

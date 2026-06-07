@@ -659,10 +659,7 @@ class CubeWebService {
      * the Purifier"). Entries that don't resolve go into [MatchResult.notFound].
      */
     fun matchEntries(entries: List<ListEntry>, cards: List<ScryfallCard>): MatchResult {
-        val byKey = HashMap<String, ScryfallCard>()
-        cards.forEach { card ->
-            MtgNames.matchKeys(card.card.name).forEach { key -> byKey.putIfAbsent(key, card) }
-        }
+        val byKey = MtgNames.index(cards) { it.card.name }
         val pool = mutableListOf<ScryfallCard>()
         val notFound = mutableListOf<String>()
         for (entry in entries) {

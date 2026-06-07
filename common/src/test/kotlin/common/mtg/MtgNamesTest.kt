@@ -121,4 +121,31 @@ class MtgNamesTest {
         val fullNameKeys = MtgNames.matchKeys("Archangel Avacyn // Avacyn, the Purifier")
         assertTrue(fullNameKeys.contains(MtgNames.lookupKey(request)))
     }
+
+    // --- index ----------------------------------------------------------
+
+    @Test
+    fun `index keys an item under its full name and every face`() {
+        val dfc = "Huntmaster of the Fells // Ravager of the Fells"
+        val byKey = MtgNames.index(listOf(dfc)) { it }
+
+        // Resolvable by the pasted front face, the back face, or the full name.
+        assertEquals(dfc, byKey[MtgNames.lookupKey("Huntmaster of the Fells")])
+        assertEquals(dfc, byKey[MtgNames.lookupKey("Ravager of the Fells")])
+        assertEquals(dfc, byKey[MtgNames.lookupKey(dfc)])
+    }
+
+    @Test
+    fun `index lets the first item win a contested key`() {
+        // Two printings of the same name: the first one indexed is kept.
+        val byKey = MtgNames.index(listOf("Forest #1", "Forest #2")) { "Forest" }
+        assertEquals("Forest #1", byKey[MtgNames.lookupKey("Forest")])
+    }
+
+    @Test
+    fun `index maps over arbitrary item types via the name selector`() {
+        data class Card(val name: String, val id: Int)
+        val byKey = MtgNames.index(listOf(Card("Sol Ring", 7))) { it.name }
+        assertEquals(7, byKey[MtgNames.lookupKey("sol ring")]?.id)
+    }
 }

@@ -5,7 +5,6 @@ import bot.toby.command.commands.mtg.ScryfallCubeFetcher
 import common.discord.embed
 import common.logging.DiscordLogger
 import common.mtg.CubeCard
-import common.mtg.Rarity
 import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
 import kotlinx.coroutines.CoroutineDispatcher
@@ -63,13 +62,8 @@ class CardMentionListener @Autowired constructor(
         val front = embed(color = CubeEmbeds.OK_COLOR) {
             setTitle(card.name)
             card.imageUrl?.let { setImage(it) }
-            val facts = buildList {
-                if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
-                card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
-                add("**Colour identity** · ${CubeEmbeds.colorIdentityLine(card)}")
-                CubeEmbeds.priceLine(card)?.let { add("**Price** · $it") }
-                if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
-            }.joinToString("\n")
+            // Compact panel: same facts as /mtgcard lookup, minus the mana value.
+            val facts = CubeEmbeds.cardFactLines(card, includeManaValue = false).joinToString("\n")
             setDescription(facts + (card.oracleText?.let { "\n\n${CubeEmbeds.oracleBlock(it)}" }.orEmpty()))
         }
         val back = card.imageUrlBack?.let { url ->

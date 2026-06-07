@@ -37,7 +37,7 @@ class PriceWatchCommand @Autowired constructor(
             SUB_ADD -> launchHandling(ctx) { handleAdd(ctx, requestingUserDto, deleteDelay) }
             SUB_LIST -> handleList(ctx, requestingUserDto, deleteDelay) // DB read, no network
             SUB_REMOVE -> handleRemove(ctx, requestingUserDto, deleteDelay)
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: add, list or remove."), deleteDelay)
+            else -> replyError(ctx, "Pick a subcommand: add, list or remove.", deleteDelay)
         }
     }
 
@@ -48,18 +48,18 @@ class PriceWatchCommand @Autowired constructor(
         val price = ctx.event.getOption(OPT_PRICE)?.asDouble
         val currency = MtgCurrency.fromCode(ctx.event.stringOption(OPT_CURRENCY)) ?: MtgCurrency.DEFAULT
         if (name.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to watch."), deleteDelay); return
+            replyError(ctx, "Give me a card `name` to watch.", deleteDelay); return
         }
         val direction = directionKey?.let { runCatching { CardPriceWatchDto.Direction.valueOf(it) }.getOrNull() }
         if (direction == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("Pick a `direction`: below or above."), deleteDelay); return
+            replyError(ctx, "Pick a `direction`: below or above.", deleteDelay); return
         }
         if (price == null || price <= 0.0) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a positive target `price`."), deleteDelay); return
+            replyError(ctx, "Give me a positive target `price`.", deleteDelay); return
         }
         val card = fetcher.fetchNamed(name)
         if (card == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay); return
+            replyError(ctx, "Couldn't find a card named `$name`.", deleteDelay); return
         }
         val currentPrice = card.price(currency)?.toDoubleOrNull()
         val created = priceWatchService.create(
@@ -72,7 +72,7 @@ class PriceWatchCommand @Autowired constructor(
             priceAtCreation = currentPrice,
         )
         if (created == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("You've hit the watch limit (${priceWatchService.maxPerUser}). Remove one with `${MtgCommandRef.PRICEWATCH_REMOVE}` first."), deleteDelay)
+            replyError(ctx, "You've hit the watch limit (${priceWatchService.maxPerUser}). Remove one with `${MtgCommandRef.PRICEWATCH_REMOVE}` first.", deleteDelay)
         } else {
             reply(ctx, CubeEmbeds.watchAddedEmbed(created, card, currency, currentPrice), deleteDelay)
         }
@@ -88,7 +88,7 @@ class PriceWatchCommand @Autowired constructor(
     private fun handleRemove(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val id = ctx.event.getOption(OPT_WATCH_ID)?.asLong
         if (id == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me the watch `id` to remove (see `${MtgCommandRef.PRICEWATCH_LIST}`)."), deleteDelay); return
+            replyError(ctx, "Give me the watch `id` to remove (see `${MtgCommandRef.PRICEWATCH_LIST}`).", deleteDelay); return
         }
         val removed = priceWatchService.remove(id, requestingUserDto.discordId)
         reply(

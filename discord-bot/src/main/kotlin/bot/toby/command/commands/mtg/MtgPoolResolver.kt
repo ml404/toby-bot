@@ -45,10 +45,7 @@ class MtgPoolResolver @Autowired constructor(
             return when (val res = fetcher.fetchByNames(entries.map { MtgNames.requestName(it.name) })) {
                 is ScryfallCubeFetcher.Result.Failure -> PoolResult.Failed(res.message)
                 is ScryfallCubeFetcher.Result.Success -> {
-                    val byName = HashMap<String, CubeCard>()
-                    res.cards.forEach { card ->
-                        MtgNames.matchKeys(card.name).forEach { key -> byName.putIfAbsent(key, card) }
-                    }
+                    val byName = MtgNames.index(res.cards) { it.name }
                     val pool = entries.flatMap { entry ->
                         byName[MtgNames.lookupKey(entry.name)]?.let { card -> List(entry.count) { card } } ?: emptyList()
                     }

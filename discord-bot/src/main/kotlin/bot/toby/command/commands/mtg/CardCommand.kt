@@ -33,7 +33,7 @@ class CardCommand @Autowired constructor(
             SUB_LOOKUP -> launchHandling(ctx) { handleLookup(ctx, deleteDelay) }
             SUB_RULINGS -> launchHandling(ctx) { handleRulings(ctx, deleteDelay) }
             SUB_COMBOS -> launchHandling(ctx) { handleCombos(ctx, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: lookup, rulings or combos."), deleteDelay)
+            else -> replyError(ctx, "Pick a subcommand: lookup, rulings or combos.", deleteDelay)
         }
     }
 
@@ -41,17 +41,17 @@ class CardCommand @Autowired constructor(
     private suspend fun handleLookup(ctx: CommandContext, deleteDelay: Int) {
         val name = ctx.event.stringOption(OPT_NAME)?.trim()
         if (name.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to look up."), deleteDelay)
+            replyError(ctx, "Give me a card `name` to look up.", deleteDelay)
             return
         }
         when (val res = fetcher.fetchByNames(listOf(MtgNames.requestName(name)))) {
             is ScryfallCubeFetcher.Result.Failure ->
-                reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+                replyError(ctx, "Couldn't find a card named `$name`.", deleteDelay)
             is ScryfallCubeFetcher.Result.Success -> {
                 // Prefer the card whose full/face name matches what was typed.
                 val card = res.cards.firstOrNull { MtgNames.matchKeys(it.name).contains(MtgNames.lookupKey(name)) }
                     ?: res.cards.firstOrNull()
-                if (card == null) reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+                if (card == null) replyError(ctx, "Couldn't find a card named `$name`.", deleteDelay)
                 else reply(ctx, CubeEmbeds.cardEmbed(card), deleteDelay)
             }
         }
@@ -61,11 +61,11 @@ class CardCommand @Autowired constructor(
     private suspend fun handleRulings(ctx: CommandContext, deleteDelay: Int) {
         val name = ctx.event.stringOption(OPT_NAME)?.trim()
         if (name.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to look up rulings for."), deleteDelay)
+            replyError(ctx, "Give me a card `name` to look up rulings for.", deleteDelay)
             return
         }
         when (val rulings = fetcher.fetchRulings(name)) {
-            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a card named `$name`."), deleteDelay)
+            null -> replyError(ctx, "Couldn't find a card named `$name`.", deleteDelay)
             else -> reply(ctx, CubeEmbeds.rulingsEmbed(rulings), deleteDelay)
         }
     }
@@ -74,11 +74,11 @@ class CardCommand @Autowired constructor(
     private suspend fun handleCombos(ctx: CommandContext, deleteDelay: Int) {
         val name = ctx.event.stringOption(OPT_NAME)?.trim()
         if (name.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a card `name` to find combos for."), deleteDelay)
+            replyError(ctx, "Give me a card `name` to find combos for.", deleteDelay)
             return
         }
         when (val combos = fetcher.fetchCombos(name)) {
-            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't reach Commander Spellbook. Try again later."), deleteDelay)
+            null -> replyError(ctx, "Couldn't reach Commander Spellbook. Try again later.", deleteDelay)
             else -> reply(ctx, CubeEmbeds.combosEmbed(combos), deleteDelay)
         }
     }

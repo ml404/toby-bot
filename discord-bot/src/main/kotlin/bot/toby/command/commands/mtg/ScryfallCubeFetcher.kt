@@ -170,20 +170,30 @@ class ScryfallCubeFetcher @Autowired constructor(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return@withContext null
         val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        getAndParse(url, "Scryfall named lookup failed for '$trimmed'") { parseCard(it) }
+    }
+
+    /**
+     * GETs [url] and maps the JSON body via [parse], or null when the response
+     * isn't 200, the body can't be parsed, or the request fails (logged under
+     * [context]). Coroutine cancellation is always rethrown. Shared by the
+     * single-object lookups ([fetchNamed], [fetchSet], [fetchCombos]) so they
+     * don't each re-spell the request, status check and error handling.
+     */
+    private suspend fun <T> getAndParse(url: String, context: String, parse: (JsonObject) -> T?): T? =
         try {
             val response = client.get(url) {
                 header(HttpHeaders.Accept, "application/json")
                 timeout { requestTimeoutMillis = TIMEOUT_MS }
             }
-            if (response.status.value != 200) return@withContext null
-            parseCard(JsonParser.parseString(response.bodyAsText()).asJsonObject)
+            if (response.status.value != 200) null
+            else parse(JsonParser.parseString(response.bodyAsText()).asJsonObject)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            logger.error("Scryfall named lookup failed for '$trimmed': $e")
+            logger.error("$context: $e")
             null
         }
-    }
 
     /**
      * Resolves a card by (fuzzy) name and fetches its official rulings in two
@@ -246,18 +256,8 @@ class ScryfallCubeFetcher @Autowired constructor(
         // q=card:"Name" filters variants that use that exact card.
         val query = URLEncoder.encode("card:\"$trimmed\"", StandardCharsets.UTF_8)
         val url = "$SPELLBOOK_ENDPOINT?q=$query&limit=$MAX_COMBOS&ordering=-popularity"
-        try {
-            val response = client.get(url) {
-                header(HttpHeaders.Accept, "application/json")
-                timeout { requestTimeoutMillis = TIMEOUT_MS }
-            }
-            if (response.status.value != 200) return@withContext null
-            CardCombos(trimmed, parseCombos(JsonParser.parseString(response.bodyAsText()).asJsonObject))
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logger.error("Commander Spellbook lookup failed for '$trimmed': $e")
-            null
+        getAndParse(url, "Commander Spellbook lookup failed for '$trimmed'") {
+            CardCombos(trimmed, parseCombos(it))
         }
     }
 
@@ -269,19 +269,7 @@ class ScryfallCubeFetcher @Autowired constructor(
         val trimmed = code.trim().lowercase()
         if (trimmed.isEmpty()) return@withContext null
         val url = "$SETS_ENDPOINT/" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
-        try {
-            val response = client.get(url) {
-                header(HttpHeaders.Accept, "application/json")
-                timeout { requestTimeoutMillis = TIMEOUT_MS }
-            }
-            if (response.status.value != 200) return@withContext null
-            parseSet(JsonParser.parseString(response.bodyAsText()).asJsonObject)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            logger.error("Scryfall set lookup failed for '$trimmed': $e")
-            null
-        }
+        getAndParse(url, "Scryfall set lookup failed for '$trimmed'") { parseSet(it) }
     }
 
     /** Maps a Scryfall set object to [MtgSet], or null without a code/name. */

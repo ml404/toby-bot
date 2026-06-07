@@ -51,7 +51,7 @@ class CubeCommand @Autowired constructor(
             SUB_PREVIEW -> launchHandling(ctx) { handlePreview(ctx, requestingUserDto, deleteDelay) }
             SUB_GENERATE -> launchHandling(ctx) { handleGenerate(ctx, requestingUserDto) }
             SUB_SAVED -> launchHandling(ctx) { handleSaved(ctx, requestingUserDto, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: asfan, preview, generate or saved."), deleteDelay)
+            else -> replyError(ctx, "Pick a subcommand: asfan, preview, generate or saved.", deleteDelay)
         }
     }
 
@@ -84,7 +84,7 @@ class CubeCommand @Autowired constructor(
     private suspend fun handlePreview(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val packSize = ctx.event.intOption(OPT_PACK_SIZE, DEFAULT_PACK_SIZE)
         when (val resolved = resolvePool(ctx, requestingUserDto)) {
-            is MtgPoolResolver.PoolResult.Failed -> reply(ctx, CubeEmbeds.errorEmbed(resolved.message), deleteDelay)
+            is MtgPoolResolver.PoolResult.Failed -> replyError(ctx, resolved.message, deleteDelay)
             is MtgPoolResolver.PoolResult.Ready -> {
                 val pool = resolved.pool
                 val currency = currencyFor(ctx)
