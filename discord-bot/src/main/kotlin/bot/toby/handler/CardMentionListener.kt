@@ -5,7 +5,6 @@ import bot.toby.command.commands.mtg.ScryfallCubeFetcher
 import common.discord.embed
 import common.logging.DiscordLogger
 import common.mtg.CubeCard
-import common.mtg.MtgColor
 import common.mtg.Rarity
 import database.dto.guild.ConfigDto
 import database.service.guild.ConfigService
@@ -18,7 +17,6 @@ import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.awt.Color
 
 /**
  * Inline Magic card lookups: when a message contains `[[Card Name]]` markers,
@@ -62,22 +60,20 @@ class CardMentionListener @Autowired constructor(
 
     /** The front-face panel, plus a back-face image embed for a double-faced card. */
     private fun cardEmbeds(card: CubeCard): List<MessageEmbed> {
-        val colours = if (card.colors.isEmpty()) "Colourless"
-        else MtgColor.entries.filter { it in card.colors }.joinToString(", ") { it.displayName }
-        val front = embed(color = GOLD) {
+        val front = embed(color = CubeEmbeds.OK_COLOR) {
             setTitle(card.name)
             card.imageUrl?.let { setImage(it) }
             val facts = buildList {
                 if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
                 card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
-                add("**Colour identity** · $colours")
+                add("**Colour identity** · ${CubeEmbeds.colorIdentityLine(card)}")
                 CubeEmbeds.priceLine(card)?.let { add("**Price** · $it") }
                 if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
             }.joinToString("\n")
             setDescription(facts + (card.oracleText?.let { "\n\n${CubeEmbeds.oracleBlock(it)}" }.orEmpty()))
         }
         val back = card.imageUrlBack?.let { url ->
-            embed(color = GOLD) {
+            embed(color = CubeEmbeds.OK_COLOR) {
                 setTitle("${card.name} (back)")
                 setImage(url)
             }
@@ -86,8 +82,6 @@ class CardMentionListener @Autowired constructor(
     }
 
     companion object {
-        /** Magic five-colour gold, matching the cube tooling's accent. */
-        private val GOLD = Color(199, 161, 79)
         private val MENTION = Regex("\\[\\[([^\\[\\]]+)]]")
 
         /** Max cards resolved from one message, so a bracket-wall can't spam. */

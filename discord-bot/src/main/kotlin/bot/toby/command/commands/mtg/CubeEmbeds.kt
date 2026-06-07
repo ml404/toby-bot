@@ -199,19 +199,26 @@ internal object CubeEmbeds {
         setAuthor(AUTHOR)
         setTitle(card.name)
         card.imageUrl?.let { setImage(it) }
-        val colours = if (card.colors.isEmpty()) "Colourless"
-        else MtgColor.entries.filter { it in card.colors }.joinToString(", ") { it.displayName }
         val facts = buildList {
             if (card.typeLine.isNotBlank()) add("**Type** · ${card.typeLine}")
             add("**Mana value** · ${formatMv(card.manaValue)}")
             card.rarity?.let { add("**Rarity** · ${Rarity.parse(it).displayName}") }
-            add("**Colour identity** · $colours")
+            add("**Colour identity** · ${colorIdentityLine(card)}")
             priceLine(card)?.let { add("**Price** · $it") }
             if (card.legalFormats.isNotEmpty()) add("**Legal** · ${card.legalFormats.joinToString(", ")}")
         }.joinToString("\n")
         val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
         setDescription(facts + oracle)
     }
+
+    /**
+     * A card's colour-identity line for a panel: its colour names in WUBRG
+     * order, or "Colourless" when it has none. Shared by [cardEmbed] and the
+     * inline `[[card]]` mentions so the two card panels read identically.
+     */
+    fun colorIdentityLine(card: CubeCard): String =
+        if (card.colors.isEmpty()) "Colourless"
+        else MtgColor.displayNames(card.colors).joinToString(", ")
 
     /**
      * The cube's total value line in the requested [currency]
@@ -232,7 +239,7 @@ internal object CubeEmbeds {
             ?: totalValues.firstOrNull()?.let { it.currency to it.amount }
             ?: return null
         val (cur, amount) = total
-        return "≈ ${cur.symbol}${format(amount)}${cur.suffix} (priced cards, ${cur.display})"
+        return "≈ ${cur.format(amount)} (priced cards, ${cur.display})"
     }
 
     /**
@@ -260,8 +267,7 @@ internal object CubeEmbeds {
 
     /** A two-line "most / least valuable card" block in the extremes' currency. */
     fun valueExtremesBlock(ext: CubeAnalytics.ValueExtremes): String {
-        fun line(v: CubeAnalytics.ValuedCard) =
-            "${v.name} (${ext.currency.symbol}${format(v.amount)}${ext.currency.suffix})"
+        fun line(v: CubeAnalytics.ValuedCard) = "${v.name} (${ext.currency.format(v.amount)})"
         return "**Most:** ${line(ext.mostValuable)}\n**Least:** ${line(ext.leastValuable)}"
     }
 
@@ -270,9 +276,9 @@ internal object CubeEmbeds {
      * present currencies only, or null when Scryfall has no price for it.
      */
     fun priceLine(card: CubeCard): String? = buildList {
-        card.priceUsd?.let { add("$$it") }
-        card.priceEur?.let { add("€$it") }
-        card.priceTix?.let { add("$it tix") }
+        card.priceUsd?.let { add(MtgCurrency.USD.wrap(it)) }
+        card.priceEur?.let { add(MtgCurrency.EUR.wrap(it)) }
+        card.priceTix?.let { add(MtgCurrency.TIX.wrap(it)) }
     }.takeIf { it.isNotEmpty() }?.joinToString(" · ")
 
     /**
@@ -338,9 +344,9 @@ internal object CubeEmbeds {
         setTitle("🔔 Watching ${card.name}")
         card.imageUrl?.let { setThumbnail(it) }
         val dir = watch.directionEnum.name.lowercase()
-        val now = currentPrice?.let { " (now ${money(it, currency)})" }.orEmpty()
+        val now = currentPrice?.let { " (now ${currency.format(it)})" }.orEmpty()
         setDescription(
-            "I'll DM you when **${card.name}** is **$dir ${money(watch.threshold, currency)}**$now.\n" +
+            "I'll DM you when **${card.name}** is **$dir ${currency.format(watch.threshold)}**$now.\n" +
                 "Watch **#${watch.id}** · one-shot · remove with `${MtgCommandRef.PRICEWATCH_REMOVE} id:${watch.id}`."
         )
         setFooter("Manage card-price-watch DMs in /preferences notifications.")
@@ -357,7 +363,7 @@ internal object CubeEmbeds {
         setDescription(
             watches.joinToString("\n") { w ->
                 val cur = MtgCurrency.fromCode(w.currency) ?: MtgCurrency.DEFAULT
-                "• **#${w.id}** ${w.cardName} — ${w.directionEnum.name.lowercase()} ${money(w.threshold, cur)}"
+                "• **#${w.id}** ${w.cardName} — ${w.directionEnum.name.lowercase()} ${cur.format(w.threshold)}"
             }
         )
         setFooter("Remove one with ${MtgCommandRef.PRICEWATCH_REMOVE} id:<id>")
@@ -369,10 +375,6 @@ internal object CubeEmbeds {
         setTitle("Watch removed")
         setDescription("Stopped watching **#$id**.")
     }
-
-    /** A money amount in a currency: `$1.50` / `€1.50` / `1.50 tix`. */
-    private fun money(amount: Double, currency: MtgCurrency): String =
-        "${currency.symbol}${format(amount)}${currency.suffix}"
 
     /** A keyword's reminder text for `/mtg rule`. */
     fun ruleEmbed(term: MtgGlossary.Term): MessageEmbed = embed(color = OK_COLOR) {
@@ -447,11 +449,11 @@ internal object CubeEmbeds {
         packs.forEachIndexed { i, pack ->
             val priced = pack.mapNotNull { it.price(currency)?.toDoubleOrNull() }
             val packTotal = priced.takeIf { it.isNotEmpty() }
-                ?.let { " — ≈ ${currency.symbol}${format(it.sum())}${currency.suffix}" }
+                ?.let { " — ≈ ${currency.format(it.sum())}" }
                 .orEmpty()
             appendLine("== Pack ${i + 1} (${pack.size} cards)$packTotal ==")
             pack.forEach { card ->
-                val price = card.price(currency)?.let { " (${currency.symbol}$it${currency.suffix})" }.orEmpty()
+                val price = card.price(currency)?.let { " (${currency.wrap(it)})" }.orEmpty()
                 val image = card.imageUrl?.let { " — $it" }.orEmpty()
                 appendLine("  ${card.name}$price$image")
             }
