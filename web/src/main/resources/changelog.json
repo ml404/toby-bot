@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Surface \"members reached\" as live social proof on the homepage",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 673
+  },
+  {
+    "date": "June 2026",
     "title": "Unify Scryfall card parsing across the bot and web",
     "summary": "## What & why",
     "emoji": "✨",
