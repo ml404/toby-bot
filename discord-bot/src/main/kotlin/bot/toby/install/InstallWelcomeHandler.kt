@@ -57,12 +57,19 @@ class InstallWelcomeHandler(
             logger.info { "Skipping welcome — guild ${guild.id} already installed ($existingValue)" }
             return
         }
+        // `INSTALL_MODE` is cleared on guild-leave (see GuildLeaveCleanupHandler)
+        // so a genuine re-invite re-opens the wizard, but `INSTALLED_AT` is
+        // left intact as a "we've onboarded this guild before" marker. Its
+        // presence here means this is a returning server whose config survived
+        // — greet them with the welcome-back variant instead of a fresh pitch.
+        val returning = !configService.getConfigByName(Configurations.INSTALLED_AT.configValue, guild.id)?.value.isNullOrBlank()
+        val welcomeEmbed = if (returning) InstallWizard.welcomeBackEmbed(guild.name) else InstallWizard.welcomeEmbed(guild.name)
         val channel = pickWelcomeChannel(guild)
         if (channel != null) {
-            channel.sendMessageEmbeds(InstallWizard.welcomeEmbed(guild.name))
+            channel.sendMessageEmbeds(welcomeEmbed)
                 .addComponents(InstallWizard.wizardButtons())
                 .queue()
-            logger.info { "Posted install welcome to ${guild.id} in #${channel.name}" }
+            logger.info { "Posted install ${if (returning) "welcome-back" else "welcome"} to ${guild.id} in #${channel.name}" }
             return
         }
         // No writable channel — fall back to DMing the guild owner so the

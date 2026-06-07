@@ -8,6 +8,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.components.actionrow.ActionRow
@@ -23,6 +24,7 @@ import net.dv8tion.jda.api.events.guild.GuildJoinEvent
 import net.dv8tion.jda.api.requests.RestAction
 import net.dv8tion.jda.api.requests.restaction.CacheRestAction
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -113,6 +115,44 @@ internal class InstallWelcomeHandlerTest {
         handler.onGuildJoin(event)
 
         verify(exactly = 0) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `posts the welcome-back variant when INSTALLED_AT survives a re-invite`() {
+        // INSTALL_MODE was cleared on the previous leave, but INSTALLED_AT
+        // survives — so this is a returning server and should get the
+        // welcome-back greeting, not the first-time pitch.
+        every { configService.getConfigByName(Configurations.INSTALL_MODE.configValue, "100") } returns null
+        every { configService.getConfigByName(Configurations.INSTALLED_AT.configValue, "100") } returns
+            ConfigDto(Configurations.INSTALLED_AT.configValue, "1700000000000", "100")
+        every { guild.systemChannel } returns systemChannel
+        every {
+            selfMember.hasPermission(systemChannel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
+        } returns true
+
+        val embedSlot = slot<MessageEmbed>()
+        every { systemChannel.sendMessageEmbeds(capture(embedSlot)) } returns messageAction
+
+        handler.onGuildJoin(event)
+
+        verify(exactly = 1) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+        assertTrue(embedSlot.captured.title!!.contains("Welcome back"))
+    }
+
+    @Test
+    fun `posts the first-time welcome when there is no prior INSTALLED_AT`() {
+        every { configService.getConfigByName(any(), any()) } returns null
+        every { guild.systemChannel } returns systemChannel
+        every {
+            selfMember.hasPermission(systemChannel, Permission.VIEW_CHANNEL, Permission.MESSAGE_SEND)
+        } returns true
+
+        val embedSlot = slot<MessageEmbed>()
+        every { systemChannel.sendMessageEmbeds(capture(embedSlot)) } returns messageAction
+
+        handler.onGuildJoin(event)
+
+        assertTrue(embedSlot.captured.title!!.contains("Thanks for adding me"))
     }
 
     @Test

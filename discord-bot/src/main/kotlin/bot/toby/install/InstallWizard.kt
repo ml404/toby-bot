@@ -36,6 +36,14 @@ object InstallWizard {
     const val BTN_EXPRESS = "install_express"
     const val BTN_CUSTOM = "install_custom"
     const val BTN_SKIP = "install_skip"
+
+    /**
+     * Public (non-owner) button on the welcome message — anyone can click
+     * it to get the `/help` overview ephemerally. Gives curious members an
+     * immediate, zero-setup action while the owner-only Express / Custom /
+     * Skip buttons stay gated.
+     */
+    const val BTN_HELP = "install_help"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -53,19 +61,46 @@ object InstallWizard {
     // ---- embed factories ----
 
     fun welcomeEmbed(guildName: String): MessageEmbed = EmbedBuilder()
-        .setTitle("Welcome to $guildName!")
+        .setTitle("Thanks for adding me to $guildName! 🎉")
         .setDescription(
-            "Pick how you'd like to set the bot up:\n\n" +
-                "**▸ Express setup** — accept all defaults and get going in one click. " +
-                "Defaults include:\n" +
-                "  • Audio at full volume, message auto-delete on\n" +
-                "  • Activity tracking **OFF** (no XP / leaderboards)\n" +
-                "  • Daily lottery **OFF**\n" +
-                "  • Casino games enabled with conservative stake bounds\n" +
-                "  • Jackpot pool wired up but moderate (10% loss-tribute, 1% win-chance)\n\n" +
-                "**▸ Custom setup** — pick categories to tune now (audio, channels, casino rules, lottery). " +
-                "Anything you skip falls back to the defaults above; `/setconfig` is available anytime for fine-tuning.\n\n" +
-                "**▸ Skip for now** — dismiss this prompt. Run `/install` anytime to come back.\n\n" +
+            "I'm **toby-bot** — here's what I bring to the table:\n\n" +
+                "🎲 **Casino** — blackjack, poker, roulette, slots, dice & more, all sharing a Toby Coin " +
+                "economy and a server jackpot\n" +
+                "🎵 **Music** — queue and play audio right in your voice channels\n" +
+                "📈 **Leveling** — optional XP, leaderboards & activity rewards\n" +
+                "🎟️ **Daily lottery** — an optional server-wide draw\n\n" +
+                "**Let's get you set up — pick a path below:**\n" +
+                "**▸ Express setup** — one click, sensible defaults, start playing right away. Express keeps " +
+                "**Activity tracking OFF**, the **Daily lottery OFF**, and uses conservative casino stakes — " +
+                "flip anything on later with `/setconfig`.\n" +
+                "**▸ Custom setup** — tune audio, channels, casino rules, lottery & more before you start.\n" +
+                "**▸ Skip for now** — dismiss this; run `/install` whenever you're ready.\n\n" +
+                "💡 **No waiting required** — even before setup, anyone can play `/blackjack solo`, spin " +
+                "`/roulette`, or queue music with `/play`. Run `/help` to see everything I can do.\n" +
+                "🌐 Want the full tour first? Everything's at **[toby-bot.co.uk](https://www.toby-bot.co.uk/)**.\n" +
+                "_Only the server owner can use these buttons._"
+        )
+        .build()
+
+    /**
+     * Returning-server variant of [welcomeEmbed], shown when the bot is
+     * re-invited to a guild it was previously set up in (detected via a
+     * surviving `INSTALLED_AT` sentinel). Reassures the owner their prior
+     * configuration is intact and offers the same Express / Custom / Skip
+     * buttons in case they want to review it.
+     */
+    fun welcomeBackEmbed(guildName: String): MessageEmbed = EmbedBuilder()
+        .setTitle("Welcome back to $guildName! 👋")
+        .setDescription(
+            "Good to be back — **your previous settings are still saved**, so the casino, channels and " +
+                "everything you configured before are exactly as you left them. You don't need to do " +
+                "anything to keep them.\n\n" +
+                "If you'd like to review or change your setup:\n" +
+                "**▸ Express setup** — re-confirm the quick defaults.\n" +
+                "**▸ Custom setup** — jump back into the tuning menus.\n" +
+                "**▸ Skip for now** — keep everything as it is.\n\n" +
+                "💡 Or jump straight back in — anyone can play `/blackjack solo`, spin `/roulette`, or queue " +
+                "`/play`. Run `/help` for the full list.\n" +
                 "_Only the server owner can use these buttons._"
         )
         .build()
@@ -90,10 +125,13 @@ object InstallWizard {
         .build()
 
     fun expressDoneEmbed(): MessageEmbed = EmbedBuilder()
-        .setTitle("You're all set!")
+        .setTitle("You're all set! 🎉")
         .setDescription(
-            "The bot is running on defaults. Use `/setconfig <category>` anytime to fine-tune settings, " +
-                "or `/install` to re-open this wizard."
+            "Defaults are live and the casino is open. Here's how to get going:\n\n" +
+                "• `/help` — browse every command\n" +
+                "• `/blackjack` or `/roulette` — deal a quick game\n" +
+                "• `/play <song>` — queue music in a voice channel\n\n" +
+                "Owners: `/setconfig <category>` fine-tunes any setting, and `/install` reopens this wizard anytime."
         )
         .build()
 
@@ -137,8 +175,14 @@ object InstallWizard {
         .build()
 
     fun finishDoneEmbed(): MessageEmbed = EmbedBuilder()
-        .setTitle("Custom setup complete")
-        .setDescription("Your settings are saved. Use `/setconfig <category>` anytime to keep tuning.")
+        .setTitle("Custom setup complete ✅")
+        .setDescription(
+            "Your settings are saved. Time to play:\n\n" +
+                "• `/help` — browse every command\n" +
+                "• `/blackjack` or `/roulette` — deal a quick game\n" +
+                "• `/play <song>` — queue music in a voice channel\n\n" +
+                "Keep tuning anytime with `/setconfig <category>`, or reopen this wizard with `/install`."
+        )
         .build()
 
     // ---- component factories ----
@@ -147,6 +191,9 @@ object InstallWizard {
         Button.success(BTN_EXPRESS, "Express setup"),
         Button.primary(BTN_CUSTOM, "Custom setup"),
         Button.secondary(BTN_SKIP, "Skip for now"),
+        // Non-owner-friendly: any member can click this to see what the bot
+        // does without waiting on the owner to finish setup.
+        Button.secondary(BTN_HELP, "✨ What can I do?"),
     )
 
     fun finishButtonRow(): ActionRow = ActionRow.of(

@@ -1,6 +1,7 @@
 package bot.toby.command.commands.misc
 
-import core.command.Command.Companion.replyAndDelete
+import core.command.Command
+import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -10,31 +11,31 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 @Component
-class HelpCommand @Autowired constructor(private val commands: List<core.command.Command>) : MiscCommand {
+class HelpCommand @Autowired constructor(private val commands: List<Command>) : MiscCommand {
     companion object {
         private const val COMMAND = "command"
     }
+
     override val ephemeral: Boolean = true
 
     override fun handle(ctx: CommandContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        val args = ctx.event.options
         val event = ctx.event
-        // If no specific command is provided, direct users to the general wiki page
-        if (args.isEmpty()) {
-            val helpMessage =
-                "For a list of all available commands, visit the [Toby Bot Commands Wiki](https://github.com/ml404/toby-bot/wiki/Commands).\n" +
-                "Enjoying the bot? You can support development on [Ko-fi](https://ko-fi.com/fratlayton)."
-            event.hook.replyAndDelete(helpMessage, deleteDelay)
+        // No argument → show the in-Discord command overview rather than
+        // punting to an external wiki. This is the surface a brand-new user
+        // hits first, so it should answer "what can this bot do?" inline and
+        // hand off a zero-setup first action.
+        if (event.options.isEmpty()) {
+            event.hook.replyEmbedAndDelete(HelpOverview.embed(commands), deleteDelay)
             return
         }
 
         val searchOptional = event.getOption(COMMAND)?.asString
         val command = getCommand(searchOptional!!)
         if (command == null) {
-            event.hook.replyAndDelete("Nothing found for command '$searchOptional'", deleteDelay)
+            event.hook.replyEphemeralAndDelete("Nothing found for command '$searchOptional'", deleteDelay)
             return
         }
-        event.hook.replyEphemeralAndDelete(command.description, deleteDelay)
+        event.hook.replyEphemeralAndDelete("**/${command.name}** — ${command.description}", deleteDelay)
     }
 
     private fun getCommand(searchOptional: String) = commands.find { it.name.lowercase() == searchOptional }
@@ -42,7 +43,7 @@ class HelpCommand @Autowired constructor(private val commands: List<core.command
     override val name: String
         get() = "help"
     override val description: String
-        get() = "get help with the command you give this command"
+        get() = "See everything the bot can do, or pass a command name for details on just that one."
     override val optionData: List<OptionData>
         get() = listOf(OptionData(OptionType.STRING, COMMAND, "Command you would like help with", false, true))
 }

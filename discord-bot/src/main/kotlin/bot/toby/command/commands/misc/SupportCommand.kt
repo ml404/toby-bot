@@ -22,7 +22,7 @@ class SupportCommand : MiscCommand {
             )
             .addField("Ko-fi", "[Support development](https://ko-fi.com/fratlayton)", false)
             .addField("GitHub", "[Source & issues](https://github.com/ml404/toby-bot)", false)
-            .addField("Commands wiki", "[Browse all commands](https://github.com/ml404/toby-bot/wiki/Commands)", false)
+            .addField("Commands", "[Browse all commands](https://www.toby-bot.co.uk/commands/wiki)", false)
             .build()
 
         event.hook.sendMessageEmbeds(embed)
