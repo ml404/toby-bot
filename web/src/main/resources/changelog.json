@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Polish /admin/installs for mobile (card-per-row layout + reveal/count-up)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 665
+  },
+  {
+    "date": "June 2026",
     "title": "Add health, liveness, feature-adoption and audience insights to /admin/installs",
     "summary": "## Why",
     "emoji": "✨",
