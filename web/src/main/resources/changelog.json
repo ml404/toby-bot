@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Improve first-time onboarding: in-Discord /help overview, value-forward copy, re-welcome on re-invite",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 674
+  },
+  {
+    "date": "June 2026",
     "title": "Surface \"members reached\" as live social proof on the homepage",
     "summary": "## Why",
     "emoji": "✨",
