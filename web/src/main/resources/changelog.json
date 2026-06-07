@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Unify Scryfall card parsing across the bot and web",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 672
+  },
+  {
+    "date": "June 2026",
     "title": "Second DRY/SOLID pass over the Magic features",
     "summary": "## What & why",
     "emoji": "✨",
