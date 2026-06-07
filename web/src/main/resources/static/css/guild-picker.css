@@ -1,0 +1,101 @@
+/* Shared styles for the two legacy "pick a server" pickers that predate the
+ * lb-guild fragment system — the intro picker (guilds.html) and the
+ * moderation picker (moderation-guilds.html). Extracted out of per-page
+ * inline <style> blocks so both share one cacheable sheet and one set of
+ * responsive rules.
+ *
+ * (Most other pickers — casino/economy/lottery/etc. — render through
+ * fragments/guildListPage + leaderboard.css's .lb-guild-* classes; these
+ * two have bespoke card bodies, so they keep .guild-* but now share it.) */
+
+.guild-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: var(--space-4);
+}
+.guild-card {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    text-align: center;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s var(--ease-out, ease), transform 0.1s var(--ease-out, ease), box-shadow 0.15s var(--ease-out, ease);
+    display: block;
+}
+.guild-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    color: var(--text);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+.guild-icon, .guild-icon-placeholder {
+    width: 64px; height: 64px; border-radius: 50%;
+    margin: 0 auto 12px; display: block;
+}
+.guild-icon-placeholder {
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.5rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+}
+.guild-name {
+    font-weight: 600; font-size: 0.95rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Per-card count pill (intro picker: "2 / 3" intros used). */
+.guild-count {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: var(--border);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+.guild-count.has-intros { background: var(--accent-soft); color: var(--accent); }
+.guild-count.full { background: rgba(231, 76, 60, 0.12); color: var(--danger); }
+
+/* Wrap holds the card + the floating "set default" star form. */
+.guild-card-wrap { position: relative; display: block; }
+.guild-card-wrap .default-guild-form {
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    z-index: 2;
+}
+.guild-card-wrap .guild-card { padding-bottom: 44px; }
+
+.search-row {
+    display: flex;
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+    align-items: center;
+}
+.search-row input { flex: 1; max-width: 420px; }
+
+.empty-hero {
+    background: var(--bg-elevated);
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-lg);
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+.empty-hero h2 { color: var(--text); margin-bottom: 10px; }
+.empty-hero .emoji { font-size: 2.4rem; display: block; margin-bottom: 12px; }
+.no-results { color: var(--text-muted); padding: 24px; text-align: center; display: none; }
+
+@media (max-width: 480px) {
+    .guild-grid { grid-template-columns: 1fr; gap: 12px; }
+    .guild-card { padding: 14px 16px; }
+    .guild-card-wrap .guild-card { padding-bottom: 44px; }
+    .search-row { flex-direction: column; align-items: stretch; }
+    .search-row input { max-width: 100%; }
+    .empty-hero { padding: 32px 16px; }
+}
