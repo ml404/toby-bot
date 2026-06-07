@@ -5,8 +5,10 @@ import bot.toby.voice.VoiceCompanyTracker
 import database.blackjack.BlackjackTableRegistry
 import database.poker.CasinoHoldemTableRegistry
 import database.poker.PokerTableRegistry
+import database.dto.guild.ConfigDto.Configurations
 import database.service.activity.InstallEventService
 import database.service.casino.CasinoBotSuspicionService
+import database.service.guild.ConfigService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -28,6 +30,7 @@ class GuildLeaveCleanupHandlerTest {
     private val casinoBotSuspicionService: CasinoBotSuspicionService = mockk(relaxed = true)
     private val voiceCompanyTracker: VoiceCompanyTracker = mockk(relaxed = true)
     private val installEventService: InstallEventService = mockk(relaxed = true)
+    private val configService: ConfigService = mockk(relaxed = true)
 
     private val handler = GuildLeaveCleanupHandler(
         pokerTableRegistry,
@@ -38,10 +41,14 @@ class GuildLeaveCleanupHandlerTest {
         casinoBotSuspicionService,
         voiceCompanyTracker,
         installEventService,
+        configService,
     )
 
     private fun leaveEvent(guildId: Long): GuildLeaveEvent {
-        val guild = mockk<Guild>(relaxed = true) { every { idLong } returns guildId }
+        val guild = mockk<Guild>(relaxed = true) {
+            every { idLong } returns guildId
+            every { id } returns guildId.toString()
+        }
         return mockk(relaxed = true) { every { this@mockk.guild } returns guild }
     }
 
@@ -57,6 +64,19 @@ class GuildLeaveCleanupHandlerTest {
         verify(exactly = 1) { antiAutoclickNotifier.evictGuild(42L) }
         verify(exactly = 1) { casinoBotSuspicionService.evictGuild(42L) }
         verify(exactly = 1) { voiceCompanyTracker.evictGuild(42L) }
+    }
+
+    @Test
+    fun `guild leave clears the INSTALL_MODE welcome-gate so a re-invite re-onboards`() {
+        // INSTALL_MODE is the sentinel InstallWelcomeHandler checks to decide
+        // whether to skip the welcome. Clearing it on leave is what lets a
+        // re-invited guild see the wizard again instead of silence.
+        handler.onGuildLeave(leaveEvent(42L))
+
+        verify(exactly = 1) { configService.deleteConfig("42", Configurations.INSTALL_MODE.configValue) }
+        // INSTALLED_AT and substantive config are preserved — never deleted here.
+        verify(exactly = 0) { configService.deleteConfig("42", Configurations.INSTALLED_AT.configValue) }
+        verify(exactly = 0) { configService.deleteAll(any()) }
     }
 
     @Test

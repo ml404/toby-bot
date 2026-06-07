@@ -145,6 +145,7 @@ internal class InstallWizardTest {
     fun `every welcome embed factory returns a nonempty description`() {
         val embeds = listOf(
             InstallWizard.welcomeEmbed("Guild"),
+            InstallWizard.welcomeBackEmbed("Guild"),
             InstallWizard.dmWelcomeEmbed("Guild"),
             InstallWizard.expressDoneEmbed(),
             InstallWizard.customSectionEmbed(),
@@ -183,6 +184,26 @@ internal class InstallWizardTest {
     fun `welcome embed mentions the guild name`() {
         val embed = InstallWizard.welcomeEmbed("MyServer")
         assertTrue(embed.title!!.contains("MyServer"))
+    }
+
+    @Test
+    fun `welcomeBack embed names the guild and reassures settings are kept`() {
+        val embed = InstallWizard.welcomeBackEmbed("MyServer")
+        assertTrue(embed.title!!.contains("Welcome back"))
+        assertTrue(embed.title!!.contains("MyServer"))
+        // Returning owners should be told their prior config survived the re-invite.
+        assertTrue(embed.description!!.contains("still saved", ignoreCase = true))
+    }
+
+    @Test
+    fun `done embeds point owners at concrete first actions`() {
+        // Onboarding should hand off to something playable, not just /setconfig.
+        listOf(InstallWizard.expressDoneEmbed(), InstallWizard.finishDoneEmbed()).forEach { embed ->
+            val description = embed.description!!
+            assertTrue(description.contains("/help"))
+            assertTrue(description.contains("/blackjack"))
+            assertTrue(description.contains("/play"))
+        }
     }
 
     @Test
