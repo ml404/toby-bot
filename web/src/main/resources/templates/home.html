@@ -18,7 +18,11 @@
             <h1 id="hero-title">Your server&rsquo;s <span>best companion</span></h1>
             <p>A live per-server coin economy, a [[${homeStats.casinoGameCount}]]-game casino with a shared jackpot pool,
                 [[${homeStats.pvpGameCount}]] head-to-head PvP matchups, music and intro songs, monthly leaderboards,
-                and a full browser-based admin &mdash; all in one Discord bot.</p>
+                and a full browser-based admin &mdash; all in one Discord bot.<span
+                    th:if="${homeStats.serverCount > 0}"
+                    th:text="' Already serving ' + ${#numbers.formatInteger(homeStats.memberCount, 1, 'COMMA')}
+                             + ' members across ' + ${#numbers.formatInteger(homeStats.serverCount, 1, 'COMMA')}
+                             + ' server' + (${homeStats.serverCount} == 1 ? '' : 's') + '.'"> Already serving members.</span></p>
             <div class="hero-actions">
                 <a th:href="${inviteUrl}" class="btn-primary">Invite to Server</a>
                 <a th:href="@{/commands/wiki}" class="btn-secondary">Browse all commands</a>
@@ -36,6 +40,10 @@
     <div class="stat">
         <span class="stat-value" data-count-up th:text="${homeStats.serverCount}">0</span>
         <span class="stat-label">Servers</span>
+    </div>
+    <div class="stat">
+        <span class="stat-value" data-count-up th:text="${#numbers.formatInteger(homeStats.memberCount, 1, 'COMMA')}">0</span>
+        <span class="stat-label">Members</span>
     </div>
     <div class="stat">
         <span class="stat-value" data-count-up th:text="${homeStats.commandCount}">0</span>
@@ -176,6 +184,10 @@
 <!-- By the numbers — surfaces the homeStats DTO as a visible craft signal. -->
 <section class="numbers-strip" aria-label="TobyBot by the numbers">
     <div class="numbers-strip-inner">
+        <div class="numbers-cell" data-reveal>
+            <span class="numbers-value" data-count-up th:text="${#numbers.formatInteger(homeStats.memberCount, 1, 'COMMA')}">0</span>
+            <span class="numbers-label">Members reached</span>
+        </div>
         <div class="numbers-cell" data-reveal>
             <span class="numbers-value" data-count-up th:text="${homeStats.casinoGameCount}">0</span>
             <span class="numbers-label">Casino games</span>

@@ -47,6 +47,22 @@ class HomeStatsServiceTest {
     }
 
     @Test
+    fun `memberCount sums the member count of every cached guild`() {
+        @Suppress("UNCHECKED_CAST")
+        val guildCache = mockk<SnowflakeCacheView<Guild>>(relaxed = true)
+        every { jda.guildCache } returns guildCache
+        every { guildCache.size() } returns 3L
+        every { guildCache.iterator() } returns mutableListOf(
+            mockk<Guild> { every { memberCount } returns 1000 },
+            mockk<Guild> { every { memberCount } returns 250 },
+            mockk<Guild> { every { memberCount } returns 7 },
+        ).iterator()
+        service = HomeStatsService(jda, commandManager)
+
+        assertEquals(1257L, service.get().memberCount)
+    }
+
+    @Test
     fun `commandCount sums every category in CommandManager`() {
         // 17 + 3 + 18 + 6 + 34 + 17 + 3 = 98
         assertEquals(98, service.get().commandCount)

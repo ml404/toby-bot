@@ -24,6 +24,7 @@ class HomeControllerTest {
     private val expectedInviteUrl = web.util.DiscordInvite.urlFor(clientId)
     private val sampleStats = HomeStatsService.HomeStats(
         serverCount = 7,
+        memberCount = 12_345L,
         commandCount = 42,
         gameCount = 19,
         minigameCount = 12,
