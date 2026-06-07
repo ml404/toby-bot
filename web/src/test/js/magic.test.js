@@ -1106,6 +1106,126 @@ describe('readUrlPrefill', () => {
     });
 });
 
+describe('prefillFromUrl lands a shared link on a cube tab', () => {
+    // A ?q= / ?list= share link prefills the shared "Your cube" source, which
+    // only shows on the cube tabs — but the page defaults to Card lookup, where
+    // it's hidden. These prove the prefill switches to a cube tab to reveal it.
+    let host;
+    afterEach(() => {
+        window.history.replaceState(null, '', '/magic');
+        window.location.hash = '';
+        if (host && host.parentNode) host.parentNode.removeChild(host);
+        host = null;
+    });
+
+    function setUp() {
+        host = document.createElement('div');
+        host.innerHTML =
+            '<section class="cube-source-card" data-needs-cube hidden></section>' +
+            '<div data-source-tab="search" aria-selected="false"></div>' +
+            '<div data-source-tab="list" aria-selected="false"></div>' +
+            '<div data-source-panel="search"><input name="query"></div>' +
+            '<div data-source-panel="list" hidden><textarea name="list"></textarea></div>' +
+            '<button role="tab" data-tab="card" aria-selected="true"></button>' +
+            '<button role="tab" data-tab="preview" aria-selected="false"></button>' +
+            '<section data-panel="card"></section>' +
+            '<section data-panel="preview" hidden></section>';
+        document.body.appendChild(host);
+    }
+
+    test('a ?q= link fills the search box and switches to the preview tab', () => {
+        setUp();
+        window.history.replaceState(null, '', '/magic?q=cube%3Avintage');
+        Cube.prefillFromUrl(document);
+
+        expect(document.querySelector('[data-source-panel="search"] input[name="query"]').value).toBe('cube:vintage');
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('true');
+        expect(document.querySelector('[data-panel="preview"]').hidden).toBe(false);
+        expect(document.querySelector('[data-needs-cube]').hidden).toBe(false);
+    });
+
+    test('a ?list= link fills the list box and switches to the preview tab', () => {
+        setUp();
+        window.history.replaceState(null, '', '/magic?list=Bolt%0AForest');
+        Cube.prefillFromUrl(document);
+
+        expect(document.querySelector('textarea[name="list"]').value).toBe('Bolt\nForest');
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('true');
+    });
+
+    test('an explicit #hash deep-link wins over the prefill default', () => {
+        setUp();
+        window.history.replaceState(null, '', '/magic?q=cube%3Avintage#card');
+        Cube.prefillFromUrl(document);
+
+        // The query is still prefilled, but the chosen tab is left to wireTabs.
+        expect(document.querySelector('[data-source-panel="search"] input[name="query"]').value).toBe('cube:vintage');
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('false');
+    });
+
+    test('no prefill leaves the tabs untouched', () => {
+        setUp();
+        window.history.replaceState(null, '', '/magic');
+        Cube.prefillFromUrl(document);
+
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('false');
+        expect(document.querySelector('[data-panel="preview"]').hidden).toBe(true);
+    });
+});
+
+describe('revealSharedCube lands a /magic/c/<token> link on a cube tab', () => {
+    // A server-rendered shared cube pre-loads the list box (or, for a bad token,
+    // a "not found" notice) inside the shared "Your cube" source — hidden on the
+    // default Card lookup tab. These prove it switches to the list source on a
+    // cube tab so the loaded list / notice is actually visible.
+    let host;
+    afterEach(() => {
+        if (host && host.parentNode) host.parentNode.removeChild(host);
+        host = null;
+    });
+
+    function setUp(extra) {
+        host = document.createElement('div');
+        host.innerHTML =
+            '<section class="cube-source-card" data-needs-cube hidden></section>' +
+            '<div data-source-tab="search" aria-selected="true"></div>' +
+            '<div data-source-tab="list" aria-selected="false"></div>' +
+            '<div data-source-panel="search"></div>' +
+            '<div data-source-panel="list" hidden>' + (extra || '') + '</div>' +
+            '<button role="tab" data-tab="card" aria-selected="true"></button>' +
+            '<button role="tab" data-tab="preview" aria-selected="false"></button>' +
+            '<section data-panel="card"></section>' +
+            '<section data-panel="preview" hidden></section>';
+        document.body.appendChild(host);
+    }
+
+    test('a loaded shared cube switches to the list source on the preview tab', () => {
+        setUp('<p data-shared-banner>Loaded shared cube: Vintage</p>');
+        expect(Cube.revealSharedCube(document)).toBe(true);
+
+        expect(document.querySelector('[data-source-tab="list"]').getAttribute('aria-selected')).toBe('true');
+        expect(document.querySelector('[data-source-panel="list"]').hidden).toBe(false);
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('true');
+        expect(document.querySelector('[data-needs-cube]').hidden).toBe(false);
+    });
+
+    test('a not-found shared link still reveals the notice on a cube tab', () => {
+        setUp('<p data-shared-missing>That shared cube link wasn\'t found</p>');
+        expect(Cube.revealSharedCube(document)).toBe(true);
+
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('true');
+        expect(document.querySelector('[data-source-panel="list"]').hidden).toBe(false);
+    });
+
+    test('no shared cube is a no-op', () => {
+        setUp('');
+        expect(Cube.revealSharedCube(document)).toBe(false);
+
+        expect(document.querySelector('[data-tab="preview"]').getAttribute('aria-selected')).toBe('false');
+        expect(document.querySelector('[data-panel="preview"]').hidden).toBe(true);
+    });
+});
+
 describe('countCards', () => {
     test('counts non-blank, non-comment lines', () => {
         expect(Cube.countCards('Bolt\nForest\n\n# comment\n// also\n3 Island')).toBe(3);

@@ -1027,9 +1027,16 @@
         });
     }
 
-    /** Pre-loads the source from ?q= / ?list= so a shared link lands ready. */
+    /**
+     * Pre-loads the source from ?q= / ?list= so a shared link lands ready.
+     * A prefill targets the shared "Your cube" source, which only shows on the
+     * cube tabs — but the page defaults to Card lookup, where it's hidden. So a
+     * prefill also lands on a cube tab (Preview) to reveal it, unless an
+     * explicit #hash deep-link already chose one.
+     */
     function prefillFromUrl(doc) {
         const pre = readUrlPrefill(root.location && root.location.search);
+        const hasPrefill = pre.q != null || pre.list != null;
         if (pre.q != null) {
             const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
             if (input) input.value = pre.q;
@@ -1039,6 +1046,23 @@
             if (textarea) textarea.value = pre.list;
             setSource(doc, 'list');
         }
+        if (hasPrefill && !tabIdFromHash(root.location && root.location.hash)) {
+            activateTab(doc, 'preview');
+        }
+    }
+
+    /**
+     * A server-rendered shared cube (/magic/c/<token>) arrives pre-loaded in
+     * the list box, or — for a bad token — with a "not found" notice there.
+     * Either lives in the shared "Your cube" source, which is hidden on the
+     * default Card lookup tab, so switch to the list source and a cube tab
+     * (Preview) to reveal it. Returns true when a shared cube/miss was present.
+     */
+    function revealSharedCube(doc) {
+        if (!doc.querySelector('[data-shared-banner], [data-shared-missing]')) return false;
+        setSource(doc, 'list');
+        activateTab(doc, 'preview');
+        return true;
     }
 
     /** Disables the form's submit button while a request is in flight. */
@@ -2018,9 +2042,8 @@
         wireShare(doc);
         wireCardAutocomplete(doc);
         prefillFromUrl(doc);
-        // A shared cube arrives pre-loaded in the list box — show that source
-        // (this wins over a ?q= / ?list= prefill).
-        if (doc.querySelector('[data-shared-banner]')) setSource(doc, 'list');
+        // A server-rendered shared cube wins over a ?q= / ?list= prefill.
+        revealSharedCube(doc);
         wireCardCount(doc);
         wireCopyQuery(doc);
         wireExamples(doc);
@@ -2052,6 +2075,8 @@
         absoluteUrl: absoluteUrl,
         queryShareUrl: queryShareUrl,
         readUrlPrefill: readUrlPrefill,
+        prefillFromUrl: prefillFromUrl,
+        revealSharedCube: revealSharedCube,
         countCards: countCards,
         scryfallAutocompleteUrl: scryfallAutocompleteUrl,
         currentLineInfo: currentLineInfo,
