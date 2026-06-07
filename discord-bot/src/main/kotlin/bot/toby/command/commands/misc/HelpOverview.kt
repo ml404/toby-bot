@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.entities.MessageEmbed
  */
 object HelpOverview {
 
+    private const val WEBSITE_URL = "https://www.toby-bot.co.uk/"
     private const val WIKI_URL = "github.com/ml404/toby-bot/wiki/Commands"
     private const val KOFI_URL = "ko-fi.com/fratlayton"
     private const val OTHER_LABEL = "📦 Everything else"
@@ -61,12 +62,13 @@ object HelpOverview {
             .setTitle("Toby Bot — what I can do")
             .setDescription(
                 "**👉 New here? Try `/blackjack solo` or `/play <song>` right now — no setup needed.**\n\n" +
-                    "Below is everything I offer, grouped by area. Run `/help <command>` for details on any one of them."
+                    "Below is everything I offer, grouped by area. Run `/help <command>` for details on any one of them, " +
+                    "or see the full feature tour at **[toby-bot.co.uk]($WEBSITE_URL)**."
             )
         buckets.filterValues { it.isNotEmpty() }.forEach { (label, names) ->
             builder.addField(label, names.joinToString(" · "), false)
         }
-        builder.setFooter("Full docs: $WIKI_URL  ·  Enjoying the bot? Support dev at $KOFI_URL")
+        builder.setFooter("Full command list: $WIKI_URL  ·  Enjoying the bot? Support dev at $KOFI_URL")
         return builder.build()
     }
 }
