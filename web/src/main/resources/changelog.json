@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add health, liveness, feature-adoption and audience insights to /admin/installs",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 664
+  },
+  {
+    "date": "June 2026",
     "title": "Add install metrics, churn tracking and UI polish to /admin/installs",
     "summary": "## Why",
     "emoji": "✨",
