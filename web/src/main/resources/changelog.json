@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Polish the navbar default-server (star) chip",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 667
+  },
+  {
+    "date": "June 2026",
     "title": "Share + mobile-polish the two legacy guild-picker pages",
     "summary": "## Why",
     "emoji": "🛡️",
