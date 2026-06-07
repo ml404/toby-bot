@@ -573,11 +573,22 @@
     /** Renders a card's combos (pieces → produces, each linked), or a friendly empty state. */
     function renderCombos(container, data) {
         container.replaceChildren();
+        const combos = (data && data.combos) || [];
+
+        const head = document.createElement('div');
+        head.className = 'cube-combos-head';
         const h = document.createElement('h4');
         h.className = 'cube-combos-h';
         h.textContent = 'Combos';
-        container.appendChild(h);
-        const combos = (data && data.combos) || [];
+        head.appendChild(h);
+        if (combos.length) {
+            const count = document.createElement('span');
+            count.className = 'cube-combos-count';
+            count.textContent = String(combos.length);
+            head.appendChild(count);
+        }
+        container.appendChild(head);
+
         if (!combos.length) {
             const p = document.createElement('p');
             p.className = 'cube-combos-empty';
@@ -585,19 +596,40 @@
             container.appendChild(p);
             return container;
         }
+
+        // Renders a labelled row of card-name chips ("Needs …", "Makes …").
+        function chipRow(rowClass, label, names, chipClass) {
+            const row = document.createElement('div');
+            row.className = rowClass;
+            const tag = document.createElement('span');
+            tag.className = 'cube-combo-label';
+            tag.textContent = label;
+            row.appendChild(tag);
+            (names || []).forEach(function (name) {
+                const chip = document.createElement('span');
+                chip.className = chipClass;
+                chip.textContent = name;
+                row.appendChild(chip);
+            });
+            return row;
+        }
+
         const ul = document.createElement('ul');
         ul.className = 'cube-combos-list';
-        combos.forEach(function (combo) {
+        combos.forEach(function (combo, i) {
             const li = document.createElement('li');
             li.className = 'cube-combo';
-            const uses = document.createElement('div');
-            uses.className = 'cube-combo-uses';
-            uses.textContent = (combo.uses || []).join(', ');
-            const produces = document.createElement('div');
-            produces.className = 'cube-combo-produces';
-            produces.textContent = '→ ' + (combo.produces || []).join(', ');
-            li.appendChild(uses);
-            li.appendChild(produces);
+
+            const num = document.createElement('span');
+            num.className = 'cube-combo-num';
+            num.setAttribute('aria-hidden', 'true');
+            num.textContent = String(i + 1);
+            li.appendChild(num);
+
+            const body = document.createElement('div');
+            body.className = 'cube-combo-body';
+            body.appendChild(chipRow('cube-combo-uses', 'Needs', combo.uses, 'cube-combo-piece'));
+            body.appendChild(chipRow('cube-combo-produces', 'Makes', combo.produces, 'cube-combo-result'));
             if (combo.url) {
                 const a = document.createElement('a');
                 a.className = 'cube-combo-link';
@@ -605,8 +637,9 @@
                 a.target = '_blank';
                 a.rel = 'noopener';
                 a.textContent = 'View combo ↗';
-                li.appendChild(a);
+                body.appendChild(a);
             }
+            li.appendChild(body);
             ul.appendChild(li);
         });
         container.appendChild(ul);

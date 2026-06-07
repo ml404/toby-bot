@@ -486,11 +486,42 @@ describe('combos (combosUrl / renderCombos)', () => {
         expect(items[0].querySelector('.cube-combo-link').getAttribute('href')).toBe('https://commanderspellbook.com/combo/7/');
     });
 
+    test('renderCombos renders each card piece as its own chip', () => {
+        const container = document.createElement('div');
+        Cube.renderCombos(container, {
+            combos: [
+                { id: '7', uses: ['Kiki-Jiki', 'Zealous Conscripts'], produces: ['Infinite haste creatures'], url: 'x' },
+            ],
+        });
+        const combo = container.querySelector('.cube-combo');
+        const pieces = combo.querySelectorAll('.cube-combo-piece');
+        expect(pieces).toHaveLength(2);
+        expect(pieces[0].textContent).toBe('Kiki-Jiki');
+        expect(pieces[1].textContent).toBe('Zealous Conscripts');
+        const results = combo.querySelectorAll('.cube-combo-result');
+        expect(results).toHaveLength(1);
+        expect(results[0].textContent).toBe('Infinite haste creatures');
+    });
+
+    test('renderCombos numbers each combo and shows the total in the header', () => {
+        const container = document.createElement('div');
+        Cube.renderCombos(container, {
+            combos: [
+                { id: '1', uses: ['A'], produces: ['X'], url: 'x' },
+                { id: '2', uses: ['B'], produces: ['Y'], url: 'y' },
+            ],
+        });
+        expect(container.querySelector('.cube-combos-count').textContent).toBe('2');
+        const nums = container.querySelectorAll('.cube-combo-num');
+        expect(Array.from(nums).map(function (n) { return n.textContent; })).toEqual(['1', '2']);
+    });
+
     test('renderCombos shows an empty state when there are none', () => {
         const container = document.createElement('div');
         Cube.renderCombos(container, { combos: [] });
         expect(container.querySelector('.cube-combos-empty').textContent).toContain('No combos found');
         expect(container.querySelectorAll('.cube-combo')).toHaveLength(0);
+        expect(container.querySelector('.cube-combos-count')).toBeNull();
     });
 });
 
