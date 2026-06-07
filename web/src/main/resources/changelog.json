@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Share + mobile-polish the two legacy guild-picker pages",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 666
+  },
+  {
+    "date": "June 2026",
     "title": "Polish /admin/installs for mobile (card-per-row layout + reveal/count-up)",
     "summary": "## Why",
     "emoji": "✨",
