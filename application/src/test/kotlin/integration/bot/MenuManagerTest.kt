@@ -9,6 +9,7 @@ import bot.toby.managers.DefaultMenuManager
 import bot.toby.menu.menus.ActivityContribMenu
 import bot.toby.menu.menus.DeleteIntroMenu
 import bot.toby.menu.menus.EditIntroMenu
+import bot.toby.menu.menus.HelpCategoryMenu
 import bot.toby.menu.menus.SetIntroMenu
 import bot.toby.menu.menus.dnd.DndMenu
 import common.configuration.TestCachingConfig
@@ -64,6 +65,7 @@ internal class MenuManagerTest {
             DeleteIntroMenu::class.java,
             ActivityContribMenu::class.java,
             InstallCategoryMenu::class.java,
+            HelpCategoryMenu::class.java,
         )
         assertEquals(availableMenus.size, menuManager.menus.size)
         assertTrue(availableMenus.containsAll(menuManager.menus.map { it.javaClass }.toList()))

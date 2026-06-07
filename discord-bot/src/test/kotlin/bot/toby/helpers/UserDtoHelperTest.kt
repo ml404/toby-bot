@@ -47,7 +47,21 @@ class UserDtoHelperTest {
         assertNotNull(result)
         assertEquals(123L, result.discordId)
         assertEquals(456L, result.guildId)
+        // New users are seeded with the starter balance so onboarding's
+        // "try /blackjack solo" nudge works on first contact.
+        assertEquals(UserDtoHelper.STARTER_CREDITS, result.socialCredit)
         verify(exactly = 1) { userService.createNewUser(any()) }
+    }
+
+    @Test
+    fun `calculateUserDto does not re-grant the starter balance to an existing user`() {
+        val existingUser = UserDto(123L, 456L).apply { socialCredit = 5L }
+        every { userService.getUserById(123L, 456L) } returns existingUser
+
+        val result = userDtoHelper.calculateUserDto(123L, 456L)
+
+        assertEquals(5L, result.socialCredit)
+        verify(exactly = 0) { userService.createNewUser(any()) }
     }
 
     @Test

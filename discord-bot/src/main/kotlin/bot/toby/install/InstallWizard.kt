@@ -75,8 +75,9 @@ object InstallWizard {
                 "flip anything on later with `/setconfig`.\n" +
                 "**▸ Custom setup** — tune audio, channels, casino rules, lottery & more before you start.\n" +
                 "**▸ Skip for now** — dismiss this; run `/install` whenever you're ready.\n\n" +
-                "💡 **No waiting required** — even before setup, anyone can play `/blackjack solo`, spin " +
-                "`/roulette`, or queue music with `/play`. Run `/help` to see everything I can do.\n" +
+                "💡 **No waiting required** — everyone starts with free credits, so anyone can play " +
+                "`/blackjack solo`, spin `/roulette`, or queue `/play` right away. Top up anytime with " +
+                "`/daily`, and run `/help` to see everything I can do.\n" +
                 "🌐 Want the full tour first? Everything's at **[toby-bot.co.uk](https://www.toby-bot.co.uk/)**.\n" +
                 "_Only the server owner can use these buttons._"
         )
@@ -128,9 +129,10 @@ object InstallWizard {
         .setTitle("You're all set! 🎉")
         .setDescription(
             "Defaults are live and the casino is open. Here's how to get going:\n\n" +
-                "• `/help` — browse every command\n" +
+                "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
-                "• `/play <song>` — queue music in a voice channel\n\n" +
+                "• `/play <song>` — queue music in a voice channel\n" +
+                "• `/help` — browse every command\n\n" +
                 "Owners: `/setconfig <category>` fine-tunes any setting, and `/install` reopens this wizard anytime."
         )
         .build()
@@ -178,9 +180,10 @@ object InstallWizard {
         .setTitle("Custom setup complete ✅")
         .setDescription(
             "Your settings are saved. Time to play:\n\n" +
-                "• `/help` — browse every command\n" +
+                "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
-                "• `/play <song>` — queue music in a voice channel\n\n" +
+                "• `/play <song>` — queue music in a voice channel\n" +
+                "• `/help` — browse every command\n\n" +
                 "Keep tuning anytime with `/setconfig <category>`, or reopen this wizard with `/install`."
         )
         .build()

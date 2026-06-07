@@ -6,6 +6,7 @@ import core.button.Button
 import core.button.ButtonContext
 import core.command.Command
 import database.dto.user.UserDto
+import net.dv8tion.jda.api.components.actionrow.ActionRow
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -28,6 +29,8 @@ class InstallHelpButton @Autowired constructor(
     override val description: String = "Show what the bot can do — usable by anyone, not just the owner."
 
     override fun handle(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
-        ctx.event.hook.sendMessageEmbeds(HelpOverview.embed(commands)).queue()
+        ctx.event.hook.sendMessageEmbeds(HelpOverview.embed(commands))
+            .addComponents(ActionRow.of(HelpOverview.selectMenu(commands)))
+            .queue()
     }
 }
