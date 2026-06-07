@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Second DRY/SOLID pass over the Magic features",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 671
+  },
+  {
+    "date": "June 2026",
     "title": "Refactor Magic features for DRY/SOLID and add missing test coverage",
     "summary": "## What & why",
     "emoji": "✨",
