@@ -32,7 +32,7 @@ class DeckCommand @Autowired constructor(
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
         when (ctx.event.subcommandName) {
             SUB_LEGALITY -> launchHandling(ctx) { handleLegality(ctx, requestingUserDto, deleteDelay) }
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: legality."), deleteDelay)
+            else -> replyError(ctx, "Pick a subcommand: legality.", deleteDelay)
         }
     }
 
@@ -41,12 +41,12 @@ class DeckCommand @Autowired constructor(
         val formatKey = ctx.event.stringOption(OPT_FORMAT)?.trim()?.lowercase()
         val format = CubeCard.FORMATS.firstOrNull { it.first == formatKey }
         if (format == null) {
-            reply(ctx, CubeEmbeds.errorEmbed("Pick a `format` to check against (e.g. Modern, Commander)."), deleteDelay)
+            replyError(ctx, "Pick a `format` to check against (e.g. Modern, Commander).", deleteDelay)
             return
         }
         val resolved = resolver.resolve(ctx.event.stringOption(OPT_SAVED), ctx.event.stringOption(OPT_QUERY), requestingUserDto.discordId)
         when (resolved) {
-            is MtgPoolResolver.PoolResult.Failed -> reply(ctx, CubeEmbeds.errorEmbed(resolved.message), deleteDelay)
+            is MtgPoolResolver.PoolResult.Failed -> replyError(ctx, resolved.message, deleteDelay)
             is MtgPoolResolver.PoolResult.Ready -> {
                 val report = DeckLegality.check(resolved.pool, format.first)
                 reply(ctx, CubeEmbeds.legalityEmbed(report, format.second, resolved.label, resolved.notFound), deleteDelay)

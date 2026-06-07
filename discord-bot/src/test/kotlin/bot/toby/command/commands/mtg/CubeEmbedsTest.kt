@@ -197,6 +197,21 @@ class CubeEmbedsTest {
     }
 
     @Test
+    fun `cardFactLines includes the mana value only when asked`() {
+        val card = CubeCard(
+            name = "Ragavan", colors = setOf(MtgColor.RED),
+            typeLine = "Legendary Creature", manaValue = 1.0, rarity = "mythic",
+        )
+        val withMv = CubeEmbeds.cardFactLines(card, includeManaValue = true)
+        val withoutMv = CubeEmbeds.cardFactLines(card, includeManaValue = false)
+
+        assertTrue(withMv.any { it.contains("Mana value") })
+        assertFalse(withoutMv.any { it.contains("Mana value") })
+        // The other facts (type, rarity, colour identity) are present either way.
+        assertTrue(withoutMv.any { it.contains("Type") } && withoutMv.any { it.contains("Colour identity") })
+    }
+
+    @Test
     fun `priceLine joins present currencies only and is null when unpriced`() {
         assertEquals("\$1.50", CubeEmbeds.priceLine(CubeCard(name = "A", priceUsd = "1.50")))
         assertEquals(

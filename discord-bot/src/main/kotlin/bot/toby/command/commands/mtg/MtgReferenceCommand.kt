@@ -31,7 +31,7 @@ class MtgReferenceCommand @Autowired constructor(
         when (ctx.event.subcommandName) {
             SUB_SET -> launchHandling(ctx) { handleSet(ctx, deleteDelay) }
             SUB_RULE -> handleRule(ctx, deleteDelay) // static glossary, no IO
-            else -> reply(ctx, CubeEmbeds.errorEmbed("Pick a subcommand: set or rule."), deleteDelay)
+            else -> replyError(ctx, "Pick a subcommand: set or rule.", deleteDelay)
         }
     }
 
@@ -39,11 +39,11 @@ class MtgReferenceCommand @Autowired constructor(
     private suspend fun handleSet(ctx: CommandContext, deleteDelay: Int) {
         val code = ctx.event.stringOption(OPT_CODE)?.trim()
         if (code.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a set `code` (e.g. vow, mh3)."), deleteDelay)
+            replyError(ctx, "Give me a set `code` (e.g. vow, mh3).", deleteDelay)
             return
         }
         when (val set = fetcher.fetchSet(code)) {
-            null -> reply(ctx, CubeEmbeds.errorEmbed("Couldn't find a set with code `$code`."), deleteDelay)
+            null -> replyError(ctx, "Couldn't find a set with code `$code`.", deleteDelay)
             else -> reply(ctx, CubeEmbeds.setEmbed(set), deleteDelay)
         }
     }
@@ -52,11 +52,11 @@ class MtgReferenceCommand @Autowired constructor(
     private fun handleRule(ctx: CommandContext, deleteDelay: Int) {
         val term = ctx.event.stringOption(OPT_TERM)?.trim()
         if (term.isNullOrEmpty()) {
-            reply(ctx, CubeEmbeds.errorEmbed("Give me a keyword (e.g. trample, deathtouch)."), deleteDelay)
+            replyError(ctx, "Give me a keyword (e.g. trample, deathtouch).", deleteDelay)
             return
         }
         when (val found = MtgGlossary.lookup(term)) {
-            null -> reply(ctx, CubeEmbeds.errorEmbed("No glossary entry for `$term`. Try an evergreen keyword like trample or flying."), deleteDelay)
+            null -> replyError(ctx, "No glossary entry for `$term`. Try an evergreen keyword like trample or flying.", deleteDelay)
             else -> reply(ctx, CubeEmbeds.ruleEmbed(found), deleteDelay)
         }
     }

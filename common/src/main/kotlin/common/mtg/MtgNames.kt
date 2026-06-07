@@ -35,6 +35,21 @@ object MtgNames {
     fun lookupKey(name: String): String = name.trim().lowercase()
 
     /**
+     * Indexes [items] by every [matchKeys] form of their name (full name plus
+     * each face), so a pasted front-face name resolves to the full-name card
+     * Scryfall returns. The first item wins a contested key — matching how
+     * both the bot's `MtgPoolResolver` and the web's cube service tie a
+     * resolved list back to its entries, kept here so they can't diverge.
+     */
+    fun <T> index(items: Iterable<T>, nameOf: (T) -> String): Map<String, T> {
+        val byKey = HashMap<String, T>()
+        items.forEach { item ->
+            matchKeys(nameOf(item)).forEach { key -> byKey.putIfAbsent(key, item) }
+        }
+        return byKey
+    }
+
+    /**
      * The identifier to send to Scryfall's collection lookup for [name].
      * Scryfall matches a card by a single face, **not** by its full
      * `A // B` name, so a pasted full name (e.g.

@@ -40,4 +40,13 @@ abstract class AbstractMtgCommand(
     protected fun reply(ctx: CommandContext, embed: MessageEmbed, deleteDelay: Int) {
         ctx.event.hook.sendMessageEmbeds(embed).queue(invokeDeleteOnMessageResponse(deleteDelay))
     }
+
+    /**
+     * Replies with the family's standard error embed — the most-repeated reply
+     * across the commands (a bad/missing option, nothing found, etc.), so it
+     * lives here rather than being re-spelled at every call site.
+     */
+    protected fun replyError(ctx: CommandContext, message: String, deleteDelay: Int) {
+        reply(ctx, CubeEmbeds.errorEmbed(message), deleteDelay)
+    }
 }
