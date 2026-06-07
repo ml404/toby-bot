@@ -88,11 +88,12 @@ internal class InstallCommandTest : CommandTest {
         verify(exactly = 1) { replyCallbackAction.addComponents(any<ActionRow>()) }
         // Embed mentions the guild name.
         assertTrue(embedSlot.captured.description?.contains("Express") == true)
-        // Action row has exactly the three wizard buttons in order.
+        // Action row has the three owner buttons plus the public help button.
         val buttons = componentsSlot.captured.components.filterIsInstance<Button>()
-        assertEquals(3, buttons.size)
+        assertEquals(4, buttons.size)
         assertEquals(InstallWizard.BTN_EXPRESS, buttons[0].customId)
         assertEquals(InstallWizard.BTN_CUSTOM, buttons[1].customId)
         assertEquals(InstallWizard.BTN_SKIP, buttons[2].customId)
+        assertEquals(InstallWizard.BTN_HELP, buttons[3].customId)
     }
 }

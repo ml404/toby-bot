@@ -18,12 +18,14 @@ import common.casino.roulette.Roulette
 internal class InstallWizardTest {
 
     @Test
-    fun `wizardButtons returns the three welcome buttons in order`() {
+    fun `wizardButtons returns the owner buttons plus the public help button in order`() {
         val buttons = InstallWizard.wizardButtons().components.filterIsInstance<Button>()
-        assertEquals(3, buttons.size)
+        assertEquals(4, buttons.size)
         assertEquals(InstallWizard.BTN_EXPRESS, buttons[0].customId)
         assertEquals(InstallWizard.BTN_CUSTOM, buttons[1].customId)
         assertEquals(InstallWizard.BTN_SKIP, buttons[2].customId)
+        // The help button is the only non-owner-gated entry point on the welcome message.
+        assertEquals(InstallWizard.BTN_HELP, buttons[3].customId)
     }
 
     @Test

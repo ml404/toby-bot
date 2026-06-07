@@ -36,6 +36,14 @@ object InstallWizard {
     const val BTN_EXPRESS = "install_express"
     const val BTN_CUSTOM = "install_custom"
     const val BTN_SKIP = "install_skip"
+
+    /**
+     * Public (non-owner) button on the welcome message — anyone can click
+     * it to get the `/help` overview ephemerally. Gives curious members an
+     * immediate, zero-setup action while the owner-only Express / Custom /
+     * Skip buttons stay gated.
+     */
+    const val BTN_HELP = "install_help"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -182,6 +190,9 @@ object InstallWizard {
         Button.success(BTN_EXPRESS, "Express setup"),
         Button.primary(BTN_CUSTOM, "Custom setup"),
         Button.secondary(BTN_SKIP, "Skip for now"),
+        // Non-owner-friendly: any member can click this to see what the bot
+        // does without waiting on the owner to finish setup.
+        Button.secondary(BTN_HELP, "✨ What can I do?"),
     )
 
     fun finishButtonRow(): ActionRow = ActionRow.of(
