@@ -16,6 +16,7 @@ import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
 import common.mtg.Rarity
+import common.mtg.scryfall.ScryfallCardMapper
 import org.springframework.stereotype.Service
 import java.io.IOException
 import java.net.URI
@@ -463,94 +464,17 @@ class CubeWebService {
 
     /** Maps one Scryfall card object to a [ScryfallCard], or null if it has no name. */
     fun cardOf(node: JsonNode): ScryfallCard? {
-        val name = node.path("name").asText("").takeIf { it.isNotBlank() } ?: return null
-        val identity = node.path("color_identity").mapNotNull { it.asText(null) }
-        val typeLine = node.path("type_line").asText("")
+        val accessor = JacksonAccessor(node)
+        // The web renders oracle text as plain HTML, so DFC face names stay
+        // undecorated (no markdown). It keeps both image sizes for the page.
+        val card = ScryfallCardMapper.toCubeCard(accessor) ?: return null
         return ScryfallCard(
-            card = CubeCard(
-                name = name,
-                colors = MtgColor.parse(identity),
-                isLand = CubeCard.isLandType(typeLine),
-                typeLine = typeLine,
-                manaValue = node.path("cmc").asDouble(0.0),
-                rarity = node.path("rarity").asText("").takeIf { it.isNotBlank() },
-                manaCost = manaCostOf(node),
-                oracleText = oracleTextOf(node),
-                imageUrlBack = backImageOf(node),
-                priceUsd = priceOf(node, "usd"),
-                priceEur = priceOf(node, "eur"),
-                priceTix = priceOf(node, "tix"),
-                legalFormats = CubeCard.legalFormatsOf { node.path("legalities").path(it).asText(null) },
-                legalities = CubeCard.legalitiesOf { node.path("legalities").path(it).asText(null) },
-            ),
-            imageUrl = imageOf(node, "small"),
-            imageUrlLarge = imageOf(node, "normal"),
-            imageUrlBack = backImageOf(node),
-            manaCost = manaCostOf(node),
+            card = card,
+            imageUrl = ScryfallCardMapper.frontImageUrl(accessor, "small"),
+            imageUrlLarge = ScryfallCardMapper.frontImageUrl(accessor, "normal"),
+            imageUrlBack = card.imageUrlBack,
+            manaCost = card.manaCost,
         )
-    }
-
-    /**
-     * A card image at the given Scryfall [size] (`small` ≈ 146×204 thumb,
-     * `normal` ≈ 488×680 for the hover zoom), or null if Scryfall has none.
-     * Single-faced cards carry `image_uris` directly; double-faced cards
-     * put images on the first face instead.
-     */
-    private fun imageOf(node: JsonNode, size: String): String? {
-        node.path("image_uris").path(size).asText("").takeIf { it.isNotBlank() }?.let { return it }
-        val faces = node.path("card_faces")
-        if (faces.isArray && faces.size() > 0) {
-            faces[0].path("image_uris").path(size).asText("").takeIf { it.isNotBlank() }?.let { return it }
-        }
-        return null
-    }
-
-    /**
-     * The back-face `normal` image for a double-faced card (transform / modal
-     * DFC), or null. Only true two-faced cards carry per-face `image_uris`;
-     * split, adventure and aftermath cards share one image, so they correctly
-     * return null here (no spurious "flip" affordance).
-     */
-    private fun backImageOf(node: JsonNode): String? {
-        val faces = node.path("card_faces")
-        if (faces.isArray && faces.size() > 1) {
-            faces[1].path("image_uris").path("normal").asText("").takeIf { it.isNotBlank() }?.let { return it }
-        }
-        return null
-    }
-
-    /**
-     * The card's mana cost string (e.g. `{1}{R}{R}`). Single-faced cards carry
-     * it directly; double-faced cards put it on the front face. Null when the
-     * card has none (most lands).
-     */
-    private fun manaCostOf(node: JsonNode): String? {
-        node.path("mana_cost").asText("").takeIf { it.isNotBlank() }?.let { return it }
-        val faces = node.path("card_faces")
-        if (faces.isArray && faces.size() > 0) {
-            faces[0].path("mana_cost").asText("").takeIf { it.isNotBlank() }?.let { return it }
-        }
-        return null
-    }
-
-    /** A Scryfall `prices` entry (e.g. "usd"), or null when absent/blank. */
-    private fun priceOf(node: JsonNode, key: String): String? =
-        node.path("prices").path(key).asText("").takeIf { it.isNotBlank() }
-
-    /**
-     * The card's rules text, or null. Single-faced cards carry `oracle_text`
-     * directly; double-faced cards put it on each face, combined with the
-     * face names.
-     */
-    private fun oracleTextOf(node: JsonNode): String? {
-        node.path("oracle_text").asText("").takeIf { it.isNotBlank() }?.let { return it }
-        val faces = node.path("card_faces")
-        if (!faces.isArray) return null
-        val parts = faces.mapNotNull { face ->
-            val text = face.path("oracle_text").asText("").takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            face.path("name").asText("").takeIf { it.isNotBlank() }?.let { "$it\n$text" } ?: text
-        }
-        return parts.joinToString("\n\n").takeIf { it.isNotBlank() }
     }
 
     private fun fetchPool(query: String): CubeResult<List<ScryfallCard>> {

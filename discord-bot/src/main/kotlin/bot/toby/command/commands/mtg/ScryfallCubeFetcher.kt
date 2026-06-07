@@ -8,8 +8,8 @@ import common.logging.DiscordLogger
 import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.CubeCard
-import common.mtg.MtgColor
 import common.mtg.MtgSet
+import common.mtg.scryfall.ScryfallCardMapper
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.get
@@ -336,86 +336,14 @@ class ScryfallCubeFetcher @Autowired constructor(
      * status from the type line.
      */
     fun parseCard(card: JsonObject): CubeCard? {
-        val name = card.get("name")?.asString?.takeIf { it.isNotBlank() } ?: return null
-        val identity = card.getAsJsonArray("color_identity")
-            ?.map { it.asString }
-            ?: emptyList()
-        val typeLine = card.get("type_line")?.asString ?: ""
-        val manaValue = card.get("cmc")?.asDouble ?: 0.0
-        return CubeCard(
-            name = name,
-            colors = MtgColor.parse(identity),
-            isLand = CubeCard.isLandType(typeLine),
-            typeLine = typeLine,
-            manaValue = manaValue,
-            imageUrl = imageUrl(card),
-            rarity = card.get("rarity")?.asString?.takeIf { it.isNotBlank() },
-            manaCost = manaCost(card),
-            oracleText = oracleText(card),
-            imageUrlBack = backImageUrl(card),
-            priceUsd = price(card, "usd"),
-            priceEur = price(card, "eur"),
-            priceTix = price(card, "tix"),
-            legalFormats = CubeCard.legalFormatsOf { fmt -> legality(card, fmt) },
-            legalities = CubeCard.legalitiesOf { fmt -> legality(card, fmt) },
+        val node = GsonAccessor(card)
+        // The bot renders in Discord, so a DFC's face names are bolded with
+        // markdown; the card carries the `normal` image for its panel.
+        return ScryfallCardMapper.toCubeCard(
+            node,
+            decorateFaceName = { "**$it**" },
+            frontImageUrl = ScryfallCardMapper.frontImageUrl(node, "normal"),
         )
-    }
-
-    /** A Scryfall `legalities` status for a format code, or null when absent. */
-    fun legality(card: JsonObject, format: String): String? =
-        card.getAsJsonObject("legalities")?.get(format)?.takeIf { !it.isJsonNull }?.asString
-
-    /** A Scryfall `prices` entry (e.g. "usd"), or null when absent/blank. */
-    fun price(card: JsonObject, key: String): String? =
-        card.getAsJsonObject("prices")?.get(key)?.takeIf { !it.isJsonNull }?.asString?.takeIf { it.isNotBlank() }
-
-    /**
-     * The card's rules text, or null. Single-faced cards carry `oracle_text`
-     * directly; double-faced cards put it on each face, so both are combined
-     * with their face names.
-     */
-    fun oracleText(card: JsonObject): String? {
-        card.get("oracle_text")?.asString?.takeIf { it.isNotBlank() }?.let { return it }
-        val faces = card.getAsJsonArray("card_faces") ?: return null
-        val parts = faces.mapNotNull { face ->
-            val obj = face.asJsonObject
-            val text = obj.get("oracle_text")?.asString?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
-            obj.get("name")?.asString?.let { "**$it**\n$text" } ?: text
-        }
-        return parts.joinToString("\n\n").takeIf { it.isNotBlank() }
-    }
-
-    /** The back-face `normal` image for a double-faced card, or null. */
-    fun backImageUrl(card: JsonObject): String? {
-        val faces = card.getAsJsonArray("card_faces") ?: return null
-        if (faces.size() < 2) return null
-        return faces[1].asJsonObject.getAsJsonObject("image_uris")?.get("normal")?.asString?.takeIf { it.isNotBlank() }
-    }
-
-    /**
-     * The card's `mana_cost`, or null. Single-faced cards carry it directly;
-     * double-faced cards put it on the first face.
-     */
-    fun manaCost(card: JsonObject): String? {
-        fun costOf(obj: JsonObject?): String? =
-            obj?.get("mana_cost")?.asString?.takeIf { it.isNotBlank() }
-
-        costOf(card)?.let { return it }
-        val firstFace = card.getAsJsonArray("card_faces")?.firstOrNull()?.asJsonObject
-        return costOf(firstFace)
-    }
-
-    /**
-     * The card's `normal` image link, or null. Single-faced cards carry
-     * `image_uris` directly; double-faced cards put it on the first face.
-     */
-    fun imageUrl(card: JsonObject): String? {
-        fun normalOf(obj: JsonObject?): String? =
-            obj?.getAsJsonObject("image_uris")?.get("normal")?.asString?.takeIf { it.isNotBlank() }
-
-        normalOf(card)?.let { return it }
-        val firstFace = card.getAsJsonArray("card_faces")?.firstOrNull()?.asJsonObject
-        return normalOf(firstFace)
     }
 
     private fun searchUrl(query: String): String {
