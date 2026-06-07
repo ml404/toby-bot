@@ -140,21 +140,33 @@ body > nav::after {
 .nav-default-guild {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    max-width: 160px;
-    padding: 4px 10px;
-    border: 1px solid var(--border-strong);
+    gap: 6px;
+    max-width: 180px;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
     border-radius: 999px;
-    color: #c5c5d2;
+    color: var(--text-muted);
     font-size: 0.8rem;
+    line-height: 1.4;
     text-decoration: none;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
-.nav-default-guild:hover { border-color: var(--heading); color: var(--heading); }
-.nav-default-guild-empty { color: var(--text-dim); }
-.nav-default-guild-empty:hover { color: #c5c5d2; border-color: var(--text-dim); }
+.nav-default-guild:hover {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--heading);
+}
+/* Leading glyph (★ / ☆ / ⚙). Accent on an anchored server so the pill reads
+   as an active state at a glance; the label truncates, the glyph never does. */
+.nav-default-star { flex: 0 0 auto; color: var(--accent-light); font-size: 0.8rem; line-height: 1; }
+.nav-default-cog { flex: 0 0 auto; font-size: 0.8rem; line-height: 1; opacity: 0.85; }
+.nav-default-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* Nothing anchored yet — a dashed "add me" chip rather than a faint label. */
+.nav-default-guild-empty { color: var(--text-muted); border-style: dashed; }
+.nav-default-guild-empty .nav-default-star { color: var(--text-dim); }
+.nav-default-guild-empty:hover { color: var(--heading); border-color: var(--accent); border-style: solid; }
+.nav-default-guild-empty:hover .nav-default-star { color: var(--accent-light); }
 
 /* Hamburger toggle — hidden on desktop, swap glyph via [aria-expanded]
    so JS only flips the attribute. */
