@@ -86,7 +86,7 @@
             <div data-source-panel="list" hidden>
                 <p class="cube-shared-banner" th:if="${sharedName}" data-shared-banner
                    th:text="'📥 Loaded shared cube: ' + ${sharedName}">Loaded shared cube</p>
-                <p class="cube-shared-missing" th:if="${sharedMissing}">
+                <p class="cube-shared-missing" th:if="${sharedMissing}" data-shared-missing>
                     That shared cube link wasn't found — it may have been mistyped.
                 </p>
                 <div class="cube-listlabel" id="cube-list-label">Your card list

@@ -1051,6 +1051,20 @@
         }
     }
 
+    /**
+     * A server-rendered shared cube (/magic/c/<token>) arrives pre-loaded in
+     * the list box, or — for a bad token — with a "not found" notice there.
+     * Either lives in the shared "Your cube" source, which is hidden on the
+     * default Card lookup tab, so switch to the list source and a cube tab
+     * (Preview) to reveal it. Returns true when a shared cube/miss was present.
+     */
+    function revealSharedCube(doc) {
+        if (!doc.querySelector('[data-shared-banner], [data-shared-missing]')) return false;
+        setSource(doc, 'list');
+        activateTab(doc, 'preview');
+        return true;
+    }
+
     /** Disables the form's submit button while a request is in flight. */
     function withBusy(form, busy) {
         const btn = form.querySelector('button[type="submit"]');
@@ -2028,9 +2042,8 @@
         wireShare(doc);
         wireCardAutocomplete(doc);
         prefillFromUrl(doc);
-        // A shared cube arrives pre-loaded in the list box — show that source
-        // (this wins over a ?q= / ?list= prefill).
-        if (doc.querySelector('[data-shared-banner]')) setSource(doc, 'list');
+        // A server-rendered shared cube wins over a ?q= / ?list= prefill.
+        revealSharedCube(doc);
         wireCardCount(doc);
         wireCopyQuery(doc);
         wireExamples(doc);
@@ -2063,6 +2076,7 @@
         queryShareUrl: queryShareUrl,
         readUrlPrefill: readUrlPrefill,
         prefillFromUrl: prefillFromUrl,
+        revealSharedCube: revealSharedCube,
         countCards: countCards,
         scryfallAutocompleteUrl: scryfallAutocompleteUrl,
         currentLineInfo: currentLineInfo,
