@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix shared /magic?q= links landing on the hidden Card lookup tab",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 668
+  },
+  {
+    "date": "June 2026",
     "title": "Polish the navbar default-server (star) chip",
     "summary": "## Why",
     "emoji": "✨",
