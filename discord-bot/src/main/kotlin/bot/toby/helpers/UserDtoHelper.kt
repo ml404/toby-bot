@@ -17,6 +17,11 @@ class UserDtoHelper(private val userService: UserService) {
         logger.info("Processing lookup for user: $discordId, guild: $guildId")
         return userService.getUserById(discordId, guildId) ?: UserDto(discordId, guildId).apply {
             this.superUser = isSuperUser
+            // Seed a small starter balance so a brand-new user can act on the
+            // onboarding nudge (/blackjack solo, etc.) immediately instead of
+            // hitting "Not enough credits" on their very first try. Granted
+            // once, on first creation; top up afterwards with /daily.
+            this.socialCredit = STARTER_CREDITS
             this.musicDtos = mutableListOf()
             userService.createNewUser(this)
         }
@@ -31,6 +36,14 @@ class UserDtoHelper(private val userService: UserService) {
     }
 
     companion object {
+        /**
+         * One-time starting credit balance granted when a user's record is
+         * first created, so the casino games onboarding points people at
+         * (`/blackjack solo`, `/roulette`, …) are immediately playable —
+         * enough for several minimum-stake rounds. Refill via `/daily`.
+         */
+        const val STARTER_CREDITS: Long = 100L
+
         fun Member.getRequestingUserDto(userDtoHelper: UserDtoHelper): UserDto {
             val discordId = this.idLong
             val guildId = this.guild.idLong

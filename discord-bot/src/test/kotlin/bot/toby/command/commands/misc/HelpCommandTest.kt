@@ -51,16 +51,13 @@ internal class HelpCommandTest : CommandTest {
         // Mock user interaction with a command argument
         val optionMapping: OptionMapping = mockk()
         every { event.options } returns listOf(optionMapping)
-
-        val musicCommand: Command = mockk<PlayCommand>()
         every { event.getOption("command") } returns optionMapping
         every { optionMapping.asString } returns "play"
-        every { musicCommand.description } returns ""
-        every { musicCommand.name } returns "play"
 
         helpCommand.handle(DefaultCommandContext(event), mockk(), 0)
 
-        // Detail lookups reply with text (ephemeral).
-        verify(exactly = 1) { event.hook.sendMessage(any<String>()) }
+        // Detail lookups now reply with a rich, ephemeral usage embed
+        // (title + arguments) rather than a plain one-line string.
+        verify(exactly = 1) { event.hook.sendMessageEmbeds(any<MessageEmbed>(), *anyVararg()) }
     }
 }

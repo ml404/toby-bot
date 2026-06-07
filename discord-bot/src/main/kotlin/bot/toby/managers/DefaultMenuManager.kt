@@ -32,10 +32,17 @@ class DefaultMenuManager @Autowired constructor(
             val deleteDelayConfig = configService.getConfigByName(
                 ConfigDto.Configurations.DELETE_DELAY.configValue,
                 event.guild!!.id)
-            event.channel.sendTyping().queue()
             val ctx = DefaultMenuContext(event)
-            val disabledActionRows = event.message.components.filterIsInstance<ActionRow>().map { it.asDisabled() }
-            event.message.editMessageComponents(disabledActionRows).queue()
+            // Ephemeral messages can't be edited via the bot webhook
+            // (`event.message.edit*`) — only through the interaction hook.
+            // So skip the typing indicator + disable-rows source edit for
+            // ephemeral menus (e.g. the /help category drill-down); those
+            // handlers re-render via deferEdit + hook.editOriginal instead.
+            if (!event.message.isEphemeral) {
+                event.channel.sendTyping().queue()
+                val disabledActionRows = event.message.components.filterIsInstance<ActionRow>().map { it.asDisabled() }
+                event.message.editMessageComponents(disabledActionRows).queue()
+            }
 
             menu.handle(ctx, deleteDelayConfig?.value!!.toInt())
         }
