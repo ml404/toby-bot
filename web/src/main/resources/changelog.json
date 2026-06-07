@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Refactor Magic features for DRY/SOLID and add missing test coverage",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 670
+  },
+  {
+    "date": "June 2026",
     "title": "Polish the web MTG combo lookup (chips, labels, numbered cards)",
     "summary": "## What & why",
     "emoji": "✨",
