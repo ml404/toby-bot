@@ -58,21 +58,21 @@
                th:href="@{/preferences(pick=true)}"
                class="nav-default-guild"
                th:title="'Default server: ' + ${currentDefaultGuildName} + ' — click to change'">
-                <span aria-hidden="true">&#9733;</span>
-                <span th:text="${currentDefaultGuildName}">Server</span>
+                <span class="nav-default-star" aria-hidden="true">&#9733;</span>
+                <span class="nav-default-label" th:text="${currentDefaultGuildName}">Server</span>
             </a>
             <a th:unless="${currentDefaultGuildName != null}"
                th:href="@{/preferences(pick=true)}"
                class="nav-default-guild nav-default-guild-empty"
                title="Set a default server to skip the guild picker">
-                <span aria-hidden="true">&#9734;</span>
-                <span>Set default server</span>
+                <span class="nav-default-star" aria-hidden="true">&#9734;</span>
+                <span class="nav-default-label">Set default server</span>
             </a>
             <a href="/preferences"
                class="nav-default-guild"
                title="Account settings &amp; notification preferences">
-                <span aria-hidden="true">&#9881;&#65039;</span>
-                <span>Settings</span>
+                <span class="nav-default-cog" aria-hidden="true">&#9881;&#65039;</span>
+                <span class="nav-default-label">Settings</span>
             </a>
         </div>
 
