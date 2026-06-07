@@ -1027,9 +1027,16 @@
         });
     }
 
-    /** Pre-loads the source from ?q= / ?list= so a shared link lands ready. */
+    /**
+     * Pre-loads the source from ?q= / ?list= so a shared link lands ready.
+     * A prefill targets the shared "Your cube" source, which only shows on the
+     * cube tabs — but the page defaults to Card lookup, where it's hidden. So a
+     * prefill also lands on a cube tab (Preview) to reveal it, unless an
+     * explicit #hash deep-link already chose one.
+     */
     function prefillFromUrl(doc) {
         const pre = readUrlPrefill(root.location && root.location.search);
+        const hasPrefill = pre.q != null || pre.list != null;
         if (pre.q != null) {
             const input = doc.querySelector('[data-source-panel="search"] input[name="query"]');
             if (input) input.value = pre.q;
@@ -1038,6 +1045,9 @@
             const textarea = doc.querySelector('textarea[name="list"]');
             if (textarea) textarea.value = pre.list;
             setSource(doc, 'list');
+        }
+        if (hasPrefill && !tabIdFromHash(root.location && root.location.hash)) {
+            activateTab(doc, 'preview');
         }
     }
 
@@ -2052,6 +2062,7 @@
         absoluteUrl: absoluteUrl,
         queryShareUrl: queryShareUrl,
         readUrlPrefill: readUrlPrefill,
+        prefillFromUrl: prefillFromUrl,
         countCards: countCards,
         scryfallAutocompleteUrl: scryfallAutocompleteUrl,
         currentLineInfo: currentLineInfo,
