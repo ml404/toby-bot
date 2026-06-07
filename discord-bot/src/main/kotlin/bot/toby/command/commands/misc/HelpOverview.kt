@@ -26,7 +26,9 @@ import net.dv8tion.jda.api.entities.MessageEmbed
 object HelpOverview {
 
     private const val WEBSITE_URL = "https://www.toby-bot.co.uk/"
-    private const val WIKI_URL = "github.com/ml404/toby-bot/wiki/Commands"
+    // The site's own polished, auto-generated commands page (categorized
+    // cards + search) — not the bare GitHub wiki.
+    private const val COMMANDS_URL = "toby-bot.co.uk/commands/wiki"
     private const val KOFI_URL = "ko-fi.com/fratlayton"
     private const val OTHER_LABEL = "📦 Everything else"
 
@@ -68,7 +70,7 @@ object HelpOverview {
         buckets.filterValues { it.isNotEmpty() }.forEach { (label, names) ->
             builder.addField(label, names.joinToString(" · "), false)
         }
-        builder.setFooter("Full command list: $WIKI_URL  ·  Enjoying the bot? Support dev at $KOFI_URL")
+        builder.setFooter("Full command list: $COMMANDS_URL  ·  Enjoying the bot? Support dev at $KOFI_URL")
         return builder.build()
     }
 }
