@@ -77,6 +77,7 @@ object InstallWizard {
                 "**▸ Skip for now** — dismiss this; run `/install` whenever you're ready.\n\n" +
                 "💡 **No waiting required** — even before setup, anyone can play `/blackjack solo`, spin " +
                 "`/roulette`, or queue music with `/play`. Run `/help` to see everything I can do.\n" +
+                "🌐 Want the full tour first? Everything's at **[toby-bot.co.uk](https://www.toby-bot.co.uk/)**.\n" +
                 "_Only the server owner can use these buttons._"
         )
         .build()
