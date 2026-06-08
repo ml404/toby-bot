@@ -7,6 +7,7 @@ import common.events.user.AchievementUnlockedEvent
 import common.events.casino.baccarat.BaccaratWonEvent
 import common.events.casino.blackjack.BlackjackNaturalEvent
 import common.events.casino.casinoholdem.CasinoHoldemWonEvent
+import common.events.casino.CasinoGamePlayedEvent
 import common.events.casino.coinflip.CoinflipWonEvent
 import common.events.casino.dice.DiceWonEvent
 import common.events.pvp.duel.DuelResolvedEvent
@@ -331,6 +332,14 @@ class AchievementEventHandlerTest {
         handler.onCoinflipWon(CoinflipWonEvent(discordId, guildId))
         verify(exactly = 1) {
             achievementService.unlock(discordId, guildId, "coinflip_first_win")
+        }
+    }
+
+    @Test
+    fun `casino play unlocks casino_first_game for the player`() {
+        handler.onCasinoGamePlayed(CasinoGamePlayedEvent(discordId, guildId))
+        verify(exactly = 1) {
+            achievementService.unlock(discordId, guildId, "casino_first_game")
         }
     }
 

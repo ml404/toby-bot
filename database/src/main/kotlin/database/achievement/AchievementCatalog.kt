@@ -54,6 +54,17 @@ object AchievementCatalog {
             xpReward = 100,
             creditReward = 500,
         ),
+        // First casino play (win or lose) — fired by AchievementEventHandler
+        // on CasinoGamePlayedEvent from the shared luck-game edge pass.
+        AchievementSpec(
+            code = "casino_first_game",
+            name = "First Bet",
+            description = "Play your first casino luck game (coinflip, dice, slots, plinko or wheel).",
+            category = "casino",
+            icon = "🎰",
+            xpReward = 50,
+            creditReward = 50,
+        ),
         // Streak achievements — fired by AchievementEventHandler on StreakClaimedEvent.
         AchievementSpec(
             code = "streak_first",

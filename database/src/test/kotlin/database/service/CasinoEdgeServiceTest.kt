@@ -1,5 +1,6 @@
 package database.service
 
+import common.events.casino.CasinoGamePlayedEvent
 import common.events.moderation.AntiAutoclickEvent
 import database.dto.guild.ConfigDto
 import io.mockk.every
@@ -280,5 +281,20 @@ class CasinoEdgeServiceTest {
                 AntiAutoclickEvent.BiasFired(guildId, discordId, gameKey, streak = 50, edgePct = 10.0)
             )
         }
+    }
+
+    @Test
+    fun `publishes CasinoGamePlayedEvent on every play, win or lose`() {
+        // No suspicion, fair outcome stands — but the play still counts,
+        // driving the one-shot casino_first_game achievement.
+        stubStreak(0)
+        service = CasinoEdgeService(botSuspicionService, configService, eventPublisher, mockk(relaxed = true))
+
+        service.applyBotEdge(
+            discordId, guildId, gameKey, 100, 200, false, edgeMaxConfig,
+            fairOutcome = "fair", asLoss = { "loss" },
+        )
+
+        verify(exactly = 1) { eventPublisher.publishEvent(CasinoGamePlayedEvent(discordId, guildId)) }
     }
 }
