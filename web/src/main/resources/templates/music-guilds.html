@@ -14,7 +14,7 @@
     <div th:replace="~{fragments/alerts :: error}"></div>
 
     <div class="music-guild-grid" th:if="${not #lists.isEmpty(guilds)}">
-        <article class="music-guild-card" th:each="g : ${guilds}">
+        <article class="music-guild-card" data-reveal th:each="g : ${guilds}">
             <header class="music-guild-card-head">
                 <img class="music-guild-icon"
                      th:if="${g.iconUrl != null}"
