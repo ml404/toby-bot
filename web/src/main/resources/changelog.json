@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Reuse shared primitives on the music player (toasts, modal, member-cell)",
+    "summary": "Three consistency refactors so the music player leans on site-wide primitives instead of bespoke / native equivalents. (Independent of #677 — touches different file sections, so the two merge cleanly in either order.)",
+    "emoji": "✨",
+    "prNumber": 678
+  },
+  {
+    "date": "June 2026",
     "title": "Fix music player horizontal overflow on mobile",
     "summary": "## Problem",
     "emoji": "✨",
