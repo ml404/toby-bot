@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add /install summary + a View setup control-panel button",
+    "summary": "Follow-up to #680/#681. Gives server owners a way to **audit their current setup and see what's still worth turning on** — without re-running the wizard.",
+    "emoji": "✨",
+    "prNumber": 682
+  },
+  {
+    "date": "June 2026",
     "title": "Make the post-install launcher playable, persistent, and linked to the web app",
     "summary": "Follow-up to #680. That PR turned the post-install \"done\" message into a one-click launcher (claim daily + help). This extends that launcher into a genuine, durable control panel. Three isolated commits:",
     "emoji": "✨",
