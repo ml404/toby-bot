@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix music player horizontal overflow on mobile",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 677
+  },
+  {
+    "date": "June 2026",
     "title": "Polish music player to match other web surfaces",
     "summary": "## Why",
     "emoji": "✨",
