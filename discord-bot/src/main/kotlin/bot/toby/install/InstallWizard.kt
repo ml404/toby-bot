@@ -52,6 +52,14 @@ object InstallWizard {
      * [bot.toby.install.button.InstallClaimDailyButton].
      */
     const val BTN_CLAIM_DAILY = "install_claim_daily"
+
+    /**
+     * Public (non-owner) launcher on the post-install "done" message —
+     * anyone can tap it to play one real coinflip at the minimum stake, so
+     * the casino is demonstrated (not just described) in a single click.
+     * Handled by [bot.toby.install.button.InstallQuickFlipButton].
+     */
+    const val BTN_QUICK_FLIP = "install_quick_flip"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -247,11 +255,12 @@ object InstallWizard {
     /**
      * One-click launcher row left on the post-install "done" message so the
      * owner's (or any member's) very first action is a tap, not a typed
-     * slash command: claim daily credits, or open the full feature tour.
-     * Both buttons are non-owner-gated — the welcome message doubles as a
-     * shared launcher for everyone in the channel.
+     * slash command: play a real coinflip, claim daily credits, or open the
+     * full feature tour. Every button is non-owner-gated — the message
+     * doubles as a shared launcher for everyone in the channel.
      */
     fun launcherRow(): ActionRow = ActionRow.of(
+        Button.primary(BTN_QUICK_FLIP, "🪙 Flip a coin"),
         Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
         Button.secondary(BTN_HELP, "✨ What can I do?"),
     )

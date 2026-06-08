@@ -36,12 +36,13 @@ internal class InstallWizardTest {
     }
 
     @Test
-    fun `launcherRow has the non-owner claim-daily and help buttons`() {
+    fun `launcherRow has the non-owner quick-flip, claim-daily and help buttons`() {
         val buttons = InstallWizard.launcherRow().components.filterIsInstance<Button>()
-        assertEquals(2, buttons.size)
-        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[0].customId)
-        assertEquals(ButtonStyle.SUCCESS, buttons[0].style)
-        assertEquals(InstallWizard.BTN_HELP, buttons[1].customId)
+        assertEquals(3, buttons.size)
+        assertEquals(InstallWizard.BTN_QUICK_FLIP, buttons[0].customId)
+        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[1].customId)
+        assertEquals(ButtonStyle.SUCCESS, buttons[1].style)
+        assertEquals(InstallWizard.BTN_HELP, buttons[2].customId)
     }
 
     @Test
