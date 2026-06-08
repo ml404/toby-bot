@@ -31,7 +31,13 @@ class InstallFinishButton(
         event.deferEdit().queue()
         installCompletionService.complete(ctx.guild, mode = "custom", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.finishDoneEmbed())
-            .setComponents(InstallWizard.launcherRow(ctx.guild.id, webBaseUrl))
+            .setComponents(
+                InstallWizard.launcherRows(
+                    guildId = ctx.guild.id,
+                    webBaseUrl = webBaseUrl,
+                    inviteUrl = InstallWizard.inviteUrl(event.jda.selfUser.id),
+                ),
+            )
             .queue()
         pinAsControlPanel(event.message)
     }

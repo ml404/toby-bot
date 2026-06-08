@@ -260,33 +260,46 @@ object InstallWizard {
         Button.success(BTN_FINISH, "Finish"),
     )
 
+    /** Bot invite URL for [clientId] (the bot's application/user id). Mirrors `web.util.DiscordInvite`. */
+    fun inviteUrl(clientId: String): String =
+        "https://discord.com/api/oauth2/authorize?client_id=$clientId" +
+            "&permissions=8&scope=bot%20applications.commands"
+
     /**
-     * One-click launcher row left on the post-install "done" message so the
-     * owner's (or any member's) very first action is a tap, not a typed
-     * slash command: play a real coinflip, claim daily credits, or open the
-     * full feature tour. Every button is non-owner-gated — the message
-     * doubles as a shared launcher for everyone in the channel.
+     * The post-install "done" message's launcher, returned as one or two
+     * action rows so the very first action is a tap, not a typed command.
      *
-     * The owner-only **View setup** button is always present (non-owners get
-     * an ephemeral reject on click). When [webBaseUrl] is configured (and
-     * [guildId] known) a deep-link button to the web dashboard's guild
-     * profile is also appended — the same `"$webBaseUrl/profile/$guildId"`
-     * page the achievement web-push points at, so the owner can see the
-     * "Welcome Aboard" badge they just earned. The link is omitted when the
-     * base URL is unset (self-hosters without a public dashboard), exactly
-     * as the push deep links degrade.
+     * Row 1 (always) — the action buttons: play a real coinflip, claim daily
+     * credits, the feature tour, and the owner-only **View setup** summary.
+     * All non-owner-gated except View setup, so the message doubles as a
+     * shared launcher for everyone in the channel.
+     *
+     * Row 2 (link buttons, only when present) — a web-dashboard profile
+     * deep-link when [webBaseUrl] + [guildId] are known (the same
+     * `"$webBaseUrl/profile/$guildId"` page the achievement web-push points
+     * at), and an "add me to another server" invite when [inviteUrl] is
+     * supplied. Links live on their own row because Discord caps an action
+     * row at five buttons and row 1 already holds four.
      */
-    fun launcherRow(guildId: String? = null, webBaseUrl: String? = null): ActionRow {
-        val buttons = mutableListOf(
+    fun launcherRows(
+        guildId: String? = null,
+        webBaseUrl: String? = null,
+        inviteUrl: String? = null,
+    ): List<ActionRow> {
+        val actions = ActionRow.of(
             Button.primary(BTN_QUICK_FLIP, "🪙 Flip a coin"),
             Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
             Button.secondary(BTN_HELP, "✨ What can I do?"),
             Button.secondary(BTN_VIEW_SETUP, "⚙️ View setup"),
         )
+        val links = mutableListOf<Button>()
         if (!webBaseUrl.isNullOrBlank() && !guildId.isNullOrBlank()) {
-            buttons += Button.link("$webBaseUrl/profile/$guildId", "🌐 View your profile")
+            links += Button.link("$webBaseUrl/profile/$guildId", "🌐 View your profile")
         }
-        return ActionRow.of(buttons)
+        if (!inviteUrl.isNullOrBlank()) {
+            links += Button.link(inviteUrl, "➕ Add me to another server")
+        }
+        return listOfNotNull(actions, links.takeIf { it.isNotEmpty() }?.let { ActionRow.of(it) })
     }
 
     fun backButtonRow(): ActionRow = ActionRow.of(

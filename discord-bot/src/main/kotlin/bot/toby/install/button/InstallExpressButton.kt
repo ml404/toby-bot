@@ -33,7 +33,13 @@ class InstallExpressButton(
         event.deferEdit().queue()
         installCompletionService.complete(ctx.guild, mode = "express", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.expressDoneEmbed())
-            .setComponents(InstallWizard.launcherRow(ctx.guild.id, webBaseUrl))
+            .setComponents(
+                InstallWizard.launcherRows(
+                    guildId = ctx.guild.id,
+                    webBaseUrl = webBaseUrl,
+                    inviteUrl = InstallWizard.inviteUrl(event.jda.selfUser.id),
+                ),
+            )
             .queue()
         pinAsControlPanel(event.message)
     }
