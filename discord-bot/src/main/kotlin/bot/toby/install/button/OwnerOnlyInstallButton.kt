@@ -4,6 +4,7 @@ import bot.toby.install.InstallAuth
 import core.button.Button
 import core.button.ButtonContext
 import database.dto.user.UserDto
+import net.dv8tion.jda.api.entities.Message
 
 /**
  * Shared base for every install-wizard button. Centralizes:
@@ -39,4 +40,21 @@ abstract class OwnerOnlyInstallButton : Button {
         requestingUserDto: UserDto,
         deleteDelay: Int,
     )
+
+    /**
+     * Best-effort pin of the post-install "done" [message] so it lingers as
+     * a persistent control panel — the launcher buttons stay one tap away
+     * instead of scrolling out of sight. Purely cosmetic: pinning needs
+     * Manage Messages and can hit the 50-pin cap, so any failure (sync
+     * permission precheck or async REST error) is logged at warn and
+     * swallowed rather than disrupting the install flow.
+     */
+    protected fun pinAsControlPanel(message: Message) {
+        runCatching {
+            message.pin().queue(
+                { logger.info { "Pinned install control panel ${message.id}" } },
+                { err -> logger.warn { "Could not pin install control panel ${message.id}: ${err.message}" } },
+            )
+        }.onFailure { logger.warn { "Could not pin install control panel ${message.id}: ${it.message}" } }
+    }
 }

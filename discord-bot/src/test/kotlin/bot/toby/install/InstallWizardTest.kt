@@ -36,12 +36,30 @@ internal class InstallWizardTest {
     }
 
     @Test
-    fun `launcherRow has the non-owner claim-daily and help buttons`() {
+    fun `launcherRow has the non-owner quick-flip, claim-daily and help buttons`() {
         val buttons = InstallWizard.launcherRow().components.filterIsInstance<Button>()
-        assertEquals(2, buttons.size)
-        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[0].customId)
-        assertEquals(ButtonStyle.SUCCESS, buttons[0].style)
-        assertEquals(InstallWizard.BTN_HELP, buttons[1].customId)
+        assertEquals(3, buttons.size)
+        assertEquals(InstallWizard.BTN_QUICK_FLIP, buttons[0].customId)
+        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[1].customId)
+        assertEquals(ButtonStyle.SUCCESS, buttons[1].style)
+        assertEquals(InstallWizard.BTN_HELP, buttons[2].customId)
+    }
+
+    @Test
+    fun `launcherRow appends a profile deep-link button when a base url is configured`() {
+        val buttons = InstallWizard.launcherRow("g123", "https://toby-bot.co.uk")
+            .components.filterIsInstance<Button>()
+        assertEquals(4, buttons.size)
+        // Link buttons carry a url (and no componentId), pointing at the same
+        // /profile/{guildId} page the achievement web-push deep-links to.
+        assertEquals("https://toby-bot.co.uk/profile/g123", buttons[3].url)
+    }
+
+    @Test
+    fun `launcherRow omits the deep-link when the base url is unset`() {
+        assertEquals(3, InstallWizard.launcherRow("g123", "").components.filterIsInstance<Button>().size)
+        assertEquals(3, InstallWizard.launcherRow("g123", null).components.filterIsInstance<Button>().size)
+        assertEquals(3, InstallWizard.launcherRow(null, "https://x").components.filterIsInstance<Button>().size)
     }
 
     @Test

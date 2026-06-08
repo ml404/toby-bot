@@ -4,16 +4,12 @@ import core.command.CommandContext
 import database.dto.user.UserDto
 import common.casino.coinflip.Coinflip
 import database.service.casino.coinflip.CoinflipService
-import database.service.casino.coinflip.CoinflipService.FlipOutcome
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 import bot.toby.command.commands.game.pvp.GameCommand
-import bot.toby.command.commands.game.WagerCommandColors
 import bot.toby.command.commands.game.WagerCommandEmbeds
-import bot.toby.command.commands.game.WagerCommandFailure
 
 /**
  * `/coinflip side:<HEADS|TAILS> stake:<int>` — fair 50/50 double-or-
@@ -36,7 +32,7 @@ class CoinflipCommand @Autowired constructor(
         private const val OPT_STAKE = "stake"
         private const val SIDE_HEADS = "HEADS"
         private const val SIDE_TAILS = "TAILS"
-        private const val TITLE = "🪙 Coinflip"
+        private val TITLE = CoinflipEmbeds.TITLE
     }
 
     override val optionData: List<OptionData> = listOf(
@@ -59,39 +55,12 @@ class CoinflipCommand @Autowired constructor(
         )?.asLong ?: return
 
         val outcome = coinflipService.flip(requestingUserDto.discordId, guild.idLong, stake, side)
-        WagerCommandEmbeds.reply(event, embedFor(outcome), deleteDelay)
+        WagerCommandEmbeds.reply(event, CoinflipEmbeds.outcome(outcome), deleteDelay)
     }
 
     private fun parseSide(raw: String?): Coinflip.Side? = when (raw) {
         SIDE_HEADS -> Coinflip.Side.HEADS
         SIDE_TAILS -> Coinflip.Side.TAILS
         else -> null
-    }
-
-    private fun embedFor(outcome: FlipOutcome) = when (outcome) {
-        is FlipOutcome.Win -> EmbedBuilder()
-            .setTitle("🪙 ${outcome.landed.display}!")
-            .setDescription("You called **${outcome.predicted.display}** and won **+${outcome.net} credits**.")
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.WIN)
-            .build()
-
-        is FlipOutcome.Lose -> EmbedBuilder()
-            .setTitle("🪙 ${outcome.landed.display}!")
-            .setDescription("You called **${outcome.predicted.display}**. Lost **${outcome.stake} credits**.")
-            .addField("New balance", "${outcome.newBalance} credits", true)
-            .setColor(WagerCommandColors.LOSE)
-            .build()
-
-        is FlipOutcome.InsufficientCredits -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.InsufficientCredits(outcome.stake, outcome.have)
-        )
-        is FlipOutcome.InsufficientCoinsForTopUp -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.InsufficientCoinsForTopUp(outcome.needed, outcome.have)
-        )
-        is FlipOutcome.InvalidStake -> WagerCommandEmbeds.failureEmbed(
-            TITLE, WagerCommandFailure.InvalidStake(outcome.min, outcome.max)
-        )
-        FlipOutcome.UnknownUser -> WagerCommandEmbeds.failureEmbed(TITLE, WagerCommandFailure.UnknownUser)
     }
 }
