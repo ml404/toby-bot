@@ -136,8 +136,10 @@ class MusicPlayerCssTest {
         // Grid items default to `min-width: auto`, which refuses to shrink
         // below content min-content. Without `min-width: 0` a wide child
         // stretches the card past its column even after the track collapses.
-        val cardBlock = topLevelRuleBody(musicCss, ".now-playing-card,")
-            ?: error("music-player.css must declare the shared card rule starting `.now-playing-card,`")
+        // `.voice-card` is the last selector in the shared card list, sitting
+        // directly before the `{`, so it uniquely anchors that block.
+        val cardBlock = topLevelRuleBody(musicCss, ".voice-card")
+            ?: error("music-player.css must declare the shared `.voice-card { ... }` card rule")
         assertTrue(
             cardBlock.contains("min-width: 0"),
             "the shared music card rule must set `min-width: 0` so the cards " +
