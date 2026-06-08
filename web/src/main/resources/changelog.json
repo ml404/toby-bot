@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Make the post-install launcher playable, persistent, and linked to the web app",
+    "summary": "Follow-up to #680. That PR turned the post-install \"done\" message into a one-click launcher (claim daily + help). This extends that launcher into a genuine, durable control panel. Three isolated commits:",
+    "emoji": "✨",
+    "prNumber": 681
+  },
+  {
+    "date": "June 2026",
     "title": "Make toby-bot's value land in the first 30 seconds for new installers",
     "summary": "Closes the gap between *\"setup done\"* and *\"value felt\"* in onboarding. The install wizard already tells new owners to go type `/blackjack`; these four changes make the bot **demonstrate** its value instead, in the first few seconds after install. Each feature is an isolated commit.",
     "emoji": "✨",
