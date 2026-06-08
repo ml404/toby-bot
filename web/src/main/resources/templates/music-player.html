@@ -87,9 +87,14 @@
         <article class="playlists-card" data-reveal aria-labelledby="playlists-heading">
             <h2 id="playlists-heading">Saved playlists</h2>
             <form id="save-playlist-form" class="save-playlist-form" autocomplete="off">
-                <input id="save-playlist-name" type="text" maxlength="80" placeholder="Name your playlist" required>
-                <button class="btn-secondary" type="submit">💾 Save current queue</button>
+                <input id="save-playlist-name" type="text" maxlength="80" placeholder="New playlist name" required>
+                <div class="save-playlist-actions">
+                    <button class="btn-primary" type="submit">＋ New</button>
+                    <button class="btn-secondary" type="button" id="save-queue-btn"
+                            title="Snapshot the current queue into a new playlist">💾 Save queue</button>
+                </div>
             </form>
+            <p class="add-track-hint muted">Create an empty playlist, then add tracks from search — building a playlist never plays anything.</p>
             <ul id="playlist-list" class="playlist-list" aria-live="polite"></ul>
             <p id="playlists-empty" class="muted">No saved playlists yet.</p>
         </article>

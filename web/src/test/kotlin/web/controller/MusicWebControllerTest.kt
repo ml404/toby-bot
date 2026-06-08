@@ -102,6 +102,10 @@ class MusicWebControllerTest {
             "playlists POST"   to { controller.createPlaylist(guildId, user, MusicWebController.SavePlaylistRequest("x")).statusCode.value() },
             "playlists/{id}/load" to { controller.loadPlaylist(guildId, 1L, user).statusCode.value() },
             "playlists/{id} DELETE" to { controller.deletePlaylist(guildId, 1L, user).statusCode.value() },
+            "playlists/{id}/items POST" to { controller.addPlaylistItem(guildId, 1L, user, MusicWebController.AddPlaylistItemRequest("u")).statusCode.value() },
+            "playlists/{id}/items DELETE" to { controller.removePlaylistItem(guildId, 1L, 2L, user).statusCode.value() },
+            "playlists/{id}/items/reorder" to { controller.reorderPlaylist(guildId, 1L, user, MusicWebController.ReorderRequest(0, 1)).statusCode.value() },
+            "playlists/{id}/rename" to { controller.renamePlaylist(guildId, 1L, user, MusicWebController.RenamePlaylistRequest("x")).statusCode.value() },
         )
         writes.forEach { (label, run) ->
             assertEquals(403, run(), "Expected $label to 403 when musicPermission revoked")
@@ -118,6 +122,8 @@ class MusicWebControllerTest {
             )
         every { musicWebService.search(guildId, any(), any()) } returns emptyList()
         every { musicWebService.listPlaylistsForGuild(guildId) } returns emptyList()
+        every { musicWebService.getPlaylistDetail(guildId, 1L, discordId) } returns
+            MusicWebService.PlaylistDetail(1L, "Mix", discordId, canEdit = true, items = emptyList())
         every { sseService.register(guildId) } returns mockk(relaxed = true)
 
         val reads: List<Pair<String, () -> Int>> = listOf(
@@ -125,6 +131,7 @@ class MusicWebControllerTest {
             "events"           to { controller.stream(guildId, user).statusCode.value() },
             "search"           to { controller.search(guildId, "linkin park", user).statusCode.value() },
             "playlists GET"    to { controller.listPlaylists(guildId, user).statusCode.value() },
+            "playlists/{id} GET" to { controller.playlistDetail(guildId, 1L, user).statusCode.value() },
         )
         reads.forEach { (label, run) ->
             assertEquals(200, run(), "Expected $label to 200 even when musicPermission revoked")
@@ -400,6 +407,74 @@ class MusicWebControllerTest {
         assertEquals(200, response.statusCode.value())
         assertTrue(response.body!!.ok)
         assertEquals(42L, response.body!!.id)
+    }
+
+    @Test
+    fun `create empty playlist routes to createEmptyPlaylist when fromQueue is false`() {
+        every { musicWebService.createEmptyPlaylist(guildId, discordId, "Fresh") } returns 7L
+        val response = controller.createPlaylist(
+            guildId, user, MusicWebController.SavePlaylistRequest("Fresh", fromQueue = false),
+        )
+        assertEquals(200, response.statusCode.value())
+        assertEquals(7L, response.body!!.id)
+        verify(exactly = 1) { musicWebService.createEmptyPlaylist(guildId, discordId, "Fresh") }
+        verify(exactly = 0) { musicWebService.saveCurrentQueueAsPlaylist(any(), any(), any()) }
+    }
+
+    @Test
+    fun `playlist detail returns 404 when missing`() {
+        every { musicWebService.getPlaylistDetail(guildId, 1L, discordId) } returns null
+        assertEquals(404, controller.playlistDetail(guildId, 1L, user).statusCode.value())
+    }
+
+    @Test
+    fun `add playlist item returns 200 with the updated detail`() {
+        val detail = MusicWebService.PlaylistDetail(1L, "Mix", discordId, canEdit = true, items = emptyList())
+        every { musicWebService.addTrackToPlaylist(guildId, 1L, discordId, any()) } returns
+            MusicWebService.PlaylistMutation(true, detail)
+        val response = controller.addPlaylistItem(
+            guildId, 1L, user, MusicWebController.AddPlaylistItemRequest(identifier = "uri-1", title = "Song"),
+        )
+        assertEquals(200, response.statusCode.value())
+        assertTrue(response.body!!.ok)
+        assertNotNull(response.body!!.detail)
+    }
+
+    @Test
+    fun `add playlist item returns 404 when the service refuses`() {
+        every { musicWebService.addTrackToPlaylist(guildId, 1L, discordId, any()) } returns
+            MusicWebService.PlaylistMutation(false, message = "Only the owner can edit this playlist.")
+        val response = controller.addPlaylistItem(
+            guildId, 1L, user, MusicWebController.AddPlaylistItemRequest(identifier = "uri-1"),
+        )
+        assertEquals(404, response.statusCode.value())
+        assertFalse(response.body!!.ok)
+    }
+
+    @Test
+    fun `reorder playlist rejects negative indices with 400`() {
+        val response = controller.reorderPlaylist(
+            guildId, 1L, user, MusicWebController.ReorderRequest(-1, 0),
+        )
+        assertEquals(400, response.statusCode.value())
+    }
+
+    @Test
+    fun `rename playlist returns 409 on a name clash`() {
+        every { musicWebService.renamePlaylist(guildId, 1L, discordId, "Taken") } throws
+            PlaylistNameTakenException("taken")
+        val response = controller.renamePlaylist(
+            guildId, 1L, user, MusicWebController.RenamePlaylistRequest("Taken"),
+        )
+        assertEquals(409, response.statusCode.value())
+    }
+
+    @Test
+    fun `rename playlist rejects blank name with 400`() {
+        val response = controller.renamePlaylist(
+            guildId, 1L, user, MusicWebController.RenamePlaylistRequest("  "),
+        )
+        assertEquals(400, response.statusCode.value())
     }
 
     @Test

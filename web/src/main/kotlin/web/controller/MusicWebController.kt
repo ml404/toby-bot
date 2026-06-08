@@ -1,6 +1,7 @@
 package web.controller
 
 import core.music.MusicControlGateway
+import database.service.music.MusicPlaylistService.PlaylistItemInput
 import database.service.music.MusicPlaylistService.PlaylistNameTakenException
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
@@ -43,8 +44,21 @@ class MusicWebController(
     data class SeekRequest(val positionMs: Long = 0)
     data class LoopRequest(val looping: Boolean = false)
     data class ReorderRequest(val from: Int = 0, val to: Int = 0)
-    data class SavePlaylistRequest(val name: String = "")
+    data class SavePlaylistRequest(val name: String = "", val fromQueue: Boolean = true)
     data class SavePlaylistResponse(val ok: Boolean, val id: Long? = null, val message: String? = null)
+    data class RenamePlaylistRequest(val name: String = "")
+    data class AddPlaylistItemRequest(
+        val identifier: String = "",
+        val title: String? = null,
+        val author: String? = null,
+        val durationMs: Long? = null,
+        val sourceName: String? = null,
+    )
+    data class PlaylistDetailResponse(
+        val ok: Boolean,
+        val detail: MusicWebService.PlaylistDetail? = null,
+        val message: String? = null,
+    )
 
     @GetMapping("/guilds")
     fun guildList(
@@ -272,7 +286,11 @@ class MusicWebController(
                     .body(SavePlaylistResponse(false, null, "Name is required"))
             }
             try {
-                val id = musicWebService.saveCurrentQueueAsPlaylist(guildId, discordId, body.name)
+                val id = if (body.fromQueue) {
+                    musicWebService.saveCurrentQueueAsPlaylist(guildId, discordId, body.name)
+                } else {
+                    musicWebService.createEmptyPlaylist(guildId, discordId, body.name)
+                }
                 ResponseEntity.ok(SavePlaylistResponse(true, id, null))
             } catch (e: PlaylistNameTakenException) {
                 ResponseEntity.status(409).body(SavePlaylistResponse(false, null, e.message))
@@ -294,6 +312,94 @@ class MusicWebController(
         if (result.ok) ResponseEntity.ok(ApiResult(true, "Loaded ${result.tracksLoaded} tracks (${result.tracksFailed} failed)"))
         else ResponseEntity.status(404).body(ApiResult(false, result.message ?: "Failed to load playlist"))
     }
+
+    @GetMapping("/{guildId}/playlists/{playlistId}")
+    @ResponseBody
+    fun playlistDetail(
+        @PathVariable guildId: Long,
+        @PathVariable playlistId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<PlaylistDetailResponse> =
+        guarded(user, guildId, { PlaylistDetailResponse(false, null, "Unauthorized") }) { discordId ->
+            val detail = musicWebService.getPlaylistDetail(guildId, playlistId, discordId)
+                ?: return@guarded ResponseEntity.status(404).body(PlaylistDetailResponse(false, null, "Playlist not found"))
+            ResponseEntity.ok(PlaylistDetailResponse(true, detail))
+        }
+
+    @PostMapping("/{guildId}/playlists/{playlistId}/items")
+    @ResponseBody
+    fun addPlaylistItem(
+        @PathVariable guildId: Long,
+        @PathVariable playlistId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+        @RequestBody body: AddPlaylistItemRequest,
+    ): ResponseEntity<PlaylistDetailResponse> = guardedDetail(user, guildId) { discordId ->
+        val result = musicWebService.addTrackToPlaylist(
+            guildId, playlistId, discordId,
+            PlaylistItemInput(
+                identifier = body.identifier,
+                title = body.title,
+                author = body.author,
+                durationMs = body.durationMs,
+                sourceName = body.sourceName,
+            ),
+        )
+        playlistResult(result)
+    }
+
+    @DeleteMapping("/{guildId}/playlists/{playlistId}/items/{itemId}")
+    @ResponseBody
+    fun removePlaylistItem(
+        @PathVariable guildId: Long,
+        @PathVariable playlistId: Long,
+        @PathVariable itemId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<PlaylistDetailResponse> = guardedDetail(user, guildId) { discordId ->
+        playlistResult(musicWebService.removeTrackFromPlaylist(guildId, playlistId, discordId, itemId))
+    }
+
+    @PostMapping("/{guildId}/playlists/{playlistId}/items/reorder")
+    @ResponseBody
+    fun reorderPlaylist(
+        @PathVariable guildId: Long,
+        @PathVariable playlistId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+        @RequestBody body: ReorderRequest,
+    ): ResponseEntity<PlaylistDetailResponse> = guardedDetail(user, guildId) { discordId ->
+        if (body.from < 0 || body.to < 0) {
+            return@guardedDetail ResponseEntity.badRequest()
+                .body(PlaylistDetailResponse(false, null, "indices must be >= 0"))
+        }
+        playlistResult(musicWebService.reorderPlaylist(guildId, playlistId, discordId, body.from, body.to))
+    }
+
+    @PostMapping("/{guildId}/playlists/{playlistId}/rename")
+    @ResponseBody
+    fun renamePlaylist(
+        @PathVariable guildId: Long,
+        @PathVariable playlistId: Long,
+        @AuthenticationPrincipal user: OAuth2User?,
+        @RequestBody body: RenamePlaylistRequest,
+    ): ResponseEntity<PlaylistDetailResponse> = guardedDetail(user, guildId) { discordId ->
+        if (body.name.isBlank()) {
+            return@guardedDetail ResponseEntity.badRequest()
+                .body(PlaylistDetailResponse(false, null, "Name is required"))
+        }
+        try {
+            playlistResult(musicWebService.renamePlaylist(guildId, playlistId, discordId, body.name))
+        } catch (e: PlaylistNameTakenException) {
+            ResponseEntity.status(409).body(PlaylistDetailResponse(false, null, e.message))
+        }
+    }
+
+    /** Maps a service [MusicWebService.PlaylistMutation] to a response: 200 on
+        success, 404 otherwise (owner/missing failures carry their message). */
+    private fun playlistResult(result: MusicWebService.PlaylistMutation): ResponseEntity<PlaylistDetailResponse> =
+        if (result.ok) {
+            ResponseEntity.ok(PlaylistDetailResponse(true, result.detail))
+        } else {
+            ResponseEntity.status(404).body(PlaylistDetailResponse(false, null, result.message))
+        }
 
     @DeleteMapping("/{guildId}/playlists/{playlistId}")
     @ResponseBody
@@ -350,4 +456,13 @@ class MusicWebController(
         guildId: Long,
         block: (discordId: Long) -> ResponseEntity<ApiResult>,
     ): ResponseEntity<ApiResult> = guardedWrite(user, guildId, { ApiResult(false, "Unauthorized") }, block)
+
+    /** Write-flavoured guard for the playlist-editor endpoints, which return a
+        [PlaylistDetailResponse] rather than the bare [ApiResult]. */
+    private inline fun guardedDetail(
+        user: OAuth2User?,
+        guildId: Long,
+        block: (discordId: Long) -> ResponseEntity<PlaylistDetailResponse>,
+    ): ResponseEntity<PlaylistDetailResponse> =
+        guardedWrite(user, guildId, { PlaylistDetailResponse(false, null, "Unauthorized") }, block)
 }

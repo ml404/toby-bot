@@ -359,12 +359,85 @@
 .search-result {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
     padding: 0.5rem;
     background: rgba(255, 255, 255, 0.04);
     border-radius: var(--radius-sm);
 }
 .search-result-meta { flex: 1; min-width: 0; }
+
+/* Add-to-playlist picker — the menu drops onto its own full-width row
+   below the result controls (no absolute positioning, so it can't clip
+   off-screen on phones). */
+.add-to-playlist { position: relative; }
+.btn-add-playlist {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.85rem;
+    min-height: var(--tap-min);
+    padding: 0 0.6rem;
+    white-space: nowrap;
+    touch-action: manipulation;
+    transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.btn-add-playlist:hover { background: var(--accent-soft); border-color: var(--accent); }
+.btn-add-playlist[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.add-to-playlist-menu {
+    flex-basis: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+}
+.add-to-playlist-menu[hidden] { display: none; }
+.add-to-playlist-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    color: inherit;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    min-height: 36px;
+    text-align: left;
+}
+.add-to-playlist-option:hover { background: var(--accent-soft); border-color: var(--accent); }
+.add-to-playlist-option-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.add-to-playlist-option-count { flex-shrink: 0; font-size: 0.75rem; }
+.add-to-playlist-empty { margin: 0.1rem 0; font-size: 0.8rem; }
+.add-to-playlist-new {
+    display: flex;
+    gap: 0.4rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.4rem;
+}
+.add-to-playlist-new input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.4rem 0.6rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: inherit;
+}
 .search-result-title {
     font-size: 0.9rem;
     white-space: nowrap;
@@ -474,22 +547,114 @@
 }
 
 .playlist-item {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-sm);
+}
+
+/* Header row: expand toggle on the left, Load/Delete on the right. */
+.playlist-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
     padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: var(--radius-sm);
     flex-wrap: wrap;
     min-height: var(--tap-min);
 }
-
-.playlist-meta { min-width: 0; flex: 1; }
-.playlist-name { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.playlist-count { font-size: 0.75rem; }
+.playlist-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    text-align: left;
+    font: inherit;
+}
+.playlist-caret {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+.playlist-name { font-size: 0.9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.playlist-count { flex-shrink: 0; font-size: 0.75rem; }
 
 .playlist-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Inline editor revealed under an expanded playlist. */
+.playlist-editor {
+    padding: 0 0.5rem 0.5rem;
+}
+.playlist-editor[hidden] { display: none; }
+.pl-loading, .pl-empty { font-size: 0.8rem; margin: 0.25rem 0; }
+
+.playlist-rename-form {
+    display: flex;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+}
+.playlist-rename-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.4rem 0.6rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: inherit;
+}
+
+.pl-track-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.pl-track {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+}
+.pl-track[draggable="true"] { cursor: grab; }
+.pl-track:hover { background: rgba(255, 255, 255, 0.06); }
+.pl-track.dragging { opacity: 0.4; }
+.pl-track.drop-target { border-color: var(--accent); }
+.pl-track-handle {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    cursor: grab;
+    user-select: none;
+}
+.pl-track-meta { flex: 1; min-width: 0; }
+.pl-track-title { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-track-sub { font-size: 0.72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-track-remove {
+    flex-shrink: 0;
+    background: transparent;
+    color: var(--text-muted);
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+    touch-action: manipulation;
+}
+.pl-track-remove:hover { color: #f25865; }
+
+.save-playlist-actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
@@ -700,17 +865,13 @@
         flex-direction: column;
     }
     .add-track-form button,
-    .save-playlist-form button {
+    .save-playlist-form .btn-primary {
         width: 100%;
     }
-    .playlist-item {
-        flex-direction: column;
-        align-items: stretch;
+    .save-playlist-actions {
+        width: 100%;
     }
-    .playlist-actions {
-        justify-content: stretch;
-    }
-    .playlist-actions button {
+    .save-playlist-actions button {
         flex: 1;
     }
 }

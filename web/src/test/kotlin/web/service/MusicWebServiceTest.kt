@@ -183,6 +183,101 @@ class MusicWebServiceTest {
         assertFalse(ok)
     }
 
+    // ---- Curation (build playlists without playing) --------------------
+
+    @Test
+    fun `createEmptyPlaylist delegates to playlist service and returns id`() {
+        every { playlistService.createEmpty(guildId, discordId, "Empty") } returns
+            MusicPlaylistDto(id = 7L, guildId = guildId, ownerDiscordId = discordId, name = "Empty")
+        assertEquals(7L, service.createEmptyPlaylist(guildId, discordId, "Empty"))
+    }
+
+    @Test
+    fun `getPlaylistDetail maps items and flags canEdit for owner`() {
+        val playlist = MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = discordId, name = "Mix")
+        playlist.items.add(
+            MusicPlaylistItemDto(
+                id = 10L, position = 0, identifier = "uri-1",
+                title = "Song", author = "Artist", durationMs = 1234L, sourceName = "youtube",
+            ),
+        )
+        every { playlistService.getById(1L) } returns playlist
+        val detail = service.getPlaylistDetail(guildId, 1L, discordId)
+        assertNotNull(detail)
+        assertTrue(detail!!.canEdit)
+        assertEquals(1, detail.items.size)
+        assertEquals(10L, detail.items[0].id)
+        assertEquals("uri-1", detail.items[0].uri)
+    }
+
+    @Test
+    fun `getPlaylistDetail flags canEdit false for a non-owner viewer`() {
+        every { playlistService.getById(1L) } returns
+            MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = 9999L, name = "Mix")
+        assertFalse(service.getPlaylistDetail(guildId, 1L, discordId)!!.canEdit)
+    }
+
+    @Test
+    fun `getPlaylistDetail returns null for a cross-guild playlist`() {
+        every { playlistService.getById(1L) } returns
+            MusicPlaylistDto(id = 1L, guildId = 999L, ownerDiscordId = discordId, name = "Mix")
+        assertNull(service.getPlaylistDetail(guildId, 1L, discordId))
+    }
+
+    @Test
+    fun `addTrackToPlaylist appends for the owner`() {
+        val playlist = MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = discordId, name = "Mix")
+        every { playlistService.getById(1L) } returns playlist
+        every { playlistService.addItem(1L, any()) } returns playlist
+        val result = service.addTrackToPlaylist(guildId, 1L, discordId, item("uri-1"))
+        assertTrue(result.ok)
+        assertNotNull(result.detail)
+        verify(exactly = 1) { playlistService.addItem(1L, any()) }
+    }
+
+    @Test
+    fun `addTrackToPlaylist refuses a non-owner and never mutates`() {
+        every { playlistService.getById(1L) } returns
+            MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = 9999L, name = "Mix")
+        val result = service.addTrackToPlaylist(guildId, 1L, discordId, item("uri-1"))
+        assertFalse(result.ok)
+        verify(exactly = 0) { playlistService.addItem(any(), any()) }
+    }
+
+    @Test
+    fun `removeTrackFromPlaylist refuses a non-owner`() {
+        every { playlistService.getById(1L) } returns
+            MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = 9999L, name = "Mix")
+        val result = service.removeTrackFromPlaylist(guildId, 1L, discordId, 5L)
+        assertFalse(result.ok)
+        verify(exactly = 0) { playlistService.removeItem(any(), any()) }
+    }
+
+    @Test
+    fun `reorderPlaylist delegates for the owner`() {
+        val playlist = MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = discordId, name = "Mix")
+        every { playlistService.getById(1L) } returns playlist
+        every { playlistService.reorderItems(1L, 0, 1) } returns playlist
+        assertTrue(service.reorderPlaylist(guildId, 1L, discordId, 0, 1).ok)
+    }
+
+    @Test
+    fun `renamePlaylist refuses a non-owner`() {
+        every { playlistService.getById(1L) } returns
+            MusicPlaylistDto(id = 1L, guildId = guildId, ownerDiscordId = 9999L, name = "Mix")
+        val result = service.renamePlaylist(guildId, 1L, discordId, "New")
+        assertFalse(result.ok)
+        verify(exactly = 0) { playlistService.rename(any(), any()) }
+    }
+
+    private fun item(id: String) = PlaylistItemInput(
+        identifier = id,
+        title = "title-$id",
+        author = "author-$id",
+        durationMs = 1000L,
+        sourceName = "youtube",
+    )
+
     @Test
     fun `isMember delegates to GuildMembership`() {
         every { membership.isMember(discordId, guildId) } returns true
