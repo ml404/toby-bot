@@ -40,7 +40,15 @@
 
 @media (max-width: 768px) {
     .music-grid {
-        grid-template-columns: 1fr;
+        /* `minmax(0, 1fr)` not `1fr` — a bare `1fr` track is
+           `minmax(auto, 1fr)`, whose `auto` floor lets a grid item's
+           min-content (a long search-result title, the volume slider's
+           intrinsic width, etc.) push the single column wider than the
+           viewport. That blew every card's right edge — Search button,
+           result rows, Queue buttons — off-screen on phones. The `0`
+           floor lets the column shrink to the container so the inner
+           ellipsis/wrap rules can do their job. */
+        grid-template-columns: minmax(0, 1fr);
         gap: 1rem;
     }
 }
@@ -55,6 +63,11 @@
     padding: var(--space-4) var(--space-5);
     box-shadow: var(--shadow-sm);
     transition: border-color var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out);
+    /* Grid items default to `min-width: auto`, which refuses to shrink
+       below their content's min-content — so a wide child would stretch
+       the card past the column. Pin to 0 so the cards always fit their
+       track and the inner truncation rules take over. */
+    min-width: 0;
 }
 
 /* Now-playing is the hero of the dashboard — give it an accent-tinted
@@ -208,6 +221,7 @@
 
 .progress-track {
     flex: 1;
+    min-width: 0;
     /* Hit-target larger than the visible bar; transparent padding around it
        gives finger-sized scrubbing on touch without making the bar chunky. */
     height: 18px;
@@ -275,9 +289,11 @@
     align-items: center;
     gap: 0.5rem;
     margin-left: auto;
+    min-width: 0;
 }
 .volume-label input[type=range] {
     width: 120px;
+    min-width: 0;
     height: 32px;
     touch-action: manipulation;
 }

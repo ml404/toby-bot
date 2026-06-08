@@ -110,6 +110,41 @@ class MusicPlayerCssTest {
         )
     }
 
+    @Test
+    fun `mobile grid collapses with a zero-floor track to avoid horizontal overflow`() {
+        // The single-column phone grid must use `minmax(0, 1fr)`, never a
+        // bare `1fr`. A bare `1fr` is `minmax(auto, 1fr)`, whose `auto`
+        // floor lets a grid item's min-content stretch the column past the
+        // viewport — which pushed every card's right edge (Search button,
+        // result rows, Queue buttons) off-screen on phones.
+        val normalized = musicCss.replace("\\s+".toRegex(), " ")
+        assertTrue(
+            normalized.contains("grid-template-columns: minmax(0, 1fr);"),
+            "music-player.css must collapse .music-grid to `minmax(0, 1fr)` on " +
+                "phones so the single column can shrink to the viewport."
+        )
+        assertFalse(
+            normalized.contains(".music-grid { grid-template-columns: 1fr;") ||
+                normalized.contains("grid-template-columns: 1fr; gap: 1rem;"),
+            "music-player.css must not use a bare `1fr` track for the phone " +
+                ".music-grid — it reintroduces the off-screen overflow."
+        )
+    }
+
+    @Test
+    fun `dashboard cards can shrink inside their grid track`() {
+        // Grid items default to `min-width: auto`, which refuses to shrink
+        // below content min-content. Without `min-width: 0` a wide child
+        // stretches the card past its column even after the track collapses.
+        val cardBlock = topLevelRuleBody(musicCss, ".now-playing-card,")
+            ?: error("music-player.css must declare the shared card rule starting `.now-playing-card,`")
+        assertTrue(
+            cardBlock.contains("min-width: 0"),
+            "the shared music card rule must set `min-width: 0` so the cards " +
+                "fit their grid track instead of stretching it on mobile."
+        )
+    }
+
     /**
      * Returns the body of the first top-level `selector { ... }` rule, or
      * null. "Top-level" excludes occurrences nested inside an `@media`
