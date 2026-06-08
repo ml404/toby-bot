@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Build and edit playlists in the web UI without playing",
+    "summary": "Lets you **build and edit playlists entirely from the web UI without playing anything**. Before this, the only way to fill a playlist was to snapshot the live queue — so curating meant playing the tracks first. This decouples curation from playback end-to-end.",
+    "emoji": "✨",
+    "prNumber": 679
+  },
+  {
+    "date": "June 2026",
     "title": "Reuse shared primitives on the music player (toasts, modal, member-cell)",
     "summary": "Three consistency refactors so the music player leans on site-wide primitives instead of bespoke / native equivalents. (Independent of #677 — touches different file sections, so the two merge cleanly in either order.)",
     "emoji": "✨",
