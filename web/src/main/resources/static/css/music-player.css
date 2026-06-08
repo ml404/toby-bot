@@ -513,30 +513,20 @@
     flex-direction: column;
     gap: 0.35rem;
 }
+/* Voice members reuse the shared `.member-cell` + `.avatar` + `.lb-name`
+   projection (same primitives as the "Requested by" line and the
+   leaderboard standings). Only the row padding and the bot/status
+   accents stay music-specific. The `<li>` carries `member-cell voice-member`,
+   the image `.avatar`, the name `.lb-name`. */
 .voice-member {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
     padding: 0.25rem 0.4rem;
     border-radius: var(--radius-sm);
 }
-.voice-member-avatar {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    object-fit: cover;
-    flex-shrink: 0;
-    background: rgba(255, 255, 255, 0.1);
-}
-.voice-member-name {
+.voice-member .lb-name {
     flex: 1;
-    min-width: 0;
-    font-size: 0.9rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 500;
 }
-.voice-member.is-bot .voice-member-name { color: var(--accent); font-weight: 600; }
+.voice-member.is-bot .lb-name { color: var(--accent); font-weight: 600; }
 .voice-member-mute,
 .voice-member-deaf {
     font-size: 0.85rem;

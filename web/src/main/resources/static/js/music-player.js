@@ -86,6 +86,13 @@
     const post = (path, body) => sendJson('POST', path, body);
     const del = (path) => sendJson('DELETE', path);
 
+    // Feedback through the shared toast primitive (toasts.js is loaded
+    // globally) so the player matches the rest of the site instead of
+    // firing OS-native alert() dialogs. No-ops if the message is empty.
+    function toast(message, type) {
+        if (message && window.TobyToasts) window.TobyToasts.show(message, { type: type || 'info' });
+    }
+
     // ---- Rendering -----------------------------------------------------
 
     function formatMs(ms) {
@@ -406,9 +413,26 @@
             delBtn.type = 'button';
             delBtn.className = 'btn-tertiary btn-danger';
             delBtn.textContent = '🗑 Delete';
-            delBtn.addEventListener('click', () => {
-                if (!confirm('Delete playlist "' + pl.name + '"?')) return;
-                del('/playlists/' + pl.id).then(() => refreshPlaylists());
+            delBtn.addEventListener('click', async () => {
+                // Shared modal (modal.js) for the confirm; fall back to the
+                // native dialog if it somehow isn't loaded.
+                const ok = window.TobyModal
+                    ? await window.TobyModal.confirm({
+                        title: 'Delete playlist?',
+                        body: '“' + pl.name + '” will be removed permanently.',
+                        confirmLabel: 'Delete',
+                        cancelLabel: 'Cancel',
+                    })
+                    : window.confirm('Delete playlist "' + pl.name + '"?');
+                if (!ok) return;
+                del('/playlists/' + pl.id).then((res) => {
+                    if (res && res.ok === false) {
+                        toast(res.message || 'Could not delete playlist.', 'error');
+                        return;
+                    }
+                    toast('Playlist deleted.', 'success');
+                    refreshPlaylists();
+                });
             });
             actions.appendChild(delBtn);
 
@@ -434,17 +458,17 @@
         els.voiceMemberList.innerHTML = '';
         (voice.members || []).forEach((m) => {
             const li = document.createElement('li');
-            li.className = 'voice-member';
+            li.className = 'member-cell voice-member';
             if (m.isBot) li.classList.add('is-bot');
 
             const img = document.createElement('img');
-            img.className = 'voice-member-avatar';
+            img.className = 'avatar';
             img.alt = '';
             if (m.avatarUrl) img.src = m.avatarUrl;
             li.appendChild(img);
 
             const name = document.createElement('span');
-            name.className = 'voice-member-name';
+            name.className = 'lb-name';
             name.textContent = m.displayName + (m.isBot ? ' (bot)' : '');
             li.appendChild(name);
 
@@ -566,10 +590,11 @@
                     if (res && res.ok) {
                         clearSearchResults();
                         els.addInput.value = '';
+                        toast('Added to queue.', 'success');
                     } else {
                         queueBtn.disabled = false;
                         queueBtn.textContent = 'Queue';
-                        if (res && res.message) alert(res.message);
+                        toast((res && res.message) || 'Could not queue that track.', 'error');
                     }
                 });
             });
@@ -589,8 +614,9 @@
                 if (res && res.ok) {
                     els.addInput.value = '';
                     clearSearchResults();
-                } else if (res && res.message) {
-                    alert(res.message);
+                    toast('Added to queue.', 'success');
+                } else {
+                    toast((res && res.message) || 'Could not queue that link.', 'error');
                 }
             });
             return;
@@ -613,8 +639,9 @@
             if (res && res.ok) {
                 els.savePlaylistName.value = '';
                 refreshPlaylists();
-            } else if (res && res.message) {
-                alert(res.message);
+                toast('Playlist saved.', 'success');
+            } else {
+                toast((res && res.message) || 'Could not save playlist.', 'error');
             }
         });
     });

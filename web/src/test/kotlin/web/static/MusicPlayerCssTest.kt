@@ -147,6 +147,24 @@ class MusicPlayerCssTest {
         )
     }
 
+    @Test
+    fun `voice list reuses the shared member-cell primitives`() {
+        // The voice-channel roster renders with `member-cell` + `.avatar` +
+        // `.lb-name` — the same member projection as the leaderboard and the
+        // "Requested by" line — rather than bespoke per-row classes. Guard
+        // that the row keeps only the music-specific contextual tweak and
+        // doesn't re-grow a parallel `.voice-member-name` / `-avatar` set.
+        assertTrue(
+            musicCss.contains(".voice-member .lb-name"),
+            "music-player.css should style the voice name via the shared `.lb-name`."
+        )
+        assertFalse(
+            musicCss.contains(".voice-member-name") || musicCss.contains(".voice-member-avatar"),
+            "music-player.css must not reintroduce bespoke `.voice-member-name` / " +
+                "`.voice-member-avatar` rules — the voice row reuses `.lb-name` + `.avatar`."
+        )
+    }
+
     /**
      * Returns the body of the first top-level `selector { ... }` rule, or
      * null. "Top-level" excludes occurrences nested inside an `@media`
