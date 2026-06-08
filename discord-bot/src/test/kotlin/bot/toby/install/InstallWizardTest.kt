@@ -36,6 +36,15 @@ internal class InstallWizardTest {
     }
 
     @Test
+    fun `launcherRow has the non-owner claim-daily and help buttons`() {
+        val buttons = InstallWizard.launcherRow().components.filterIsInstance<Button>()
+        assertEquals(2, buttons.size)
+        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[0].customId)
+        assertEquals(ButtonStyle.SUCCESS, buttons[0].style)
+        assertEquals(InstallWizard.BTN_HELP, buttons[1].customId)
+    }
+
+    @Test
     fun `backButtonRow contains the back button only`() {
         val buttons = InstallWizard.backButtonRow().components.filterIsInstance<Button>()
         assertEquals(1, buttons.size)
@@ -186,6 +195,28 @@ internal class InstallWizardTest {
     fun `welcome embed mentions the guild name`() {
         val embed = InstallWizard.welcomeEmbed("MyServer")
         assertTrue(embed.title!!.contains("MyServer"))
+    }
+
+    @Test
+    fun `socialProofLine is empty below the floor or when unknown`() {
+        assertEquals("", InstallWizard.socialProofLine(null))
+        assertEquals("", InstallWizard.socialProofLine(0))
+        assertEquals("", InstallWizard.socialProofLine(InstallWizard.MIN_SERVERS_FOR_SOCIAL_PROOF - 1))
+    }
+
+    @Test
+    fun `socialProofLine floors the count to the nearest ten and never overstates`() {
+        // 47 → "40+" (always rounded down so the shown number is <= the real one).
+        val line = InstallWizard.socialProofLine(47)
+        assertTrue(line.contains("40+"), "expected floored '40+' but was: $line")
+        assertEquals(false, line.contains("47"))
+        assertEquals(false, line.contains("50+"))
+    }
+
+    @Test
+    fun `welcome embed omits social proof when count is unknown but includes it when flattering`() {
+        assertEquals(false, InstallWizard.welcomeEmbed("G").description!!.contains("trusted by", ignoreCase = true))
+        assertTrue(InstallWizard.welcomeEmbed("G", 130).description!!.contains("130+"))
     }
 
     @Test

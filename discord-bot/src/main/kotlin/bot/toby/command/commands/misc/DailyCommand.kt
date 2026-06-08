@@ -4,7 +4,6 @@ import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
 import database.service.social.LoginStreakService
-import database.service.social.LoginStreakService.ClaimResult
 import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.MessageEmbed
 import org.springframework.beans.factory.annotation.Autowired
@@ -36,36 +35,7 @@ class DailyCommand @Autowired constructor(
             guildId = guild.idLong,
             channelId = event.channel.idLong
         )
-        event.hook.replyEphemeralEmbedAndDelete(buildEmbed(result), deleteDelay)
-    }
-
-    private fun buildEmbed(result: ClaimResult): MessageEmbed = when (result) {
-        is ClaimResult.Granted -> {
-            val title = if (result.isNewBest) "🔥 New personal best — Day ${result.currentStreak}!"
-                        else "✅ Daily claimed — Day ${result.currentStreak}"
-            EmbedBuilder()
-                .setTitle(title)
-                .setDescription(buildString {
-                    append("**+").append(result.xpGranted).append(" XP**")
-                    if (result.creditsGranted > 0) {
-                        append("  ·  **+").append(result.creditsGranted).append(" credits**")
-                    }
-                    append('\n')
-                    append("Current streak: ").append(result.currentStreak)
-                    append("  ·  Best: ").append(result.longestStreak)
-                    append("\n\nCome back tomorrow to keep the streak alive.")
-                })
-                .setColor(Color(0x4ADE80))
-                .build()
-        }
-        is ClaimResult.AlreadyClaimed -> EmbedBuilder()
-            .setTitle("Already claimed today")
-            .setDescription(
-                "You're at Day **${result.currentStreak}** (best: ${result.longestStreak}). " +
-                "Come back after midnight UTC to keep the streak going."
-            )
-            .setColor(Color(0x60A5FA))
-            .build()
+        event.hook.replyEphemeralEmbedAndDelete(DailyEmbeds.claimResult(result), deleteDelay)
     }
 
     private fun errorEmbed(message: String): MessageEmbed = EmbedBuilder()

@@ -1,28 +1,24 @@
 package bot.toby.install.button
 
-import database.dto.guild.ConfigDto.Configurations
-import database.service.guild.ConfigService
-import io.mockk.every
+import bot.toby.install.InstallCompletionService
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class InstallFinishButtonTest {
 
-    private lateinit var configService: ConfigService
+    private lateinit var installCompletionService: InstallCompletionService
     private lateinit var button: InstallFinishButton
     private lateinit var fx: InstallButtonFixture
 
     @BeforeEach
     fun setUp() {
-        configService = mockk(relaxed = true)
-        button = InstallFinishButton(configService)
+        installCompletionService = mockk(relaxed = true)
+        button = InstallFinishButton(installCompletionService)
         fx = InstallButtonFixture()
     }
 
@@ -32,38 +28,25 @@ internal class InstallFinishButtonTest {
     }
 
     @Test
-    fun `non-owner is rejected with no writes or edits`() {
+    fun `non-owner is rejected with no completion or edits`() {
         fx.asNonOwner()
 
         button.handle(fx.ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { fx.event.reply(any<String>()) }
-        verify(exactly = 0) { configService.upsertAll(any(), any()) }
-        verify(exactly = 0) {
-            configService.upsertConfig(any<String>(), any<String>(), any<String>())
-        }
+        verify(exactly = 0) { installCompletionService.complete(any(), any(), any()) }
         verify(exactly = 0) { fx.hook.editOriginalEmbeds(any<MessageEmbed>()) }
     }
 
     @Test
-    fun `owner happy path writes INSTALL_MODE custom and INSTALLED_AT epoch via batch upsert`() {
-        val rowsSlot = slot<List<Pair<String, String>>>()
-        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
-
-        val before = System.currentTimeMillis()
+    fun `owner happy path delegates completion in custom mode`() {
         button.handle(fx.ctx, mockk(relaxed = true), 0)
-        val after = System.currentTimeMillis()
 
-        verify(exactly = 1) { configService.upsertAll("g1", any()) }
-        val rows = rowsSlot.captured
-        assertTrue(rows.size == 2)
-        assertTrue(rows[0] == Configurations.INSTALL_MODE.configValue to "custom")
-        assertTrue(rows[1].first == Configurations.INSTALLED_AT.configValue)
-        assertTrue(rows[1].second.toLong() in before..after, "INSTALLED_AT epoch should be ~now")
+        verify(exactly = 1) { installCompletionService.complete(fx.guild, "custom", any()) }
     }
 
     @Test
-    fun `owner happy path defers edit then shows finish-done embed with stripped components`() {
+    fun `owner happy path defers edit then shows finish-done embed with launcher components`() {
         button.handle(fx.ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { fx.event.deferEdit() }

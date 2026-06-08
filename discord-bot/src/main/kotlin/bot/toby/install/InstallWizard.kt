@@ -44,6 +44,14 @@ object InstallWizard {
      * Skip buttons stay gated.
      */
     const val BTN_HELP = "install_help"
+
+    /**
+     * Public (non-owner) launcher on the post-install "done" message —
+     * anyone can click it to claim their daily reward in one tap, no
+     * command typing. Handled by
+     * [bot.toby.install.button.InstallClaimDailyButton].
+     */
+    const val BTN_CLAIM_DAILY = "install_claim_daily"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -58,9 +66,37 @@ object InstallWizard {
 
     fun sectionDetailMenuId(sectionId: String): String = "$MENU_SECTION_DETAIL_PREFIX:$sectionId"
 
+    /**
+     * Floor below which the "trusted by N servers" social-proof line is
+     * suppressed — a tiny number reads as a liability, not a credential, so
+     * fresh / self-hosted deployments simply omit the line until it's
+     * flattering.
+     */
+    const val MIN_SERVERS_FOR_SOCIAL_PROOF = 25
+
+    /**
+     * Honest, never-overstated social-proof line for the welcome pitch:
+     * floors the live guild count down to the nearest 10 and renders it as
+     * "N+", so the number shown is always ≤ the real one. Returns an empty
+     * string (no line) when [serverCount] is null/unknown or below
+     * [MIN_SERVERS_FOR_SOCIAL_PROOF].
+     */
+    fun socialProofLine(serverCount: Int?): String {
+        if (serverCount == null || serverCount < MIN_SERVERS_FOR_SOCIAL_PROOF) return ""
+        val rounded = (serverCount / 10) * 10
+        return "🏆 Already trusted by **$rounded+** Discord servers.\n"
+    }
+
     // ---- embed factories ----
 
-    fun welcomeEmbed(guildName: String): MessageEmbed = EmbedBuilder()
+    /**
+     * The guild-join / `/install` welcome pitch. [serverCount] (the bot's
+     * live guild count) is threaded through only to render the optional
+     * social-proof line via [socialProofLine] — pass null to omit it (e.g.
+     * when the count is unknown or unflattering). Defaulting to null keeps
+     * every existing caller and test source-compatible.
+     */
+    fun welcomeEmbed(guildName: String, serverCount: Int? = null): MessageEmbed = EmbedBuilder()
         .setTitle("Thanks for adding me to $guildName! 🎉")
         .setDescription(
             "I'm **toby-bot** — here's what I bring to the table:\n\n" +
@@ -69,6 +105,7 @@ object InstallWizard {
                 "🎵 **Music** — queue and play audio right in your voice channels\n" +
                 "📈 **Leveling** — optional XP, leaderboards & activity rewards\n" +
                 "🎟️ **Daily lottery** — an optional server-wide draw\n\n" +
+                socialProofLine(serverCount) +
                 "**Let's get you set up — pick a path below:**\n" +
                 "**▸ Express setup** — one click, sensible defaults, start playing right away. Express keeps " +
                 "**Activity tracking OFF**, the **Daily lottery OFF**, and uses conservative casino stakes — " +
@@ -128,7 +165,9 @@ object InstallWizard {
     fun expressDoneEmbed(): MessageEmbed = EmbedBuilder()
         .setTitle("You're all set! 🎉")
         .setDescription(
-            "Defaults are live and the casino is open. Here's how to get going:\n\n" +
+            "Defaults are live and the casino is open. **Tap a button below to start right now** — " +
+                "claim your daily credits, or take the tour. No typing needed.\n\n" +
+                "Prefer commands? Here's how to get going:\n" +
                 "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
                 "• `/play <song>` — queue music in a voice channel\n" +
@@ -179,7 +218,9 @@ object InstallWizard {
     fun finishDoneEmbed(): MessageEmbed = EmbedBuilder()
         .setTitle("Custom setup complete ✅")
         .setDescription(
-            "Your settings are saved. Time to play:\n\n" +
+            "Your settings are saved. **Tap a button below to start right now** — claim your daily " +
+                "credits, or take the tour. No typing needed.\n\n" +
+                "Prefer commands? Time to play:\n" +
                 "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
                 "• `/play <song>` — queue music in a voice channel\n" +
@@ -201,6 +242,18 @@ object InstallWizard {
 
     fun finishButtonRow(): ActionRow = ActionRow.of(
         Button.success(BTN_FINISH, "Finish"),
+    )
+
+    /**
+     * One-click launcher row left on the post-install "done" message so the
+     * owner's (or any member's) very first action is a tap, not a typed
+     * slash command: claim daily credits, or open the full feature tour.
+     * Both buttons are non-owner-gated — the welcome message doubles as a
+     * shared launcher for everyone in the channel.
+     */
+    fun launcherRow(): ActionRow = ActionRow.of(
+        Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
+        Button.secondary(BTN_HELP, "✨ What can I do?"),
     )
 
     fun backButtonRow(): ActionRow = ActionRow.of(

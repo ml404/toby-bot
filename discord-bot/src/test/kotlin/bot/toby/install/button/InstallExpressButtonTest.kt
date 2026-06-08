@@ -1,15 +1,11 @@
 package bot.toby.install.button
 
-import bot.toby.install.InstallWizard
+import bot.toby.install.InstallCompletionService
 import core.button.ButtonContext
-import database.dto.guild.ConfigDto
-import database.dto.guild.ConfigDto.Configurations
-import database.service.guild.ConfigService
 import io.mockk.Runs
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.entities.Guild
@@ -20,13 +16,12 @@ import net.dv8tion.jda.api.events.interaction.component.ButtonInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageEditAction
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 internal class InstallExpressButtonTest {
 
-    private lateinit var configService: ConfigService
+    private lateinit var installCompletionService: InstallCompletionService
     private lateinit var button: InstallExpressButton
     private lateinit var ctx: ButtonContext
     private lateinit var event: ButtonInteractionEvent
@@ -37,8 +32,8 @@ internal class InstallExpressButtonTest {
 
     @BeforeEach
     fun setUp() {
-        configService = mockk(relaxed = true)
-        button = InstallExpressButton(configService)
+        installCompletionService = mockk(relaxed = true)
+        button = InstallExpressButton(installCompletionService)
 
         hook = mockk(relaxed = true)
         member = mockk(relaxed = true) { every { isOwner } returns true }
@@ -71,42 +66,26 @@ internal class InstallExpressButtonTest {
     }
 
     @Test
-    fun `non-owner is rejected ephemerally with no DB writes or edits`() {
+    fun `non-owner is rejected ephemerally with no completion or edits`() {
         every { member.isOwner } returns false
 
         button.handle(ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { event.reply(any<String>()) }
-        verify(exactly = 0) { configService.upsertAll(any(), any()) }
-        verify(exactly = 0) {
-            configService.upsertConfig(any<String>(), any<String>(), any<String>())
-        }
+        verify(exactly = 0) { installCompletionService.complete(any(), any(), any()) }
         verify(exactly = 0) { hook.editOriginalEmbeds(any<MessageEmbed>()) }
         verify(exactly = 0) { event.deferEdit() }
     }
 
     @Test
-    fun `owner happy path writes INSTALL_MODE express and INSTALLED_AT epoch via batch upsert`() {
-        // The sentinel writes flow through InstallSentinel.writeIfFresh,
-        // which now uses upsertAll for transactional cohesion (one commit
-        // instead of two).
-        val rowsSlot = slot<List<Pair<String, String>>>()
-        every { configService.upsertAll("g1", capture(rowsSlot)) } returns emptyList()
-
-        val before = System.currentTimeMillis()
+    fun `owner happy path delegates completion in express mode`() {
         button.handle(ctx, mockk(relaxed = true), 0)
-        val after = System.currentTimeMillis()
 
-        verify(exactly = 1) { configService.upsertAll("g1", any()) }
-        val rows = rowsSlot.captured
-        assertTrue(rows.size == 2)
-        assertTrue(rows[0] == Configurations.INSTALL_MODE.configValue to "express")
-        assertTrue(rows[1].first == Configurations.INSTALLED_AT.configValue)
-        assertTrue(rows[1].second.toLong() in before..after, "INSTALLED_AT epoch should be ~now")
+        verify(exactly = 1) { installCompletionService.complete(guild, "express", any()) }
     }
 
     @Test
-    fun `owner happy path defers edit then shows done embed with stripped components`() {
+    fun `owner happy path defers edit then shows done embed with launcher components`() {
         button.handle(ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { event.deferEdit() }

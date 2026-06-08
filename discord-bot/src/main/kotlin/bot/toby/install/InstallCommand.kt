@@ -24,7 +24,7 @@ class InstallCommand : ModerationCommand {
             event.reply("This command can only be used in a server.").setEphemeral(true).queue()
             return
         }
-        event.replyEmbeds(InstallWizard.welcomeEmbed(guild.name))
+        event.replyEmbeds(InstallWizard.welcomeEmbed(guild.name, event.jda.guildCache.size().toInt()))
             .addComponents(InstallWizard.wizardButtons())
             .queue()
     }
