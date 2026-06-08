@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Make toby-bot's value land in the first 30 seconds for new installers",
+    "summary": "Closes the gap between *\"setup done\"* and *\"value felt\"* in onboarding. The install wizard already tells new owners to go type `/blackjack`; these four changes make the bot **demonstrate** its value instead, in the first few seconds after install. Each feature is an isolated commit.",
+    "emoji": "✨",
+    "prNumber": 680
+  },
+  {
+    "date": "June 2026",
     "title": "Build and edit playlists in the web UI without playing",
     "summary": "Lets you **build and edit playlists entirely from the web UI without playing anything**. Before this, the only way to fill a playlist was to snapshot the live queue — so curating meant playing the tracks first. This decouples curation from playback end-to-end.",
     "emoji": "✨",
