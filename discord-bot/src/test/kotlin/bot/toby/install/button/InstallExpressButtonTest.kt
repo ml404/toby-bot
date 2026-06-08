@@ -56,7 +56,7 @@ internal class InstallExpressButtonTest {
         @Suppress("UNCHECKED_CAST")
         editAction = mockk<WebhookMessageEditAction<Message>>(relaxed = true)
         every { hook.editOriginalEmbeds(any<MessageEmbed>()) } returns editAction
-        every { editAction.setComponents(*anyVararg<MessageTopLevelComponent>()) } returns editAction
+        every { editAction.setComponents(any<Collection<MessageTopLevelComponent>>()) } returns editAction
         every { editAction.queue() } just Runs
     }
 
@@ -91,7 +91,7 @@ internal class InstallExpressButtonTest {
         verify(exactly = 1) { event.deferEdit() }
         verify(exactly = 1) { hook.editOriginalEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) {
-            editAction.setComponents(*anyVararg<MessageTopLevelComponent>())
+            editAction.setComponents(any<Collection<MessageTopLevelComponent>>())
         }
         verify(exactly = 1) { editAction.queue() }
     }

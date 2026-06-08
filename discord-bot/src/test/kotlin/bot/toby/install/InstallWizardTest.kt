@@ -36,31 +36,44 @@ internal class InstallWizardTest {
     }
 
     @Test
-    fun `launcherRow has the quick-flip, claim-daily, help and view-setup buttons`() {
-        val buttons = InstallWizard.launcherRow().components.filterIsInstance<Button>()
-        assertEquals(4, buttons.size)
-        assertEquals(InstallWizard.BTN_QUICK_FLIP, buttons[0].customId)
-        assertEquals(InstallWizard.BTN_CLAIM_DAILY, buttons[1].customId)
-        assertEquals(ButtonStyle.SUCCESS, buttons[1].style)
-        assertEquals(InstallWizard.BTN_HELP, buttons[2].customId)
-        assertEquals(InstallWizard.BTN_VIEW_SETUP, buttons[3].customId)
+    fun `launcherRows row one has the four action buttons`() {
+        val actions = InstallWizard.launcherRows()[0].components.filterIsInstance<Button>()
+        assertEquals(4, actions.size)
+        assertEquals(InstallWizard.BTN_QUICK_FLIP, actions[0].customId)
+        assertEquals(InstallWizard.BTN_CLAIM_DAILY, actions[1].customId)
+        assertEquals(ButtonStyle.SUCCESS, actions[1].style)
+        assertEquals(InstallWizard.BTN_HELP, actions[2].customId)
+        assertEquals(InstallWizard.BTN_VIEW_SETUP, actions[3].customId)
     }
 
     @Test
-    fun `launcherRow appends a profile deep-link button when a base url is configured`() {
-        val buttons = InstallWizard.launcherRow("g123", "https://toby-bot.co.uk")
-            .components.filterIsInstance<Button>()
-        assertEquals(5, buttons.size)
-        // Link buttons carry a url (and no componentId), pointing at the same
-        // /profile/{guildId} page the achievement web-push deep-links to.
-        assertEquals("https://toby-bot.co.uk/profile/g123", buttons[4].url)
+    fun `launcherRows has no link row when nothing links`() {
+        assertEquals(1, InstallWizard.launcherRows().size)
+        assertEquals(1, InstallWizard.launcherRows("g1", "", "").size)
     }
 
     @Test
-    fun `launcherRow omits the deep-link when the base url is unset`() {
-        assertEquals(4, InstallWizard.launcherRow("g123", "").components.filterIsInstance<Button>().size)
-        assertEquals(4, InstallWizard.launcherRow("g123", null).components.filterIsInstance<Button>().size)
-        assertEquals(4, InstallWizard.launcherRow(null, "https://x").components.filterIsInstance<Button>().size)
+    fun `launcherRows adds a link row with profile then invite buttons`() {
+        val rows = InstallWizard.launcherRows("g123", "https://toby-bot.co.uk", "https://discord/invite-x")
+        assertEquals(2, rows.size)
+        val links = rows[1].components.filterIsInstance<Button>()
+        assertEquals(2, links.size)
+        assertEquals("https://toby-bot.co.uk/profile/g123", links[0].url)
+        assertEquals("https://discord/invite-x", links[1].url)
+    }
+
+    @Test
+    fun `launcherRows includes only the invite link when web base url is unset`() {
+        val rows = InstallWizard.launcherRows(guildId = "g1", webBaseUrl = "", inviteUrl = "https://inv")
+        assertEquals(2, rows.size)
+        val links = rows[1].components.filterIsInstance<Button>()
+        assertEquals(1, links.size)
+        assertEquals("https://inv", links[0].url)
+    }
+
+    @Test
+    fun `inviteUrl embeds the client id`() {
+        assertTrue(InstallWizard.inviteUrl("12345").contains("client_id=12345"))
     }
 
     @Test

@@ -132,6 +132,7 @@ class AchievementCatalogTest {
             "baccarat_first_win",
             "casino_holdem_first_win",
             "highlow_first_streak",
+            "casino_first_game",
             // Unlocked directly by InstallCompletionService when the owner
             // finishes the install wizard — wired, just not via the
             // AchievementEventHandler event path.

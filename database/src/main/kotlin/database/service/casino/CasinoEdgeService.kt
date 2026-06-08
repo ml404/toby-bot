@@ -1,5 +1,6 @@
 package database.service.casino
 
+import common.events.casino.CasinoGamePlayedEvent
 import common.events.moderation.AntiAutoclickEvent
 import database.dto.guild.ConfigDto
 import org.springframework.context.ApplicationEventPublisher
@@ -67,6 +68,9 @@ class CasinoEdgeService(
         val streak = botSuspicionService.recordAndScore(
             discordId, guildId, gameKey, clickX, clickY, mouseMoved
         )
+        // Fired once per play (win or lose) for every luck game that routes
+        // through here — drives the one-shot `casino_first_game` achievement.
+        eventPublisher.publishEvent(CasinoGamePlayedEvent(discordId, guildId))
         val maxEdgePct = configService.cfgLong(
             edgeMaxConfig, guildId, default = DEFAULT_EDGE_MAX_PCT, min = 0L
         ).coerceAtMost(HARD_EDGE_MAX_PCT)
