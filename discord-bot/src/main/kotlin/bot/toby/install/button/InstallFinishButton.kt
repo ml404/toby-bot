@@ -5,6 +5,7 @@ import bot.toby.install.InstallCompletionService
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
 import database.dto.user.UserDto
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
 /**
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component
 @Component
 class InstallFinishButton(
     private val installCompletionService: InstallCompletionService,
+    @param:Value($$"${app.base-url:}") private val webBaseUrl: String = "",
 ) : OwnerOnlyInstallButton() {
 
     override val name: String = InstallWizard.BTN_FINISH
@@ -29,7 +31,7 @@ class InstallFinishButton(
         event.deferEdit().queue()
         installCompletionService.complete(ctx.guild, mode = "custom", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.finishDoneEmbed())
-            .setComponents(InstallWizard.launcherRow())
+            .setComponents(InstallWizard.launcherRow(ctx.guild.id, webBaseUrl))
             .queue()
     }
 }

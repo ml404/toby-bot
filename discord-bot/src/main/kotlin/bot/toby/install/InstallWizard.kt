@@ -258,12 +258,25 @@ object InstallWizard {
      * slash command: play a real coinflip, claim daily credits, or open the
      * full feature tour. Every button is non-owner-gated — the message
      * doubles as a shared launcher for everyone in the channel.
+     *
+     * When [webBaseUrl] is configured (and [guildId] known) a deep-link
+     * button to the web dashboard's guild profile is appended — the same
+     * `"$webBaseUrl/profile/$guildId"` page the achievement web-push points
+     * at, so the owner can see the "Welcome Aboard" badge they just earned.
+     * The link is omitted when the base URL is unset (self-hosters without a
+     * public dashboard), exactly as the push deep links degrade.
      */
-    fun launcherRow(): ActionRow = ActionRow.of(
-        Button.primary(BTN_QUICK_FLIP, "🪙 Flip a coin"),
-        Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
-        Button.secondary(BTN_HELP, "✨ What can I do?"),
-    )
+    fun launcherRow(guildId: String? = null, webBaseUrl: String? = null): ActionRow {
+        val buttons = mutableListOf(
+            Button.primary(BTN_QUICK_FLIP, "🪙 Flip a coin"),
+            Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
+            Button.secondary(BTN_HELP, "✨ What can I do?"),
+        )
+        if (!webBaseUrl.isNullOrBlank() && !guildId.isNullOrBlank()) {
+            buttons += Button.link("$webBaseUrl/profile/$guildId", "🌐 View your profile")
+        }
+        return ActionRow.of(buttons)
+    }
 
     fun backButtonRow(): ActionRow = ActionRow.of(
         Button.secondary(BTN_BACK, "← Back"),

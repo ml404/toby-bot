@@ -46,6 +46,23 @@ internal class InstallWizardTest {
     }
 
     @Test
+    fun `launcherRow appends a profile deep-link button when a base url is configured`() {
+        val buttons = InstallWizard.launcherRow("g123", "https://toby-bot.co.uk")
+            .components.filterIsInstance<Button>()
+        assertEquals(4, buttons.size)
+        // Link buttons carry a url (and no componentId), pointing at the same
+        // /profile/{guildId} page the achievement web-push deep-links to.
+        assertEquals("https://toby-bot.co.uk/profile/g123", buttons[3].url)
+    }
+
+    @Test
+    fun `launcherRow omits the deep-link when the base url is unset`() {
+        assertEquals(3, InstallWizard.launcherRow("g123", "").components.filterIsInstance<Button>().size)
+        assertEquals(3, InstallWizard.launcherRow("g123", null).components.filterIsInstance<Button>().size)
+        assertEquals(3, InstallWizard.launcherRow(null, "https://x").components.filterIsInstance<Button>().size)
+    }
+
+    @Test
     fun `backButtonRow contains the back button only`() {
         val buttons = InstallWizard.backButtonRow().components.filterIsInstance<Button>()
         assertEquals(1, buttons.size)
