@@ -7,6 +7,8 @@ import core.button.Button
 import core.button.ButtonContext
 import database.dto.user.UserDto
 import database.service.casino.coinflip.CoinflipService
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button as JdaButton
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
@@ -40,6 +42,15 @@ class InstallQuickFlipButton @Autowired constructor(
             stake = Coinflip.MIN_STAKE,
             predicted = Coinflip.Side.HEADS,
         )
-        ctx.event.hook.sendMessageEmbeds(CoinflipEmbeds.outcome(outcome)).queue()
+        val reply = ctx.event.hook.sendMessageEmbeds(CoinflipEmbeds.outcome(outcome))
+        // Close the dead-end: a broke new member gets a one-tap way to top up
+        // right on the "not enough credits" result instead of hunting for
+        // /daily. Routes to the same InstallClaimDailyButton as the launcher.
+        if (outcome is CoinflipService.FlipOutcome.InsufficientCredits) {
+            reply.addComponents(
+                ActionRow.of(JdaButton.success(InstallWizard.BTN_CLAIM_DAILY, "🎁 Claim daily credits")),
+            )
+        }
+        reply.queue()
     }
 }
