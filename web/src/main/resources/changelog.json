@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Player-side onboarding: first-game achievement, empty-state recovery, invite loop",
+    "summary": "Follow-up to #680/#681/#682. Those rewarded the **owner** at install; this turns attention to the **players** the owner is trying to keep, and closes the last onboarding dead-ends. Three isolated commits (disjoint files).",
+    "emoji": "✨",
+    "prNumber": 683
+  },
+  {
+    "date": "June 2026",
     "title": "Add /install summary + a View setup control-panel button",
     "summary": "Follow-up to #680/#681. Gives server owners a way to **audit their current setup and see what's still worth turning on** — without re-running the wizard.",
     "emoji": "✨",
