@@ -35,5 +35,6 @@ class InstallExpressButton(
         event.hook.editOriginalEmbeds(InstallWizard.expressDoneEmbed())
             .setComponents(InstallWizard.launcherRow(ctx.guild.id, webBaseUrl))
             .queue()
+        pinAsControlPanel(event.message)
     }
 }

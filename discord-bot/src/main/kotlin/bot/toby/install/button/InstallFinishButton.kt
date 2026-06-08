@@ -33,5 +33,6 @@ class InstallFinishButton(
         event.hook.editOriginalEmbeds(InstallWizard.finishDoneEmbed())
             .setComponents(InstallWizard.launcherRow(ctx.guild.id, webBaseUrl))
             .queue()
+        pinAsControlPanel(event.message)
     }
 }

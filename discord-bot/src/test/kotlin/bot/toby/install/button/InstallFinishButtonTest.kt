@@ -56,4 +56,20 @@ internal class InstallFinishButtonTest {
         }
         verify(exactly = 1) { fx.editAction.queue() }
     }
+
+    @Test
+    fun `owner happy path pins the done message as a control panel`() {
+        button.handle(fx.ctx, mockk(relaxed = true), 0)
+
+        verify(exactly = 1) { fx.message.pin() }
+    }
+
+    @Test
+    fun `non-owner does not pin`() {
+        fx.asNonOwner()
+
+        button.handle(fx.ctx, mockk(relaxed = true), 0)
+
+        verify(exactly = 0) { fx.message.pin() }
+    }
 }
