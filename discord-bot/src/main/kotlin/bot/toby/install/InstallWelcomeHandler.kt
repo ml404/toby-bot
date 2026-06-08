@@ -63,7 +63,8 @@ class InstallWelcomeHandler(
         // presence here means this is a returning server whose config survived
         // — greet them with the welcome-back variant instead of a fresh pitch.
         val returning = !configService.getConfigByName(Configurations.INSTALLED_AT.configValue, guild.id)?.value.isNullOrBlank()
-        val welcomeEmbed = if (returning) InstallWizard.welcomeBackEmbed(guild.name) else InstallWizard.welcomeEmbed(guild.name)
+        val welcomeEmbed = if (returning) InstallWizard.welcomeBackEmbed(guild.name)
+            else InstallWizard.welcomeEmbed(guild.name, guild.jda.guildCache.size().toInt())
         val channel = pickWelcomeChannel(guild)
         if (channel != null) {
             channel.sendMessageEmbeds(welcomeEmbed)

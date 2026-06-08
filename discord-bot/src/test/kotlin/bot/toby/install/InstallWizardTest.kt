@@ -189,6 +189,28 @@ internal class InstallWizardTest {
     }
 
     @Test
+    fun `socialProofLine is empty below the floor or when unknown`() {
+        assertEquals("", InstallWizard.socialProofLine(null))
+        assertEquals("", InstallWizard.socialProofLine(0))
+        assertEquals("", InstallWizard.socialProofLine(InstallWizard.MIN_SERVERS_FOR_SOCIAL_PROOF - 1))
+    }
+
+    @Test
+    fun `socialProofLine floors the count to the nearest ten and never overstates`() {
+        // 47 → "40+" (always rounded down so the shown number is <= the real one).
+        val line = InstallWizard.socialProofLine(47)
+        assertTrue(line.contains("40+"), "expected floored '40+' but was: $line")
+        assertEquals(false, line.contains("47"))
+        assertEquals(false, line.contains("50+"))
+    }
+
+    @Test
+    fun `welcome embed omits social proof when count is unknown but includes it when flattering`() {
+        assertEquals(false, InstallWizard.welcomeEmbed("G").description!!.contains("trusted by", ignoreCase = true))
+        assertTrue(InstallWizard.welcomeEmbed("G", 130).description!!.contains("130+"))
+    }
+
+    @Test
     fun `welcomeBack embed names the guild and reassures settings are kept`() {
         val embed = InstallWizard.welcomeBackEmbed("MyServer")
         assertTrue(embed.title!!.contains("Welcome back"))

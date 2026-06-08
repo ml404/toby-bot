@@ -58,9 +58,37 @@ object InstallWizard {
 
     fun sectionDetailMenuId(sectionId: String): String = "$MENU_SECTION_DETAIL_PREFIX:$sectionId"
 
+    /**
+     * Floor below which the "trusted by N servers" social-proof line is
+     * suppressed — a tiny number reads as a liability, not a credential, so
+     * fresh / self-hosted deployments simply omit the line until it's
+     * flattering.
+     */
+    const val MIN_SERVERS_FOR_SOCIAL_PROOF = 25
+
+    /**
+     * Honest, never-overstated social-proof line for the welcome pitch:
+     * floors the live guild count down to the nearest 10 and renders it as
+     * "N+", so the number shown is always ≤ the real one. Returns an empty
+     * string (no line) when [serverCount] is null/unknown or below
+     * [MIN_SERVERS_FOR_SOCIAL_PROOF].
+     */
+    fun socialProofLine(serverCount: Int?): String {
+        if (serverCount == null || serverCount < MIN_SERVERS_FOR_SOCIAL_PROOF) return ""
+        val rounded = (serverCount / 10) * 10
+        return "🏆 Already trusted by **$rounded+** Discord servers.\n"
+    }
+
     // ---- embed factories ----
 
-    fun welcomeEmbed(guildName: String): MessageEmbed = EmbedBuilder()
+    /**
+     * The guild-join / `/install` welcome pitch. [serverCount] (the bot's
+     * live guild count) is threaded through only to render the optional
+     * social-proof line via [socialProofLine] — pass null to omit it (e.g.
+     * when the count is unknown or unflattering). Defaulting to null keeps
+     * every existing caller and test source-compatible.
+     */
+    fun welcomeEmbed(guildName: String, serverCount: Int? = null): MessageEmbed = EmbedBuilder()
         .setTitle("Thanks for adding me to $guildName! 🎉")
         .setDescription(
             "I'm **toby-bot** — here's what I bring to the table:\n\n" +
@@ -69,6 +97,7 @@ object InstallWizard {
                 "🎵 **Music** — queue and play audio right in your voice channels\n" +
                 "📈 **Leveling** — optional XP, leaderboards & activity rewards\n" +
                 "🎟️ **Daily lottery** — an optional server-wide draw\n\n" +
+                socialProofLine(serverCount) +
                 "**Let's get you set up — pick a path below:**\n" +
                 "**▸ Express setup** — one click, sensible defaults, start playing right away. Express keeps " +
                 "**Activity tracking OFF**, the **Daily lottery OFF**, and uses conservative casino stakes — " +
