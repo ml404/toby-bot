@@ -5,6 +5,7 @@ import bot.configuration.*
 import bot.toby.button.buttons.*
 import bot.toby.helpers.*
 import bot.toby.install.button.InstallBackButton
+import bot.toby.install.button.InstallClaimDailyButton
 import bot.toby.install.button.InstallCustomButton
 import bot.toby.install.button.InstallExpressButton
 import bot.toby.install.button.InstallFeaturesButton
@@ -127,6 +128,7 @@ class ButtonManagerTest {
             InstallFeaturesButton::class.java,
             InstallToggleButton::class.java,
             InstallHelpButton::class.java,
+            InstallClaimDailyButton::class.java,
         )
 
         assertTrue(availableButtons.containsAll(buttonManager.buttons.map { it.javaClass }.toList()))

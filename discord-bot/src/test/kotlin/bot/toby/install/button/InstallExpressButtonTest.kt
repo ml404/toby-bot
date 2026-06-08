@@ -85,7 +85,7 @@ internal class InstallExpressButtonTest {
     }
 
     @Test
-    fun `owner happy path defers edit then shows done embed with stripped components`() {
+    fun `owner happy path defers edit then shows done embed with launcher components`() {
         button.handle(ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { event.deferEdit() }

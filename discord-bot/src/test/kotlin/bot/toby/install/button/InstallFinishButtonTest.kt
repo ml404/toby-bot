@@ -46,7 +46,7 @@ internal class InstallFinishButtonTest {
     }
 
     @Test
-    fun `owner happy path defers edit then shows finish-done embed with stripped components`() {
+    fun `owner happy path defers edit then shows finish-done embed with launcher components`() {
         button.handle(fx.ctx, mockk(relaxed = true), 0)
 
         verify(exactly = 1) { fx.event.deferEdit() }

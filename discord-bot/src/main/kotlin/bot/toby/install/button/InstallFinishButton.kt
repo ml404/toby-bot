@@ -29,7 +29,7 @@ class InstallFinishButton(
         event.deferEdit().queue()
         installCompletionService.complete(ctx.guild, mode = "custom", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.finishDoneEmbed())
-            .setComponents()
+            .setComponents(InstallWizard.launcherRow())
             .queue()
     }
 }

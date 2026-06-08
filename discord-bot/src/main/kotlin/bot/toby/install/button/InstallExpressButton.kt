@@ -31,7 +31,7 @@ class InstallExpressButton(
         event.deferEdit().queue()
         installCompletionService.complete(ctx.guild, mode = "express", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.expressDoneEmbed())
-            .setComponents()
+            .setComponents(InstallWizard.launcherRow())
             .queue()
     }
 }

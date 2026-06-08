@@ -44,6 +44,14 @@ object InstallWizard {
      * Skip buttons stay gated.
      */
     const val BTN_HELP = "install_help"
+
+    /**
+     * Public (non-owner) launcher on the post-install "done" message —
+     * anyone can click it to claim their daily reward in one tap, no
+     * command typing. Handled by
+     * [bot.toby.install.button.InstallClaimDailyButton].
+     */
+    const val BTN_CLAIM_DAILY = "install_claim_daily"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -157,7 +165,9 @@ object InstallWizard {
     fun expressDoneEmbed(): MessageEmbed = EmbedBuilder()
         .setTitle("You're all set! 🎉")
         .setDescription(
-            "Defaults are live and the casino is open. Here's how to get going:\n\n" +
+            "Defaults are live and the casino is open. **Tap a button below to start right now** — " +
+                "claim your daily credits, or take the tour. No typing needed.\n\n" +
+                "Prefer commands? Here's how to get going:\n" +
                 "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
                 "• `/play <song>` — queue music in a voice channel\n" +
@@ -208,7 +218,9 @@ object InstallWizard {
     fun finishDoneEmbed(): MessageEmbed = EmbedBuilder()
         .setTitle("Custom setup complete ✅")
         .setDescription(
-            "Your settings are saved. Time to play:\n\n" +
+            "Your settings are saved. **Tap a button below to start right now** — claim your daily " +
+                "credits, or take the tour. No typing needed.\n\n" +
+                "Prefer commands? Time to play:\n" +
                 "• `/daily` — claim free credits to play with (new players start with some already)\n" +
                 "• `/blackjack` or `/roulette` — deal a quick game\n" +
                 "• `/play <song>` — queue music in a voice channel\n" +
@@ -230,6 +242,18 @@ object InstallWizard {
 
     fun finishButtonRow(): ActionRow = ActionRow.of(
         Button.success(BTN_FINISH, "Finish"),
+    )
+
+    /**
+     * One-click launcher row left on the post-install "done" message so the
+     * owner's (or any member's) very first action is a tap, not a typed
+     * slash command: claim daily credits, or open the full feature tour.
+     * Both buttons are non-owner-gated — the welcome message doubles as a
+     * shared launcher for everyone in the channel.
+     */
+    fun launcherRow(): ActionRow = ActionRow.of(
+        Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
+        Button.secondary(BTN_HELP, "✨ What can I do?"),
     )
 
     fun backButtonRow(): ActionRow = ActionRow.of(
