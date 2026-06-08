@@ -28,7 +28,7 @@ class AchievementCatalogTest {
 
     @Test
     fun `every catalog entry uses a known category`() {
-        val known = setOf("streak", "level", "casino", "social", "music", "voice", "consolation")
+        val known = setOf("streak", "level", "casino", "social", "music", "voice", "consolation", "milestone")
         val unknown = AchievementCatalog.all.filterNot { it.category in known }
         assertTrue(unknown.isEmpty(), "achievements with unknown category: ${unknown.map { it.code to it.category }}")
     }
@@ -132,6 +132,10 @@ class AchievementCatalogTest {
             "baccarat_first_win",
             "casino_holdem_first_win",
             "highlow_first_streak",
+            // Unlocked directly by InstallCompletionService when the owner
+            // finishes the install wizard — wired, just not via the
+            // AchievementEventHandler event path.
+            "install_complete",
         )
         val visible = AchievementCatalog.all.filterNot { it.hidden }.map { it.code }.toSet()
         val orphaned = visible - wired

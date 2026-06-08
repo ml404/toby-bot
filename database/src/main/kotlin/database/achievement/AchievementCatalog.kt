@@ -42,6 +42,18 @@ object AchievementCatalog {
      * the moment the relevant trigger calls `progress(...)`/`unlock(...)`.
      */
     val all: List<AchievementSpec> = listOf(
+        // Milestone — fired once when the server owner completes the install
+        // wizard (InstallCompletionService). Visible from day one so a fresh
+        // server has something on the board immediately.
+        AchievementSpec(
+            code = "install_complete",
+            name = "Welcome Aboard",
+            description = "Finish setting up toby-bot in your server.",
+            category = "milestone",
+            icon = "🎉",
+            xpReward = 100,
+            creditReward = 500,
+        ),
         // Streak achievements — fired by AchievementEventHandler on StreakClaimedEvent.
         AchievementSpec(
             code = "streak_first",

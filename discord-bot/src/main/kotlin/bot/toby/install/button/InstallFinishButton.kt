@@ -1,11 +1,10 @@
 package bot.toby.install.button
 
 import bot.toby.install.InstallAuth
-import bot.toby.install.InstallSentinel
+import bot.toby.install.InstallCompletionService
 import bot.toby.install.InstallWizard
 import core.button.ButtonContext
 import database.dto.user.UserDto
-import database.service.guild.ConfigService
 import org.springframework.stereotype.Component
 
 /**
@@ -18,7 +17,7 @@ import org.springframework.stereotype.Component
  */
 @Component
 class InstallFinishButton(
-    private val configService: ConfigService,
+    private val installCompletionService: InstallCompletionService,
 ) : OwnerOnlyInstallButton() {
 
     override val name: String = InstallWizard.BTN_FINISH
@@ -28,7 +27,7 @@ class InstallFinishButton(
     override fun handleAsOwner(ctx: ButtonContext, requestingUserDto: UserDto, deleteDelay: Int) {
         val event = ctx.event
         event.deferEdit().queue()
-        InstallSentinel.writeIfFresh(configService, ctx.guild.id, mode = "custom")
+        installCompletionService.complete(ctx.guild, mode = "custom", channelId = event.channel.idLong)
         event.hook.editOriginalEmbeds(InstallWizard.finishDoneEmbed())
             .setComponents()
             .queue()
