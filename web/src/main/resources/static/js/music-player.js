@@ -45,10 +45,19 @@
         playlistsEmpty: $('playlists-empty'),
         savePlaylistForm: $('save-playlist-form'),
         savePlaylistName: $('save-playlist-name'),
+        saveQueueBtn: $('save-queue-btn'),
         voiceChannelName: $('voice-channel-name'),
         voiceChannelEmpty: $('voice-channel-empty'),
         voiceMemberList: $('voice-member-list'),
     };
+
+    // Current user — lets us show edit affordances only on playlists they own.
+    const myDiscordId = body.dataset.discordId || '';
+    // Cache of the last-rendered playlist summaries + which one is expanded in
+    // the inline editor, so SSE-less refreshes (save / delete / visibility)
+    // can re-open the same editor without the user losing their place.
+    let playlistsCache = [];
+    let expandedPlaylistId = null;
 
     let lastPaused = false;
     let lastDurationMs = 0;
@@ -375,69 +384,221 @@
         previewController.clearIfRemoved(tracks.map((t) => t.uri || t.identifier));
     }
 
+    // Small DOM helper to keep the playlist-editor builders readable.
+    function makeEl(tag, className, text) {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (text != null) el.textContent = text;
+        return el;
+    }
+
+    function ownsPlaylist(pl) {
+        return myDiscordId !== '' && String(pl.ownerDiscordId) === myDiscordId;
+    }
+
+    function trackCountLabel(n) {
+        return n + ' track' + (n === 1 ? '' : 's');
+    }
+
     function renderPlaylists(playlists) {
+        playlistsCache = playlists || [];
         els.playlistList.innerHTML = '';
-        if (!playlists || playlists.length === 0) {
+        if (playlistsCache.length === 0) {
             els.playlistsEmpty.hidden = false;
             return;
         }
         els.playlistsEmpty.hidden = true;
-        playlists.forEach((pl) => {
-            const li = document.createElement('li');
-            li.className = 'playlist-item';
+        playlistsCache.forEach((pl) => {
+            const li = makeEl('li', 'playlist-item');
+            li.dataset.playlistId = String(pl.id);
+            const owned = ownsPlaylist(pl);
 
-            const meta = document.createElement('div');
-            meta.className = 'playlist-meta';
-            const name = document.createElement('div');
-            name.className = 'playlist-name';
-            name.textContent = pl.name;
-            const count = document.createElement('div');
-            count.className = 'playlist-count muted';
-            count.textContent = pl.trackCount + ' track' + (pl.trackCount === 1 ? '' : 's');
-            meta.appendChild(name);
-            meta.appendChild(count);
-            li.appendChild(meta);
+            // Header row: expand toggle (name + count) then Load / Delete.
+            const row = makeEl('div', 'playlist-row');
 
-            const actions = document.createElement('div');
-            actions.className = 'playlist-actions';
-            const loadBtn = document.createElement('button');
+            const toggle = makeEl('button', 'playlist-toggle');
+            toggle.type = 'button';
+            toggle.setAttribute('aria-expanded', 'false');
+            const caret = makeEl('span', 'playlist-caret', '▸');
+            caret.setAttribute('aria-hidden', 'true');
+            const name = makeEl('span', 'playlist-name', pl.name);
+            const count = makeEl('span', 'playlist-count muted', trackCountLabel(pl.trackCount));
+            toggle.appendChild(caret);
+            toggle.appendChild(name);
+            toggle.appendChild(count);
+            row.appendChild(toggle);
+
+            const actions = makeEl('div', 'playlist-actions');
+            const loadBtn = makeEl('button', 'btn-tertiary', '⏵ Load');
             loadBtn.type = 'button';
-            loadBtn.className = 'btn-tertiary';
-            loadBtn.textContent = '⏵ Load';
+            loadBtn.title = 'Add this playlist to the queue';
             loadBtn.addEventListener('click', () => {
-                post('/playlists/' + pl.id + '/load');
+                loadBtn.disabled = true;
+                post('/playlists/' + pl.id + '/load').then((res) => {
+                    loadBtn.disabled = false;
+                    if (res && res.ok) toast(res.message || 'Playlist loaded.', 'success');
+                    else toast((res && res.message) || 'Could not load playlist.', 'error');
+                });
             });
             actions.appendChild(loadBtn);
 
-            const delBtn = document.createElement('button');
-            delBtn.type = 'button';
-            delBtn.className = 'btn-tertiary btn-danger';
-            delBtn.textContent = '🗑 Delete';
-            delBtn.addEventListener('click', async () => {
-                // Shared modal (modal.js) for the confirm; fall back to the
-                // native dialog if it somehow isn't loaded.
-                const ok = window.TobyModal
-                    ? await window.TobyModal.confirm({
-                        title: 'Delete playlist?',
-                        body: '“' + pl.name + '” will be removed permanently.',
-                        confirmLabel: 'Delete',
-                        cancelLabel: 'Cancel',
-                    })
-                    : window.confirm('Delete playlist "' + pl.name + '"?');
-                if (!ok) return;
-                del('/playlists/' + pl.id).then((res) => {
-                    if (res && res.ok === false) {
-                        toast(res.message || 'Could not delete playlist.', 'error');
-                        return;
+            if (owned) {
+                const delBtn = makeEl('button', 'btn-tertiary btn-danger', '🗑');
+                delBtn.type = 'button';
+                delBtn.title = 'Delete playlist';
+                delBtn.setAttribute('aria-label', 'Delete playlist');
+                delBtn.addEventListener('click', () => deletePlaylist(pl));
+                actions.appendChild(delBtn);
+            }
+            row.appendChild(actions);
+            li.appendChild(row);
+
+            const panel = makeEl('div', 'playlist-editor');
+            panel.hidden = true;
+            li.appendChild(panel);
+
+            toggle.addEventListener('click', () => togglePlaylist(pl, toggle, panel));
+
+            els.playlistList.appendChild(li);
+
+            // Re-open the editor that was open before this re-render.
+            if (String(pl.id) === String(expandedPlaylistId)) {
+                openPlaylist(pl, toggle, panel);
+            }
+        });
+    }
+
+    function togglePlaylist(pl, toggle, panel) {
+        if (toggle.getAttribute('aria-expanded') === 'true') {
+            expandedPlaylistId = null;
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.querySelector('.playlist-caret').textContent = '▸';
+            panel.hidden = true;
+        } else {
+            openPlaylist(pl, toggle, panel);
+        }
+    }
+
+    function openPlaylist(pl, toggle, panel) {
+        expandedPlaylistId = pl.id;
+        toggle.setAttribute('aria-expanded', 'true');
+        toggle.querySelector('.playlist-caret').textContent = '▾';
+        panel.hidden = false;
+        panel.innerHTML = '<p class="muted pl-loading">Loading…</p>';
+        getJson('/playlists/' + pl.id)
+            .then((res) => {
+                if (res && res.ok && res.detail) renderPlaylistEditor(panel, res.detail);
+                else panel.innerHTML = '<p class="muted">Could not load this playlist.</p>';
+            })
+            .catch(() => { panel.innerHTML = '<p class="muted">Could not load this playlist.</p>'; });
+    }
+
+    function renderPlaylistEditor(panel, detail) {
+        panel.innerHTML = '';
+
+        if (detail.canEdit) {
+            const renameForm = makeEl('form', 'playlist-rename-form');
+            renameForm.autocomplete = 'off';
+            const renameInput = makeEl('input', 'playlist-rename-input');
+            renameInput.type = 'text';
+            renameInput.maxLength = 80;
+            renameInput.value = detail.name;
+            renameInput.setAttribute('aria-label', 'Playlist name');
+            const renameBtn = makeEl('button', 'btn-tertiary', 'Rename');
+            renameBtn.type = 'submit';
+            renameForm.appendChild(renameInput);
+            renameForm.appendChild(renameBtn);
+            renameForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const newName = renameInput.value.trim();
+                if (!newName || newName === detail.name) return;
+                post('/playlists/' + detail.id + '/rename', { name: newName }).then((res) => {
+                    if (res && res.ok && res.detail) {
+                        toast('Playlist renamed.', 'success');
+                        renderPlaylistEditor(panel, res.detail);
+                        refreshPlaylists();
+                    } else {
+                        toast((res && res.message) || 'Could not rename playlist.', 'error');
                     }
-                    toast('Playlist deleted.', 'success');
-                    refreshPlaylists();
                 });
             });
-            actions.appendChild(delBtn);
+            panel.appendChild(renameForm);
+        }
 
-            li.appendChild(actions);
-            els.playlistList.appendChild(li);
+        if (!detail.items || detail.items.length === 0) {
+            panel.appendChild(makeEl('p', 'muted pl-empty',
+                detail.canEdit
+                    ? 'No tracks yet — find tracks in search and use “＋ Playlist”.'
+                    : 'This playlist is empty.'));
+            return;
+        }
+
+        const list = makeEl('ol', 'pl-track-list');
+        detail.items.forEach((track, i) => {
+            const item = makeEl('li', 'pl-track');
+            item.dataset.index = String(i);
+            if (detail.canEdit) {
+                item.draggable = true;
+                const handle = makeEl('span', 'pl-track-handle', '⋮⋮');
+                handle.setAttribute('aria-hidden', 'true');
+                item.appendChild(handle);
+            }
+            const meta = makeEl('div', 'pl-track-meta');
+            meta.appendChild(makeEl('div', 'pl-track-title', track.title || '(untitled)'));
+            const sub = [track.author || '', track.durationMs ? formatMs(track.durationMs) : '']
+                .filter(Boolean).join(' • ');
+            meta.appendChild(makeEl('div', 'pl-track-sub muted', sub));
+            item.appendChild(meta);
+
+            if (detail.canEdit) {
+                const remove = makeEl('button', 'pl-track-remove', '✕');
+                remove.type = 'button';
+                remove.setAttribute('aria-label', 'Remove track');
+                remove.addEventListener('click', () => {
+                    del('/playlists/' + detail.id + '/items/' + track.id).then((res) => {
+                        if (res && res.ok && res.detail) {
+                            renderPlaylistEditor(panel, res.detail);
+                            refreshPlaylists();
+                        } else {
+                            toast((res && res.message) || 'Could not remove track.', 'error');
+                        }
+                    });
+                });
+                item.appendChild(remove);
+            }
+            list.appendChild(item);
+        });
+        panel.appendChild(list);
+
+        if (detail.canEdit && window.TobyMusicQueue && typeof window.TobyMusicQueue.attach === 'function') {
+            window.TobyMusicQueue.attach(list, (from, to) => {
+                post('/playlists/' + detail.id + '/items/reorder', { from: from, to: to }).then((res) => {
+                    if (res && res.ok && res.detail) renderPlaylistEditor(panel, res.detail);
+                    else toast((res && res.message) || 'Could not reorder.', 'error');
+                });
+            }, 'li.pl-track');
+        }
+    }
+
+    async function deletePlaylist(pl) {
+        // Shared modal (modal.js) for the confirm; fall back to native if absent.
+        const ok = window.TobyModal
+            ? await window.TobyModal.confirm({
+                title: 'Delete playlist?',
+                body: '“' + pl.name + '” will be removed permanently.',
+                confirmLabel: 'Delete',
+                cancelLabel: 'Cancel',
+            })
+            : window.confirm('Delete playlist "' + pl.name + '"?');
+        if (!ok) return;
+        del('/playlists/' + pl.id).then((res) => {
+            if (res && res.ok === false) {
+                toast(res.message || 'Could not delete playlist.', 'error');
+                return;
+            }
+            if (String(pl.id) === String(expandedPlaylistId)) expandedPlaylistId = null;
+            toast('Playlist deleted.', 'success');
+            refreshPlaylists();
         });
     }
 
@@ -549,6 +710,111 @@
         els.searchQueryLabel.textContent = '';
     }
 
+    // ---- Add-to-playlist picker (search results) -----------------------
+    // Curating a playlist never queues or plays the track — it POSTs the
+    // resolved metadata straight to /playlists/{id}/items.
+
+    function closeAllPlaylistMenus(except) {
+        els.searchList.querySelectorAll('.add-to-playlist-menu').forEach((m) => {
+            if (m !== except) m.hidden = true;
+        });
+    }
+    // One document-level listener closes any open picker on an outside click.
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.add-to-playlist')) closeAllPlaylistMenus(null);
+    });
+
+    function addTrackToPlaylist(playlistId, track) {
+        return post('/playlists/' + playlistId + '/items', {
+            identifier: track.uri || track.identifier,
+            title: track.title,
+            author: track.author,
+            durationMs: track.durationMs,
+            sourceName: track.sourceName,
+        }).then((res) => {
+            if (res && res.ok) {
+                toast('Added to playlist.', 'success');
+                refreshPlaylists();
+            } else {
+                toast((res && res.message) || 'Could not add to playlist.', 'error');
+            }
+            return res;
+        });
+    }
+
+    function buildPlaylistMenu(track, menu) {
+        menu.innerHTML = '';
+        const owned = playlistsCache.filter(ownsPlaylist);
+        if (owned.length > 0) {
+            owned.forEach((pl) => {
+                const opt = makeEl('button', 'add-to-playlist-option');
+                opt.type = 'button';
+                opt.appendChild(makeEl('span', 'add-to-playlist-option-name', pl.name));
+                opt.appendChild(makeEl('span', 'add-to-playlist-option-count muted', trackCountLabel(pl.trackCount)));
+                opt.addEventListener('click', () => {
+                    menu.hidden = true;
+                    addTrackToPlaylist(pl.id, track);
+                });
+                menu.appendChild(opt);
+            });
+        } else {
+            menu.appendChild(makeEl('p', 'add-to-playlist-empty muted', 'No playlists yet — name one below.'));
+        }
+
+        // Inline "create + add" so a playlist can be born from a search hit.
+        const newForm = makeEl('form', 'add-to-playlist-new');
+        newForm.autocomplete = 'off';
+        const input = makeEl('input', 'add-to-playlist-new-input');
+        input.type = 'text';
+        input.maxLength = 80;
+        input.placeholder = 'New playlist…';
+        const addBtn = makeEl('button', 'btn-tertiary', '＋ Add');
+        addBtn.type = 'submit';
+        newForm.appendChild(input);
+        newForm.appendChild(addBtn);
+        newForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = input.value.trim();
+            if (!name) return;
+            addBtn.disabled = true;
+            post('/playlists', { name: name, fromQueue: false }).then((res) => {
+                if (res && res.ok && res.id) {
+                    menu.hidden = true;
+                    addTrackToPlaylist(res.id, track);
+                } else {
+                    addBtn.disabled = false;
+                    toast((res && res.message) || 'Could not create playlist.', 'error');
+                }
+            });
+        });
+        menu.appendChild(newForm);
+    }
+
+    function makeAddToPlaylistControl(track) {
+        const wrap = makeEl('div', 'add-to-playlist');
+        const btn = makeEl('button', 'btn-add-playlist', '＋ Playlist');
+        btn.type = 'button';
+        btn.setAttribute('aria-haspopup', 'true');
+        btn.setAttribute('aria-expanded', 'false');
+        btn.title = 'Add to a playlist without playing';
+        const menu = makeEl('div', 'add-to-playlist-menu');
+        menu.hidden = true;
+        btn.addEventListener('click', () => {
+            const opening = menu.hidden;
+            closeAllPlaylistMenus(menu);
+            if (opening) {
+                buildPlaylistMenu(track, menu);
+                menu.hidden = false;
+            } else {
+                menu.hidden = true;
+            }
+            btn.setAttribute('aria-expanded', String(opening));
+        });
+        wrap.appendChild(btn);
+        wrap.appendChild(menu);
+        return wrap;
+    }
+
     function renderSearchResults(query, results) {
         els.searchSection.hidden = false;
         els.searchQueryLabel.textContent = '"' + query + '"';
@@ -578,6 +844,8 @@
 
             const previewBtn = makePreviewBtn(track);
             if (previewBtn) li.appendChild(previewBtn);
+
+            li.appendChild(makeAddToPlaylistControl(track));
 
             const queueBtn = document.createElement('button');
             queueBtn.type = 'button';
@@ -631,20 +899,30 @@
 
     els.searchCloseBtn.addEventListener('click', clearSearchResults);
 
-    els.savePlaylistForm.addEventListener('submit', (e) => {
-        e.preventDefault();
+    // Two ways to create: the form submit (“＋ New”) makes an empty playlist
+    // to curate from search; “💾 Save queue” snapshots the live queue.
+    function createPlaylist(fromQueue) {
         const name = els.savePlaylistName.value.trim();
         if (!name) return;
-        post('/playlists', { name: name }).then((res) => {
+        post('/playlists', { name: name, fromQueue: fromQueue }).then((res) => {
             if (res && res.ok) {
                 els.savePlaylistName.value = '';
+                if (res.id != null) expandedPlaylistId = res.id;
                 refreshPlaylists();
-                toast('Playlist saved.', 'success');
+                toast(fromQueue ? 'Queue saved as playlist.' : 'Playlist created.', 'success');
             } else {
-                toast((res && res.message) || 'Could not save playlist.', 'error');
+                toast((res && res.message) || 'Could not create playlist.', 'error');
             }
         });
+    }
+
+    els.savePlaylistForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        createPlaylist(false);
     });
+    if (els.saveQueueBtn) {
+        els.saveQueueBtn.addEventListener('click', () => createPlaylist(true));
+    }
 
     // ---- SSE -----------------------------------------------------------
 

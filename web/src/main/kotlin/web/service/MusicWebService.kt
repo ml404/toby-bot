@@ -34,6 +34,27 @@ class MusicWebService(
         val trackCount: Int,
     )
 
+    data class PlaylistItemView(
+        val id: Long,
+        val title: String?,
+        val author: String?,
+        val durationMs: Long?,
+        val sourceName: String?,
+        val uri: String?,
+    )
+
+    /** Full playlist contents for the web editor. [canEdit] is true only for
+        the owner — other guild members can view a playlist but not change it. */
+    data class PlaylistDetail(
+        val id: Long,
+        val name: String,
+        val ownerDiscordId: Long,
+        val canEdit: Boolean,
+        val items: List<PlaylistItemView>,
+    )
+
+    data class PlaylistMutation(val ok: Boolean, val detail: PlaylistDetail? = null, val message: String? = null)
+
     fun getGuildName(guildId: Long): String? = jda.getGuildById(guildId)?.name
 
     fun listGuildsForUser(accessToken: String, discordId: Long): List<GuildCardView> {
@@ -122,6 +143,89 @@ class MusicWebService(
         val saved = playlistService.create(guildId, discordId, name, items)
         return saved.id ?: -1L
     }
+
+    /** Create an empty playlist so it can be curated track-by-track without
+        playing anything. Returns the new playlist's id. */
+    fun createEmptyPlaylist(guildId: Long, discordId: Long, name: String): Long =
+        playlistService.createEmpty(guildId, discordId, name).id ?: -1L
+
+    /**
+     * Full contents of a playlist for the editor. Any guild member may view;
+     * `canEdit` flags whether the requester owns it. Returns null when the
+     * playlist is missing or belongs to another guild.
+     */
+    fun getPlaylistDetail(guildId: Long, playlistId: Long, discordId: Long): PlaylistDetail? {
+        val playlist = playlistService.getById(playlistId) ?: return null
+        if (playlist.guildId != guildId) return null
+        return playlist.toDetail(discordId)
+    }
+
+    /** Append a resolved track to a playlist the requester owns. */
+    fun addTrackToPlaylist(
+        guildId: Long,
+        playlistId: Long,
+        discordId: Long,
+        input: PlaylistItemInput,
+    ): PlaylistMutation {
+        ownedPlaylistOrError(guildId, playlistId, discordId)?.let { return it }
+        if (input.identifier.isBlank()) return PlaylistMutation(false, message = "Track is missing an identifier.")
+        val updated = playlistService.addItem(playlistId, input) ?: return notFound()
+        return PlaylistMutation(true, updated.toDetail(discordId))
+    }
+
+    fun removeTrackFromPlaylist(guildId: Long, playlistId: Long, discordId: Long, itemId: Long): PlaylistMutation {
+        ownedPlaylistOrError(guildId, playlistId, discordId)?.let { return it }
+        val updated = playlistService.removeItem(playlistId, itemId)
+            ?: return PlaylistMutation(false, message = "Track not found in playlist.")
+        return PlaylistMutation(true, updated.toDetail(discordId))
+    }
+
+    fun reorderPlaylist(guildId: Long, playlistId: Long, discordId: Long, from: Int, to: Int): PlaylistMutation {
+        ownedPlaylistOrError(guildId, playlistId, discordId)?.let { return it }
+        val updated = playlistService.reorderItems(playlistId, from, to)
+            ?: return PlaylistMutation(false, message = "Invalid track positions.")
+        return PlaylistMutation(true, updated.toDetail(discordId))
+    }
+
+    /** May throw [MusicPlaylistService.PlaylistNameTakenException]. */
+    fun renamePlaylist(guildId: Long, playlistId: Long, discordId: Long, name: String): PlaylistMutation {
+        ownedPlaylistOrError(guildId, playlistId, discordId)?.let { return it }
+        val updated = playlistService.rename(playlistId, name) ?: return notFound()
+        return PlaylistMutation(true, updated.toDetail(discordId))
+    }
+
+    /**
+     * Returns a failure [PlaylistMutation] when the playlist is missing, in a
+     * different guild, or not owned by [discordId]; null when the requester
+     * may edit it.
+     */
+    private fun ownedPlaylistOrError(guildId: Long, playlistId: Long, discordId: Long): PlaylistMutation? {
+        val playlist = playlistService.getById(playlistId) ?: return notFound()
+        if (playlist.guildId != guildId) return notFound()
+        if (playlist.ownerDiscordId != discordId) {
+            return PlaylistMutation(false, message = "Only the owner can edit this playlist.")
+        }
+        return null
+    }
+
+    private fun notFound() = PlaylistMutation(false, message = "Playlist not found.")
+
+    private fun database.dto.music.MusicPlaylistDto.toDetail(viewerDiscordId: Long) = PlaylistDetail(
+        id = id ?: -1L,
+        name = name,
+        ownerDiscordId = ownerDiscordId,
+        canEdit = ownerDiscordId == viewerDiscordId,
+        items = items.sortedBy { it.position }.map {
+            PlaylistItemView(
+                id = it.id ?: -1L,
+                title = it.title,
+                author = it.author,
+                durationMs = it.durationMs,
+                sourceName = it.sourceName,
+                uri = it.identifier,
+            )
+        },
+    )
 
     /**
      * Re-load each track in the saved playlist via the gateway. Errors on
