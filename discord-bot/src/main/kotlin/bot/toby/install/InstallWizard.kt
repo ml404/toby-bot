@@ -60,6 +60,14 @@ object InstallWizard {
      * Handled by [bot.toby.install.button.InstallQuickFlipButton].
      */
     const val BTN_QUICK_FLIP = "install_quick_flip"
+
+    /**
+     * Owner-only launcher button on the post-install "done" message — opens
+     * the ephemeral setup summary (same content as `/install summary`).
+     * Handled by [bot.toby.install.button.InstallSummaryButton]. Non-owners
+     * who click it get the standard owner-only ephemeral reject.
+     */
+    const val BTN_VIEW_SETUP = "install_view_setup"
     const val BTN_FINISH = "install_finish"
     const val BTN_BACK = "install_category_back"
     const val BTN_FEATURES = "install_features"
@@ -259,18 +267,21 @@ object InstallWizard {
      * full feature tour. Every button is non-owner-gated — the message
      * doubles as a shared launcher for everyone in the channel.
      *
-     * When [webBaseUrl] is configured (and [guildId] known) a deep-link
-     * button to the web dashboard's guild profile is appended — the same
-     * `"$webBaseUrl/profile/$guildId"` page the achievement web-push points
-     * at, so the owner can see the "Welcome Aboard" badge they just earned.
-     * The link is omitted when the base URL is unset (self-hosters without a
-     * public dashboard), exactly as the push deep links degrade.
+     * The owner-only **View setup** button is always present (non-owners get
+     * an ephemeral reject on click). When [webBaseUrl] is configured (and
+     * [guildId] known) a deep-link button to the web dashboard's guild
+     * profile is also appended — the same `"$webBaseUrl/profile/$guildId"`
+     * page the achievement web-push points at, so the owner can see the
+     * "Welcome Aboard" badge they just earned. The link is omitted when the
+     * base URL is unset (self-hosters without a public dashboard), exactly
+     * as the push deep links degrade.
      */
     fun launcherRow(guildId: String? = null, webBaseUrl: String? = null): ActionRow {
         val buttons = mutableListOf(
             Button.primary(BTN_QUICK_FLIP, "🪙 Flip a coin"),
             Button.success(BTN_CLAIM_DAILY, "🎁 Claim daily credits"),
             Button.secondary(BTN_HELP, "✨ What can I do?"),
+            Button.secondary(BTN_VIEW_SETUP, "⚙️ View setup"),
         )
         if (!webBaseUrl.isNullOrBlank() && !guildId.isNullOrBlank()) {
             buttons += Button.link("$webBaseUrl/profile/$guildId", "🌐 View your profile")

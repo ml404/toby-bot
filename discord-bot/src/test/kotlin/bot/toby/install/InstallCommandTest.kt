@@ -7,16 +7,18 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.replyCallbackAction
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
+import database.service.economy.JackpotService
+import database.service.guild.ConfigService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.just
+import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
 import io.mockk.verify
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.MessageEmbed
-import net.dv8tion.jda.api.requests.restaction.interactions.ReplyCallbackAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -25,17 +27,22 @@ import org.junit.jupiter.api.Test
 
 internal class InstallCommandTest : CommandTest {
 
+    private lateinit var configService: ConfigService
+    private lateinit var jackpotService: JackpotService
     private lateinit var command: InstallCommand
 
     @BeforeEach
     fun setUp() {
         setUpCommonMocks()
-        command = InstallCommand()
+        configService = mockk(relaxed = true)
+        jackpotService = mockk(relaxed = true)
+        command = InstallCommand(configService, jackpotService)
         every { event.reply(any<String>()) } returns replyCallbackAction
         every { event.replyEmbeds(any<MessageEmbed>()) } returns replyCallbackAction
         every { replyCallbackAction.addComponents(any<ActionRow>()) } returns replyCallbackAction
         every { guild.name } returns "Test Guild"
         every { member.isOwner } returns true
+        every { event.subcommandName } returns InstallCommand.SUB_SETUP
     }
 
     @AfterEach
@@ -45,13 +52,18 @@ internal class InstallCommandTest : CommandTest {
     }
 
     @Test
-    fun `name is install`() {
+    fun `name is install with setup and summary subcommands`() {
         assertEquals("install", command.name)
-        assertTrue(command.subCommands.isEmpty(), "install has no subcommands")
+        assertEquals(
+            listOf(InstallCommand.SUB_SETUP, InstallCommand.SUB_SUMMARY),
+            command.subCommands.map { it.name },
+        )
+        // Direct-reply command: must opt out of the manager's auto-defer.
+        assertEquals(false, command.defersReply)
     }
 
     @Test
-    fun `non-owner gets ephemeral reject and no welcome posted`() {
+    fun `non-owner gets ephemeral reject and nothing posted`() {
         every { member.isOwner } returns false
 
         command.handle(DefaultCommandContext(event), requestingUserDto, 0)
@@ -75,7 +87,8 @@ internal class InstallCommandTest : CommandTest {
     }
 
     @Test
-    fun `owner happy path posts welcome embed and the three wizard buttons`() {
+    fun `setup subcommand posts the welcome embed and wizard buttons`() {
+        every { event.subcommandName } returns InstallCommand.SUB_SETUP
         val embedSlot = slot<MessageEmbed>()
         val componentsSlot = slot<ActionRow>()
         every { event.replyEmbeds(capture(embedSlot)) } returns replyCallbackAction
@@ -86,14 +99,28 @@ internal class InstallCommandTest : CommandTest {
 
         verify(exactly = 1) { event.replyEmbeds(any<MessageEmbed>()) }
         verify(exactly = 1) { replyCallbackAction.addComponents(any<ActionRow>()) }
-        // Embed mentions the guild name.
         assertTrue(embedSlot.captured.description?.contains("Express") == true)
-        // Action row has the three owner buttons plus the public help button.
         val buttons = componentsSlot.captured.components.filterIsInstance<Button>()
         assertEquals(4, buttons.size)
         assertEquals(InstallWizard.BTN_EXPRESS, buttons[0].customId)
-        assertEquals(InstallWizard.BTN_CUSTOM, buttons[1].customId)
-        assertEquals(InstallWizard.BTN_SKIP, buttons[2].customId)
         assertEquals(InstallWizard.BTN_HELP, buttons[3].customId)
+    }
+
+    @Test
+    fun `summary subcommand replies ephemerally with the setup summary`() {
+        every { event.subcommandName } returns InstallCommand.SUB_SUMMARY
+        every { jackpotService.getPool(1L) } returns 1234L
+        every { jackpotService.winProbabilityDisplay(1L) } returns "1"
+        val embedSlot = slot<MessageEmbed>()
+        every { event.replyEmbeds(capture(embedSlot)) } returns replyCallbackAction
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
+
+        verify(exactly = 1) { jackpotService.getPool(1L) }
+        verify(exactly = 1) { event.replyEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 1) { replyCallbackAction.setEphemeral(true) }
+        // No wizard buttons on the summary.
+        verify(exactly = 0) { replyCallbackAction.addComponents(any<ActionRow>()) }
+        assertTrue(embedSlot.captured.title!!.contains("setup summary"))
     }
 }
