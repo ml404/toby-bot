@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix the nowPlaying stale-message bug (#85) and the broken /meme Reddit auth (#107)",
+    "summary": "Fixes two long-standing maintainer-filed bugs. Two isolated commits.",
+    "emoji": "✨",
+    "prNumber": 684
+  },
+  {
+    "date": "June 2026",
     "title": "Player-side onboarding: first-game achievement, empty-state recovery, invite loop",
     "summary": "Follow-up to #680/#681/#682. Those rewarded the **owner** at install; this turns attention to the **players** the owner is trying to keep, and closes the last onboarding dead-ends. Three isolated commits (disjoint files).",
     "emoji": "✨",
