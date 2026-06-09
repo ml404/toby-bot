@@ -19,9 +19,23 @@ import common.casino.blackjack.Blackjack
 class BlackjackTable(
     val id: Long,
     val guildId: Long,
-    val mode: Mode,
-    /** Null for SOLO tables (the seated player is implicitly the host). */
-    val hostDiscordId: Long?,
+    /**
+     * SOLO when a single seat created the table via `/blackjack solo`
+     * (or the web solo deal). Flips to MULTI in-place when a second
+     * player joins — see [database.service.casino.blackjack.BlackjackService.joinMultiTable]
+     * for the promotion path. Once promoted, never demoted back.
+     */
+    var mode: Mode,
+    /**
+     * SOLO tables set this to the seated player's id at creation time
+     * (the player is implicitly the host) — used by the lobby
+     * projection to render a meaningful "host" name even before the
+     * SOLO table has been promoted to MULTI. On SOLO → MULTI promotion
+     * the value is left in place (or backfilled from the seated player
+     * if it was somehow null) so the existing `startMultiHand` /
+     * host-only controls keep working unchanged.
+     */
+    var hostDiscordId: Long?,
     /**
      * Per-hand wager. SOLO tables can in principle re-deal at a
      * different stake, but v1 makes a fresh table per `/blackjack solo`
@@ -30,7 +44,13 @@ class BlackjackTable(
      * same per hand.
      */
     val ante: Long,
-    val maxSeats: Int,
+    /**
+     * SOLO tables ship with `maxSeats = 1` to reflect the single-player
+     * shape. Promoted to the regular multi cap on SOLO → MULTI
+     * conversion so a joiner can actually fit (and the table can grow
+     * to the full multi capacity afterwards).
+     */
+    var maxSeats: Int,
     var phase: Phase = Phase.LOBBY,
     val seats: MutableList<Seat> = mutableListOf(),
     val dealer: MutableList<Card> = mutableListOf(),

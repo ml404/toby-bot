@@ -174,7 +174,15 @@
         }
 
         var seated = state.mySeatIndex != null;
-        joinCard.hidden = seated || state.phase !== "LOBBY";
+        // A table accepts joiners between hands: explicit LOBBY phase
+        // for MULTI tables, RESOLVED phase for SOLO tables (which never
+        // sit in LOBBY — they go straight from creation to PLAYER_TURNS
+        // and end in RESOLVED, then promote on join). Mirror the
+        // service-side preflight in BlackjackService.joinMultiTable.
+        var joinablePhase = state.mode === "SOLO"
+            ? state.phase === "RESOLVED"
+            : state.phase === "LOBBY";
+        joinCard.hidden = seated || !joinablePhase;
 
         var iAmHost = state.hostDiscordId != null && state.hostDiscordId === myId;
         startBtn.hidden = !(iAmHost && state.phase === "LOBBY");

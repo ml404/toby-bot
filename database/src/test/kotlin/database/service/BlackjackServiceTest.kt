@@ -479,13 +479,75 @@ class BlackjackServiceTest {
     }
 
     @Test
-    fun `startMultiHand requires at least the minimum seat count`() {
+    fun `joining a resolved SOLO table promotes it to MULTI with the original player as host`() {
+        // The solo flow creates a Mode.SOLO single-seat table that
+        // resolves the hand and then sits in Phase.RESOLVED. A second
+        // player asking to join now finds it via listMultiTables and
+        // promotes it in place: mode → MULTI, phase → LOBBY, host →
+        // original solo player. From here the standard multi flow
+        // applies (host hits Start to deal the next hand).
+        val player = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns player
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        every { userService.getUserById(discordId, guildId) } returns player
+        // Deal & resolve a solo hand: 20 vs 18 → player wins.
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.KING), c(Rank.QUEEN)),
+            mutableListOf(c(Rank.NINE), c(Rank.NINE, Suit.HEARTS))
+        )
+        every { blackjack.evaluate(any(), any()) } returns Blackjack.Result.PLAYER_WIN
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+            as BlackjackService.SoloDealOutcome.Dealt
+        service.applySoloAction(discordId, guildId, deal.tableId, Blackjack.Action.STAND)
+        val resolved = registry.get(deal.tableId)!!
+        assertEquals(BlackjackTable.Mode.SOLO, resolved.mode)
+        assertEquals(BlackjackTable.Phase.RESOLVED, resolved.phase)
+
+        val join = service.joinMultiTable(otherDiscordId, guildId, deal.tableId)
+        val ok = assertInstanceOf(BlackjackService.MultiJoinOutcome.Ok::class.java, join)
+        assertEquals(1, ok.seatIndex, "joiner seated after the original solo player")
+
+        val promoted = registry.get(deal.tableId)!!
+        assertEquals(BlackjackTable.Mode.MULTI, promoted.mode, "table promoted to MULTI")
+        assertEquals(BlackjackTable.Phase.LOBBY, promoted.phase, "phase reset to LOBBY for the next deal")
+        assertEquals(discordId, promoted.hostDiscordId, "original solo player becomes the host")
+        assertEquals(2, promoted.seats.size)
+        assertEquals(otherDiscordId, promoted.seats[1].discordId)
+    }
+
+    @Test
+    fun `joining a SOLO table mid-hand returns HandInProgress`() {
+        val player = userWithBalance(1_000L)
+        val joiner = userWithBalance(1_000L, id = otherDiscordId)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns player
+        every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
+        // Deal a solo hand and leave it in PLAYER_TURNS — non-blackjack
+        // starting cards so the table stays mid-hand instead of resolving.
+        every { blackjack.dealStartingHands(any()) } returns Blackjack.StartingDeal(
+            mutableListOf(c(Rank.FIVE), c(Rank.SEVEN)),
+            mutableListOf(c(Rank.NINE), c(Rank.NINE, Suit.HEARTS))
+        )
+        val deal = service.dealSolo(discordId, guildId, stake = 100L)
+            as BlackjackService.SoloDealOutcome.Dealt
+
+        val outcome = service.joinMultiTable(otherDiscordId, guildId, deal.tableId)
+        assertEquals(BlackjackService.MultiJoinOutcome.HandInProgress, outcome)
+        assertEquals(BlackjackTable.Mode.SOLO, registry.get(deal.tableId)!!.mode, "still SOLO; not promoted")
+    }
+
+    @Test
+    fun `startMultiHand deals with the host alone now that MIN_SEATS is 1`() {
+        // Used to require ≥ 2 seats; the SOLO-promotion refactor lowered
+        // MULTI_MIN_SEATS to 1 so a residual one-seat table (or a freshly
+        // created multi table waiting for joiners) can still deal hands
+        // exactly like the solo flow.
         val host = userWithBalance(1_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
         val create = service.createMultiTable(discordId, guildId, ante = 100L)
             as BlackjackService.MultiCreateOutcome.Ok
         val outcome = service.startMultiHand(discordId, guildId, create.tableId)
-        assertEquals(BlackjackService.MultiStartOutcome.NotEnoughPlayers, outcome)
+        assertInstanceOf(BlackjackService.MultiStartOutcome.Ok::class.java, outcome)
     }
 
     @Test
@@ -830,14 +892,17 @@ class BlackjackServiceTest {
         service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.HIT)
 
         // Try a second hand — `poor` has 50 credits, can't cover the 100 ante.
-        // Single seat can pay → falls below MIN_SEATS → NotEnoughPlayers,
-        // unfunded seat dropped from table.
+        // Host (the only solvent seat) is dropped to a one-seat table and
+        // the hand still deals: MULTI_MIN_SEATS=1 since the SOLO-promotion
+        // refactor, so a single solvent seat is enough to keep the table
+        // running solo-style. The unfunded seat is evicted exactly as
+        // before so it doesn't permanently block re-starts.
         val outcome = service.startMultiHand(discordId, guildId, create.tableId)
-        assertEquals(BlackjackService.MultiStartOutcome.NotEnoughPlayers, outcome)
+        assertInstanceOf(BlackjackService.MultiStartOutcome.Ok::class.java, outcome)
         val live = registry.get(create.tableId)!!
         assertEquals(1, live.seats.size)
         assertEquals(discordId, live.seats[0].discordId, "host kept; poor dropped")
-        assertEquals(900L, host.socialCredit, "host not debited when start aborted")
+        assertEquals(800L, host.socialCredit, "host re-debited for the solo continuation")
     }
 
     // -------------------------------------------------------------------------
