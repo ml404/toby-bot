@@ -499,10 +499,10 @@ class BlackjackServiceTest {
     }
 
     @Test
-    fun `multi hand with all winners refunds stakes only - no losers means no bonus`() {
-        // Two-seat table where both players win against the dealer. With
-        // no losers contributing to the pot, each winner just gets their
-        // stake back; nothing rakes to the jackpot.
+    fun `multi hand pays each winner 2x stake from the house with no rake`() {
+        // Two-seat table where both players beat the dealer. Each winner
+        // is paid 1:1 by the house (2× stake) — no peer pool, so neither
+        // player needs the other to lose. No losers → no rake.
         val host = userWithBalance(1_000L)
         val joiner = userWithBalance(1_000L, id = otherDiscordId)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
@@ -520,28 +520,22 @@ class BlackjackServiceTest {
         val resolved = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
             as BlackjackService.MultiActionOutcome.HandResolved
 
-        // Both at the table win → losers' pool is 0 → each winner just
-        // gets their 100 stake refunded. No rake (no pool to skim).
-        assertEquals(1_000L, host.socialCredit)
-        assertEquals(1_000L, joiner.socialCredit)
+        // Each winner gets 200 from house (stake + 1× winnings).
+        // 900 ante-debited + 200 payout = 1100.
+        assertEquals(1_100L, host.socialCredit)
+        assertEquals(1_100L, joiner.socialCredit)
         assertEquals(0L, resolved.result.rake)
         verify(exactly = 0) { jackpotService.addToPool(guildId, any()) }
     }
 
     @Test
-    fun `multi hand pays winner from loser's stake with 5pct rake`() {
+    fun `multi hand pays winner independently of other seats and tributes 5pct of each loss`() {
         val host = userWithBalance(1_000L)
         val joiner = userWithBalance(1_000L, id = otherDiscordId)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
         every { userService.getUserByIdForUpdate(otherDiscordId, guildId) } returns joiner
-        // Host wins, joiner busts.
-        every { blackjack.evaluate(any(), any()) } answers {
-            // Order isn't deterministic per call — pin off who's playing.
-            // We rely on the order winners are listed via seat order.
-            Blackjack.Result.PLAYER_WIN
-        }
-        // Stub per-seat by capturing the player hand reference.
-        // Simpler: just stub differently via answers cycle.
+        // Host wins, joiner loses — verify host is paid the full 1:1
+        // amount from the house regardless of what joiner does.
         var n = 0
         every { blackjack.evaluate(any(), any()) } answers {
             n++
@@ -556,21 +550,16 @@ class BlackjackServiceTest {
         val resolved = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
             as BlackjackService.MultiActionOutcome.HandResolved
 
-        // Pot=200, losersPool=100, baseRake=5, payable=95, host entitled to 100.
-        // 95 < 100 → scaled: host gets 95. Plus stake refund 100 → +95 net.
-        // Host: 900 + 100 (refund) + 95 (share) = 1095. Joiner: 900 (lost stake).
-        assertEquals(1_095L, host.socialCredit)
+        // Host: 900 + 200 (2× stake) = 1100. Joiner: 900 (lost ante).
+        // Rake = 5% of joiner's lost 100 = 5 to jackpot.
+        assertEquals(1_100L, host.socialCredit)
         assertEquals(900L, joiner.socialCredit)
         assertEquals(5L, resolved.result.rake)
         verify { jackpotService.addToPool(guildId, 5L) }
     }
 
     @Test
-    fun `multi hand BJ winner takes 1_5x premium plus stake refund from losers pool`() {
-        // 3-seat table so the losers' pool (200) can cover the host's
-        // BJ premium (150) with surplus to spare. Everyone stands so the
-        // resolution path is deterministic regardless of which cards the
-        // real Deck dealt — outcomes are pinned by the evaluate stub.
+    fun `multi hand pays BJ winner 2_5x stake regardless of other seats`() {
         val host = userWithBalance(1_000L)
         val a = userWithBalance(1_000L, id = otherDiscordId)
         val b = userWithBalance(1_000L, id = 102L)
@@ -593,19 +582,17 @@ class BlackjackServiceTest {
         val resolved = service.applyMultiAction(102L, guildId, create.tableId, Blackjack.Action.STAND)
             as BlackjackService.MultiActionOutcome.HandResolved
 
-        // Pot=300, losersPool=200, baseRake=10, payable=190.
-        // BJ entitled = 100*1.5 = 150. Total entitled 150 ≤ 190 → full
-        // bonus. Surplus 40 → jackpot. Total rake = 10 + 40 = 50.
-        // Host payout: 100 (refund) + 150 (premium) = 250 → 900+250 = 1150.
+        // Host BJ → 250 (2.5× stake) paid by house. Losers each lose 100.
+        // Rake = 5% × 2 losses × 100 = 10 to jackpot.
         assertEquals(1_150L, host.socialCredit)
         assertEquals(900L, a.socialCredit)
         assertEquals(900L, b.socialCredit)
-        assertEquals(50L, resolved.result.rake)
-        verify { jackpotService.addToPool(guildId, 50L) }
+        assertEquals(10L, resolved.result.rake)
+        verify { jackpotService.addToPool(guildId, 10L) }
     }
 
     @Test
-    fun `multi hand routes entire pot to jackpot when all seats bust`() {
+    fun `multi hand tributes 5pct of each lost stake to the jackpot when all seats bust`() {
         val host = userWithBalance(1_000L)
         val joiner = userWithBalance(1_000L, id = otherDiscordId)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns host
@@ -625,8 +612,10 @@ class BlackjackServiceTest {
         val outcome = service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.HIT)
         val resolved = assertInstanceOf(BlackjackService.MultiActionOutcome.HandResolved::class.java, outcome)
 
-        // Both bust: no winners, no pushes — entire 200 to jackpot.
-        verify { jackpotService.addToPool(guildId, 200L) }
+        // Both bust: each contributes 5% of their 100 ante → 10 to jackpot.
+        // The remainder of each lost ante stays with the house (player's
+        // wallet already debited at the start of the hand).
+        verify { jackpotService.addToPool(guildId, 10L) }
         assertEquals(900L, host.socialCredit, "host loses ante")
         assertEquals(900L, joiner.socialCredit, "joiner loses ante")
         assertEquals(0, resolved.result.payouts.values.sum())
@@ -704,7 +693,7 @@ class BlackjackServiceTest {
         val create = service.createMultiTable(discordId, guildId, ante = 100L)
             as BlackjackService.MultiCreateOutcome.Ok
         service.joinMultiTable(otherDiscordId, guildId, create.tableId)
-        // First hand: starts and resolves with both winning (no-loser refund path).
+        // First hand: both beat the dealer → each paid 2× stake from the house.
         service.startMultiHand(discordId, guildId, create.tableId)
         service.applyMultiAction(discordId, guildId, create.tableId, Blackjack.Action.STAND)
         service.applyMultiAction(otherDiscordId, guildId, create.tableId, Blackjack.Action.STAND)
@@ -715,13 +704,13 @@ class BlackjackServiceTest {
         assertEquals(2, tableAfter!!.seats.size)
         assertEquals(0L, tableAfter.seats[0].stake, "stake reset between hands")
         assertEquals(0L, tableAfter.seats[1].stake)
-        assertEquals(1_000L, host.socialCredit)
-        assertEquals(1_000L, joiner.socialCredit)
+        assertEquals(1_100L, host.socialCredit)
+        assertEquals(1_100L, joiner.socialCredit)
 
-        // Second hand: re-debit each seat's ante.
+        // Second hand: re-debit each seat's ante from their post-payout balance.
         service.startMultiHand(discordId, guildId, create.tableId) as BlackjackService.MultiStartOutcome.Ok
-        assertEquals(900L, host.socialCredit, "ante re-debited")
-        assertEquals(900L, joiner.socialCredit)
+        assertEquals(1_000L, host.socialCredit, "ante re-debited")
+        assertEquals(1_000L, joiner.socialCredit)
     }
 
     @Test

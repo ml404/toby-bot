@@ -12,8 +12,9 @@
         <a class="back-link" th:href="@{/blackjack/guilds(pick=true)}">&larr; All servers</a>
         <h1 th:text="'🂡 Blackjack • ' + ${guildName}">🂡 Blackjack</h1>
         <p class="muted">
-            Players vs. shared dealer. Each seat antes the same amount per hand.
-            Up to <span th:text="${maxSeats}">5</span> seats. 5% rake on each pot
+            Players vs. shared dealer. Each seat plays independently and is paid by the house —
+            you only need to beat the dealer, not the other players. Each seat antes the same
+            amount per hand. Up to <span th:text="${maxSeats}">5</span> seats. 5% of each loss
             feeds the per-server jackpot. Natural blackjack pays 3:2.
         </p>
     </div>
@@ -65,7 +66,7 @@
             <li>Pick a table to join, or create your own with the form above and an ante you choose.</li>
             <li>Beat the dealer's hand without going over <strong>21</strong>. Natural blackjack pays <strong>3:2</strong>; any other win pays <strong>1:1</strong>; pushes refund.</li>
             <li>The dealer stands on all 17. <strong>Double</strong>, <strong>split</strong>, and re-split (up to 4 hands) are available on every seat.</li>
-            <li>Each multiplayer hand takes a <strong>5% rake</strong> from losers' chips into the per-guild jackpot pool — somebody at the table eventually scoops it.</li>
+            <li>Each losing hand sends a <strong>5% tribute</strong> from its lost chips to the per-guild jackpot pool.</li>
         </ul>
     </section>
 </main>
