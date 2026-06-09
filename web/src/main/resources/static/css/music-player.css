@@ -32,10 +32,26 @@
 }
 
 .music-grid {
+    /* Two columns — now-playing hero on the left, side stack (queue /
+       playlists / voice) on the right. The previous 3-column layout
+       crammed every card under ~1100px wide: Search inputs truncated to
+       "URL or sear", playlist names collapsed to "Pl…", buttons sat on
+       top of each other. Two columns gives every card enough width to
+       breathe at the typical desktop viewport. */
     display: grid;
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
     gap: 1.25rem;
     align-items: start;
+}
+
+.music-side-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    /* Same min-width: 0 escape hatch as the cards themselves — grid
+       items default to min-content, which would let a long search title
+       stretch the column past its track. */
+    min-width: 0;
 }
 
 @media (max-width: 768px) {
@@ -49,6 +65,9 @@
            floor lets the column shrink to the container so the inner
            ellipsis/wrap rules can do their job. */
         grid-template-columns: minmax(0, 1fr);
+        gap: 1rem;
+    }
+    .music-side-column {
         gap: 1rem;
     }
 }
