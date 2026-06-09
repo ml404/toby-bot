@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Security audit: fix open redirect and harden web-layer input handling",
+    "summary": "A security audit of the codebase (web layer, Discord bot, database, config). The database/bot layer came back clean — parameterized queries throughout, no command injection or path traversal, secrets via env vars, permission checks on privileged commands, and dependency CVEs already pinned in `build.gradle`. The web layer had one real vulnerability and a few hardening gaps, all fixed here.",
+    "emoji": "🎵",
+    "prNumber": 695
+  },
+  {
+    "date": "June 2026",
     "title": "Promote solo blackjack tables to multiplayer when a second player joins",
     "summary": "Removes the up-front \"solo vs multi\" decision in web blackjack. A solo table is now just a 1-seat multi table that hasn't been joined yet: when a second player joins, the table flips mode in place (`SOLO → MULTI`, `RESOLVED → LOBBY`, original solo player becomes the host) and proceeds through the standard multi flow. The reverse direction works without coordination too — a multi table that drops to one seat keeps running, because `MULTI_MIN_SEATS` is now 1.",
     "emoji": "♠️",
