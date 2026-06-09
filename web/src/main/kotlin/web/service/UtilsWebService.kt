@@ -11,7 +11,9 @@ import java.time.Duration
 import kotlin.random.Random
 
 @Service
-class UtilsWebService {
+class UtilsWebService(
+    private val tokenSource: RedditTokenSource = RedditTokenProvider(),
+) {
     private val http: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .build()
@@ -30,12 +32,24 @@ class UtilsWebService {
         }
         val tp = validTimePeriod(timePeriod)
         val capped = limit.coerceIn(1, 100)
-        val url = "https://old.reddit.com/r/$sub/top/.json?limit=$capped&t=$tp"
+
+        // Reddit blocks the anonymous `.json` endpoint with a 403, so prefer the
+        // app-only OAuth endpoint when credentials are configured (issue #403).
+        val token = tokenSource.bearerToken()
+        val url = when {
+            token != null -> "https://oauth.reddit.com/r/$sub/top.json?limit=$capped&t=$tp&raw_json=1"
+            tokenSource.isConfigured ->
+                // Credentials are set but the token fetch failed (already logged) —
+                // don't fall back to the blocked anonymous endpoint, surface a retry.
+                return UtilsResult.error("Could not reach Reddit right now. Please try again later.")
+            else -> "https://old.reddit.com/r/$sub/top/.json?limit=$capped&t=$tp"
+        }
 
         return try {
             val response = http.send(
                 HttpRequest.newBuilder(URI.create(url))
-                    .header("User-Agent", "tobybot-web/1.0")
+                    .header("User-Agent", RedditTokenProvider.USER_AGENT)
+                    .apply { token?.let { header("Authorization", "bearer $it") } }
                     .timeout(Duration.ofSeconds(10))
                     .GET()
                     .build(),

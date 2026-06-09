@@ -80,6 +80,19 @@ class UtilsWebServiceTest {
     }
 
     @Test
+    fun `configured creds with no available token surface a retry error without hitting Reddit`() {
+        // Credentials are set but the token fetch failed: we must NOT fall back
+        // to the anonymous endpoint Reddit now 403s — surface a transient error
+        // (issue #403). No network is touched because the fake returns no token.
+        val service = UtilsWebService(FakeTokenSource(isConfigured = true, token = null))
+
+        val result = service.randomMeme("memes", "day", 10)
+
+        assertNull(result.value)
+        assertEquals("Could not reach Reddit right now. Please try again later.", result.error)
+    }
+
+    @Test
     fun `UtilsResult ok and error helpers produce mutually-exclusive shapes`() {
         val ok = UtilsResult.ok("hi")
         assertEquals("hi", ok.value)
@@ -88,5 +101,12 @@ class UtilsWebServiceTest {
         val err = UtilsResult.error<String>("nope")
         assertNull(err.value)
         assertEquals("nope", err.error)
+    }
+
+    private class FakeTokenSource(
+        override val isConfigured: Boolean,
+        private val token: String?,
+    ) : RedditTokenSource {
+        override fun bearerToken(): String? = token
     }
 }
