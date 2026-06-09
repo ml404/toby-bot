@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix cube pack tiles stretching on desktop until whole row collapses",
+    "summary": "Each generated cube pack is a `<details>` element inside a CSS grid (`.cube-packs`). The grid relied on the default `align-items: stretch`, so every tile in a row was sized to the tallest open sibling. As a result, collapsing one pack appeared to do nothing on the desktop view until every pack in that row was also closed. Setting `align-items: start` lets each tile size to its own content, so collapsing an individual pack now shrinks just that tile.",
+    "emoji": "✨",
+    "prNumber": 689
+  },
+  {
+    "date": "June 2026",
     "title": "Test coverage: add the two missing command-handler tests (/daily, /casinoholdem)",
     "summary": "Last of the four follow-up directions — **test coverage**.",
     "emoji": "✨",
