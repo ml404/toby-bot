@@ -764,9 +764,10 @@
                     <summary>Game stake limits</summary>
                     <p class="muted config-section-lead">
                         Stake bounds for every simple casino game. Set any maximum to
-                        <code>0</code> to remove the cap. Blackjack ante limits live
-                        in the <strong>Blackjack</strong> section; poker blinds and
-                        buy-ins live in the <strong>Poker</strong> section.
+                        <code>0</code> to remove the cap. Blackjack ante limits are
+                        editable here too (and mirrored in the <strong>Blackjack</strong>
+                        section). Poker blinds and buy-ins live in the
+                        <strong>Poker</strong> section.
                     </p>
 
                     <!--
@@ -1067,6 +1068,29 @@
                                             <label class="sr-only">Wheel of Fortune maximum stake (0 = unlimited; default 500)</label>
                                             <input type="number" min="0"
                                                    th:value="${overview.config['WHEEL_OF_FORTUNE_MAX_STAKE']}"
+                                                   placeholder="500"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Blackjack</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="BLACKJACK_MIN_ANTE">
+                                            <label class="sr-only">Blackjack minimum ante per hand (applies to solo &amp; multi; default 10)</label>
+                                            <input type="number" min="1"
+                                                   th:value="${overview.config['BLACKJACK_MIN_ANTE']}"
+                                                   placeholder="10"
+                                                   th:disabled="${!isOwner}">
+                                            <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="BLACKJACK_MAX_ANTE">
+                                            <label class="sr-only">Blackjack maximum ante per hand (applies to solo &amp; multi; 0 = unlimited; default 500)</label>
+                                            <input type="number" min="0"
+                                                   th:value="${overview.config['BLACKJACK_MAX_ANTE']}"
                                                    placeholder="500"
                                                    th:disabled="${!isOwner}">
                                             <button type="button" class="btn btn-sm save-config" th:disabled="${!isOwner}">Save</button>

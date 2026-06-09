@@ -17,6 +17,10 @@
             amount per hand. Up to <span th:text="${maxSeats}">5</span> seats. 5% of each loss
             feeds the per-server jackpot. Natural blackjack pays 3:2.
         </p>
+        <p class="muted">
+            Prefer to play alone?
+            <a th:href="@{/blackjack/{id}/solo(id=${guildId})}">Open a solo hand &rsaquo;</a>
+        </p>
     </div>
 
     <div th:replace="~{fragments/alerts :: error}"></div>

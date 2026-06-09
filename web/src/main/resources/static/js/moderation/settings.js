@@ -240,13 +240,18 @@
             // is a hook added just for this lookup. Split into MIN / MAX
             // by the data-key suffix so the same cell loop drives both
             // sides.
+            // Blackjack uses `_MIN_ANTE` / `_MAX_ANTE` keys instead of
+            // `_MIN_STAKE` / `_MAX_STAKE` — semantically the same
+            // per-hand bound, just named after the blackjack jargon.
             const stakeCells = Array.from(document.querySelectorAll('.settings-stake-cell[data-key]'));
+            const isMinKey = (key) => key.endsWith('_MIN_STAKE') || key.endsWith('_MIN_ANTE');
+            const isMaxKey = (key) => key.endsWith('_MAX_STAKE') || key.endsWith('_MAX_ANTE');
             const targets = [];
             stakeCells.forEach(cell => {
                 const key = cell.dataset.key || '';
-                if (minVal !== '' && key.endsWith('_MIN_STAKE')) {
+                if (minVal !== '' && isMinKey(key)) {
                     targets.push({ key: key, value: minVal, cell: cell });
-                } else if (maxVal !== '' && key.endsWith('_MAX_STAKE')) {
+                } else if (maxVal !== '' && isMaxKey(key)) {
                     targets.push({ key: key, value: maxVal, cell: cell });
                 }
             });
