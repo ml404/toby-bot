@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Reliability: retry transient music loads, harden intro media download",
+    "summary": "Second of the four follow-up directions — **reliability hardening**, scoped to playback & media (the riskiest external-fetch surfaces). Two isolated commits.",
+    "emoji": "🎵",
+    "prNumber": 685
+  },
+  {
+    "date": "June 2026",
     "title": "Fix the nowPlaying stale-message bug (#85) and the broken /meme Reddit auth (#107)",
     "summary": "Fixes two long-standing maintainer-filed bugs. Two isolated commits.",
     "emoji": "✨",
