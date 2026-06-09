@@ -983,3 +983,30 @@ details.lb-collapse[open] .lb-collapse-caret { transform: rotate(90deg); }
         font-size: 0.78rem;
     }
 }
+
+/* -- Member search (Members tab) -- */
+.lb-search {
+    margin-bottom: var(--space-3);
+}
+.lb-search-label {
+    display: block;
+    margin-bottom: var(--space-1);
+    font-size: 0.85rem;
+}
+.lb-search-input {
+    width: 100%;
+    max-width: 360px;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font-size: 0.95rem;
+}
+.lb-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+.lb-search-empty {
+    margin-top: var(--space-2);
+}

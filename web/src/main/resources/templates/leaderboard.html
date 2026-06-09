@@ -205,6 +205,15 @@
             </span>
         </summary>
         <div class="lb-collapse-body">
+            <div class="lb-search">
+                <label class="lb-search-label" for="lb-member-search">Find a member</label>
+                <input type="search" id="lb-member-search" class="lb-search-input"
+                       placeholder="Search members…" autocomplete="off"
+                       aria-controls="lb-standings-body">
+                <p class="lb-search-empty muted" hidden>
+                    No members match “<span class="lb-search-term"></span>”.
+                </p>
+            </div>
             <div class="mod-table-wrap">
                 <table class="mod-table lb-standings-table">
                     <thead>
@@ -226,11 +235,12 @@
                         <th>🎤 Voice this month</th>
                     </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="lb-standings-body">
                     <tr th:each="row : ${view.standings}"
                         th:attr="data-credits-month=${row.creditsEarnedThisMonth},
                                  data-credits-total=${row.socialCredit},
-                                 data-xp=${row.xp}">
+                                 data-xp=${row.xp},
+                                 data-name=${#strings.toLowerCase(row.name)}">
                         <td data-label="#">
                             <span class="lb-rank"
                                   th:classappend="${row.rank == 1 ? 'lb-rank-1' : (row.rank == 2 ? 'lb-rank-2' : (row.rank == 3 ? 'lb-rank-3' : ''))}"
