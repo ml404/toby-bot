@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Promote solo blackjack tables to multiplayer when a second player joins",
+    "summary": "Removes the up-front \"solo vs multi\" decision in web blackjack. A solo table is now just a 1-seat multi table that hasn't been joined yet: when a second player joins, the table flips mode in place (`SOLO → MULTI`, `RESOLVED → LOBBY`, original solo player becomes the host) and proceeds through the standard multi flow. The reverse direction works without coordination too — a multi table that drops to one seat keeps running, because `MULTI_MIN_SEATS` is now 1.",
+    "emoji": "♠️",
+    "prNumber": 694
+  },
+  {
+    "date": "June 2026",
     "title": "Expose multiplayer blackjack and ante limits in the web UI",
     "summary": "Two related discoverability fixes for blackjack on the web surface. ### 1. Multiplayer blackjack reachable from the web casino picker The `/casino/{guildId}` picker linked Blackjack straight to `/blackjack/{id}/solo`, and the solo page had no cross-link to multi — so players going through that path had no way to find the multi lobby (where you create / join a table). `casino-guilds.html` Blackjack button now points at `/blackjack/{id}` (the multi lobby), matching how Poker…",
     "emoji": "♠️",
