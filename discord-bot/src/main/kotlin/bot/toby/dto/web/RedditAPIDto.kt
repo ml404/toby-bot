@@ -43,6 +43,10 @@ class RedditAPIDto {
     }
 
     companion object {
+        /** Legacy unauthenticated endpoint — Reddit now rate-limits/blocks this; kept as a fallback when no creds are set. */
         const val REDDIT_PREFIX: String = "https://old.reddit.com/r/%s/top/.json?limit=%d&t=%s"
+
+        /** Authenticated endpoint used with an app-only bearer token (issue #107). */
+        const val REDDIT_OAUTH_PREFIX: String = "https://oauth.reddit.com/r/%s/top.json?limit=%d&t=%s&raw_json=1"
     }
 }

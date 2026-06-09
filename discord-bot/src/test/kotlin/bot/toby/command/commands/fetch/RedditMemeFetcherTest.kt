@@ -20,8 +20,12 @@ class RedditMemeFetcherTest {
 
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, "application/json")
 
-    private fun fetcherWith(engine: MockEngine): RedditMemeFetcher =
-        RedditMemeFetcher(HttpClient(engine) { install(HttpTimeout) }, Dispatchers.Unconfined)
+    // Unconfigured token provider → fetcher uses the legacy unauthenticated
+    // endpoint, exercising the existing behaviour these tests assert.
+    private fun fetcherWith(engine: MockEngine): RedditMemeFetcher {
+        val client = HttpClient(engine) { install(HttpTimeout) }
+        return RedditMemeFetcher(client, RedditTokenProvider(client), Dispatchers.Unconfined)
+    }
 
     private fun listing(vararg posts: String): String =
         """{"data":{"children":[${posts.joinToString(",")}]}}"""
@@ -83,6 +87,58 @@ class RedditMemeFetcherTest {
         val result = fetcherWith(MockEngine { respond(listing(post(video = true)), HttpStatusCode.OK, jsonHeaders) }).fetch("memes", "day", 1)
         val error = assertInstanceOf(RedditMemeFetcher.Result.Error::class.java, result)
         assertTrue(error.message.contains("video"))
+    }
+
+    @Test
+    fun `fetch uses the authenticated endpoint with a bearer token when configured`() = runBlocking {
+        val engine = MockEngine { req ->
+            when {
+                req.url.toString().startsWith(RedditTokenProvider.TOKEN_URL) ->
+                    respond(
+                        """{"access_token":"tok123","token_type":"bearer","expires_in":3600}""",
+                        HttpStatusCode.OK, jsonHeaders,
+                    )
+                req.url.host == "oauth.reddit.com" ->
+                    respond(listing(post(title = "Authed")), HttpStatusCode.OK, jsonHeaders)
+                else -> respondError(HttpStatusCode.NotFound)
+            }
+        }
+        val client = HttpClient(engine) { install(HttpTimeout) }
+        val fetcher = RedditMemeFetcher(
+            client,
+            RedditTokenProvider(client, clientId = "id", clientSecret = "secret"),
+            Dispatchers.Unconfined,
+        )
+
+        val result = fetcher.fetch("memes", "day", 5)
+
+        val success = assertInstanceOf(RedditMemeFetcher.Result.Success::class.java, result)
+        assertEquals("Authed", success.title)
+        val listingReq = engine.requestHistory.single { it.url.host == "oauth.reddit.com" }
+        assertEquals("bearer tok123", listingReq.headers[HttpHeaders.Authorization])
+        assertTrue(listingReq.url.toString().contains("/r/memes/"), "url was: ${listingReq.url}")
+    }
+
+    @Test
+    fun `fetch returns an error (no listing call) when configured but the token request fails`() = runBlocking {
+        val engine = MockEngine { req ->
+            if (req.url.toString().startsWith(RedditTokenProvider.TOKEN_URL)) {
+                respondError(HttpStatusCode.Unauthorized)
+            } else {
+                respond(listing(post()), HttpStatusCode.OK, jsonHeaders)
+            }
+        }
+        val client = HttpClient(engine) { install(HttpTimeout) }
+        val fetcher = RedditMemeFetcher(
+            client,
+            RedditTokenProvider(client, clientId = "id", clientSecret = "secret"),
+            Dispatchers.Unconfined,
+        )
+
+        val result = fetcher.fetch("memes", "day", 5)
+
+        assertInstanceOf(RedditMemeFetcher.Result.Error::class.java, result)
+        assertTrue(engine.requestHistory.none { it.url.host == "oauth.reddit.com" })
     }
 
     @Test
