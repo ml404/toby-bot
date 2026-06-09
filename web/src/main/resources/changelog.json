@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Test coverage: add the two missing command-handler tests (/daily, /casinoholdem)",
+    "summary": "Last of the four follow-up directions — **test coverage**.",
+    "emoji": "✨",
+    "prNumber": 688
+  },
+  {
+    "date": "June 2026",
     "title": "Web: add member search to the leaderboard standings",
     "summary": "Third of the four follow-up directions — **web dashboard wins**.",
     "emoji": "✨",
