@@ -43,11 +43,17 @@ interface RedditTokenSource {
 // both and fails to load the context (issue #403 follow-up).
 @Component("webRedditTokenProvider")
 class RedditTokenProvider(
-    @param:Value($$"${reddit.client-id:}") private val clientId: String = "",
-    @param:Value($$"${reddit.client-secret:}") private val clientSecret: String = "",
+    @param:Value($$"${reddit.client-id:}") clientId: String = "",
+    @param:Value($$"${reddit.client-secret:}") clientSecret: String = "",
     private val http: HttpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build(),
     private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) : RedditTokenSource {
+
+    // Trim defensively: env vars pasted into a host's config (e.g. Heroku)
+    // often carry a trailing newline/space, which would corrupt the Basic
+    // auth header and earn a 401 from Reddit's token endpoint.
+    private val clientId: String = clientId.trim()
+    private val clientSecret: String = clientSecret.trim()
 
     private val jackson = ObjectMapper()
     private val lock = Any()

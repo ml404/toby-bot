@@ -35,10 +35,16 @@ import java.util.Base64
 @Component
 class RedditTokenProvider @Autowired constructor(
     private val client: HttpClient,
-    @param:Value($$"${reddit.client-id:}") private val clientId: String = "",
-    @param:Value($$"${reddit.client-secret:}") private val clientSecret: String = "",
+    @param:Value($$"${reddit.client-id:}") clientId: String = "",
+    @param:Value($$"${reddit.client-secret:}") clientSecret: String = "",
     private val nowMs: () -> Long = { System.currentTimeMillis() },
 ) {
+    // Trim defensively: env vars pasted into a host's config (e.g. Heroku)
+    // often carry a trailing newline/space, which would corrupt the Basic
+    // auth header and earn a 401 from Reddit's token endpoint.
+    private val clientId: String = clientId.trim()
+    private val clientSecret: String = clientSecret.trim()
+
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val mutex = Mutex()
 
