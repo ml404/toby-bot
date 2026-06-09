@@ -1063,6 +1063,7 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
 .cube-packs {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    align-items: start;
     gap: var(--space-3);
     margin-top: var(--space-3);
 }
