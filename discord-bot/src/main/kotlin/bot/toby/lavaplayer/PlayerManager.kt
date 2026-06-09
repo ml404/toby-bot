@@ -30,6 +30,9 @@ import dev.lavalink.youtube.clients.TvHtml5Simply
 import dev.lavalink.youtube.clients.Web
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.function.Function
 
 private const val CIPHER_API_URL = "https://cipher.kikkia.dev/api"
@@ -52,7 +55,14 @@ private const val LAVAPLAYER_ENABLE_TWITCH = "LAVAPLAYER_ENABLE_TWITCH"
 
 private val logger: DiscordLogger = DiscordLogger.createLogger(PlayerManager::class.java)
 
-class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
+class PlayerManager(
+    private val audioPlayerManager: AudioPlayerManager,
+    // Backs the transient-load retry backoff. Daemon so it never blocks JVM
+    // shutdown; injectable so tests can run retries synchronously.
+    private val retryExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r ->
+        Thread(r, "track-load-retry").apply { isDaemon = true }
+    },
+) {
     private val musicManagers: MutableMap<Long, GuildMusicManager> = HashMap()
     var isCurrentlyStoppable: Boolean = true
     private var previousVolume: Int? = null
@@ -238,6 +248,7 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
         volume: Int,
         deleteDelay: Int,
         isIntro: Boolean = false,
+        attempt: Int = 1,
     ): AudioLoadResultHandler {
         return object : AudioLoadResultHandler {
             private val scheduler: TrackScheduler = musicManager.scheduler
@@ -265,8 +276,36 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
             }
 
             override fun loadFailed(exception: FriendlyException) {
+                // COMMON = track-specific (e.g. video unavailable): retrying won't help.
+                // SUSPICIOUS / FAULT are usually transient (rate-limit, IP block,
+                // momentary source glitch) and frequently succeed on a second try —
+                // exactly the cases users work around today by re-running /play.
+                val transient = exception.severity == FriendlyException.Severity.SUSPICIOUS ||
+                    exception.severity == FriendlyException.Severity.FAULT
+                if (transient && attempt < MAX_LOAD_ATTEMPTS) {
+                    val delayMs = LOAD_RETRY_BASE_MS * attempt
+                    logger.warn {
+                        "Track load failed for url=$trackUrl severity=${exception.severity}; " +
+                            "retry $attempt/${MAX_LOAD_ATTEMPTS - 1} in ${delayMs}ms"
+                    }
+                    retryExecutor.schedule(
+                        {
+                            audioPlayerManager.loadItemOrdered(
+                                musicManager,
+                                trackUrl,
+                                getResultHandler(
+                                    event, musicManager, trackUrl, startPosition, endPosition,
+                                    volume, deleteDelay, isIntro, attempt + 1,
+                                ),
+                            )
+                        },
+                        delayMs,
+                        TimeUnit.MILLISECONDS,
+                    )
+                    return
+                }
                 logger.error {
-                    "Track load failed for url=$trackUrl severity=${exception.severity}\n" +
+                    "Track load failed for url=$trackUrl severity=${exception.severity} after $attempt attempt(s)\n" +
                             exception.stackTraceToString()
                 }
                 event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
@@ -299,6 +338,12 @@ class PlayerManager(private val audioPlayerManager: AudioPlayerManager) {
     }
 
     companion object {
+        /** Total load attempts before giving up (1 initial + retries). */
+        const val MAX_LOAD_ATTEMPTS = 3
+
+        /** Base backoff between transient-load retries; multiplied by the attempt number. */
+        const val LOAD_RETRY_BASE_MS = 1_000L
+
         val instance: PlayerManager by lazy {
             PlayerManager()
         }
