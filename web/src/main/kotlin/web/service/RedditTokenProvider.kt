@@ -37,7 +37,11 @@ interface RedditTokenSource {
     fun bearerToken(): String?
 }
 
-@Component
+// Explicit bean name: the discord-bot module also has a `RedditTokenProvider`
+// @Component, and the full application context scans both `bot.toby.*` and
+// `web.*`. Without a distinct name Spring derives `redditTokenProvider` for
+// both and fails to load the context (issue #403 follow-up).
+@Component("webRedditTokenProvider")
 class RedditTokenProvider(
     @param:Value($$"${reddit.client-id:}") private val clientId: String = "",
     @param:Value($$"${reddit.client-secret:}") private val clientSecret: String = "",
