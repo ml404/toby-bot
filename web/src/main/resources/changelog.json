@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Expose multiplayer blackjack and ante limits in the web UI",
+    "summary": "Two related discoverability fixes for blackjack on the web surface. ### 1. Multiplayer blackjack reachable from the web casino picker The `/casino/{guildId}` picker linked Blackjack straight to `/blackjack/{id}/solo`, and the solo page had no cross-link to multi — so players going through that path had no way to find the multi lobby (where you create / join a table). `casino-guilds.html` Blackjack button now points at `/blackjack/{id}` (the multi lobby), matching how Poker…",
+    "emoji": "♠️",
+    "prNumber": 693
+  },
+  {
+    "date": "June 2026",
     "title": "Settle multi blackjack hands per seat vs the dealer, not from a peer pool",
     "summary": "The multi-table resolver pooled every losing seat's stake, then split the remainder among winners after a flat rake — so two players who both beat the dealer would just trade refunds with no winnings, and a single winner's payout scaled with how many others happened to lose. Players were effectively competing with each other, not the dealer. Now each hand-slot is settled independently against the dealer, matching how the solo flow already pays out: Win → 1:1 (2× stake) pai…",
     "emoji": "♠️",
