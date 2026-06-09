@@ -1,3 +1,18 @@
+// Show only the standings rows whose member name contains `query`
+// (case-insensitive, trimmed). Returns the number of visible rows.
+// Pure DOM helper, exported for unit tests.
+function filterStandingsRows(rows, query) {
+    const q = (query || '').trim().toLowerCase();
+    let visible = 0;
+    rows.forEach(function (tr) {
+        const name = tr.getAttribute('data-name') || '';
+        const match = q === '' || name.indexOf(q) !== -1;
+        tr.hidden = !match;
+        if (match) visible += 1;
+    });
+    return visible;
+}
+
 (function () {
     'use strict';
 
@@ -199,4 +214,26 @@
             });
         });
     }
+
+    // ---- Member search (Members tab) ----
+    // The full ranked standings are all in the DOM, so filtering client-side
+    // searches every member — not just the visible top rows. Degrades fine
+    // with JS off (no input shown does nothing; the table is still complete).
+    const searchInput = document.getElementById('lb-member-search');
+    const standingsBody = document.getElementById('lb-standings-body');
+    if (searchInput && standingsBody) {
+        const emptyEl = document.querySelector('.lb-search-empty');
+        const termEl = document.querySelector('.lb-search-term');
+        searchInput.addEventListener('input', () => {
+            const query = searchInput.value;
+            const rows = Array.from(standingsBody.querySelectorAll('tr'));
+            const visible = filterStandingsRows(rows, query);
+            if (termEl) termEl.textContent = query.trim();
+            if (emptyEl) emptyEl.hidden = visible !== 0 || query.trim() === '';
+        });
+    }
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { filterStandingsRows };
+}
