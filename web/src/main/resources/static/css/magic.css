@@ -300,7 +300,18 @@
     line-height: 1.5;
 }
 
-.cube-list-wrap textarea:focus {
+/* Single-line card-name inputs inside .cube-list-wrap should fill the
+   wrapper so the suggestion dropdown (absolute, full-width) aligns. The
+   wrapper sits inside a grid-item <label>, so giving the input a sensible
+   minimum width keeps the field readable in narrow layouts. */
+.cube-list-wrap input[type="text"] {
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 240px;
+}
+
+.cube-list-wrap textarea:focus,
+.cube-list-wrap input[type="text"]:focus {
     outline: none;
     border-color: var(--mtg-gold);
     box-shadow: 0 0 0 2px var(--mtg-gold-soft);

@@ -328,13 +328,23 @@
                 name (counts included), no Scryfall lookup needed.
             </p>
             <form class="cube-form cube-compare-form" data-form="compare" autocomplete="off">
-                <label class="cube-compare-col">List A (before)
-                    <textarea name="listA" rows="8" spellcheck="false"
-                              placeholder="One card per line:&#10;1 Lightning Bolt&#10;10 Forest"></textarea>
+                <label class="cube-compare-col" id="compare-a-label">List A (before)
+                    <div class="cube-list-wrap">
+                        <textarea name="listA" rows="8" spellcheck="false"
+                                  aria-labelledby="compare-a-label"
+                                  aria-autocomplete="list" aria-controls="compare-a-suggest"
+                                  placeholder="One card per line:&#10;1 Lightning Bolt&#10;10 Forest"></textarea>
+                        <ul class="cube-card-suggest" id="compare-a-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
                 </label>
-                <label class="cube-compare-col">List B (after)
-                    <textarea name="listB" rows="8" spellcheck="false"
-                              placeholder="The new version of the list"></textarea>
+                <label class="cube-compare-col" id="compare-b-label">List B (after)
+                    <div class="cube-list-wrap">
+                        <textarea name="listB" rows="8" spellcheck="false"
+                                  aria-labelledby="compare-b-label"
+                                  aria-autocomplete="list" aria-controls="compare-b-suggest"
+                                  placeholder="The new version of the list"></textarea>
+                        <ul class="cube-card-suggest" id="compare-b-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
                 </label>
                 <button type="submit" class="btn cube-submit">Compare</button>
             </form>
@@ -350,8 +360,14 @@
                 the <code th:text="${mtgCmd.cardLookup}">/mtgcard lookup</code> Discord command.
             </p>
             <form class="cube-form" data-form="card" autocomplete="off">
-                <label>Card name
-                    <input type="text" name="name" placeholder="e.g. Lightning Bolt" autocomplete="off" required>
+                <label id="card-lookup-label">Card name
+                    <div class="cube-list-wrap">
+                        <input type="text" name="name" placeholder="e.g. Lightning Bolt"
+                               autocomplete="off"
+                               aria-labelledby="card-lookup-label"
+                               aria-autocomplete="list" aria-controls="card-lookup-suggest" required>
+                        <ul class="cube-card-suggest" id="card-lookup-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
                 </label>
                 <button type="submit" class="btn cube-submit">Look up</button>
             </form>
@@ -367,9 +383,14 @@
                 not-in-format card is flagged. The website twin of <code th:text="${mtgCmd.deckLegality}">/mtgdeck legality</code>.
             </p>
             <form class="cube-form" data-form="legality" autocomplete="off">
-                <label>Decklist
-                    <textarea name="list" rows="10" spellcheck="false"
-                              placeholder="One card per line:&#10;4 Ragavan, Nimble Pilferer&#10;4 Lightning Bolt&#10;20 Mountain"></textarea>
+                <label id="legality-list-label">Decklist
+                    <div class="cube-list-wrap">
+                        <textarea name="list" rows="10" spellcheck="false"
+                                  aria-labelledby="legality-list-label"
+                                  aria-autocomplete="list" aria-controls="legality-card-suggest"
+                                  placeholder="One card per line:&#10;4 Ragavan, Nimble Pilferer&#10;4 Lightning Bolt&#10;20 Mountain"></textarea>
+                        <ul class="cube-card-suggest" id="legality-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
                 </label>
                 <label>Format
                     <select name="format">
@@ -423,8 +444,14 @@
             </p>
             <div th:if="${loggedIn}" data-watch-block>
                 <form class="cube-form cube-watch-form" data-form="watch" autocomplete="off">
-                    <label>Card
-                        <input type="text" name="name" placeholder="e.g. Ragavan, Nimble Pilferer" autocomplete="off" required>
+                    <label id="watch-card-label">Card
+                        <div class="cube-list-wrap">
+                            <input type="text" name="name" placeholder="e.g. Ragavan, Nimble Pilferer"
+                                   autocomplete="off"
+                                   aria-labelledby="watch-card-label"
+                                   aria-autocomplete="list" aria-controls="watch-card-suggest" required>
+                            <ul class="cube-card-suggest" id="watch-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                        </div>
                     </label>
                     <label>Alert when price is
                         <select name="direction">
