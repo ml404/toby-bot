@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Settle multi blackjack hands per seat vs the dealer, not from a peer pool",
+    "summary": "The multi-table resolver pooled every losing seat's stake, then split the remainder among winners after a flat rake — so two players who both beat the dealer would just trade refunds with no winnings, and a single winner's payout scaled with how many others happened to lose. Players were effectively competing with each other, not the dealer. Now each hand-slot is settled independently against the dealer, matching how the solo flow already pays out: Win → 1:1 (2× stake) pai…",
+    "emoji": "♠️",
+    "prNumber": 692
+  },
+  {
+    "date": "June 2026",
     "title": "Fix crowded music dashboard by switching to 2-column layout",
     "summary": "The music player dashboard was packing four cards into a 3-column grid that broke down badly at ~980px viewports — the Search input truncated to \"URL or sear\", playlist names collapsed to \"Pl…\", and the Save-queue/＋New buttons stacked on top of each other. This switches the dashboard to a 2-column layout: the now-playing hero on the left, and queue / playlists / voice stacked in a side column on the right. Every card gets enough width to breathe, and the page is promoted t…",
     "emoji": "✨",
