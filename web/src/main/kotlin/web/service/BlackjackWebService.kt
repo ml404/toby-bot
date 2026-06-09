@@ -132,19 +132,25 @@ class BlackjackWebService(
     )
 
     fun listMultiTables(guildId: Long): List<TableSummaryView> {
+        // Lists every blackjack table on the guild, MULTI and SOLO
+        // alike. A SOLO table appears as a 1-seat table that a second
+        // player can join (joinMultiTable accepts SOLO tables in
+        // RESOLVED phase and promotes them in place). For SOLO tables
+        // the displayed "host" is the lone seated player — SOLO tables
+        // don't track a hostDiscordId until promotion.
         val tables = tableRegistry.listForGuild(guildId)
-            .filter { it.mode == BlackjackTable.Mode.MULTI }
-        // Batch-resolve every host's display name once so the lobby doesn't
-        // hit JDA per row.
-        val hostIds = tables.mapNotNull { it.hostDiscordId }.toSet()
-        val hosts = memberLookup.resolveAll(guildId, hostIds)
+        val displayHostIds = tables.mapNotNull { table ->
+            table.hostDiscordId ?: table.seats.firstOrNull()?.discordId
+        }.toSet()
+        val hosts = memberLookup.resolveAll(guildId, displayHostIds)
         return tables.map { table ->
-            val host = table.hostDiscordId?.let { hosts[it] }
+            val displayHostId = table.hostDiscordId ?: table.seats.firstOrNull()?.discordId
+            val host = displayHostId?.let { hosts[it] }
             TableSummaryView(
                 tableId = table.id,
-                hostDiscordId = table.hostDiscordId?.toString(),
+                hostDiscordId = displayHostId?.toString(),
                 hostName = host?.name
-                    ?: table.hostDiscordId?.let { memberLookup.fallbackName(it) }
+                    ?: displayHostId?.let { memberLookup.fallbackName(it) }
                     ?: "—",
                 mode = table.mode.name,
                 seats = table.seats.size,

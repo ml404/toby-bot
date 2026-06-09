@@ -437,9 +437,14 @@ class BlackjackController(
     }
 
     private fun findActiveSoloTable(guildId: Long, discordId: Long): Long? {
+        // Mode-agnostic lookup: returns the latest table the caller is
+        // seated at, whether it's still SOLO or has been promoted to
+        // MULTI by a joiner. The solo page's state poll uses this to
+        // notice promotion (state.mode != "SOLO") and redirect to the
+        // multi-table view; without dropping the mode filter, /solo/state
+        // would 404 the moment someone else joins.
         val mine = tableRegistry.listForGuild(guildId).filter { table ->
-            table.mode == BlackjackTable.Mode.SOLO &&
-                table.seats.any { it.discordId == discordId }
+            table.seats.any { it.discordId == discordId }
         }
         // Prefer a still-in-flight hand. After a hand resolves, the table now
         // sticks around (so /state can render the result + disable buttons)

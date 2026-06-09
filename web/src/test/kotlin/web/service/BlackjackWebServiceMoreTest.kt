@@ -379,15 +379,26 @@ class BlackjackWebServiceMoreTest {
     }
 
     @Test
-    fun `listMultiTables filters out SOLO tables`() {
-        // Create a SOLO table — should not appear in the lobby list
-        registry.create(
+    fun `listMultiTables includes SOLO tables so they are discoverable as joinable`() {
+        // SOLO tables now show up in the lobby list — a second player
+        // can find them and join, which promotes the table to MULTI in
+        // place. Pre-refactor, the lobby filtered Mode.MULTI only.
+        val table = registry.create(
             guildId = guildId,
             mode = BlackjackTable.Mode.SOLO,
             hostDiscordId = player1,
             ante = 50L, maxSeats = 1,
         )
-        assertTrue(service.listMultiTables(guildId).isEmpty())
+        table.seats.add(BlackjackTable.Seat(discordId = player1, ante = 50L, stake = 50L))
+        every { memberLookup.resolveAll(guildId, setOf(player1)) } returns mapOf(
+            player1 to MemberLookupHelper.MemberDisplay(name = "Alice", avatarUrl = "alice.png"),
+        )
+
+        val rows = service.listMultiTables(guildId)
+        assertEquals(1, rows.size)
+        assertEquals("SOLO", rows[0].mode)
+        assertEquals(1, rows[0].seats)
+        assertEquals("Alice", rows[0].hostName, "uses the lone seated player as the display host")
     }
 
     @Test
@@ -419,13 +430,35 @@ class BlackjackWebServiceMoreTest {
     }
 
     @Test
-    fun `listMultiTables hostName is dash when host is null`() {
-        // A MULTI table with null hostDiscordId
+    fun `listMultiTables hostName falls back to the seated player when host is null`() {
+        // SOLO tables (and the rare MULTI table with a null host) now
+        // fall back to the lone seated player's name so the lobby has
+        // something meaningful to render — pre-refactor, a null host
+        // rendered as a literal dash even though a player was seated.
         val table = registry.create(
             guildId = guildId, mode = BlackjackTable.Mode.MULTI,
             hostDiscordId = null, ante = 100L, maxSeats = 6,
         )
         table.seats.add(BlackjackTable.Seat(discordId = player1, ante = 100L, stake = 100L))
+        every { memberLookup.resolveAll(guildId, setOf(player1)) } returns mapOf(
+            player1 to MemberLookupHelper.MemberDisplay(name = "Alice", avatarUrl = "alice.png"),
+        )
+
+        val rows = service.listMultiTables(guildId)
+        assertEquals(1, rows.size)
+        assertEquals("Alice", rows[0].hostName)
+        assertEquals(player1.toString(), rows[0].hostDiscordId)
+    }
+
+    @Test
+    fun `listMultiTables hostName is dash when no seats and no host`() {
+        // The fallback only fires when *somebody* is seated. An empty
+        // multi table (e.g. after every seat was evicted but before the
+        // table itself was dropped) still renders the literal dash.
+        registry.create(
+            guildId = guildId, mode = BlackjackTable.Mode.MULTI,
+            hostDiscordId = null, ante = 100L, maxSeats = 6,
+        )
 
         val rows = service.listMultiTables(guildId)
         assertEquals(1, rows.size)

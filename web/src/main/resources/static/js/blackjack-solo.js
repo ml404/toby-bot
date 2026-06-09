@@ -478,7 +478,20 @@
                 if (!r.ok) throw new Error("state HTTP " + r.status);
                 return r.json();
             })
-            .then(function (state) { renderState(state); })
+            .then(function (state) {
+                // Promotion redirect: if a second player joined this
+                // solo table, the server has flipped its mode to MULTI
+                // in place. The multi-table page is the right surface
+                // for ≥2 seats (host start button, per-actor controls),
+                // so move the original solo player there. One-shot —
+                // stop the poll first so we don't race the navigation.
+                if (state && state.mode && state.mode !== "SOLO") {
+                    stopPoll();
+                    window.location.href = "/blackjack/" + guildId + "/" + state.tableId;
+                    return;
+                }
+                renderState(state);
+            })
             .catch(function (e) { console.warn("state poll failed", e); });
     }
 

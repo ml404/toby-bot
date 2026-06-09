@@ -260,13 +260,15 @@ class BlackjackService @Autowired constructor(
         stake: Long,
         autoTopUp: Boolean = false
     ): SoloDealOutcome {
-        // Reject a redeal while the caller still has an in-flight solo
-        // table on this guild — without this guard, hitting the web Deal
-        // form mid-hand would debit the stake again, orphan the previous
-        // table in the registry, and leave the wallet wonky.
+        // Reject a redeal while the caller is already seated at any
+        // in-flight table — solo OR multi (a solo table that's been
+        // promoted by a joiner is now MULTI and the caller belongs at
+        // /blackjack/{guildId}/{tableId}, not on a fresh solo escrow).
+        // Without this guard, hitting the web Deal form mid-hand would
+        // debit the stake again, orphan the previous table, and leave
+        // the wallet wonky.
         tableRegistry.listForGuild(guildId).firstOrNull { t ->
-            t.mode == BlackjackTable.Mode.SOLO &&
-                t.phase != BlackjackTable.Phase.RESOLVED &&
+            t.phase != BlackjackTable.Phase.RESOLVED &&
                 t.seats.any { it.discordId == discordId }
         }?.let { return SoloDealOutcome.HandInProgress(it.id) }
 
@@ -895,6 +897,17 @@ class BlackjackService @Autowired constructor(
         )
     }
 
+    /**
+     * Seat a player at an existing table.
+     *
+     * Accepts both MULTI tables (between hands, exactly as before) and
+     * SOLO tables (after the solo hand has resolved). Joining a SOLO
+     * table promotes it in place: the original solo seat becomes the
+     * host, mode flips to MULTI, and the table transitions from
+     * RESOLVED to LOBBY so the host can start the next (now multi)
+     * hand. Mid-hand joins on either mode are rejected with
+     * `HandInProgress`.
+     */
     @Transactional
     fun joinMultiTable(
         discordId: Long,
@@ -904,13 +917,25 @@ class BlackjackService @Autowired constructor(
     ): MultiJoinOutcome {
         val table = tableRegistry.get(tableId) ?: return MultiJoinOutcome.TableNotFound
         if (table.guildId != guildId) return MultiJoinOutcome.TableNotFound
-        if (table.mode != BlackjackTable.Mode.MULTI) return MultiJoinOutcome.TableNotFound
 
         val pre = synchronized(table) {
+            val isJoinablePhase = when (table.mode) {
+                // Multi tables only accept joins in their explicit LOBBY
+                // phase (between hands). The pendingLeave / multi seat
+                // book-keeping assumes this.
+                BlackjackTable.Mode.MULTI -> table.phase == BlackjackTable.Phase.LOBBY
+                // Solo tables don't ever sit in LOBBY — they go straight
+                // from creation into PLAYER_TURNS and end in RESOLVED. A
+                // joiner can only walk in after the solo hand resolved.
+                BlackjackTable.Mode.SOLO -> table.phase == BlackjackTable.Phase.RESOLVED
+            }
+            // The TableFull check intentionally runs in the inner monitor
+            // block below (not here) so a SOLO table's pre-promotion cap
+            // of `maxSeats=1` doesn't reject a join before the promotion
+            // step gets a chance to bump the cap.
             when {
-                table.phase != BlackjackTable.Phase.LOBBY -> JoinPreflight.HandInProgress
+                !isJoinablePhase -> JoinPreflight.HandInProgress
                 table.seats.any { it.discordId == discordId } -> JoinPreflight.AlreadySeated
-                table.seats.size >= table.maxSeats -> JoinPreflight.TableFull
                 else -> JoinPreflight.Ok
             }
         }
@@ -922,6 +947,15 @@ class BlackjackService @Autowired constructor(
         }
 
         val ante = table.ante
+        // Solo tables ship with maxSeats=1. On the first join we need
+        // to bump that to the guild's configured multi cap so the
+        // joiner (and any subsequent joiners) actually fit. Read the
+        // params once here, outside the table monitor, matching the
+        // ordering the rest of the service uses.
+        val promotedMaxSeats: Int? = if (table.mode == BlackjackTable.Mode.SOLO) {
+            readMultiTableParams(guildId).maxSeats
+        } else null
+
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return MultiJoinOutcome.UnknownUser
         val balance = user.socialCredit ?: 0L
@@ -947,8 +981,33 @@ class BlackjackService @Autowired constructor(
         }
 
         val seatIndex = synchronized(table) {
-            if (table.phase != BlackjackTable.Phase.LOBBY) return@synchronized -3
+            // Re-validate join eligibility under the monitor — phase /
+            // seat count may have changed since the preflight read.
+            val stillJoinable = when (table.mode) {
+                BlackjackTable.Mode.MULTI -> table.phase == BlackjackTable.Phase.LOBBY
+                BlackjackTable.Mode.SOLO -> table.phase == BlackjackTable.Phase.RESOLVED
+            }
+            if (!stillJoinable) return@synchronized -3
             if (table.seats.any { it.discordId == discordId }) return@synchronized -1
+
+            // Promote SOLO → MULTI in place BEFORE the seat-count gate
+            // so the post-promotion cap (read from the guild's multi
+            // params) is what's enforced. Without this order the
+            // promotion would never fire because the solo table's
+            // maxSeats=1 cap rejects the joiner first. The original
+            // solo seat becomes the host so the existing host-only
+            // `startMultiHand` gate, lobby UI, and shot-clock wiring
+            // all work without mode-specific branches downstream.
+            if (table.mode == BlackjackTable.Mode.SOLO) {
+                val originalSeat = table.seats.firstOrNull()
+                if (originalSeat != null && table.hostDiscordId == null) {
+                    table.hostDiscordId = originalSeat.discordId
+                }
+                table.mode = BlackjackTable.Mode.MULTI
+                table.phase = BlackjackTable.Phase.LOBBY
+                table.lastResult = null
+                if (promotedMaxSeats != null) table.maxSeats = promotedMaxSeats
+            }
             if (table.seats.size >= table.maxSeats) return@synchronized -2
             table.seats.add(
                 BlackjackTable.Seat(

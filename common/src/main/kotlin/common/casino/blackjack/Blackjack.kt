@@ -143,7 +143,16 @@ class Blackjack(private val random: Random = Random.Default) {
 
         const val MULTI_MIN_ANTE: Long = 10L
         const val MULTI_MAX_ANTE: Long = 500L
-        const val MULTI_MIN_SEATS: Int = 2
+        /**
+         * Minimum seated players for a multi table to deal a hand. A
+         * single-seat multi table is the natural post-promotion state of
+         * a solo table (and the residual state of a multi table whose
+         * other players have all left), so dealing has to work with
+         * just one seat — the host hits Start exactly as in the 2+ seat
+         * case. Previously was 2 (couldn't deal solo from a multi
+         * table); now 1 (solo is just a 1-seat multi).
+         */
+        const val MULTI_MIN_SEATS: Int = 1
         const val MULTI_MAX_SEATS: Int = 5
 
         /** Fraction of a multiplayer pot routed to the jackpot pool. */
