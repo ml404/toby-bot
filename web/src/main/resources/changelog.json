@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Web: add member search to the leaderboard standings",
+    "summary": "Third of the four follow-up directions — **web dashboard wins**.",
+    "emoji": "✨",
+    "prNumber": 687
+  },
+  {
+    "date": "June 2026",
     "title": "Fix web /meme 403s by using Reddit OAuth like the bot (#403)",
     "summary": "## Problem",
     "emoji": "✨",
