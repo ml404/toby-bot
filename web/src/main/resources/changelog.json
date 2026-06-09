@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix crowded music dashboard by switching to 2-column layout",
+    "summary": "The music player dashboard was packing four cards into a 3-column grid that broke down badly at ~980px viewports — the Search input truncated to \"URL or sear\", playlist names collapsed to \"Pl…\", and the Save-queue/＋New buttons stacked on top of each other. This switches the dashboard to a 2-column layout: the now-playing hero on the left, and queue / playlists / voice stacked in a side column on the right. Every card gets enough width to breathe, and the page is promoted t…",
+    "emoji": "✨",
+    "prNumber": 691
+  },
+  {
+    "date": "June 2026",
     "title": "Wire Scryfall autocomplete on every /magic card-input field",
     "summary": "The cube-list textarea was the only field with Scryfall autocomplete. The legality decklist, card lookup, price-watch, and Compare textareas all had nothing — typing a partial name there gave no help even though the backend resolved full names fine. `wireCardAutocomplete` now iterates every `[data-card-suggest]` listbox on the page and wires its sibling `textarea`/`input`, so all five fields get the same arrow-key + mouse-pick suggestions. The helper handles single-line `<…",
     "emoji": "✨",
