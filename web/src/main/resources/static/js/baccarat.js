@@ -171,7 +171,10 @@ function sideName(raw) {
     if (raw === 'PLAYER') return 'Player';
     if (raw === 'BANKER') return 'Banker';
     if (raw === 'TIE') return 'Tie';
-    return String(raw || '');
+    // The result is concatenated into innerHTML by the win/lose line
+    // builders, so an unexpected value must come out HTML-inert — keep
+    // only characters that can't open a tag or attribute.
+    return String(raw || '').replace(/[^A-Za-z0-9 _-]/g, '');
 }
 
 function winLineHtml(body, sideLabel, winnerLabel) {
