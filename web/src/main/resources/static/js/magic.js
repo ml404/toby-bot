@@ -1329,14 +1329,26 @@
     }
 
     /**
-     * As the user types a card name in the list box, suggests real card names
-     * from Scryfall's autocomplete API and completes the current line on pick
-     * (keeping any leading quantity). Arrow keys + Enter/Escape, plus mouse.
+     * Wires every card-input on the page to Scryfall's autocomplete API.
+     * Each input/textarea sits inside a [.cube-list-wrap] with a sibling
+     * [data-card-suggest] listbox; this finds those pairs and wires them.
      */
     function wireCardAutocomplete(doc) {
-        const textarea = doc.querySelector('textarea[name="list"]');
-        const box = doc.querySelector('[data-card-suggest]');
-        if (!textarea || !box) return;
+        doc.querySelectorAll('[data-card-suggest]').forEach(function (box) {
+            const wrap = box.closest('.cube-list-wrap');
+            const field = wrap && wrap.querySelector('textarea, input[type="text"]');
+            if (field) wireCardAutocompletePair(field, box);
+        });
+    }
+
+    /**
+     * As the user types a card name in [field], suggests real card names from
+     * Scryfall's autocomplete API and completes the current line on pick
+     * (keeping any leading quantity for decklist textareas). Works for both
+     * `<textarea>` decklists and single-line `<input>` card-name fields.
+     * Arrow keys + Enter/Escape, plus mouse.
+     */
+    function wireCardAutocompletePair(field, box) {
         let timer = null;
         let controller = null;
         let items = [];
@@ -1354,11 +1366,13 @@
         }
 
         function pick(name) {
-            const applied = applyCardChoice(textarea.value, textarea.selectionStart, name);
-            textarea.value = applied.value;
-            textarea.selectionStart = textarea.selectionEnd = applied.caret;
+            const applied = applyCardChoice(field.value, field.selectionStart || 0, name);
+            field.value = applied.value;
+            try { field.selectionStart = field.selectionEnd = applied.caret; } catch (e) { /* some input types reject setSelectionRange */ }
             close();
-            textarea.focus();
+            field.focus();
+            // Let listeners (card-count badge, etc.) react to the completion.
+            field.dispatchEvent(new Event('input', { bubbles: true }));
         }
 
         function render(names) {
@@ -1378,7 +1392,7 @@
         }
 
         function suggest() {
-            const info = currentLineInfo(textarea.value, textarea.selectionStart);
+            const info = currentLineInfo(field.value, field.selectionStart || 0);
             const partial = splitQuantityPrefix(info.text).name.trim();
             if (partial.length < 2) { close(); return; }
             if (controller) controller.abort();
@@ -1389,18 +1403,18 @@
                 .catch(function () { /* aborted or offline — leave the box as it is */ });
         }
 
-        textarea.addEventListener('input', function () {
+        field.addEventListener('input', function () {
             if (timer) clearTimeout(timer);
             timer = setTimeout(suggest, 160);
         });
-        textarea.addEventListener('keydown', function (e) {
+        field.addEventListener('keydown', function (e) {
             if (box.hidden) return;
             if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(active + 1, items.length - 1)); }
             else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(active - 1, 0)); }
             else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); pick(items[active]); }
             else if (e.key === 'Escape') { close(); }
         });
-        textarea.addEventListener('blur', function () { setTimeout(close, 150); });
+        field.addEventListener('blur', function () { setTimeout(close, 150); });
     }
 
     function wireCardLookup(doc) {
