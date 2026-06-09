@@ -265,6 +265,11 @@ class ProfileCardRenderer {
     }
 
     private fun loadAvatar(url: String): BufferedImage? {
+        // Avatar URLs come from Discord's CDN today, but this renderer
+        // fetches whatever it's handed — refuse anything that isn't plain
+        // https so a future caller can't be talked into reading file:/
+        // internal-network resources into a public PNG.
+        if (!isFetchableAvatarUrl(url)) return null
         avatarCache.getIfPresent(url)?.let { return it }
         val fetched = runCatching {
             val conn = URI(url).toURL().openConnection() as HttpURLConnection
@@ -331,6 +336,10 @@ class ProfileCardRenderer {
     companion object {
         const val WIDTH = 900
         const val HEIGHT = 400
+
+        /** See [loadAvatar] — plain https URLs only, everything else is dropped. */
+        internal fun isFetchableAvatarUrl(url: String): Boolean =
+            runCatching { URI(url).scheme?.lowercase() == "https" }.getOrDefault(false)
 
         private const val AVATAR_X = 40
         private const val AVATAR_Y = 40

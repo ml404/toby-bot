@@ -412,4 +412,52 @@ class IntroWebServiceTest {
         assertNull(preview.title)
         assertEquals("https://img.youtube.com/vi/abc123/mqdefault.jpg", preview.thumbnailUrl)
     }
+
+    // --- security hardening ----------------------------------------------
+
+    @Test
+    fun `setIntroByUrl rejects non-http schemes`() {
+        // file:/ftp:/javascript: would otherwise be persisted and later fetched
+        // by the music player — a local-resource read primitive.
+        assertEquals("Invalid URL provided.", service.setIntroByUrl(discordId, guildId, "file:///etc/passwd", 50, null, null, null))
+        assertEquals("Invalid URL provided.", service.setIntroByUrl(discordId, guildId, "ftp://internal.host/clip.mp3", 50, null, null, null))
+        assertEquals("Invalid URL provided.", service.setIntroByUrl(discordId, guildId, "javascript:alert(1)", 50, null, null, null))
+    }
+
+    @Test
+    fun `setIntroByUrl rejects an http url without a host`() {
+        assertEquals("Invalid URL provided.", service.setIntroByUrl(discordId, guildId, "https://", 50, null, null, null))
+    }
+
+    @Test
+    fun `fetchYouTubePreview rejects ids outside the YouTube id alphabet`() {
+        // Quotes, parens and spaces would otherwise flow into the thumbnail
+        // CSS url(...) and the Data API query string.
+        assertNull(service.fetchYouTubePreview("https://www.youtube.com/watch?v=abc')injected"))
+        assertNull(service.fetchYouTubePreview("https://www.youtube.com/watch?v=abc def"))
+    }
+
+    @Test
+    fun `sanitizeUploadFileName strips directory components and control characters`() {
+        assertEquals("clip.mp3", service.sanitizeUploadFileName("../../../etc/clip.mp3"))
+        assertEquals("clip.mp3", service.sanitizeUploadFileName("C:\\Users\\victim\\clip.mp3"))
+        assertEquals("clip.mp3", service.sanitizeUploadFileName("cl ip.mp3"))
+        assertNull(service.sanitizeUploadFileName(null))
+        assertNull(service.sanitizeUploadFileName("   "))
+    }
+
+    @Test
+    fun `sanitizeUploadFileName collapses a url-shaped name so it cannot feed the blob-heal path`() {
+        assertEquals("evil.mp3", service.sanitizeUploadFileName("https://evil.example/evil.mp3"))
+    }
+
+    @Test
+    fun `setIntroByFile persists the sanitized file name`() {
+        every { userService.getUserById(discordId, guildId) } returns user()
+        val saved = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(saved)) } returns mockk()
+        val result = service.setIntroByFile(discordId, guildId, mp3("..\\..\\traversal.mp3", byteArrayOf(1)), 60, null, null, null)
+        assertNull(result)
+        assertEquals("traversal.mp3", saved.captured.fileName)
+    }
 }

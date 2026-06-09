@@ -30,6 +30,10 @@ class IntroWebService(
         const val MAX_CLIP_DURATION_MS = MAX_INTRO_DURATION_SECONDS * 1000
         private val objectMapper = ObjectMapper()
         private val logger = DiscordLogger(IntroWebService::class.java)
+        // Real ids are 11 chars of this alphabet; the upper bound leaves
+        // headroom should YouTube ever lengthen them.
+        private val VIDEO_ID_PATTERN = Regex("[A-Za-z0-9_-]{1,20}")
+        private val API_KEY_PARAM = Regex("([?&]key=)[^&]+")
     }
 
     // Caches the Discord-side guild list per access token so rapid navigation
@@ -292,7 +296,7 @@ class IntroWebService(
         }
 
         val fileBytes = file.bytes
-        val fileName = file.originalFilename ?: "intro.mp3"
+        val fileName = sanitizeUploadFileName(file.originalFilename) ?: "intro.mp3"
         val selectedDto = replaceIndex?.let { idx -> existingIntros.find { it.index == idx } }
 
         if (selectedDto != null) {
@@ -499,8 +503,11 @@ class IntroWebService(
         val request = Request.Builder().url(apiUrl).build()
         return youtubeApiClient.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
+                // Redact the key= query param — this log line ends up in
+                // Discord via DiscordLogger, which must never see the API key.
                 logger.warn {
-                    "YouTube Data API returned HTTP ${response.code} (${response.message}) for $apiUrl"
+                    "YouTube Data API returned HTTP ${response.code} (${response.message}) " +
+                        "for ${apiUrl.replace(API_KEY_PARAM, "$1<redacted>")}"
                 }
                 null
             } else {
@@ -524,7 +531,11 @@ class IntroWebService(
         // Exclude `/` from the capture so a trailing slash (e.g. `…/shorts/ID/`)
         // doesn't get baked into the videoId and break the iframe embed URL.
         val regex = Regex("(?<=v=|/videos/|embed/|youtu\\.be/|/v/|/e/|watch\\?v=|&v=|^youtu\\.be/|/shorts/)([^#&?/\\n]+)")
-        return regex.find(url)?.value
+        // The id is interpolated into thumbnail/embed URLs, the template
+        // layer and the Data API query string, so reject anything outside
+        // the YouTube id alphabet rather than passing exotic characters
+        // (quotes, parens, spaces…) into those contexts.
+        return regex.find(url)?.value?.takeIf { VIDEO_ID_PATTERN.matches(it) }
     }
 
     /**
@@ -541,12 +552,31 @@ class IntroWebService(
 
     private fun isValidUrl(url: String): Boolean {
         return try {
-            URI(url).toURL()
-            true
+            // http(s) only — URI/URL alone would also accept file:, ftp:,
+            // jar: etc., and the saved URL is later fetched by the music
+            // player, so any other scheme is a local-resource read primitive.
+            val uri = URI(url)
+            uri.scheme?.lowercase() in setOf("http", "https") && !uri.host.isNullOrBlank()
         } catch (e: Exception) {
             false
         }
     }
+
+    /**
+     * Browsers send the client-side file name verbatim and some include a
+     * full path. Strip directory components, control characters and
+     * leading/trailing whitespace before the name is persisted or echoed
+     * back, so a crafted name can't smuggle traversal sequences into a
+     * later export or a URL shape into the blob-heal logic in
+     * [getUserIntros] (which trusts URL-shaped fileNames on blobless rows).
+     */
+    internal fun sanitizeUploadFileName(raw: String?): String? =
+        raw?.substringAfterLast('/')
+            ?.substringAfterLast('\\')
+            ?.filter { it.code >= 0x20 }
+            ?.trim()
+            ?.take(255)
+            ?.takeIf { it.isNotEmpty() }
 
     /** Parses ISO-8601 durations like "PT1M3S" or "PT15S" into seconds. Returns null if unparseable. */
     private fun parseIsoDurationSeconds(iso: String?): Int? {
