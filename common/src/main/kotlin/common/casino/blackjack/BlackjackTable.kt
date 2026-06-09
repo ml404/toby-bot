@@ -72,7 +72,7 @@ class BlackjackTable(
         val dealerHitsSoft17: Boolean = false,
         /** Natural-blackjack multiplier on the player's stake. 2.5 = 3:2 (default), 2.2 = 6:5. */
         val blackjackPayoutMultiplier: Double = 2.5,
-        /** Fraction of the multi losers' pool routed to the jackpot pool. */
+        /** Fraction of each losing multi hand-slot's stake routed to the jackpot pool. */
         val rakeFraction: Double = 0.05,
     )
 

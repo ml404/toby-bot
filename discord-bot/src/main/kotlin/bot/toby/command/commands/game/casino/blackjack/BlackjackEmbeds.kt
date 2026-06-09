@@ -218,7 +218,7 @@ internal object BlackjackEmbeds {
                     "Host (<@${table.hostDiscordId}>) starts the hand with `/blackjack start table:${table.id}`.",
                 false
             )
-            .setFooter("Best non-bust beats the dealer. Pot splits among winners; ${(Blackjack.MULTI_RAKE * 100).toInt()}% rake to the jackpot pool.")
+            .setFooter("Beat the dealer to win — each seat plays independently. ${(Blackjack.MULTI_RAKE * 100).toInt()}% of each loss feeds the jackpot pool.")
             .setColor(TABLE_COLOR)
             .build()
     }

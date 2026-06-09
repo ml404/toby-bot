@@ -1360,18 +1360,19 @@ class BlackjackService @Autowired constructor(
     }
 
     /**
-     * Dealer plays out (skipped if every seat busted), then we evaluate
-     * every seat against the dealer and split the pot:
+     * Dealer plays out (skipped if every seat busted), then each hand-
+     * slot is settled INDEPENDENTLY vs the dealer. Other players at the
+     * table winning or losing has no effect on what this seat takes
+     * home — beating the dealer is sufficient, the same way the solo
+     * flow already works. Per-slot:
      *
-     *   - Pushed antes are refunded to the push players.
-     *   - Each winner gets their own ante back from the pot.
-     *   - Natural-blackjack winners get an extra 1.5× ante "premium" off
-     *     the top, capped at the losers' contribution; if the losers'
-     *     pool can't cover the full premium it scales down proportionally.
-     *   - Whatever remains of the losers' pool after the BJ premium is
-     *     split equally among ALL winners (BJ + regular). 5% rake on the
-     *     to-be-split chunk goes to the jackpot pool.
-     *   - If no seat won, the entire losers' pool goes to the jackpot.
+     *   - Push → ante refunded (1× stake).
+     *   - Win → 2× stake credited from the house (1:1).
+     *   - Natural blackjack → stake × [TableRules.blackjackPayoutMultiplier]
+     *     credited (3:2 by default).
+     *   - Loss / bust → stake is forfeit; a configurable fraction
+     *     ([TableRules.rakeFraction], default 5%) of each losing slot's
+     *     stake is routed to the per-guild jackpot pool.
      *
      * After payouts, seats are reset to a fresh per-hand state but
      * KEPT — players re-ante on the next [startMultiHand] without
@@ -1383,8 +1384,8 @@ class BlackjackService @Autowired constructor(
         val deck = t.deck ?: error("missing deck on resolve")
         // Flatten to a single (seat, hand-slot, hand-index) list — each
         // split branch is its own wager and is settled independently
-        // (loss tribute / jackpot roll / pot share all happen at the
-        // hand-slot level rather than the seat level).
+        // (per-slot payout / loss tribute happen at the hand-slot level
+        // rather than the seat level).
         data class Entry(
             val seat: BlackjackTable.Seat,
             val slot: BlackjackTable.HandSlot,
@@ -1410,63 +1411,44 @@ class BlackjackService @Autowired constructor(
             entry.slot.status = terminalStatusFor(result, entry.slot.status)
         }
 
-        val totalPot = entries.sumOf { it.slot.stake }
-        val pushEntries = entries.filter { perSlotResult[it] == Blackjack.Result.PUSH }
-        val winnerEntries = entries.filter {
-            val r = perSlotResult[it]
-            r == Blackjack.Result.PLAYER_WIN || r == Blackjack.Result.PLAYER_BLACKJACK
-        }
-        val bjEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_BLACKJACK }
         // One BlackjackNaturalEvent per natural-on-the-deal seat. Same
         // guarantees as the solo path: `evaluate` only returns
         // PLAYER_BLACKJACK on a two-card hand with fromSplit=false.
-        bjEntries.forEach { entry ->
-            eventPublisher?.publishEvent(
-                BlackjackNaturalEvent(discordId = entry.seat.discordId, guildId = t.guildId)
-            )
-        }
-        val regularEntries = winnerEntries.filter { perSlotResult[it] == Blackjack.Result.PLAYER_WIN }
-        val pushTotal = pushEntries.sumOf { it.slot.stake }
-        val winnerStakeTotal = winnerEntries.sumOf { it.slot.stake }
-        val losersPool = (totalPot - pushTotal - winnerStakeTotal).coerceAtLeast(0L)
+        perSlotResult.entries
+            .filter { it.value == Blackjack.Result.PLAYER_BLACKJACK }
+            .forEach { (entry, _) ->
+                eventPublisher?.publishEvent(
+                    BlackjackNaturalEvent(discordId = entry.seat.discordId, guildId = t.guildId)
+                )
+            }
 
-        // Per-slot payouts → aggregated per-discordId at the end. Pushed
-        // slots get their own stake refunded; winners get their own
-        // stake refunded plus a share of the losers' pool.
+        val totalPot = entries.sumOf { it.slot.stake }
+        val payoutMult = t.rules.blackjackPayoutMultiplier
+
+        // Per-slot payouts vs the dealer — same shape as solo. House
+        // pays winners; no peer-pool redistribution between seats.
         val payoutBySlot = HashMap<Entry, Long>()
-        for (e in pushEntries) payoutBySlot[e] = e.slot.stake
-        for (e in winnerEntries) payoutBySlot[e] = e.slot.stake
+        for (entry in entries) {
+            val result = perSlotResult[entry] ?: Blackjack.Result.PUSH
+            val multiplier = blackjack.multiplier(result, payoutMult)
+            val payout = (entry.slot.stake * multiplier).toLong()
+            if (payout > 0L) payoutBySlot[entry] = payout
+        }
 
-        val bjPremiumFraction = (t.rules.blackjackPayoutMultiplier - 1.0).coerceAtLeast(0.0)
+        // Loss tribute: a fraction of each losing slot's stake routed
+        // to the per-guild jackpot pool. Uses the table's snapshot rate
+        // ([BLACKJACK_RAKE_PCT]) so admins can tune the blackjack-specific
+        // cut independently of the global loss tribute rate.
         var rake = 0L
-        if (winnerEntries.isEmpty()) {
-            rake = losersPool
-        } else if (losersPool > 0L) {
-            val baseRake = (losersPool * t.rules.rakeFraction).toLong()
-            val payable = losersPool - baseRake
-            val regularEntitled = regularEntries.sumOf { it.slot.stake }
-            val bjEntitled = bjEntries.sumOf { (it.slot.stake * bjPremiumFraction).toLong() }
-            val totalEntitled = regularEntitled + bjEntitled
-
-            if (totalEntitled > 0L && payable >= totalEntitled) {
-                for (e in regularEntries) payoutBySlot.merge(e, e.slot.stake) { a, b -> a + b }
-                for (e in bjEntries) {
-                    payoutBySlot.merge(e, (e.slot.stake * bjPremiumFraction).toLong()) { a, b -> a + b }
+        val rakeRate = t.rules.rakeFraction
+        if (rakeRate > 0.0) {
+            for (entry in entries) {
+                val result = perSlotResult[entry] ?: continue
+                if (result == Blackjack.Result.DEALER_WIN || result == Blackjack.Result.PLAYER_BUST) {
+                    if (entry.slot.stake > 0L) {
+                        rake += kotlin.math.floor(entry.slot.stake * rakeRate).toLong()
+                    }
                 }
-                rake = baseRake + (payable - totalEntitled)
-            } else if (totalEntitled > 0L) {
-                for (e in regularEntries) {
-                    val share = (e.slot.stake * payable) / totalEntitled
-                    payoutBySlot.merge(e, share) { a, b -> a + b }
-                }
-                for (e in bjEntries) {
-                    val owed = (e.slot.stake * bjPremiumFraction).toLong()
-                    val share = (owed * payable) / totalEntitled
-                    payoutBySlot.merge(e, share) { a, b -> a + b }
-                }
-                rake = baseRake
-            } else {
-                rake = losersPool
             }
         }
         if (rake > 0L) jackpotService.addToPool(guildId, rake)
