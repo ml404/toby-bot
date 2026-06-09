@@ -1,6 +1,7 @@
 package web.profile
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -105,6 +106,20 @@ class ProfileCardRendererTest {
     @Test
     fun `renders with a large multi-digit streak without overflowing`() {
         val png = renderer.renderPng(sample(streakDays = 365, streakActive = true))
+        assertPngShape(png, 900, 400)
+    }
+
+    @Test
+    fun `avatar fetches are restricted to https urls`() {
+        assertTrue(ProfileCardRenderer.isFetchableAvatarUrl("https://cdn.discordapp.com/avatars/1/a.png"))
+        assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("http://cdn.discordapp.com/avatars/1/a.png"))
+        assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("file:///etc/passwd"))
+        assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("not a url"))
+    }
+
+    @Test
+    fun `renders a grey-disc card without fetching when the avatar URL is not https`() {
+        val png = renderer.renderPng(sample(avatarUrl = "file:///etc/passwd"))
         assertPngShape(png, 900, 400)
     }
 
