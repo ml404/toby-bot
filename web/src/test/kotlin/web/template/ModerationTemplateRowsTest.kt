@@ -168,15 +168,18 @@ class ModerationTemplateRowsTest {
     fun `game stake limits table labels every game row with its name`() {
         // Stake limits live in a table so each game's min + max sit side by
         // side instead of stacked. Admins still scan by game — the row
-        // header replaces the old h4 sub-grouping. Sample three games
-        // (a simple one, a chance game, and Duel) so a flatten regression
-        // or accidentally-dropped row trips a single assertion.
-        // Blackjack and Poker rows live in their dedicated game sections
-        // under "Stakes per hand" / "Blinds & buy-ins" subgroups.
+        // header replaces the old h4 sub-grouping. Sample a few games
+        // (a simple one, a chance game, Duel, and Blackjack) so a flatten
+        // regression or accidentally-dropped row trips a single assertion.
+        // Blackjack is mirrored here AND inside its own dedicated section
+        // so the bulk "apply to all games" handler can target it. Poker
+        // blinds / buy-ins are still single-source inside the Poker
+        // section because they don't map to a single min/max stake.
         val rowHeaders = listOf(
             "<th scope=\"row\">Dice</th>",
             "<th scope=\"row\">Coinflip</th>",
             "<th scope=\"row\">Duel</th>",
+            "<th scope=\"row\">Blackjack</th>",
         )
         for (h in rowHeaders) {
             assertTrue(
@@ -188,9 +191,11 @@ class ModerationTemplateRowsTest {
 
     @Test
     fun `blackjack section consolidates table rules and stake bounds in one place`() {
-        // Pre-pass, BLACKJACK_MIN_ANTE / MAX_ANTE lived in a separate
-        // "Casino stakes & buy-ins" card; tuning blackjack meant scrolling
-        // between two sections. Pin them inside the Blackjack section.
+        // Stakes still live inside the Blackjack section so admins tuning
+        // the table rules don't have to scroll to a separate card to set
+        // bounds. (They're also mirrored into the Game stake limits table
+        // so the "apply to all games" bulk handler can hit them — see
+        // `game stake limits table labels every game row with its name`.)
         val blackjackStart = settingsHtml.indexOf("<summary>Blackjack</summary>")
         assertTrue(blackjackStart >= 0, "Blackjack section not found")
         val sectionEnd = settingsHtml.indexOf("</details>", blackjackStart)
@@ -199,7 +204,7 @@ class ModerationTemplateRowsTest {
         for (key in listOf("BLACKJACK_MIN_ANTE", "BLACKJACK_MAX_ANTE")) {
             assertTrue(
                 sectionHtml.contains("data-key=\"$key\""),
-                "$key should live inside the Blackjack section, not the Game stake limits card"
+                "$key should live inside the Blackjack section so admins can tune it alongside table rules"
             )
         }
     }

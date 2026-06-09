@@ -16,6 +16,10 @@
             <span th:text="${maxStake}">500</span> credits per hand.
             Dealer stands on all 17. Natural blackjack pays 3:2.
         </p>
+        <p class="muted">
+            Want to play with friends?
+            <a th:href="@{/blackjack/{id}(id=${guildId})}">Open multiplayer tables &rsaquo;</a>
+        </p>
     </div>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
