@@ -31,6 +31,7 @@ import kotlin.random.Random
 @Component
 class RedditMemeFetcher @Autowired constructor(
     private val client: HttpClient,
+    private val tokenProvider: RedditTokenProvider,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
 
@@ -44,11 +45,28 @@ class RedditMemeFetcher @Autowired constructor(
 
     /** Fetches a random non-NSFW, non-video post from the top [limit] of [subreddit] over [timePeriod]. */
     suspend fun fetch(subreddit: String?, timePeriod: String, limit: Int): Result = withContext(dispatcher) {
-        val url = String.format(RedditAPIDto.REDDIT_PREFIX, subreddit, limit, timePeriod)
+        val token = tokenProvider.bearerToken()
+        val url: String = when {
+            token != null -> String.format(RedditAPIDto.REDDIT_OAUTH_PREFIX, subreddit, limit, timePeriod)
+            tokenProvider.isConfigured -> {
+                // Credentials are set but the token fetch failed (already logged) — don't
+                // fall back to the unauth endpoint, just surface a transient error.
+                return@withContext Result.Error("Couldn't reach Reddit right now. Please try again later.")
+            }
+            else -> {
+                logger.warn(
+                    "Reddit credentials are not configured (reddit.client-id/secret) — using the " +
+                        "unauthenticated endpoint, which Reddit now blocks. Set them to fix /meme (issue #107)."
+                )
+                String.format(RedditAPIDto.REDDIT_PREFIX, subreddit, limit, timePeriod)
+            }
+        }
         logger.info("Fetching Reddit post from URL: $url")
         try {
             val response = client.get(url) {
                 header(HttpHeaders.Accept, "application/json")
+                header(HttpHeaders.UserAgent, RedditTokenProvider.USER_AGENT)
+                token?.let { header(HttpHeaders.Authorization, "bearer $it") }
                 timeout { requestTimeoutMillis = TIMEOUT_MS }
             }
             if (response.status.value != 200) {

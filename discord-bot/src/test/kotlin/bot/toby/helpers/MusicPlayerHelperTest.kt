@@ -179,7 +179,39 @@ class MusicPlayerHelperTest {
             message.editMessageEmbeds(match<MessageEmbed> {
                 it.title == "Title" && it.description?.contains("Author") == true
             })
-            messageEditAction.setComponents(any<ActionRow>()).queue()
+            messageEditAction.setComponents(any<ActionRow>()).queue(any(), any())
+        }
+    }
+
+    @Test
+    fun `test nowPlaying falls back to a new message when editing a stale stored message fails`() {
+        every { audioPlayer.volume } returns 50
+        every { audioPlayer.isPaused } returns false
+
+        // Pre-store a stale message whose edit will fail (deleted on Discord's side).
+        val staleMessage = mockk<Message>(relaxed = true)
+        val failingEdit = mockk<MessageEditAction>(relaxed = true)
+        every { staleMessage.editMessageEmbeds(any<MessageEmbed>()) } returns failingEdit
+        every { failingEdit.setComponents(any<ActionRow>()) } returns failingEdit
+        every { failingEdit.queue(any(), any()) } answers {
+            // JDA's queue(success, failure) takes java.util.function.Consumer, not a Kotlin lambda.
+            secondArg<java.util.function.Consumer<Throwable>>().accept(RuntimeException("10008: Unknown Message"))
+        }
+
+        val freshMessage = mockk<Message>(relaxed = true)
+        val webhookCreateAction = mockk<WebhookMessageCreateAction<Message>>()
+        createWebhookMocking(webhookCreateAction, freshMessage)
+
+        MusicPlayerHelper.nowPlayingManager.clear()
+        MusicPlayerHelper.nowPlayingManager.setNowPlayingMessage(guildId, staleMessage)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+
+        // The stale edit was attempted, then a fresh message was posted and stored.
+        verify {
+            staleMessage.editMessageEmbeds(any<MessageEmbed>())
+            replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>())
+            webhookCreateAction.queue(any())
         }
     }
 
@@ -296,7 +328,7 @@ class MusicPlayerHelperTest {
             )
         } returns messageEditAction
         every {
-            messageEditAction.setComponents(any<ActionRow>()).queue()
+            messageEditAction.setComponents(any<ActionRow>()).queue(any(), any())
         } just Runs
 
     }
