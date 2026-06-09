@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
+import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
@@ -85,23 +86,44 @@ object MusicPlayerHelper {
 
         if (nowPlayingInfo != null) {
             logger.info("Nowplaying message ${nowPlayingInfo.idLong} will be edited on guild $guildId")
-            // Update existing message
+            // Update the existing message — but the stored reference can be
+            // stale (e.g. the intro's now-playing was deleted on Discord's
+            // side), in which case the edit fails. Don't let that silently
+            // show nothing: fall back to posting a fresh message (#85).
             nowPlayingInfo.editMessageEmbeds(embed)
                 .setComponents(ActionRow.of(pausePlayButton, stopButton))
-                .queue()
-            hook.deleteOriginal().queue()
+                .queue(
+                    { hook.deleteOriginal().queue() },
+                    { error ->
+                        logger.warn {
+                            "Now-playing message ${nowPlayingInfo.idLong} no longer editable on guild " +
+                                "$guildId (${error.message}); posting a fresh one"
+                        }
+                        sendNewNowPlayingMessage(hook, embed, pausePlayButton, stopButton, guildId)
+                    },
+                )
         } else {
-            // Send a new message and store it in the map
-            hook.sendMessageEmbeds(embed)
-                .setComponents(ActionRow.of(pausePlayButton, stopButton))
-                .queue {
-                    logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
-                    nowPlayingManager.setNowPlayingMessage(guildId, it)
-                }
+            sendNewNowPlayingMessage(hook, embed, pausePlayButton, stopButton, guildId)
         }
         nowPlayingManager.scheduleNowPlayingUpdate(
             guildId, track, audioPlayer, 0L, 3L, clipStart, clipEnd, musicManager.scheduler, guild,
         )
+    }
+
+    /** Post a brand-new now-playing message and store it as the guild's current one. */
+    private fun sendNewNowPlayingMessage(
+        hook: InteractionHook,
+        embed: MessageEmbed,
+        pausePlayButton: Button,
+        stopButton: Button,
+        guildId: Long,
+    ) {
+        hook.sendMessageEmbeds(embed)
+            .setComponents(ActionRow.of(pausePlayButton, stopButton))
+            .queue {
+                logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
+                nowPlayingManager.setNowPlayingMessage(guildId, it)
+            }
     }
 
     private fun checkForPlayingTrack(track: AudioTrack?, hook: InteractionHook, deleteDelay: Int): Boolean {
