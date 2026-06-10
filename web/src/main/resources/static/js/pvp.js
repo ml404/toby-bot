@@ -11,6 +11,22 @@
 (function (root) {
     'use strict';
 
+    // Discord Activity support: state-read GETs attach the activity
+    // bearer header via TobyApi.authHeaders (no-op on the normal
+    // dashboard), and the SSE stream — which can't carry headers —
+    // threads the token as a query param instead. Both carriers are
+    // accepted by ActivityTokenAuthFilter.
+    function activityGetOpts() {
+        const headers = (root && root.TobyApi && root.TobyApi.authHeaders) ? root.TobyApi.authHeaders({}) : {};
+        return { credentials: 'same-origin', headers: headers };
+    }
+
+    function pvpStreamUrl(guildId) {
+        const token = (root && root.TobyApi && root.TobyApi.activityToken) ? root.TobyApi.activityToken() : '';
+        const base = '/pvp/' + guildId + '/stream';
+        return token ? base + '?activityToken=' + encodeURIComponent(token) : base;
+    }
+
     function makeFigure(name, avatarUrl, side, doc) {
         const d = doc || (root && root.document);
         const fig = d.createElement('div');
@@ -240,6 +256,9 @@
         makeFigure: makeFigure,
         formatExpiry: formatExpiry,
         playFromResolution: playFromResolution,
+        // Exported for unit tests — activity-token plumbing for SSE/GETs.
+        pvpStreamUrl: pvpStreamUrl,
+        activityGetOpts: activityGetOpts,
     };
     if (root) root.TobyDuel = api;
     if (typeof module !== 'undefined' && module.exports) {
@@ -398,7 +417,7 @@
     }
 
     function refreshPending() {
-        fetch('/pvp/' + guildId + '/duel/pending', { credentials: 'same-origin' })
+        fetch('/pvp/' + guildId + '/duel/pending', activityGetOpts())
             .then(function (r) { return r.ok ? r.json() : []; })
             .then(renderPending)
             .catch(function () { /* keep last known state */ });
@@ -427,7 +446,7 @@
     }
 
     function refreshOutgoing() {
-        fetch('/pvp/' + guildId + '/duel/outgoing', { credentials: 'same-origin' })
+        fetch('/pvp/' + guildId + '/duel/outgoing', activityGetOpts())
             .then(function (r) {
                 return r.ok ? r.json() : { pending: [], resolutions: [] };
             })
@@ -632,9 +651,9 @@
             if (initialFetched) return;
             initialFetched = true;
             Promise.all([
-                fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' }).then(safeJson),
-                fetch('/pvp/' + guildId + '/rps/outgoing', { credentials: 'same-origin' }).then(safeJson),
-                fetch('/pvp/' + guildId + '/rps/active', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/rps/pending', activityGetOpts()).then(safeJson),
+                fetch('/pvp/' + guildId + '/rps/outgoing', activityGetOpts()).then(safeJson),
+                fetch('/pvp/' + guildId + '/rps/active', activityGetOpts()).then(safeJson),
             ]).then(function (results) {
                 renderPendingList(pendingList, results[0] || [], 'incoming');
                 renderPendingList(outgoingList, results[1] || [], 'outgoing');
@@ -658,7 +677,7 @@
         function ensureStream() {
             if (eventSource) return;
             try {
-                eventSource = new EventSource('/pvp/' + guildId + '/stream');
+                eventSource = new EventSource(pvpStreamUrl(guildId));
             } catch (e) {
                 return; // no SSE support — RPS still works via GET initial-fetch on tab show
             }
@@ -674,7 +693,7 @@
         // ── Event handlers ──
         function onOffered(payload) {
             // Refetch pending list (the payload may be partial; safer to GET).
-            fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/rps/pending', activityGetOpts())
                 .then(safeJson).then(function (rows) {
                     renderPendingList(pendingList, rows || [], 'incoming');
                 });
@@ -683,7 +702,7 @@
             // Either I or my opponent accepted an offer; an active session exists now.
             // Pull the session view for the right id.
             if (!payload || !payload.sessionId) return;
-            fetch('/pvp/' + guildId + '/rps/' + payload.sessionId, { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/rps/' + payload.sessionId, activityGetOpts())
                 .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
             // Pending and outgoing lists need refreshing too — the offer is no longer pending.
             refreshLists();
@@ -712,9 +731,9 @@
         }
 
         function refreshLists() {
-            fetch('/pvp/' + guildId + '/rps/pending', { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/rps/pending', activityGetOpts())
                 .then(safeJson).then(function (rows) { renderPendingList(pendingList, rows || [], 'incoming'); });
-            fetch('/pvp/' + guildId + '/rps/outgoing', { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/rps/outgoing', activityGetOpts())
                 .then(safeJson).then(function (rows) { renderPendingList(outgoingList, rows || [], 'outgoing'); });
         }
 
@@ -919,9 +938,9 @@
             if (initialFetched) return;
             initialFetched = true;
             Promise.all([
-                fetch('/pvp/' + guildId + '/' + slug + '/pending', { credentials: 'same-origin' }).then(safeJson),
-                fetch('/pvp/' + guildId + '/' + slug + '/outgoing', { credentials: 'same-origin' }).then(safeJson),
-                fetch('/pvp/' + guildId + '/' + slug + '/active', { credentials: 'same-origin' }).then(safeJson),
+                fetch('/pvp/' + guildId + '/' + slug + '/pending', activityGetOpts()).then(safeJson),
+                fetch('/pvp/' + guildId + '/' + slug + '/outgoing', activityGetOpts()).then(safeJson),
+                fetch('/pvp/' + guildId + '/' + slug + '/active', activityGetOpts()).then(safeJson),
             ]).then(function (results) {
                 renderPendingList(pendingList, results[0] || [], 'incoming');
                 renderPendingList(outgoingList, results[1] || [], 'outgoing');
@@ -948,7 +967,7 @@
         function onOffered() { refreshLists(); }
         function onAccepted(payload) {
             if (!payload || !payload.sessionId) return;
-            fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, activityGetOpts())
                 .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
             refreshLists();
         }
@@ -958,7 +977,7 @@
                 openActiveSession(payload.view);
             } else {
                 // Empty view fan-out — refetch the canonical state.
-                fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, { credentials: 'same-origin' })
+                fetch('/pvp/' + guildId + '/' + slug + '/' + payload.sessionId, activityGetOpts())
                     .then(safeJson).then(function (view) { if (view) openActiveSession(view); });
             }
         }
@@ -977,9 +996,9 @@
         }
 
         function refreshLists() {
-            fetch('/pvp/' + guildId + '/' + slug + '/pending', { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/' + slug + '/pending', activityGetOpts())
                 .then(safeJson).then(function (rows) { renderPendingList(pendingList, rows || [], 'incoming'); });
-            fetch('/pvp/' + guildId + '/' + slug + '/outgoing', { credentials: 'same-origin' })
+            fetch('/pvp/' + guildId + '/' + slug + '/outgoing', activityGetOpts())
                 .then(safeJson).then(function (rows) { renderPendingList(outgoingList, rows || [], 'outgoing'); });
         }
 
@@ -1049,7 +1068,7 @@
                             // refreshes on the next onMoved fan-out (or the immediate /move
                             // response). Refetch for safety.
                             else {
-                                fetch('/pvp/' + guildId + '/' + slug + '/' + view.sessionId, { credentials: 'same-origin' })
+                                fetch('/pvp/' + guildId + '/' + slug + '/' + view.sessionId, activityGetOpts())
                                     .then(safeJson).then(function (v) { if (v) openActiveSession(v); });
                             }
                         });
@@ -1110,7 +1129,7 @@
         const main = document.getElementById('main');
         if (!main || !main.dataset.guildId) return;
         const eventSource = (function () {
-            try { return new EventSource('/pvp/' + main.dataset.guildId + '/stream'); } catch (_) { return null; }
+            try { return new EventSource(pvpStreamUrl(main.dataset.guildId)); } catch (_) { return null; }
         })();
         if (!eventSource) return;
         ['tictactoe.offered','tictactoe.accepted','tictactoe.moved','tictactoe.resolved','tictactoe.removed',
