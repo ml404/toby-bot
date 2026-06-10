@@ -15,8 +15,34 @@
         return meta ? meta.content : 'X-CSRF-TOKEN';
     }
 
+    // Discord Activity support: inside the Activity iframe there is no
+    // OAuth2 session cookie — the bootstrap shell (activity.js) issues a
+    // session token instead and threads it into the first page via
+    // ?activityToken=. Stash it in sessionStorage and attach it as a
+    // bearer header on every JSON call so the existing game endpoints
+    // authenticate through ActivityTokenAuthFilter. Outside the iframe
+    // the param/storage are absent and all of this no-ops.
+    function activityToken() {
+        try {
+            const fromUrl = new URLSearchParams(window.location.search).get('activityToken');
+            if (fromUrl) {
+                try { sessionStorage.setItem('tobyActivityToken', fromUrl); } catch (e) { /* sandboxed */ }
+                return fromUrl;
+            }
+            return sessionStorage.getItem('tobyActivityToken') || '';
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function withActivityAuth(headers) {
+        const token = activityToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+        return headers;
+    }
+
     function postJson(url, body) {
-        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+        const headers = withActivityAuth({ 'Content-Type': 'application/json', 'Accept': 'application/json' });
         const token = getCsrfToken();
         if (token) headers[getCsrfHeader()] = token;
         return fetch(url, {
@@ -43,7 +69,7 @@
     }
 
     function del(url) {
-        const headers = { 'Accept': 'application/json' };
+        const headers = withActivityAuth({ 'Accept': 'application/json' });
         const token = getCsrfToken();
         if (token) headers[getCsrfHeader()] = token;
         return fetch(url, {
@@ -57,9 +83,38 @@
         });
     }
 
-    window.TobyApi = { postJson: postJson, del: del };
+    // Full-page navigations can't carry a bearer header, so when an
+    // activity token is live, append it to same-origin links as they're
+    // clicked (capture phase, before the browser follows the href). This
+    // keeps "← All servers" / navbar navigation working inside the
+    // Activity iframe without threading the token through every template.
+    function rewriteActivityLinks() {
+        document.addEventListener('click', function (e) {
+            // Resolved per click, not at load: outside the activity this is
+            // a cheap no-op, and a token that only lands after page load
+            // (sessionStorage write from another script) still counts.
+            const token = activityToken();
+            if (!token) return;
+            const target = e.target;
+            const anchor = (target && target.closest) ? target.closest('a[href]') : null;
+            if (!anchor) return;
+            let url;
+            try {
+                url = new URL(anchor.getAttribute('href'), window.location.href);
+            } catch (err) {
+                return;
+            }
+            if (url.origin !== window.location.origin) return;
+            if (url.searchParams.get('activityToken')) return;
+            url.searchParams.set('activityToken', token);
+            anchor.setAttribute('href', url.pathname + url.search + url.hash);
+        }, true);
+    }
+    rewriteActivityLinks();
+
+    window.TobyApi = { postJson: postJson, del: del, activityToken: activityToken };
 
     if (typeof module !== 'undefined') {
-        module.exports = { postJson: postJson, del: del };
+        module.exports = { postJson: postJson, del: del, activityToken: activityToken };
     }
 })();
