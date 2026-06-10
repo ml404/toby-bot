@@ -51,6 +51,7 @@ import bot.toby.button.buttons.misc.ExcuseListPageButton
 import bot.toby.button.buttons.casino.highlow.HighlowButton
 import bot.toby.button.buttons.lottery.LotteryBuyButton
 import bot.toby.button.buttons.misc.MemeButton
+import bot.toby.button.buttons.mtg.CardSearchPageButton
 import bot.toby.button.buttons.music.PausePlayButton
 import bot.toby.button.buttons.casino.poker.PokerActionButton
 import bot.toby.button.buttons.misc.RandomButton
@@ -108,6 +109,7 @@ class ButtonManagerTest {
             DuelButton::class.java,
             EightBallButton::class.java,
             ExcuseListPageButton::class.java,
+            CardSearchPageButton::class.java,
             HighlowButton::class.java,
             LotteryBuyButton::class.java,
             MemeButton::class.java,
