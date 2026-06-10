@@ -29,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes
 import web.casino.StakeBounds
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter
 import web.event.WebDuelOfferedEvent
+import web.event.WebPvpChallengeEvent
 import web.service.EconomyWebService
 import web.service.PvpSseService
 import web.service.PvpWebService
@@ -1102,6 +1103,18 @@ class PvpController(
         pvpSseService.fanOutToUser(
             guildId, opponentDiscordId, sseEventName,
             ssePayload(session),
+        )
+        // Discord-side ping (channel post via NotificationRouter) so an
+        // opponent who isn't looking at the web/activity sees the offer —
+        // the SSE fan-out above only reaches already-open pages.
+        eventPublisher.publishEvent(
+            WebPvpChallengeEvent(
+                guildId = guildId,
+                gameLabel = gameLabel,
+                initiatorDiscordId = discordId,
+                opponentDiscordId = opponentDiscordId,
+                stake = request.stake,
+            )
         )
         ResponseEntity.ok(PvpActionResponse(ok = true, sessionId = session.id, stake = request.stake))
     }

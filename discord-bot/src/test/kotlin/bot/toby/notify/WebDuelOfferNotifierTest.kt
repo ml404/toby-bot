@@ -35,6 +35,7 @@ class WebDuelOfferNotifierTest {
     private lateinit var router: NotificationRouter
     private lateinit var pendingDuelRegistry: PendingDuelRegistry
     private lateinit var scheduler: ScheduledExecutorService
+    private lateinit var notifierJda: JDA
     private lateinit var notifier: WebDuelOfferNotifier
 
     private val guildId = 42L
@@ -81,7 +82,13 @@ class WebDuelOfferNotifierTest {
             capturedDelays.add(secondArg<Long>())
             mockk(relaxed = true)
         }
-        notifier = WebDuelOfferNotifier(router, pendingDuelRegistry, scheduler)
+        // Separate from the router's relaxed JDA: the notifier's voice
+        // lookup must default to "nobody in voice" (null guild) so the
+        // SYSTEM-route assertions below see originChannelId = null.
+        notifierJda = mockk {
+            every { getGuildById(any<Long>()) } returns null
+        }
+        notifier = WebDuelOfferNotifier(router, pendingDuelRegistry, notifierJda, scheduler)
     }
 
     @Test
@@ -112,6 +119,36 @@ class WebDuelOfferNotifierTest {
         }
         assertEquals(NotificationChannelKind.DUEL_OFFER, mentions.captured.kind)
         assertEquals(listOf(opponentId), mentions.captured.userIds)
+    }
+
+    @Test
+    fun `offer lands in the opponent's voice channel when they're connected`() {
+        val voiceChannel = mockk<net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion> {
+            every { idLong } returns 777L
+        }
+        val voiceState = mockk<net.dv8tion.jda.api.entities.GuildVoiceState> {
+            every { channel } returns voiceChannel
+        }
+        val member = mockk<net.dv8tion.jda.api.entities.Member> {
+            every { getVoiceState() } returns voiceState
+        }
+        val guild = mockk<net.dv8tion.jda.api.entities.Guild> {
+            every { getMemberById(opponentId) } returns member
+        }
+        every { notifierJda.getGuildById(guildId) } returns guild
+
+        notifier.on(event())
+
+        verify(exactly = 1) {
+            router.sendChannel(
+                guildId = guildId,
+                route = ChannelRouteKey.SYSTEM,
+                originChannelId = 777L,
+                message = any(),
+                onSent = any(),
+                mentions = any(),
+            )
+        }
     }
 
     @Test
