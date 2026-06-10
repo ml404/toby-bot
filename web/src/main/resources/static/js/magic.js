@@ -161,6 +161,9 @@
         a.target = '_blank';
         a.rel = 'noopener';
         a.title = card.name;
+        // A reliable name hook for click-through (the search grid opens the
+        // in-page detail panel; the href stays as a Scryfall fallback).
+        a.setAttribute('data-card-name', card.name);
         // The larger image + stat line drive the hover-to-enlarge preview.
         if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
         a.setAttribute('data-statline', cardStatline(card.typeLine, card.manaValue));
@@ -1459,6 +1462,33 @@
         if (!form) return;
         const status = statusFor(doc, 'search');
         const result = q(doc, '[data-result="search"]');
+        // Clicking a result opens its full details in the lookup panel below,
+        // reusing that panel's rulings/combos wiring.
+        const cardResult = q(doc, '[data-result="card"]');
+        const cardStatus = statusFor(doc, 'card');
+
+        // Delegated so it survives each grid re-render: a left-click on a result
+        // tile loads that card's detail panel instead of leaving for Scryfall.
+        // Modifier/middle clicks fall through to the tile's href (open Scryfall).
+        result.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button === 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const tile = e.target.closest && e.target.closest('.cube-card');
+            if (!tile || (e.target.closest && e.target.closest('.cube-card-flip'))) return;
+            const name = tile.getAttribute('data-card-name') || tile.getAttribute('title');
+            if (!name || !cardResult) return;
+            e.preventDefault();
+            setStatus(cardStatus, 'Loading ' + name + '…');
+            hide(cardResult);
+            getJson(cardUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
+                    setStatus(cardStatus, '');
+                    renderCardLookup(cardResult, json.card);
+                    show(cardResult);
+                    if (cardResult.scrollIntoView) cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                })
+                .catch(function () { setStatus(cardStatus, 'Something went wrong. Try again.'); });
+        });
 
         let timer = null;
         let controller = null;
