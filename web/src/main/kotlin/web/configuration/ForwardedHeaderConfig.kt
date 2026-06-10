@@ -2,9 +2,9 @@ package web.configuration
 
 import jakarta.servlet.DispatcherType
 import org.springframework.boot.web.servlet.FilterRegistrationBean
-import org.springframework.boot.web.servlet.filter.OrderedFilter
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.Ordered
 import org.springframework.web.filter.ForwardedHeaderFilter
 
 /**
@@ -32,7 +32,17 @@ import org.springframework.web.filter.ForwardedHeaderFilter
  *
  * Boot backs off automatically: its registration is guarded by
  * `@ConditionalOnMissingFilterBean(ForwardedHeaderFilter)`. Order and
- * dispatcher types mirror Boot's own registration.
+ * dispatcher types mirror Boot's own registration: `HIGHEST_PRECEDENCE`,
+ * so the forwarded-header rewrite runs BEFORE the Spring Security filter
+ * chain (registered at `DEFAULT_FILTER_ORDER`, i.e. -100). That ordering
+ * is load-bearing: Spring Security builds the OAuth2 `redirect_uri` (and
+ * saved-request URLs) from the request's scheme/host, so the
+ * X-Forwarded-* headers must already be applied when the chain runs.
+ * Registering this filter any later than the security chain (the earlier
+ * `REQUEST_WRAPPER_FILTER_MAX_ORDER - 1` = -1 did exactly that) leaves
+ * the request looking like the internal Heroku host during OAuth, so the
+ * redirect_uri sent to Discord no longer matches the registered one and
+ * login breaks.
  */
 @Configuration
 class ForwardedHeaderConfig {
@@ -43,7 +53,7 @@ class ForwardedHeaderConfig {
         filter.setRelativeRedirects(true)
         val registration = FilterRegistrationBean(filter)
         registration.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC, DispatcherType.ERROR)
-        registration.order = OrderedFilter.REQUEST_WRAPPER_FILTER_MAX_ORDER - 1
+        registration.order = Ordered.HIGHEST_PRECEDENCE
         return registration
     }
 }
