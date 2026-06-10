@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Card search: fix anonymous access + autosearch + click-through to details",
+    "summary": "Makes the web Magic **card search** fully work for anonymous users, plus two Scryfall-style UX upgrades. (The autosearch + click-through commits from #707 were folded onto this branch.)",
+    "emoji": "✨",
+    "prNumber": 706
+  },
+  {
+    "date": "June 2026",
     "title": "Multi-card Scryfall search for the Magic card tools (Discord + web)",
     "summary": "## What & why",
     "emoji": "✨",
