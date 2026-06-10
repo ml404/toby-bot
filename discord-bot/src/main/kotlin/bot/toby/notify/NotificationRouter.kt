@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel
 import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
 import org.springframework.beans.factory.annotation.Autowired
@@ -133,9 +134,15 @@ class NotificationRouter(
             return
         }
         val channel = resolveChannel(guild, route, originChannelId) ?: run {
-            logger.info {
-                "No writable channel resolved for route $route in guild ${guild.idLong}; skipping."
-            }
+            // WARN, not info: a notification the product decided to send is
+            // being dropped. The config-key trail makes "level-ups stopped
+            // posting" diagnosable from deploy logs alone.
+            logger.warn(
+                "No writable channel resolved for route $route in guild ${guild.idLong}; dropping the post. " +
+                    "Checked config keys ${listOfNotNull(route.primaryConfigKey) + route.fallbackConfigKeys}, " +
+                    "originChannelId=$originChannelId, " +
+                    "systemChannelFallback=${if (route.systemChannelFallback) "allowed" else "disabled for this route"}."
+            )
             return
         }
 
@@ -385,13 +392,17 @@ class NotificationRouter(
         route.fallbackConfigKeys.forEach { key ->
             channelFromConfig(guild, key)?.let { return it }
         }
-        // 3. originChannelId — may be a text channel OR a voice channel
-        //    (voice channels have text chat; activity-initiated PvP
-        //    challenges pass the participants' voice channel here so the
-        //    ping lands where the group is actually looking).
+        // 3. originChannelId — any message-capable channel: text, voice
+        //    (text-in-voice — activity-initiated PvP challenges pass the
+        //    participants' voice channel so the ping lands where the group
+        //    is actually looking), announcement channels, and threads /
+        //    forum posts (message XP earned inside a thread carries the
+        //    thread id; resolving only TextChannel here silently diverted
+        //    those level-up posts to the system channel, or dropped them
+        //    when no system channel was writable).
         originChannelId?.let { id ->
-            val origin: GuildMessageChannel? =
-                guild.getTextChannelById(id) ?: guild.getVoiceChannelById(id)
+            val origin = guild.getChannelById(GuildMessageChannel::class.java, id)
+                ?.takeUnless { it is ThreadChannel && (it.isArchived || it.isLocked) }
             origin?.takeIf { hasSendPerms(guild, it) }?.let { return it }
         }
         // 4. system channel fallback (per-route opt-in)
@@ -404,12 +415,31 @@ class NotificationRouter(
     private fun channelFromConfig(guild: Guild, configKey: String): TextChannel? {
         val raw = configService.getConfigByName(configKey, guild.id)?.value?.toLongOrNull()
             ?: return null
-        val channel = guild.getTextChannelById(raw) ?: return null
-        return channel.takeIf { hasSendPerms(guild, it) }
+        val channel = guild.getTextChannelById(raw)
+        if (channel == null) {
+            logger.warn(
+                "Config $configKey for guild ${guild.idLong} points at channel $raw, " +
+                    "which no longer exists (or is not a text channel); falling through."
+            )
+            return null
+        }
+        if (!hasSendPerms(guild, channel)) {
+            logger.warn(
+                "Config $configKey for guild ${guild.idLong} points at #${channel.name}, but the bot " +
+                    "lacks Send Messages / Embed Links there; falling through."
+            )
+            return null
+        }
+        return channel
     }
 
-    private fun hasSendPerms(guild: Guild, channel: GuildMessageChannel): Boolean =
-        guild.selfMember.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
+    private fun hasSendPerms(guild: Guild, channel: GuildMessageChannel): Boolean {
+        // Posting inside a thread is governed by MESSAGE_SEND_IN_THREADS
+        // on the parent; MESSAGE_SEND alone reports false there.
+        val sendPerm =
+            if (channel.type.isThread) Permission.MESSAGE_SEND_IN_THREADS else Permission.MESSAGE_SEND
+        return guild.selfMember.hasPermission(channel, sendPerm, Permission.MESSAGE_EMBED_LINKS)
+    }
 }
 
 /**
