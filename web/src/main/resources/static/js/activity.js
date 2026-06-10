@@ -4,12 +4,20 @@
 //
 //   ready → authorize (silent OAuth2 code grant) → POST the code to
 //   /activity/api/token (mints an activity session token, see
-//   ActivitySessionService) → authenticate → navigate into the casino.
+//   ActivitySessionService) → authenticate → mount the casino.
 //
-// The session token rides along as a ?activityToken= query param so the
-// destination page's GET authenticates through ActivityTokenAuthFilter;
-// api.js then stashes it in sessionStorage and attaches it as a bearer
-// header on every fetch (and onto same-origin link navigations).
+// CRITICAL CONSTRAINT: Activities must behave as single-page apps. The
+// SDK holds a persistent postMessage connection to the Discord client
+// through THIS document — any top-level navigation (window.location,
+// location.replace, a plain link) tears it down and the client kills
+// the activity with "tried to open a disallowed web page". The casino
+// is a multi-page Thymeleaf app, so it's mounted in a NESTED same-origin
+// iframe below: navigation inside that frame is invisible to the
+// sandbox, while this shell document (and the SDK connection) stays put.
+//
+// The session token rides into the nested frame as ?activityToken= and
+// as the session cookie; api.js inside the frame attaches it as a bearer
+// header on every fetch and onto same-origin link navigations.
 //
 // The SDK bundle is vendored (static/js/vendor/) rather than CDN-loaded:
 // the Activity CSP only allows the app's own proxy origin, so a
@@ -22,6 +30,18 @@ const statusEl = document.getElementById('activity-status');
 
 function status(message) {
     if (statusEl) statusEl.textContent = message;
+}
+
+function mountCasino(guildId, sessionToken) {
+    const frame = document.createElement('iframe');
+    frame.id = 'activity-game-frame';
+    frame.title = 'TobyBot Casino';
+    frame.src = '/casino/' + encodeURIComponent(guildId) + '/slots'
+        + '?activityToken=' + encodeURIComponent(sessionToken);
+    frame.addEventListener('load', () => {
+        if (main) main.hidden = true;
+    });
+    document.body.appendChild(frame);
 }
 
 async function boot() {
@@ -69,15 +89,12 @@ async function boot() {
         sessionStorage.setItem('tobyActivityToken', body.sessionToken);
     } catch (e) {
         // Storage can be unavailable in a sandboxed iframe — the query
-        // param below still authenticates the first page, and api.js
-        // falls back to reading it from the URL.
+        // param on the nested frame still authenticates it, and api.js
+        // falls back to reading the token from the frame's URL.
     }
 
     status('Entering the casino…');
-    window.location.replace(
-        '/casino/' + encodeURIComponent(sdk.guildId) + '/slots'
-        + '?activityToken=' + encodeURIComponent(body.sessionToken)
-    );
+    mountCasino(sdk.guildId, body.sessionToken);
 }
 
 boot().catch((e) => {

@@ -3,9 +3,11 @@
 <!--
     Bootstrap shell for the Discord Activity. Discord loads this page in
     the Activity iframe via the discordsays.com proxy; activity.js runs
-    the Embedded App SDK handshake and then navigates into the existing
-    casino pages. Deliberately bare — no navbar/footer, since the user
-    isn't authenticated yet and the iframe is small.
+    the Embedded App SDK handshake and then mounts the casino in a
+    nested same-origin iframe (#activity-game-frame). The shell document
+    must NEVER navigate: the SDK's postMessage connection to the Discord
+    client lives here, and a top-level navigation gets the activity
+    killed as "tried to open a disallowed web page".
 -->
 <head>
     <meta charset="UTF-8">
@@ -14,6 +16,16 @@
     <title>TobyBot Casino</title>
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/base.css}">
+    <style>
+        /* The nested casino frame owns the whole viewport once mounted. */
+        #activity-game-frame {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+    </style>
 </head>
 <body>
 <main id="activity-main" class="container" th:attr="data-client-id=${clientId}">
