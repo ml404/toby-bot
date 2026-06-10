@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<!--
+    Bootstrap shell for the Discord Activity. Discord loads this page in
+    the Activity iframe via the discordsays.com proxy; activity.js runs
+    the Embedded App SDK handshake and then navigates into the existing
+    casino pages. Deliberately bare — no navbar/footer, since the user
+    isn't authenticated yet and the iframe is small.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>TobyBot Casino</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+</head>
+<body>
+<main id="activity-main" class="container" th:attr="data-client-id=${clientId}">
+    <h1>🎰 TobyBot Casino</h1>
+    <p id="activity-status" class="muted" aria-live="polite">Loading…</p>
+</main>
+<script type="module" th:src="@{/js/activity.js}"></script>
+</body>
+</html>

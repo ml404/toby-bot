@@ -56,9 +56,22 @@
         }, backoff);
     }
 
+    function streamUrl() {
+        // Inside the Discord Activity iframe there's no session cookie and
+        // EventSource can't carry an Authorization header — thread the
+        // activity session token through as a query param instead
+        // (ActivityTokenAuthFilter accepts it). No-ops on the normal web.
+        var token = (window.TobyApi && typeof window.TobyApi.activityToken === 'function')
+            ? window.TobyApi.activityToken()
+            : '';
+        return token
+            ? STREAM_URL + '?activityToken=' + encodeURIComponent(token)
+            : STREAM_URL;
+    }
+
     function connect() {
         try { if (source) source.close(); } catch (_e) {}
-        source = new EventSource(STREAM_URL);
+        source = new EventSource(streamUrl());
 
         source.addEventListener('open', function () {
             backoff = INITIAL_BACKOFF_MS;

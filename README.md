@@ -124,6 +124,22 @@ Toby Bot ships Web Push (RFC 8030 / 8291 / 8292) for users who opt in via `/pref
 
 5. End-to-end: log in via Discord, toggle Push on for any event in `/preferences/notifications`, then trigger the event — a notification should land in the browser.
 
+## Enabling the Discord Activity (casino in the Discord client)
+
+The casino web UI can also run as a [Discord Activity](https://docs.discord.com/developers/activities/overview) — an iframe inside the Discord client. The games, balances, and jackpot are the same as the web dashboard; only the auth handshake differs (Embedded App SDK instead of the redirect OAuth2 login — see `web/src/main/kotlin/web/activity/`).
+
+No new env vars are needed (`DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` are reused), but the Discord application must be configured in the [Developer Portal](https://discord.com/developers/applications):
+
+1. Under **Activities → Settings**, enable Activities for the application.
+2. Under **Activities → URL Mappings**, map the root prefix `/` to your deployment's host (e.g. `www.toby-bot.co.uk`). All Activity traffic is proxied through `https://<client-id>.discordsays.com`, so every asset and API call must resolve relative to that mapping — the app already uses relative URLs throughout.
+3. Set the Activity entry point to `/activity`. That page runs the SDK handshake (ready → authorize → token exchange → authenticate) and then drops the user into `/casino/{guildId}/slots` for the guild the Activity was launched in.
+4. Launch it from a voice channel in a server the bot is in. Guild membership is enforced server-side exactly as on the web (`WebGuildAccess`), so the Activity works only where the bot is present.
+
+Notes:
+
+- The Embedded App SDK is vendored at `web/src/main/resources/static/js/vendor/` (the Activity CSP only allows the app's own proxied origin, so a CDN script tag would need its own URL mapping).
+- Activity sessions are in-memory bearer tokens minted by `ActivitySessionService` (TTL ≤ 12 h); a redeploy invalidates them, and relaunching the Activity silently re-authenticates.
+
 ## Support the Project
 
 TobyBot is free and open source. If you'd like to help cover hosting costs or just say thanks, you can support development on [Ko-fi](https://ko-fi.com/fratlayton).

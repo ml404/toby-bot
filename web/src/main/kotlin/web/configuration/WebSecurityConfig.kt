@@ -5,13 +5,18 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter
+import org.springframework.security.web.util.matcher.RequestMatcher
+import web.activity.ActivitySessionService
+import web.activity.ActivityTokenAuthFilter
+import web.activity.ActivitySessions
 
 @Configuration
 @EnableWebSecurity
 class WebSecurityConfig {
 
     @Bean
-    fun securityFilterChain(http: HttpSecurity): SecurityFilterChain {
+    fun securityFilterChain(http: HttpSecurity, activitySessions: ActivitySessions): SecurityFilterChain {
         http
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
@@ -38,7 +43,13 @@ class WebSecurityConfig {
                     // Public read of the VAPID public key so the
                     // client knows whether push is enabled at all
                     // before prompting the user.
-                    "/api/push/vapid-public-key"
+                    "/api/push/vapid-public-key",
+                    // Discord Activity bootstrap: the shell page and the
+                    // SDK-code-for-session-token exchange both run before
+                    // any authentication can exist (the iframe has no
+                    // session cookie). Everything past the shell is
+                    // authenticated via ActivityTokenAuthFilter.
+                    "/activity", "/activity/api/token"
                 ).permitAll()
                 auth.requestMatchers("/intro/**").authenticated()
                 auth.requestMatchers("/moderation/**").authenticated()
@@ -91,8 +102,31 @@ class WebSecurityConfig {
                     // ownership check. The only mutating action is the
                     // user (re)anchoring their own push subscription.
                     "/api/push/**",
+                    // The activity token exchange runs pre-auth (no cookie,
+                    // no session) — the Discord-issued single-use code in
+                    // the body is the whole credential.
+                    "/activity/api/token",
+                )
+                // Requests authenticated by an activity bearer token are
+                // CSRF-exempt: the token lives in JS (sessionStorage), is
+                // attached as an Authorization header, and is never sent
+                // automatically by the browser — a cross-site form can't
+                // forge it. Cookie-session requests never match this and
+                // keep full CSRF protection.
+                csrf.ignoringRequestMatchers(
+                    RequestMatcher { request ->
+                        request.getHeader("Authorization")
+                            ?.startsWith("Bearer ${ActivitySessionService.TOKEN_PREFIX}") == true
+                    }
                 )
             }
+            // Runs before the authorization checks so activity-token
+            // requests reach the same authenticated() rules as cookie
+            // sessions. No-ops when a session authentication exists.
+            .addFilterBefore(
+                ActivityTokenAuthFilter(activitySessions),
+                UsernamePasswordAuthenticationFilter::class.java
+            )
 
         return http.build()
     }
