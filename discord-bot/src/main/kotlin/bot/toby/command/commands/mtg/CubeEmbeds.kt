@@ -205,6 +205,24 @@ internal object CubeEmbeds {
     }
 
     /**
+     * One page of a `/mtgcard search` result browser: the same single-card
+     * panel as [cardEmbed] plus a footer placing the card within the match set
+     * (`Card 3 of 7` — or `7+` when Scryfall had more than we fetched), so a
+     * multi-card search reads like flipping through Scryfall's grid one card at
+     * a time.
+     */
+    fun searchResultEmbed(card: CubeCard, index: Int, total: Int, capped: Boolean): MessageEmbed =
+        embed(color = OK_COLOR) {
+            setAuthor(AUTHOR)
+            setTitle(card.name)
+            card.imageUrl?.let { setImage(it) }
+            val facts = cardFactLines(card, includeManaValue = true).joinToString("\n")
+            val oracle = card.oracleText?.let { "\n\n${oracleBlock(it)}" }.orEmpty()
+            setDescription(facts + oracle)
+            setFooter("Card ${index + 1} of ${total}${if (capped) "+" else ""}")
+        }
+
+    /**
      * The fact lines on a card panel — type, (optionally) mana value, rarity,
      * colour identity, price and legal formats — in display order, present
      * fields only. Shared by [cardEmbed] (the `/mtgcard` lookup) and the inline

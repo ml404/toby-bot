@@ -441,6 +441,27 @@
         return '/magic/api/card?name=' + encodeURIComponent(name);
     }
 
+    /**
+     * GET URL for a card search, carrying only the filled-in filters
+     * (name / type / advanced Scryfall query) as query params. Pure.
+     */
+    function searchUrl(filters) {
+        const params = new URLSearchParams();
+        if (filters.name) params.set('name', filters.name);
+        if (filters.type) params.set('type', filters.type);
+        if (filters.query) params.set('query', filters.query);
+        return '/magic/api/search?' + params.toString();
+    }
+
+    /**
+     * A Scryfall-style headline for a search result: "7 cards match" (or
+     * "750+ cards match" when the search hit the fetch ceiling). Pure.
+     */
+    function searchSentence(total, capped) {
+        const n = total + (capped ? '+' : '');
+        return n + ' card' + (total === 1 ? '' : 's') + ' match';
+    }
+
     /** GET URL for a card's official rulings. */
     function rulingsUrl(name) {
         return '/magic/api/rulings?name=' + encodeURIComponent(name);
@@ -836,6 +857,15 @@
             });
             block.appendChild(grid);
             container.appendChild(block);
+        });
+        return container;
+    }
+
+    /** A flat grid of search-result cards, each a thumbnail tile (like the preview). */
+    function renderSearchResults(container, cards) {
+        container.replaceChildren();
+        cards.forEach(function (card) {
+            container.appendChild(cardTile(card));
         });
         return container;
     }
@@ -1415,6 +1445,38 @@
             else if (e.key === 'Escape') { close(); }
         });
         field.addEventListener('blur', function () { setTimeout(close, 150); });
+    }
+
+    function wireSearch(doc) {
+        const form = q(doc, '[data-form="search"]');
+        if (!form) return;
+        const status = statusFor(doc, 'search');
+        const result = q(doc, '[data-result="search"]');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const data = new FormData(form);
+            const filters = {
+                name: (data.get('name') || '').trim(),
+                type: (data.get('type') || '').trim(),
+                query: (data.get('query') || '').trim(),
+            };
+            if (!filters.name && !filters.type && !filters.query) {
+                setStatus(status, 'Enter a name, a type, or a Scryfall query to search.');
+                return;
+            }
+            setStatus(status, 'Searching…');
+            hide(result);
+            withBusy(form, true);
+            getJson(searchUrl(filters))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); return; }
+                    setStatus(status, searchSentence(json.total, json.capped));
+                    renderSearchResults(result, json.cards || []);
+                    show(result);
+                })
+                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                .then(function () { withBusy(form, false); });
+        });
     }
 
     function wireCardLookup(doc) {
@@ -2096,6 +2158,7 @@
         wireExamples(doc);
         wireAsFan(doc);
         wireCompare(doc);
+        wireSearch(doc);
         wireCardLookup(doc);
         wireLegality(doc);
         wireReference(doc);
@@ -2147,6 +2210,9 @@
         watchLine: watchLine,
         renderWatches: renderWatches,
         cardUrl: cardUrl,
+        searchUrl: searchUrl,
+        searchSentence: searchSentence,
+        renderSearchResults: renderSearchResults,
         rulingsUrl: rulingsUrl,
         combosUrl: combosUrl,
         renderCombos: renderCombos,

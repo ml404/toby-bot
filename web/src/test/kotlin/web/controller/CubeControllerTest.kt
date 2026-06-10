@@ -166,6 +166,34 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `search builds a Scryfall query from name and type and returns the matches`() {
+        every { service.search("\"iron man\" t:creature") } returns CubeResult.ok(
+            web.service.SearchData(
+                query = "\"iron man\" t:creature",
+                total = 2,
+                capped = false,
+                cards = listOf(
+                    CardView("Iron Man, Armored Avenger", "s.jpg", "n.jpg", "Legendary Artifact Creature", 5.0),
+                    CardView("Iron Man, Bleeding Edge", "s2.jpg", "n2.jpg", "Legendary Artifact Creature", 4.0),
+                ),
+            )
+        )
+        val response = controller.search(name = "iron man", type = "creature", query = null)
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertTrue(response.body!!.ok)
+        assertEquals(2, response.body!!.total)
+        assertEquals("Iron Man, Armored Avenger", response.body!!.cards.first().name)
+    }
+
+    @Test
+    fun `search returns 400 when no filters are given`() {
+        val response = controller.search(name = null, type = null, query = "  ")
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+        verify(exactly = 0) { service.search(any()) }
+    }
+
+    @Test
     fun `rulings returns 200 with the looked-up rulings`() {
         every { service.rulings("Doubling Season") } returns CubeResult.ok(
             RulingsView(

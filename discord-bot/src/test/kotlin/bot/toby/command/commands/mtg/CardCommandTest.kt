@@ -113,11 +113,87 @@ class CardCommandTest : CommandTest {
     }
 
     @Test
-    fun `exposes lookup, rulings and combos subcommands`() {
+    fun `search with one result replies with a single card panel`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CardCommand.SUB_SEARCH
+        every { event.getOption(CardCommand.OPT_NAME) } returns strOpt("iron man")
+        every { event.getOption(CardCommand.OPT_TYPE) } returns null
+        every { event.getOption(CardCommand.OPT_QUERY) } returns null
+        coEvery { fetcher.fetch("\"iron man\"", CardCommand.SEARCH_MAX) } returns ScryfallCubeFetcher.Result.Success(
+            listOf(CubeCard("Iron Man, Tony Stark", setOf(MtgColor.RED), typeLine = "Legendary Artifact Creature")),
+        )
+
+        run()
+
+        assertEquals("Iron Man, Tony Stark", slot.captured.title)
+    }
+
+    @Test
+    fun `search with multiple results sends a paginated browser`() {
+        val content = slot<String>()
+        every { event.hook.sendMessage(capture(content)) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CardCommand.SUB_SEARCH
+        every { event.getOption(CardCommand.OPT_NAME) } returns strOpt("iron man")
+        every { event.getOption(CardCommand.OPT_TYPE) } returns strOpt("creature")
+        every { event.getOption(CardCommand.OPT_QUERY) } returns null
+        coEvery { fetcher.fetch("\"iron man\" t:creature", CardCommand.SEARCH_MAX) } returns
+            ScryfallCubeFetcher.Result.Success(
+                listOf(
+                    CubeCard("Iron Man, Armored Avenger", setOf(MtgColor.WHITE), typeLine = "Legendary Artifact Creature"),
+                    CubeCard("Iron Man, Bleeding Edge", setOf(MtgColor.BLUE), typeLine = "Legendary Artifact Creature"),
+                ),
+            )
+
+        run()
+
+        assertTrue(content.captured.contains("Found **2**"))
+        assertTrue(content.captured.contains("iron man"))
+    }
+
+    @Test
+    fun `search needs at least one filter`() {
+        val slot = slot<MessageEmbed>()
+        every { event.hook.sendMessageEmbeds(capture(slot), *anyVararg()) } returns webhookMessageCreateAction
+        every { event.subcommandName } returns CardCommand.SUB_SEARCH
+        every { event.getOption(CardCommand.OPT_NAME) } returns null
+        every { event.getOption(CardCommand.OPT_TYPE) } returns null
+        every { event.getOption(CardCommand.OPT_QUERY) } returns null
+
+        run()
+
+        assertTrue(slot.captured.description!!.contains("search"))
+    }
+
+    @Test
+    fun `buildSearchQuery composes name, type and raw query`() {
+        assertEquals(
+            "\"iron man\" t:legendary t:creature c:r",
+            CardCommand.buildSearchQuery("iron man", "legendary creature", "c:r"),
+        )
+        assertEquals("t:dragon", CardCommand.buildSearchQuery(null, "dragon", null))
+        assertEquals("", CardCommand.buildSearchQuery(" ", null, ""))
+    }
+
+    @Test
+    fun `search button id round-trips query and index through base64`() {
+        val id = CardCommand.encodeSearchButton("\"iron man\" t:creature", 3)
+        assertTrue(id.startsWith("${CardCommand.SEARCH_BUTTON}:3:"))
+        val decoded = CardCommand.decodeSearchButton(id)
+        assertEquals("\"iron man\" t:creature", decoded?.query)
+        assertEquals(3, decoded?.index)
+        // A foreign id isn't mistaken for ours.
+        assertEquals(null, CardCommand.decodeSearchButton("excuse-page:approved:1:2:"))
+    }
+
+    @Test
+    fun `exposes search, lookup, rulings and combos subcommands`() {
         assertEquals("mtgcard", command.name)
-        assertEquals(setOf("lookup", "rulings", "combos"), command.subCommands.map { it.name }.toSet())
-        command.subCommands.forEach { sub ->
+        assertEquals(setOf("search", "lookup", "rulings", "combos"), command.subCommands.map { it.name }.toSet())
+        // The single-card subcommands require a name; search's filters are all optional.
+        command.subCommands.filter { it.name != "search" }.forEach { sub ->
             assertTrue(sub.options.first { it.name == "name" }.isRequired)
         }
+        assertTrue(command.subCommands.first { it.name == "search" }.options.none { it.isRequired })
     }
 }

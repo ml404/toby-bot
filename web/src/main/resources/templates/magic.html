@@ -352,11 +352,35 @@
             <div class="cube-diff" data-result="compare" hidden></div>
         </section>
 
-        <!-- Card lookup -->
+        <!-- Card search + lookup -->
         <section id="panel-card" class="cube-panel" role="tabpanel" aria-labelledby="tab-card"
                  data-panel="card">
             <p class="cube-panel-intro">
-                Look up any Magic card by name and see its image and details — the website twin of
+                Search Magic cards by name and type and see every match as a grid of images, the
+                way Scryfall does — or look one card up below for its full details, rulings and combos.
+            </p>
+            <form class="cube-form cube-search-form" data-form="search" autocomplete="off">
+                <label id="card-search-name-label">Name includes
+                    <input type="text" name="name" placeholder="e.g. iron man"
+                           autocomplete="off" aria-labelledby="card-search-name-label">
+                </label>
+                <label id="card-search-type-label">Card type
+                    <input type="text" name="type" placeholder="e.g. creature"
+                           autocomplete="off" aria-labelledby="card-search-type-label">
+                </label>
+                <label id="card-search-query-label">Advanced (Scryfall syntax)
+                    <input type="text" name="query" placeholder="e.g. c:r mv&lt;=2"
+                           autocomplete="off" aria-labelledby="card-search-query-label">
+                </label>
+                <button type="submit" class="btn cube-submit">Search</button>
+            </form>
+            <p class="cube-status" data-status="search" aria-live="polite"></p>
+            <div class="cube-card-grid" data-result="search" hidden></div>
+
+            <hr class="cube-divider">
+
+            <p class="cube-panel-intro">
+                Look up a single card by name for its image and details — the website twin of
                 the <code th:text="${mtgCmd.cardLookup}">/mtgcard lookup</code> Discord command.
             </p>
             <form class="cube-form" data-form="card" autocomplete="off">
