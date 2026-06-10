@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix Discord Activity launch: iframe embedding, root-path launches, entry point command survival",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 698
+  },
+  {
+    "date": "June 2026",
     "title": "Run the casino as a Discord Activity (Embedded App SDK)",
     "summary": "## What",
     "emoji": "✨",
