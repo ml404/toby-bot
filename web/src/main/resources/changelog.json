@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Activity follow-up: game-picker landing with multiplayer blackjack",
+    "summary": "## What",
+    "emoji": "♠️",
+    "prNumber": 701
+  },
+  {
+    "date": "June 2026",
     "title": "Fix activity \"disallowed web page\" kill: mount casino in a nested iframe (Activities must be SPAs)",
     "summary": "## What",
     "emoji": "✨",
