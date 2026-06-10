@@ -70,7 +70,8 @@ class CasinoController(
     }
 
     companion object {
-        // Mirrors the game buttons rendered in casino-guilds.html. Lottery
+        // Mirrors the game buttons rendered in casino-guilds.html (and the
+        // activity landing, activity-casino.html). Lottery
         // is a casino-routed entry on the same picker even though it has
         // its own navbar item; baccarat / casino-hold'em sit under "Table
         // games" but route through /casino/{id}/...

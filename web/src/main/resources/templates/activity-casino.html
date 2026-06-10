@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" lang="en">
 <!--
-    Activity landing page: the slim game picker mounted in the nested
-    iframe by activity.js after the SDK handshake. Deliberately chrome-
+    Activity landing page: the guild's full games list, mounted in the
+    nested iframe by activity.js after the SDK handshake. Mirrors the
+    per-guild game catalogue on casino-guilds.html (keep the two in sync
+    with CasinoController.CASINO_GAME_SLUGS), but deliberately chrome-
     free (no navbar/footer): inside the Activity sandbox the dashboard
-    chrome wastes space and its external links (Ko-fi, invite) would be
-    blocked anyway. Links navigate the NESTED frame only, so the SDK
-    connection in the shell document is untouched.
+    chrome wastes space, its external links (Ko-fi, invite) would be
+    blocked anyway, and its cross-guild picker links need an OAuth2
+    authorized client that activity sessions don't have. Links navigate
+    the NESTED frame only, so the SDK connection in the shell document
+    is untouched.
 
     api.js is loaded so the ?activityToken= the shell appended gets
     stashed in sessionStorage and re-appended to every game link on
@@ -20,11 +24,18 @@
     <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
     <link rel="stylesheet" th:href="@{/css/base.css}">
     <style>
+        .activity-group-title {
+            margin: 1.5rem 0 0;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            opacity: 0.7;
+        }
         .activity-game-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
             gap: 0.75rem;
-            margin-top: 1rem;
+            margin-top: 0.75rem;
         }
         .activity-game-tile {
             display: flex;
@@ -45,10 +56,12 @@
 <body>
 <main class="container">
     <h1>🎰 Casino • <span th:text="${guildName}">Server</span></h1>
-    <p class="muted">Pick a game — everyone plays with their own credits.
-        Join the same blackjack table to play together.</p>
+    <p class="muted">Your wallet: <strong th:text="${credits} + ' credits'">0 credits</strong>.
+        Pick a game — everyone plays with their own credits.
+        Join the same table to play together.</p>
 
-    <nav class="activity-game-grid" aria-label="Games">
+    <h2 class="activity-group-title">Play together</h2>
+    <nav class="activity-game-grid" aria-label="Multiplayer games">
         <a class="activity-game-tile featured" th:href="@{/blackjack/{g}(g=${guildId})}">
             <span class="tile-emoji">🃏</span>Blackjack<small>play together</small>
         </a>
@@ -58,20 +71,56 @@
         <a class="activity-game-tile featured" th:href="@{/poker/{g}(g=${guildId})}">
             <span class="tile-emoji">🂡</span>Poker<small>play together</small>
         </a>
-        <a class="activity-game-tile" th:href="@{/casino/{g}/slots(g=${guildId})}">
-            <span class="tile-emoji">🎰</span>Slots
+    </nav>
+
+    <h2 class="activity-group-title">Quick play</h2>
+    <nav class="activity-game-grid" aria-label="Quick play games">
+        <a class="activity-game-tile" th:href="@{/casino/{g}/coinflip(g=${guildId})}">
+            <span class="tile-emoji">🪙</span>Coinflip
         </a>
         <a class="activity-game-tile" th:href="@{/casino/{g}/dice(g=${guildId})}">
             <span class="tile-emoji">🎲</span>Dice
         </a>
-        <a class="activity-game-tile" th:href="@{/casino/{g}/coinflip(g=${guildId})}">
-            <span class="tile-emoji">🪙</span>Coinflip
+        <a class="activity-game-tile" th:href="@{/casino/{g}/highlow(g=${guildId})}">
+            <span class="tile-emoji">🔼</span>High-Low
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/keno(g=${guildId})}">
+            <span class="tile-emoji">🎯</span>Keno
         </a>
         <a class="activity-game-tile" th:href="@{/casino/{g}/roulette(g=${guildId})}">
             <span class="tile-emoji">🎡</span>Roulette
         </a>
-        <a class="activity-game-tile" th:href="@{/casino/{g}/highlow(g=${guildId})}">
-            <span class="tile-emoji">🔼</span>High-Low
+        <a class="activity-game-tile" th:href="@{/casino/{g}/scratch(g=${guildId})}">
+            <span class="tile-emoji">🎟️</span>Scratch
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/slots(g=${guildId})}">
+            <span class="tile-emoji">🎰</span>Slots
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/plinko(g=${guildId})}">
+            <span class="tile-emoji">🟢</span>Plinko
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/horse-racing(g=${guildId})}">
+            <span class="tile-emoji">🐎</span>Horse Racing
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/wheel(g=${guildId})}">
+            <span class="tile-emoji">🎡</span>Wheel
+        </a>
+    </nav>
+
+    <h2 class="activity-group-title">Table games</h2>
+    <nav class="activity-game-grid" aria-label="Table games">
+        <a class="activity-game-tile" th:href="@{/casino/{g}/baccarat(g=${guildId})}">
+            <span class="tile-emoji">🎴</span>Baccarat
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/casinoholdem(g=${guildId})}">
+            <span class="tile-emoji">♠️</span>Casino Hold'em
+        </a>
+    </nav>
+
+    <h2 class="activity-group-title">Daily draw</h2>
+    <nav class="activity-game-grid" aria-label="Daily draw">
+        <a class="activity-game-tile" th:href="@{/casino/{g}/lottery(g=${guildId})}">
+            <span class="tile-emoji">🎟️</span>Lottery
         </a>
     </nav>
 </main>

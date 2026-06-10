@@ -26,11 +26,16 @@ import web.util.WebGuildAccess
  * authenticate — then mounts the casino in a nested iframe pointed at
  * GET /activity/casino/{guildId} (see activity.js).
  *
- * GET /activity/casino/{guildId} is the activity's landing surface: a
- * slim game picker for the launch guild. Authenticated like every other
+ * GET /activity/casino/{guildId} is the activity's landing surface: the
+ * full games list for the launch guild — the same catalogue the web UI's
+ * guild cards show, just chrome-free. Authenticated like every other
  * per-guild page (here via the activity token filter) — friends in the
  * same voice channel each land on their own picker and can meet at the
- * same blackjack table.
+ * same blackjack table. Deliberately NOT the /casino/guilds page itself:
+ * the cross-guild pickers need an OAuth2AuthorizedClient (to enumerate
+ * mutual guilds via Discord's API), which activity sessions don't
+ * register — fresh activity-only users would bounce into the external
+ * OAuth redirect and the sandbox would kill the iframe.
  *
  * POST /activity/api/token is the code-for-session exchange. Anonymous by
  * design (the caller can't be authenticated yet) and CSRF-exempt: it sets
@@ -59,9 +64,10 @@ class ActivityController(
         ra: RedirectAttributes,
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/leaderboards"
-    ) {
+    ) { discordId ->
         model.addAttribute("guildId", guildId.toString())
         model.addAttribute("guildName", jda.getGuildById(guildId)?.name ?: "your server")
+        model.addAttribute("credits", economyWebService.getCredits(discordId, guildId))
         "activity-casino"
     }
 

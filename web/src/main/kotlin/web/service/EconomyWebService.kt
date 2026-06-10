@@ -64,6 +64,15 @@ class EconomyWebService(
         }.sortedBy { it.name.lowercase() }
     }
 
+    /**
+     * Wallet balance for a single (user, guild) pair — the per-guild
+     * credits the guild cards show, without the mutual-guild enumeration
+     * of [getGuildsWhereUserCanView] (which needs an OAuth access token
+     * that activity sessions don't carry).
+     */
+    fun getCredits(discordId: Long, guildId: Long): Long =
+        userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
+
     fun getEconomyView(guildId: Long, discordId: Long): EconomyView? {
         val guild = jda.getGuildById(guildId) ?: return null
         val market = tradeService.loadOrCreateMarket(guildId)
