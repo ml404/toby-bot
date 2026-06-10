@@ -180,6 +180,52 @@ class LevelUpAnnouncementIntegrationTest {
     }
 
     @Test
+    fun `level-up still posts when computed permissions claim the only channel is unwritable`() {
+        // Pre-#492 behaviour pin: the original LevelUpListener never
+        // permission-checked at resolution time — it attempted the send
+        // and let a real Discord rejection surface in the queue-failure
+        // callback. A false negative from JDA's permission computation
+        // must degrade to a logged send failure, not a silent drop.
+        userService.clearCache()
+        userService.createNewUser(UserDto(discordId, guildId))
+
+        val action = mockk<MessageCreateAction>(relaxed = true) {
+            every { mentionUsers(*anyLongVararg()) } returns this@mockk
+        }
+        val channel = mockk<TextChannel>(relaxed = true) {
+            every { sendMessage(any<MessageCreateData>()) } returns action
+            every { name } returns "general"
+            every { type } returns ChannelType.TEXT
+        }
+        val selfMember = mockk<SelfMember> {
+            every { hasPermission(any<GuildChannel>(), *anyVararg<Permission>()) } returns false
+        }
+        val guild = mockk<Guild>(relaxed = true) {
+            every { idLong } returns guildId
+            every { id } returns guildId.toString()
+            every {
+                hint(GuildMessageChannel::class)
+                getChannelById(GuildMessageChannel::class.java, originChannelId)
+            } returns channel
+            every { this@mockk.selfMember } returns selfMember
+            every { getMemberById(discordId) } returns null
+            every { systemChannel } returns null
+        }
+        every { jda.getGuildById(guildId) } returns guild
+
+        xpAwardService.award(
+            discordId = discordId,
+            guildId = guildId,
+            amount = 150L,
+            reason = "integration-test",
+            channelId = originChannelId,
+        )
+
+        verify(exactly = 1) { channel.sendMessage(any<MessageCreateData>()) }
+        verify(exactly = 1) { action.queue(any(), any()) }
+    }
+
+    @Test
     fun `award below the threshold posts nothing`() {
         userService.clearCache()
         userService.createNewUser(UserDto(discordId, guildId))

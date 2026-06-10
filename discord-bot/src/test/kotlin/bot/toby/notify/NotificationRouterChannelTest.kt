@@ -259,6 +259,76 @@ class NotificationRouterChannelTest {
         verify(exactly = 0) { systemChannel.sendMessage(any<MessageCreateData>()) }
     }
 
+    // ---- best-effort last resort (pre-#492 behaviour pins) ----
+    //
+    // Before channel routing was centralised, LevelUpListener (and the
+    // other notifiers) never permission-checked at resolution time: the
+    // post was attempted on the first existing channel in the chain and
+    // a real Discord rejection surfaced in the queue-failure callback.
+    // #492's hasSendPerms gate turned "computed perms say no" into a
+    // silent drop — if JDA's view of the permissions is stricter than
+    // what Discord actually enforces (or the only candidate genuinely
+    // lacks perms), notifications that used to deliver (or at least
+    // log a real error) just vanish. These tests pin the old contract:
+    // never drop silently while a target channel exists.
+
+    @Test
+    fun `config channel failing the permission check is still attempted when nothing else exists`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { bot.hasPermission(primaryChannel, *anyVararg<Permission>()) } returns false
+        every { guild.systemChannel } returns null
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { primaryChannel.sendMessage(payload) }
+    }
+
+    @Test
+    fun `system channel failing the permission check is still attempted as the last resort`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
+        every { guild.systemChannel } returns systemChannel
+        every { bot.hasPermission(systemChannel, *anyVararg<Permission>()) } returns false
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { systemChannel.sendMessage(payload) }
+    }
+
+    @Test
+    fun `unwritable config channel is routed around when a writable origin exists`() {
+        // The route-around introduced by #492 is kept: best-effort only
+        // kicks in when NO candidate passes the permission check.
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { bot.hasPermission(primaryChannel, *anyVararg<Permission>()) } returns false
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 3L)
+        } returns originChannel
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, originChannelId = 3L, message = builder)
+
+        verify(exactly = 1) { originChannel.sendMessage(payload) }
+        verify(exactly = 0) { primaryChannel.sendMessage(any<MessageCreateData>()) }
+    }
+
+    @Test
+    fun `best-effort prefers the config channel over later existing candidates`() {
+        // When everything fails the perm check, the attempt goes to the
+        // FIRST existing candidate — the admin-configured channel — not
+        // whatever happened to be inspected last.
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { guild.systemChannel } returns systemChannel
+        every { bot.hasPermission(any<TextChannel>(), *anyVararg<Permission>()) } returns false
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { primaryChannel.sendMessage(payload) }
+        verify(exactly = 0) { systemChannel.sendMessage(any<MessageCreateData>()) }
+    }
+
     @Test
     fun `skips channels the bot cannot post in and continues the chain`() {
         stub(ConfigDto.Configurations.LOTTERY_CHANNEL, "1")

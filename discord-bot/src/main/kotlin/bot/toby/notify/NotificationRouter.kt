@@ -135,10 +135,12 @@ class NotificationRouter(
         }
         val channel = resolveChannel(guild, route, originChannelId) ?: run {
             // WARN, not info: a notification the product decided to send is
-            // being dropped. The config-key trail makes "level-ups stopped
-            // posting" diagnosable from deploy logs alone.
+            // being dropped. Only reachable when NO candidate channel even
+            // exists (resolveChannel attempts unwritable ones best-effort).
+            // The config-key trail makes "level-ups stopped posting"
+            // diagnosable from deploy logs alone.
             logger.warn(
-                "No writable channel resolved for route $route in guild ${guild.idLong}; dropping the post. " +
+                "No channel exists for route $route in guild ${guild.idLong}; dropping the post. " +
                     "Checked config keys ${listOfNotNull(route.primaryConfigKey) + route.fallbackConfigKeys}, " +
                     "originChannelId=$originChannelId, " +
                     "systemChannelFallback=${if (route.systemChannelFallback) "allowed" else "disabled for this route"}."
@@ -379,18 +381,38 @@ class NotificationRouter(
         }
     }
 
+    /**
+     * Walk the route's candidate chain and return the first channel that
+     * passes the permission check. If every existing candidate fails the
+     * check, fall back to the FIRST one that exists anyway: before
+     * routing was centralised (#492) no notifier permission-checked at
+     * resolution time — the send was attempted and a real Discord
+     * rejection surfaced in the queue-failure callback. Keeping that
+     * contract means a computed-permission false negative can never
+     * silently swallow a notification; the worst case is a logged send
+     * failure, exactly like the pre-router code.
+     */
     private fun resolveChannel(
         guild: Guild,
         route: ChannelRouteKey,
         originChannelId: Long?,
     ): GuildMessageChannel? {
+        var firstExisting: GuildMessageChannel? = null
+        // Returns the candidate when it's writable; remembers the first
+        // existing candidate either way for the best-effort fallback.
+        fun writable(candidate: GuildMessageChannel?): GuildMessageChannel? {
+            if (candidate == null) return null
+            if (firstExisting == null) firstExisting = candidate
+            return candidate.takeIf { hasSendPerms(guild, it) }
+        }
+
         // 1. primaryConfigKey
         route.primaryConfigKey
-            ?.let { key -> channelFromConfig(guild, key) }
+            ?.let { key -> writable(channelFromConfig(guild, key)) }
             ?.let { return it }
         // 2. fallbackConfigKeys in order
         route.fallbackConfigKeys.forEach { key ->
-            channelFromConfig(guild, key)?.let { return it }
+            writable(channelFromConfig(guild, key))?.let { return it }
         }
         // 3. originChannelId — any message-capable channel: text, voice
         //    (text-in-voice — activity-initiated PvP challenges pass the
@@ -399,17 +421,27 @@ class NotificationRouter(
         //    forum posts (message XP earned inside a thread carries the
         //    thread id; resolving only TextChannel here silently diverted
         //    those level-up posts to the system channel, or dropped them
-        //    when no system channel was writable).
+        //    when no system channel was writable). Archived/locked threads
+        //    are excluded outright — a send there always fails.
         originChannelId?.let { id ->
             val origin = guild.getChannelById(GuildMessageChannel::class.java, id)
                 ?.takeUnless { it is ThreadChannel && (it.isArchived || it.isLocked) }
-            origin?.takeIf { hasSendPerms(guild, it) }?.let { return it }
+            writable(origin)?.let { return it }
         }
         // 4. system channel fallback (per-route opt-in)
         if (route.systemChannelFallback) {
-            guild.systemChannel?.takeIf { hasSendPerms(guild, it) }?.let { return it }
+            writable(guild.systemChannel)?.let { return it }
         }
-        return null
+        // 5. Best-effort: no candidate passed the permission check, but at
+        //    least one exists — attempt the send there rather than dropping
+        //    the notification on the floor.
+        return firstExisting?.also {
+            logger.warn(
+                "No candidate for route $route in guild ${guild.idLong} passes the send/embed permission " +
+                    "check; attempting best-effort post to #${it.name} anyway. If it fails, grant the bot " +
+                    "Send Messages + Embed Links there (or point the route's config at a writable channel)."
+            )
+        }
     }
 
     private fun channelFromConfig(guild: Guild, configKey: String): TextChannel? {
@@ -421,14 +453,6 @@ class NotificationRouter(
                 "Config $configKey for guild ${guild.idLong} points at channel $raw, " +
                     "which no longer exists (or is not a text channel); falling through."
             )
-            return null
-        }
-        if (!hasSendPerms(guild, channel)) {
-            logger.warn(
-                "Config $configKey for guild ${guild.idLong} points at #${channel.name}, but the bot " +
-                    "lacks Send Messages / Embed Links there; falling through."
-            )
-            return null
         }
         return channel
     }
