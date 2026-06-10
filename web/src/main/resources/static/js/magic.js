@@ -1330,6 +1330,13 @@
 
     const MAX_CARD_SUGGEST = 10;
 
+    // Card-search autosearch: how long to wait after the last keystroke before
+    // firing, and the shortest filter that auto-fires (the Search button has no
+    // minimum). Tuned to coalesce typing into one request and stay polite to
+    // Scryfall.
+    const AUTO_SEARCH_DEBOUNCE_MS = 400;
+    const AUTO_SEARCH_MIN = 3;
+
     function scryfallAutocompleteUrl(query) {
         return 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query);
     }
@@ -1452,30 +1459,79 @@
         if (!form) return;
         const status = statusFor(doc, 'search');
         const result = q(doc, '[data-result="search"]');
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
+
+        let timer = null;
+        let controller = null;
+        // Monotonic token: only the latest search may touch the UI, so a slow
+        // earlier response can't overwrite a newer one's results.
+        let seq = 0;
+
+        function filtersOf() {
             const data = new FormData(form);
-            const filters = {
+            return {
                 name: (data.get('name') || '').trim(),
                 type: (data.get('type') || '').trim(),
                 query: (data.get('query') || '').trim(),
             };
+        }
+
+        function run(filters) {
             if (!filters.name && !filters.type && !filters.query) {
                 setStatus(status, 'Enter a name, a type, or a Scryfall query to search.');
+                hide(result);
                 return;
             }
+            // Supersede any in-flight request so its response is dropped.
+            if (controller) controller.abort();
+            controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const token = ++seq;
             setStatus(status, 'Searching…');
-            hide(result);
             withBusy(form, true);
-            getJson(searchUrl(filters))
+            fetch(searchUrl(filters), controller ? { signal: controller.signal } : undefined)
+                .then(function (r) { return r.json(); })
                 .then(function (json) {
-                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); return; }
+                    if (token !== seq) return;
+                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); return; }
                     setStatus(status, searchSentence(json.total, json.capped));
                     renderSearchResults(result, json.cards || []);
                     show(result);
                 })
-                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
-                .then(function () { withBusy(form, false); });
+                .catch(function (e) {
+                    if (e && e.name === 'AbortError') return; // superseded — leave the UI to the newer search
+                    if (token === seq) setStatus(status, 'Something went wrong. Try again.');
+                })
+                .then(function () { if (token === seq) withBusy(form, false); });
+        }
+
+        // Manual submit runs immediately, cancelling any pending auto-search.
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (timer) { clearTimeout(timer); timer = null; }
+            run(filtersOf());
+        });
+
+        // Autosearch: as the user types, debounce then fire — once a filter is
+        // long enough to be meaningful, so a single stray letter doesn't pull
+        // thousands of cards. Clearing every field clears the results.
+        function scheduleAuto() {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function () {
+                timer = null;
+                const f = filtersOf();
+                if (!f.name && !f.type && !f.query) {
+                    if (controller) controller.abort();
+                    seq++; // drop any in-flight response
+                    setStatus(status, '');
+                    hide(result);
+                    return;
+                }
+                if (f.name.length >= AUTO_SEARCH_MIN || f.type.length >= AUTO_SEARCH_MIN || f.query.length >= AUTO_SEARCH_MIN) {
+                    run(f);
+                }
+            }, AUTO_SEARCH_DEBOUNCE_MS);
+        }
+        form.querySelectorAll('input[name="name"], input[name="type"], input[name="query"]').forEach(function (input) {
+            input.addEventListener('input', scheduleAuto);
         });
     }
 
