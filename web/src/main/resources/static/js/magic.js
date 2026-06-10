@@ -161,6 +161,9 @@
         a.target = '_blank';
         a.rel = 'noopener';
         a.title = card.name;
+        // A reliable name hook for click-through (the search grid opens the
+        // in-page detail panel; the href stays as a Scryfall fallback).
+        a.setAttribute('data-card-name', card.name);
         // The larger image + stat line drive the hover-to-enlarge preview.
         if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
         a.setAttribute('data-statline', cardStatline(card.typeLine, card.manaValue));
@@ -1330,6 +1333,13 @@
 
     const MAX_CARD_SUGGEST = 10;
 
+    // Card-search autosearch: how long to wait after the last keystroke before
+    // firing, and the shortest filter that auto-fires (the Search button has no
+    // minimum). Tuned to coalesce typing into one request and stay polite to
+    // Scryfall.
+    const AUTO_SEARCH_DEBOUNCE_MS = 400;
+    const AUTO_SEARCH_MIN = 3;
+
     function scryfallAutocompleteUrl(query) {
         return 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query);
     }
@@ -1452,30 +1462,106 @@
         if (!form) return;
         const status = statusFor(doc, 'search');
         const result = q(doc, '[data-result="search"]');
-        form.addEventListener('submit', function (e) {
+        // Clicking a result opens its full details in the lookup panel below,
+        // reusing that panel's rulings/combos wiring.
+        const cardResult = q(doc, '[data-result="card"]');
+        const cardStatus = statusFor(doc, 'card');
+
+        // Delegated so it survives each grid re-render: a left-click on a result
+        // tile loads that card's detail panel instead of leaving for Scryfall.
+        // Modifier/middle clicks fall through to the tile's href (open Scryfall).
+        result.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button === 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            const tile = e.target.closest && e.target.closest('.cube-card');
+            if (!tile || (e.target.closest && e.target.closest('.cube-card-flip'))) return;
+            const name = tile.getAttribute('data-card-name') || tile.getAttribute('title');
+            if (!name || !cardResult) return;
             e.preventDefault();
+            setStatus(cardStatus, 'Loading ' + name + '…');
+            hide(cardResult);
+            getJson(cardUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
+                    setStatus(cardStatus, '');
+                    renderCardLookup(cardResult, json.card);
+                    show(cardResult);
+                    if (cardResult.scrollIntoView) cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                })
+                .catch(function () { setStatus(cardStatus, 'Something went wrong. Try again.'); });
+        });
+
+        let timer = null;
+        let controller = null;
+        // Monotonic token: only the latest search may touch the UI, so a slow
+        // earlier response can't overwrite a newer one's results.
+        let seq = 0;
+
+        function filtersOf() {
             const data = new FormData(form);
-            const filters = {
+            return {
                 name: (data.get('name') || '').trim(),
                 type: (data.get('type') || '').trim(),
                 query: (data.get('query') || '').trim(),
             };
+        }
+
+        function run(filters) {
             if (!filters.name && !filters.type && !filters.query) {
                 setStatus(status, 'Enter a name, a type, or a Scryfall query to search.');
+                hide(result);
                 return;
             }
+            // Supersede any in-flight request so its response is dropped.
+            if (controller) controller.abort();
+            controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+            const token = ++seq;
             setStatus(status, 'Searching…');
-            hide(result);
             withBusy(form, true);
-            getJson(searchUrl(filters))
+            fetch(searchUrl(filters), controller ? { signal: controller.signal } : undefined)
+                .then(function (r) { return r.json(); })
                 .then(function (json) {
-                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); return; }
+                    if (token !== seq) return;
+                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); return; }
                     setStatus(status, searchSentence(json.total, json.capped));
                     renderSearchResults(result, json.cards || []);
                     show(result);
                 })
-                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
-                .then(function () { withBusy(form, false); });
+                .catch(function (e) {
+                    if (e && e.name === 'AbortError') return; // superseded — leave the UI to the newer search
+                    if (token === seq) setStatus(status, 'Something went wrong. Try again.');
+                })
+                .then(function () { if (token === seq) withBusy(form, false); });
+        }
+
+        // Manual submit runs immediately, cancelling any pending auto-search.
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (timer) { clearTimeout(timer); timer = null; }
+            run(filtersOf());
+        });
+
+        // Autosearch: as the user types, debounce then fire — once a filter is
+        // long enough to be meaningful, so a single stray letter doesn't pull
+        // thousands of cards. Clearing every field clears the results.
+        function scheduleAuto() {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(function () {
+                timer = null;
+                const f = filtersOf();
+                if (!f.name && !f.type && !f.query) {
+                    if (controller) controller.abort();
+                    seq++; // drop any in-flight response
+                    setStatus(status, '');
+                    hide(result);
+                    return;
+                }
+                if (f.name.length >= AUTO_SEARCH_MIN || f.type.length >= AUTO_SEARCH_MIN || f.query.length >= AUTO_SEARCH_MIN) {
+                    run(f);
+                }
+            }, AUTO_SEARCH_DEBOUNCE_MS);
+        }
+        form.querySelectorAll('input[name="name"], input[name="type"], input[name="query"]').forEach(function (input) {
+            input.addEventListener('input', scheduleAuto);
         });
     }
 

@@ -134,7 +134,11 @@ describe('renderSearchResults (the Scryfall-style grid)', () => {
         ]);
         const tiles = container.querySelectorAll('.cube-card');
         expect(tiles).toHaveLength(2);
+        // The href stays a Scryfall fallback (for ctrl/cmd-click), and a
+        // data-card-name hook drives the in-page click-through to details.
         expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Iron Man, Tony Stark'));
+        expect(tiles[0].getAttribute('data-card-name')).toBe('Iron Man, Tony Stark');
+        expect(tiles[1].getAttribute('data-card-name')).toBe('Iron Man, Bleeding Edge');
         expect(tiles[0].querySelector('img.cube-card-img').getAttribute('src')).toBe('https://img/im.jpg');
         // No image → placeholder, no <img>.
         expect(tiles[1].querySelector('img')).toBeNull();
