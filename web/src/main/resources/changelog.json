@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix broken OAuth login: run ForwardedHeaderFilter before the security chain",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 704
+  },
+  {
+    "date": "June 2026",
     "title": "Activity follow-up: poker tables + PvP challenge pings in the voice channel",
     "summary": "## What",
     "emoji": "♠️",
