@@ -132,8 +132,12 @@ No new env vars are needed (`DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` are re
 
 1. Under **Activities → Settings**, enable Activities for the application.
 2. Under **Activities → URL Mappings**, map the root prefix `/` to your deployment's host (e.g. `www.toby-bot.co.uk`). All Activity traffic is proxied through `https://<client-id>.discordsays.com`, so every asset and API call must resolve relative to that mapping — the app already uses relative URLs throughout.
-3. Set the Activity entry point to `/activity`. That page runs the SDK handshake (ready → authorize → token exchange → authenticate) and then drops the user into `/casino/{guildId}/slots` for the guild the Activity was launched in.
-4. Launch it from a voice channel in a server the bot is in. Guild membership is enforced server-side exactly as on the web (`WebGuildAccess`), so the Activity works only where the bot is present.
+3. Launch it from a voice channel in a server the bot is in (in-development activities require Developer Mode in the Discord client, or use the app's `launch` Entry Point command). Discord always loads the proxy **root** `/`; `HomeController` detects the SDK launch params (`frame_id` etc.) and forwards them to `/activity`, which runs the SDK handshake (ready → authorize → token exchange → authenticate) and drops the user into `/casino/{guildId}/slots` for the guild the Activity was launched in. Guild membership is enforced server-side exactly as on the web (`WebGuildAccess`), so the Activity works only where the bot is present.
+
+Two pieces of server behavior exist specifically to keep this working:
+
+- The bot re-registers the **Entry Point command** (`launch`) via the raw REST API on every boot (`ActivityEntryPointRegistrar`): the startup `updateCommands()` bulk overwrite would otherwise delete it (JDA can't express PRIMARY_ENTRY_POINT commands), silently making the activity unlaunchable after a redeploy.
+- Spring Security's default `X-Frame-Options: DENY` is replaced with a CSP `frame-ancestors` allowlist (self + Discord origins) in `WebSecurityConfig` — with the default header the embed fails with `ERR_BLOCKED_BY_RESPONSE`.
 
 Notes:
 

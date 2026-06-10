@@ -127,6 +127,23 @@ class WebSecurityConfig {
                 ActivityTokenAuthFilter(activitySessions),
                 UsernamePasswordAuthenticationFilter::class.java
             )
+            .headers { headers ->
+                // The Discord Activity embeds the site in an iframe inside
+                // the Discord clients (via the *.discordsays.com proxy).
+                // Spring Security's default `X-Frame-Options: DENY` makes
+                // that embed die with ERR_BLOCKED_BY_RESPONSE, so replace
+                // it with a CSP frame-ancestors allowlist: same-origin plus
+                // Discord's embedding origins. frame-ancestors supersedes
+                // X-Frame-Options in every current browser, so clickjacking
+                // protection is preserved for the normal site.
+                headers.frameOptions { it.disable() }
+                headers.contentSecurityPolicy { csp ->
+                    csp.policyDirectives(
+                        "frame-ancestors 'self' https://discord.com https://*.discord.com " +
+                            "https://*.discordapp.com https://*.discordsays.com"
+                    )
+                }
+            }
 
         return http.build()
     }

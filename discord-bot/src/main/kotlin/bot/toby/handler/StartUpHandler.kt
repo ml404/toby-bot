@@ -10,12 +10,19 @@ import org.springframework.stereotype.Service
 @Service
 class StartUpHandler(
     private val commandManager: CommandManager,
+    private val entryPointRegistrar: ActivityEntryPointRegistrar,
     private val logger: DiscordLogger = DiscordLogger.createLogger(StartUpHandler::class.java)
 ) : ListenerAdapter() {
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
-        event.jda.updateCommands().addCommands(commandManager.slashCommands).queue()
+        // The bulk overwrite REPLACES the full global command set, which
+        // deletes the activity Entry Point command (JDA can't express it,
+        // so it can't be in the list). Re-create it only after the
+        // overwrite has landed — firing earlier would just get wiped.
+        event.jda.updateCommands().addCommands(commandManager.slashCommands).queue {
+            entryPointRegistrar.register(event.jda)
+        }
         logger.info { "Registered ${commandManager.slashCommands.size} commands to ${event.jda.selfUser.name}" }
     }
 
