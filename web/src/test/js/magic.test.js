@@ -108,6 +108,38 @@ describe('URL builders', () => {
         expect(Cube.generateUrl({ query: 'set:vow', packs: 8, packSize: 15, balanced: false }))
             .toBe('/magic/api/generate?query=set%3Avow&packs=8&packSize=15&balanced=false');
     });
+
+    test('searchUrl carries only the filled-in filters', () => {
+        expect(Cube.searchUrl({ name: 'iron man', type: 'creature', query: '' }))
+            .toBe('/magic/api/search?name=iron+man&type=creature');
+        expect(Cube.searchUrl({ name: '', type: '', query: 'c:r mv<=2' }))
+            .toBe('/magic/api/search?query=c%3Ar+mv%3C%3D2');
+    });
+});
+
+describe('searchSentence', () => {
+    test('reads as a Scryfall-style match count', () => {
+        expect(Cube.searchSentence(7, false)).toBe('7 cards match');
+        expect(Cube.searchSentence(1, false)).toBe('1 card match');
+        expect(Cube.searchSentence(750, true)).toBe('750+ cards match');
+    });
+});
+
+describe('renderSearchResults (the Scryfall-style grid)', () => {
+    test('renders one thumbnail tile per matching card, linking to Scryfall', () => {
+        const container = document.createElement('div');
+        Cube.renderSearchResults(container, [
+            { name: 'Iron Man, Tony Stark', imageUrl: 'https://img/im.jpg', imageUrlLarge: 'https://img/im-lg.jpg', typeLine: 'Legendary Artifact Creature', manaValue: 5 },
+            { name: 'Iron Man, Bleeding Edge', imageUrl: null, imageUrlLarge: null, typeLine: 'Legendary Artifact Creature', manaValue: 4 },
+        ]);
+        const tiles = container.querySelectorAll('.cube-card');
+        expect(tiles).toHaveLength(2);
+        expect(tiles[0].getAttribute('href')).toBe(Cube.scryfallCardUrl('Iron Man, Tony Stark'));
+        expect(tiles[0].querySelector('img.cube-card-img').getAttribute('src')).toBe('https://img/im.jpg');
+        // No image → placeholder, no <img>.
+        expect(tiles[1].querySelector('img')).toBeNull();
+        expect(tiles[1].querySelector('.cube-card-img-empty')).not.toBeNull();
+    });
 });
 
 describe('renderGroups (preview shows the actual cards as thumbnails)', () => {

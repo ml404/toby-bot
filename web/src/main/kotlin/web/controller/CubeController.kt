@@ -150,6 +150,27 @@ class CubeController(
     ): ResponseEntity<CubeGenerateResponse> =
         generateResponse(cubeWebService.generateList(request.list, request.packs, request.packSize, request.balanced))
 
+    @GetMapping("/api/search", produces = ["application/json"])
+    @ResponseBody
+    fun search(
+        @RequestParam("name", required = false) name: String?,
+        @RequestParam("type", required = false) type: String?,
+        @RequestParam("query", required = false) query: String?,
+    ): ResponseEntity<CubeSearchResponse> {
+        val built = common.mtg.MtgSearchQuery.build(name, type, query)
+        if (built.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(CubeSearchResponse(false, "Enter a name, a type, or a Scryfall query to search.", null, 0, false, emptyList()))
+        }
+        return when (val result = cubeWebService.search(built)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubeSearchResponse(true, null, result.value.query, result.value.total, result.value.capped, result.value.cards)
+            )
+            is CubeResult.Failure ->
+                ResponseEntity.badRequest().body(CubeSearchResponse(false, result.error, built, 0, false, emptyList()))
+        }
+    }
+
     @GetMapping("/api/card", produces = ["application/json"])
     @ResponseBody
     fun card(@RequestParam("name") name: String): ResponseEntity<CubeCardResponse> =
@@ -414,6 +435,15 @@ data class ShareCubeResponse(val token: String, val url: String, val name: Strin
 data class CubeListPreviewRequest(val list: String = "", val packSize: Int = 15)
 
 data class CubeCardResponse(val ok: Boolean, val error: String?, val card: CardLookupView?)
+
+data class CubeSearchResponse(
+    val ok: Boolean,
+    val error: String?,
+    val query: String?,
+    val total: Int,
+    val capped: Boolean,
+    val cards: List<CardView>,
+)
 
 data class CubeRulingsResponse(
     val ok: Boolean,

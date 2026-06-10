@@ -37,6 +37,7 @@ object MtgCommandRef {
 
     object Card {
         const val LOOKUP = "lookup"
+        const val SEARCH = "search"
         const val RULINGS = "rulings"
         const val COMBOS = "combos"
     }
@@ -60,6 +61,7 @@ object MtgCommandRef {
     const val CUBE_PREVIEW = "/$CUBE ${Cube.PREVIEW}"
     const val CUBE_GENERATE = "/$CUBE ${Cube.GENERATE}"
     const val CARD_LOOKUP = "/$CARD ${Card.LOOKUP}"
+    const val CARD_SEARCH = "/$CARD ${Card.SEARCH}"
     const val CARD_RULINGS = "/$CARD ${Card.RULINGS}"
     const val CARD_COMBOS = "/$CARD ${Card.COMBOS}"
     const val DECK_LEGALITY = "/$DECK ${Deck.LEGALITY}"

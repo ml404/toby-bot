@@ -264,6 +264,28 @@ class CubeWebService {
         )
     }
 
+    /**
+     * Runs a Scryfall card search and returns the matches as card views with
+     * images — the web twin of `/mtgcard search`, rendered as a Scryfall-style
+     * grid. [capped] is true when the search hit the [MAX_CARDS] ceiling, so
+     * the page can say there were more.
+     */
+    fun search(query: String): CubeResult<SearchData> {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return CubeResult.error("Enter a name, a type, or a Scryfall query to search.")
+        return when (val pool = fetchPool(trimmed)) {
+            is CubeResult.Failure -> CubeResult.error(pool.error)
+            is CubeResult.Success -> CubeResult.ok(
+                SearchData(
+                    query = trimmed,
+                    total = pool.value.size,
+                    capped = pool.value.size >= MAX_CARDS,
+                    cards = pool.value.map { it.toView() },
+                )
+            )
+        }
+    }
+
     /** As-fan distribution of a Scryfall query's cards, no pack generation. */
     fun preview(query: String, packSize: Int): CubeResult<PreviewData> {
         if (packSize <= 0) return CubeResult.error("Pack size must be at least 1.")
@@ -681,6 +703,14 @@ data class CardView(
     val count: Int = 1,
     /** Scryfall USD market price (raw string, e.g. "1.50"), or null when unpriced. */
     val priceUsd: String? = null,
+)
+
+/** The matches of a card search: the echoed query, total found, and the cards. */
+data class SearchData(
+    val query: String,
+    val total: Int,
+    val capped: Boolean,
+    val cards: List<CardView>,
 )
 
 /** A colour/land bucket plus the actual cards it contains. */
