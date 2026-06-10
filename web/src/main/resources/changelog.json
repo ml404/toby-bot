@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Multi-card Scryfall search for the Magic card tools (Discord + web)",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 705
+  },
+  {
+    "date": "June 2026",
     "title": "Fix broken OAuth login: run ForwardedHeaderFilter before the security chain",
     "summary": "## Problem",
     "emoji": "✨",
