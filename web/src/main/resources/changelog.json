@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Keep the Discord Activity inside the proxy sandbox (fix \"disallowed web page\" kill)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 699
+  },
+  {
+    "date": "June 2026",
     "title": "Fix Discord Activity launch: iframe embedding, root-path launches, entry point command survival",
     "summary": "## What",
     "emoji": "✨",
