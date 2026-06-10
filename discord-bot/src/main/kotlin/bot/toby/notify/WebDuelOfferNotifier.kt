@@ -7,6 +7,7 @@ import common.notification.NotificationChannelKind
 import common.notification.PushPayload
 import database.configuration.RegistryScheduler
 import database.duel.PendingDuelRegistry
+import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.components.MessageTopLevelComponent
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
@@ -43,6 +44,7 @@ import java.util.concurrent.TimeUnit
 class WebDuelOfferNotifier(
     private val notificationRouter: NotificationRouter,
     private val pendingDuelRegistry: PendingDuelRegistry,
+    private val jda: JDA,
     private val scheduler: ScheduledExecutorService = RegistryScheduler.instance,
     @Value("\${app.base-url:}") private val webBaseUrl: String = "",
 ) {
@@ -65,6 +67,16 @@ class WebDuelOfferNotifier(
         ) {
             channel(
                 route = ChannelRouteKey.SYSTEM,
+                // Prefer the participants' current voice channel: when the
+                // duel comes from the casino activity the whole audience is
+                // sitting there, and the Accept/Decline buttons work from
+                // any channel. Falls back to the system channel when
+                // neither party is in voice.
+                originChannelId = jda.currentVoiceChannelId(
+                    event.guildId,
+                    event.opponentDiscordId,
+                    event.initiatorDiscordId,
+                ),
                 onSent = { sent -> scheduleTimeoutCleanup(event, sent) },
                 // Router suppresses the opponent's user-ping when they've
                 // opted out of (DUEL_OFFER, CHANNEL). Buttons still render

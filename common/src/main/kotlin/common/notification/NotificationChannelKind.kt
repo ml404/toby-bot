@@ -30,6 +30,11 @@ enum class NotificationChannelKind(
         description = "Someone challenges you to a duel from the web dashboard.",
         perSurfaceDefaults = mapOf(Surface.CHANNEL to true, Surface.PUSH to false),
     ),
+    PVP_CHALLENGE(
+        displayName = "PvP challenges",
+        description = "Someone challenges you to rock-paper-scissors, tic-tac-toe, or Connect 4 from the web dashboard or the casino activity.",
+        perSurfaceDefaults = mapOf(Surface.CHANNEL to true, Surface.PUSH to false),
+    ),
     TIP_RECEIVED(
         displayName = "Tips received",
         description = "Another user tips you social credit from the web dashboard.",

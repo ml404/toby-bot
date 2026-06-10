@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Lazy
@@ -375,7 +376,7 @@ class NotificationRouter(
         guild: Guild,
         route: ChannelRouteKey,
         originChannelId: Long?,
-    ): TextChannel? {
+    ): GuildMessageChannel? {
         // 1. primaryConfigKey
         route.primaryConfigKey
             ?.let { key -> channelFromConfig(guild, key) }
@@ -384,9 +385,14 @@ class NotificationRouter(
         route.fallbackConfigKeys.forEach { key ->
             channelFromConfig(guild, key)?.let { return it }
         }
-        // 3. originChannelId
+        // 3. originChannelId — may be a text channel OR a voice channel
+        //    (voice channels have text chat; activity-initiated PvP
+        //    challenges pass the participants' voice channel here so the
+        //    ping lands where the group is actually looking).
         originChannelId?.let { id ->
-            guild.getTextChannelById(id)?.takeIf { hasSendPerms(guild, it) }?.let { return it }
+            val origin: GuildMessageChannel? =
+                guild.getTextChannelById(id) ?: guild.getVoiceChannelById(id)
+            origin?.takeIf { hasSendPerms(guild, it) }?.let { return it }
         }
         // 4. system channel fallback (per-route opt-in)
         if (route.systemChannelFallback) {
@@ -402,7 +408,7 @@ class NotificationRouter(
         return channel.takeIf { hasSendPerms(guild, it) }
     }
 
-    private fun hasSendPerms(guild: Guild, channel: TextChannel): Boolean =
+    private fun hasSendPerms(guild: Guild, channel: GuildMessageChannel): Boolean =
         guild.selfMember.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
 }
 
