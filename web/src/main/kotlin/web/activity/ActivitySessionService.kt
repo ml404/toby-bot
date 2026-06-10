@@ -82,6 +82,10 @@ class ActivitySessionService(
             val sessionToken = mintToken()
             val ttlMs = (expiresInSec * 1000).coerceAtMost(MAX_SESSION_TTL_MS)
             sessions[sessionToken] = Entry(principal, nowMs() + ttlMs)
+            // INFO on purpose: one line per activity launch in the deploy
+            // logs makes "did the handshake reach the server?" answerable
+            // without a debugger in the Discord client.
+            logger.info { "Activity session minted for discord user ${principal.name}" }
             ActivitySessions.Issued(sessionToken, accessToken)
         } catch (e: Exception) {
             logger.error { "Activity token exchange failed: ${e.message}" }

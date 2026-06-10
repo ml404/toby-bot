@@ -1,5 +1,6 @@
 package web.activity
 
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
@@ -37,16 +38,38 @@ class ActivityController(
 
     @PostMapping("/activity/api/token")
     @ResponseBody
-    fun token(@RequestBody request: ActivityTokenRequest): ResponseEntity<ActivityTokenResponse> {
+    fun token(
+        @RequestBody request: ActivityTokenRequest,
+        response: HttpServletResponse,
+    ): ResponseEntity<ActivityTokenResponse> {
         val code = request.code?.takeIf { it.isNotBlank() }
             ?: return ResponseEntity.badRequest()
                 .body(ActivityTokenResponse(ok = false, error = "Missing authorization code."))
         val issued = sessions.exchange(code)
             ?: return ResponseEntity.status(502)
                 .body(ActivityTokenResponse(ok = false, error = "Discord sign-in failed — relaunch the activity."))
+        // Belt-and-braces session carrier: the shell threads the token
+        // into navigations as ?activityToken=, but if a proxy hop or
+        // client webview drops query params, this cookie keeps page
+        // GETs (and EventSource) authenticated. SameSite=None because
+        // the page lives in the Discord iframe (a third-party context);
+        // the cookie is scoped to the proxied origin and HttpOnly.
+        // CSRF stays enforced for cookie-carried requests (see
+        // WebSecurityConfig), so SameSite=None doesn't widen mutation
+        // exposure.
+        response.addHeader(
+            "Set-Cookie",
+            "${ActivityTokenAuthFilter.COOKIE_NAME}=${issued.sessionToken}; " +
+                "Path=/; Max-Age=$COOKIE_MAX_AGE_SECONDS; Secure; HttpOnly; SameSite=None"
+        )
         return ResponseEntity.ok(
             ActivityTokenResponse(ok = true, sessionToken = issued.sessionToken, accessToken = issued.accessToken)
         )
+    }
+
+    companion object {
+        /** Matches the session store's 12h cap in [ActivitySessionService]. */
+        private const val COOKIE_MAX_AGE_SECONDS = 12 * 60 * 60
     }
 }
 
