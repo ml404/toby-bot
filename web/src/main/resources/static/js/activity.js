@@ -36,7 +36,7 @@ function mountCasino(guildId, sessionToken) {
     const frame = document.createElement('iframe');
     frame.id = 'activity-game-frame';
     frame.title = 'TobyBot Casino';
-    frame.src = '/casino/' + encodeURIComponent(guildId) + '/slots'
+    frame.src = '/activity/casino/' + encodeURIComponent(guildId)
         + '?activityToken=' + encodeURIComponent(sessionToken);
     frame.addEventListener('load', () => {
         if (main) main.hidden = true;

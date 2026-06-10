@@ -303,7 +303,11 @@
     }
 
     function refreshState() {
-        return fetch("/blackjack/" + guildId + "/" + tableId + "/state", { credentials: "same-origin" })
+        // Inside the Discord Activity there's no session cookie — the
+        // bearer header from TobyApi.authHeaders carries auth instead.
+        // On the normal dashboard it's a no-op.
+        var headers = (window.TobyApi && window.TobyApi.authHeaders) ? window.TobyApi.authHeaders({}) : {};
+        return fetch("/blackjack/" + guildId + "/" + tableId + "/state", { credentials: "same-origin", headers: headers })
             .then(function (r) {
                 if (r.status === 404) {
                     statusEl.textContent = "This table no longer exists.";

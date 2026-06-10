@@ -41,6 +41,14 @@
         return headers;
     }
 
+    // For pages that issue their own fetch() calls (blackjack's state
+    // polling, the lobby refresh) rather than going through postJson:
+    // merges the activity bearer header into the caller's headers when
+    // running inside the Discord Activity, and is a no-op otherwise.
+    function authHeaders(extra) {
+        return withActivityAuth(extra || {});
+    }
+
     function postJson(url, body) {
         const headers = withActivityAuth({ 'Content-Type': 'application/json', 'Accept': 'application/json' });
         const token = getCsrfToken();
@@ -112,9 +120,9 @@
     }
     rewriteActivityLinks();
 
-    window.TobyApi = { postJson: postJson, del: del, activityToken: activityToken };
+    window.TobyApi = { postJson: postJson, del: del, activityToken: activityToken, authHeaders: authHeaders };
 
     if (typeof module !== 'undefined') {
-        module.exports = { postJson: postJson, del: del, activityToken: activityToken };
+        module.exports = { postJson: postJson, del: del, activityToken: activityToken, authHeaders: authHeaders };
     }
 })();
