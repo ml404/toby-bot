@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Run the casino as a Discord Activity (Embedded App SDK)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 697
+  },
+  {
+    "date": "June 2026",
     "title": "Security audit pass 2: actuator lockdown, supply-chain pin, non-root container",
     "summary": "Second security-audit pass over the codebase, following up #695. Three parallel deep-dives this round: browser-side code (DOM XSS, service worker, postMessage), server-side authorization (CSRF-exempt APIs, IDOR, SSE, admin), and economy integrity + infrastructure (wager race conditions, GitHub Actions, Docker, actuator). ### Findings fixed **Actuator lockdown (the significant one).** `WebSecurityConfig` permitted `/actuator/**` anonymously. Spring Boot's default only web-e…",
     "emoji": "🎲",
