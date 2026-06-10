@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Activity follow-up: PvP arena (duel, RPS, tic-tac-toe, connect 4)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 702
+  },
+  {
+    "date": "June 2026",
     "title": "Activity follow-up: game-picker landing with multiplayer blackjack",
     "summary": "## What",
     "emoji": "♠️",
