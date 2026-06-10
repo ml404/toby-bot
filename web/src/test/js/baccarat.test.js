@@ -328,3 +328,59 @@ describe('renderBaccaratResult', () => {
         }
     });
 });
+
+describe('sideName HTML hardening', () => {
+    // sideName's fallback flows into innerHTML via the push/lose line
+    // builders. Whitelisted values map to friendly names; anything else
+    // must come out HTML-inert.
+    test('an unexpected side value cannot inject markup into the result line', () => {
+        document.body.innerHTML = '<div id="r"></div>';
+        const resultEl = document.getElementById('r');
+        renderBaccaratResult({
+            resultEl,
+            bankerCardsEl: null,
+            playerCardsEl: null,
+            bankerTotalEl: null,
+            playerTotalEl: null,
+            tableEl: null,
+            stagger: false,
+            body: {
+                push: true,
+                side: '<img src=x onerror="window.pwned=true">',
+                winner: 'PLAYER',
+                playerCards: [],
+                bankerCards: [],
+                playerTotal: 0,
+                bankerTotal: 0,
+                payout: 50,
+            },
+        });
+        expect(resultEl.querySelector('img')).toBeNull();
+        expect(resultEl.innerHTML).not.toContain('<img');
+    });
+
+    test('whitelisted sides still render their friendly names on a push', () => {
+        document.body.innerHTML = '<div id="r"></div>';
+        const resultEl = document.getElementById('r');
+        renderBaccaratResult({
+            resultEl,
+            bankerCardsEl: null,
+            playerCardsEl: null,
+            bankerTotalEl: null,
+            playerTotalEl: null,
+            tableEl: null,
+            stagger: false,
+            body: {
+                push: true,
+                side: 'BANKER',
+                winner: 'TIE',
+                playerCards: [],
+                bankerCards: [],
+                playerTotal: 0,
+                bankerTotal: 0,
+                payout: 50,
+            },
+        });
+        expect(resultEl.textContent).toContain('Banker');
+    });
+});

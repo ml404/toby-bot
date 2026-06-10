@@ -17,7 +17,11 @@ class WebSecurityConfig {
                 auth.requestMatchers(
                     "/", "/terms", "/privacy", "/changelog",
                     "/brother", "/config", "/music", "/user",
-                    "/commands", "/commands/**", "/actuator/**",
+                    "/commands", "/commands/**",
+                    // Health probe only — the rest of /actuator/* (env,
+                    // heapdump, …) must never be anonymously reachable even
+                    // if someone widens the management exposure config.
+                    "/actuator/health",
                     "/v3/api-docs/**", "/swagger-ui/**", "/login", "/error",
                     "/images/**", "/js/**", "/css/**",
                     "/dnd", "/dnd/**",

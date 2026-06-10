@@ -39,4 +39,6 @@ jobs:
           git diff-index --quiet HEAD || git commit -m "Update Commands.md in wiki"
 
       - name: Publish to Wiki
-        uses: Andrew-Chen-Wang/github-wiki-action@v4
+        # Pinned to the commit the v4 tag pointed at — a moving tag on a
+        # third-party action with contents:write is a supply-chain risk.
+        uses: Andrew-Chen-Wang/github-wiki-action@50650fccf3a10f741995523cf9708c53cec8912a # v4
