@@ -97,6 +97,23 @@ describe('api.js activity token plumbing', () => {
         expect(anchor.getAttribute('href')).toBe('https://discord.com/invite/whatever');
     });
 
+    test('authHeaders merges the bearer token into caller-supplied headers', () => {
+        sessionStorage.setItem('tobyActivityToken', 'act_abc');
+        const api = loadApi();
+
+        const headers = api.authHeaders({ 'Accept': 'text/html' });
+
+        expect(headers['Authorization']).toBe('Bearer act_abc');
+        expect(headers['Accept']).toBe('text/html');
+    });
+
+    test('authHeaders is a no-op outside the activity', () => {
+        const api = loadApi();
+
+        expect(api.authHeaders({})).toEqual({});
+        expect(api.authHeaders()).toEqual({});
+    });
+
     test('outside the activity no click listener rewrites anything', () => {
         loadApi();
 

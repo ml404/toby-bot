@@ -10,7 +10,9 @@
     var listEl = document.getElementById("bj-table-list");
 
     function refreshList() {
-        return fetch("/blackjack/" + guildId, { credentials: "same-origin", headers: { "Accept": "text/html" } })
+        var headers = { "Accept": "text/html" };
+        if (window.TobyApi && window.TobyApi.authHeaders) headers = window.TobyApi.authHeaders(headers);
+        return fetch("/blackjack/" + guildId, { credentials: "same-origin", headers: headers })
             // No public list endpoint; the easiest refresh is reload-on-action.
             .catch(function () {});
     }

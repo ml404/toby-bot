@@ -2,18 +2,30 @@ package web.activity
 
 import io.mockk.every
 import io.mockk.mockk
+import net.dv8tion.jda.api.JDA
+import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.mock.web.MockHttpServletResponse
+import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.ui.ConcurrentModel
+import org.springframework.web.servlet.mvc.support.RedirectAttributesModelMap
+import web.service.EconomyWebService
 
 class ActivityControllerTest {
 
     private val sessions = mockk<ActivitySessions>()
-    private val controller = ActivityController(sessions, clientId = "  12345 ")
+    private val economyWebService = mockk<EconomyWebService>()
+    private val jda = mockk<JDA>()
+    private val controller = ActivityController(sessions, clientId = "  12345 ", economyWebService, jda)
     private val servletResponse = MockHttpServletResponse()
+
+    private val user = mockk<OAuth2User> {
+        every { getAttribute<String>("id") } returns "100"
+        every { getAttribute<String>("username") } returns "tester"
+    }
 
     @Test
     fun `shell renders the activity template with the trimmed client id`() {
@@ -23,6 +35,28 @@ class ActivityControllerTest {
 
         assertEquals("activity", view)
         assertEquals("12345", model.getAttribute("clientId"))
+    }
+
+    @Test
+    fun `casino picker renders for guild members with guild context`() {
+        every { economyWebService.isMember(100L, 42L) } returns true
+        every { jda.getGuildById(42L) } returns mockk<Guild> { every { name } returns "Test Guild" }
+        val model = ConcurrentModel()
+
+        val view = controller.casino(42L, user, model, RedirectAttributesModelMap())
+
+        assertEquals("activity-casino", view)
+        assertEquals("42", model.getAttribute("guildId"))
+        assertEquals("Test Guild", model.getAttribute("guildName"))
+    }
+
+    @Test
+    fun `casino picker bounces non-members like every other per-guild page`() {
+        every { economyWebService.isMember(100L, 42L) } returns false
+
+        val view = controller.casino(42L, user, ConcurrentModel(), RedirectAttributesModelMap())
+
+        assertEquals("redirect:/leaderboards", view)
     }
 
     @Test

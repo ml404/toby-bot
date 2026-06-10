@@ -1,14 +1,21 @@
 package web.activity
 
 import jakarta.servlet.http.HttpServletResponse
+import net.dv8tion.jda.api.JDA
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.annotation.AuthenticationPrincipal
+import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.servlet.mvc.support.RedirectAttributes
+import web.service.EconomyWebService
+import web.util.WebGuildAccess
 
 /**
  * Entry point for the Discord Activity surface.
@@ -16,8 +23,14 @@ import org.springframework.web.bind.annotation.ResponseBody
  * GET /activity renders the bootstrap shell that Discord loads in the
  * Activity iframe (via the `*.discordsays.com` proxy). The shell runs the
  * Embedded App SDK handshake — ready → authorize → POST the code here →
- * authenticate — then navigates into the existing casino pages with the
- * issued session token (see activity.js).
+ * authenticate — then mounts the casino in a nested iframe pointed at
+ * GET /activity/casino/{guildId} (see activity.js).
+ *
+ * GET /activity/casino/{guildId} is the activity's landing surface: a
+ * slim game picker for the launch guild. Authenticated like every other
+ * per-guild page (here via the activity token filter) — friends in the
+ * same voice channel each land on their own picker and can meet at the
+ * same blackjack table.
  *
  * POST /activity/api/token is the code-for-session exchange. Anonymous by
  * design (the caller can't be authenticated yet) and CSRF-exempt: it sets
@@ -28,12 +41,28 @@ import org.springframework.web.bind.annotation.ResponseBody
 class ActivityController(
     private val sessions: ActivitySessions,
     @param:Value($$"${spring.security.oauth2.client.registration.discord.client-id:}") private val clientId: String,
+    private val economyWebService: EconomyWebService,
+    private val jda: JDA,
 ) {
 
     @GetMapping("/activity")
     fun shell(model: Model): String {
         model.addAttribute("clientId", clientId.trim())
         return "activity"
+    }
+
+    @GetMapping("/activity/casino/{guildId}")
+    fun casino(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes,
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/leaderboards"
+    ) {
+        model.addAttribute("guildId", guildId.toString())
+        model.addAttribute("guildName", jda.getGuildById(guildId)?.name ?: "your server")
+        "activity-casino"
     }
 
     @PostMapping("/activity/api/token")

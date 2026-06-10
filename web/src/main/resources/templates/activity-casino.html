@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<!--
+    Activity landing page: the slim game picker mounted in the nested
+    iframe by activity.js after the SDK handshake. Deliberately chrome-
+    free (no navbar/footer): inside the Activity sandbox the dashboard
+    chrome wastes space and its external links (Ko-fi, invite) would be
+    blocked anyway. Links navigate the NESTED frame only, so the SDK
+    connection in the shell document is untouched.
+
+    api.js is loaded so the ?activityToken= the shell appended gets
+    stashed in sessionStorage and re-appended to every game link on
+    click — each game page then authenticates the same way this one did.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>TobyBot Casino</title>
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" th:href="@{/css/base.css}">
+    <style>
+        .activity-game-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        .activity-game-tile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 1rem 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.75rem;
+            text-decoration: none;
+            text-align: center;
+        }
+        .activity-game-tile .tile-emoji { font-size: 2rem; }
+        .activity-game-tile small { opacity: 0.7; }
+        .activity-game-tile.featured { border-color: rgba(87, 242, 135, 0.5); }
+    </style>
+</head>
+<body>
+<main class="container">
+    <h1>🎰 Casino • <span th:text="${guildName}">Server</span></h1>
+    <p class="muted">Pick a game — everyone plays with their own credits.
+        Join the same blackjack table to play together.</p>
+
+    <nav class="activity-game-grid" aria-label="Games">
+        <a class="activity-game-tile featured" th:href="@{/blackjack/{g}(g=${guildId})}">
+            <span class="tile-emoji">🃏</span>Blackjack<small>play together</small>
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/slots(g=${guildId})}">
+            <span class="tile-emoji">🎰</span>Slots
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/dice(g=${guildId})}">
+            <span class="tile-emoji">🎲</span>Dice
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/coinflip(g=${guildId})}">
+            <span class="tile-emoji">🪙</span>Coinflip
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/roulette(g=${guildId})}">
+            <span class="tile-emoji">🎡</span>Roulette
+        </a>
+        <a class="activity-game-tile" th:href="@{/casino/{g}/highlow(g=${guildId})}">
+            <span class="tile-emoji">🔼</span>High-Low
+        </a>
+    </nav>
+</main>
+<script th:src="@{/js/api.js}"></script>
+</body>
+</html>
