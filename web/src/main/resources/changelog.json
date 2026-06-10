@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Security audit pass 2: actuator lockdown, supply-chain pin, non-root container",
+    "summary": "Second security-audit pass over the codebase, following up #695. Three parallel deep-dives this round: browser-side code (DOM XSS, service worker, postMessage), server-side authorization (CSRF-exempt APIs, IDOR, SSE, admin), and economy integrity + infrastructure (wager race conditions, GitHub Actions, Docker, actuator). ### Findings fixed **Actuator lockdown (the significant one).** `WebSecurityConfig` permitted `/actuator/**` anonymously. Spring Boot's default only web-e…",
+    "emoji": "🎲",
+    "prNumber": 696
+  },
+  {
+    "date": "June 2026",
     "title": "Security audit: fix open redirect and harden web-layer input handling",
     "summary": "A security audit of the codebase (web layer, Discord bot, database, config). The database/bot layer came back clean — parameterized queries throughout, no command injection or path traversal, secrets via env vars, permission checks on privileged commands, and dependency CVEs already pinned in `build.gradle`. The web layer had one real vulnerability and a few hardening gaps, all fixed here.",
     "emoji": "🎵",
