@@ -103,17 +103,18 @@ class HomeControllerTest {
     }
 
     @Test
-    fun `a discord activity launch on the root is forwarded to the shell with its params intact`() {
+    fun `a discord activity launch on the root renders the shell in place`() {
         // Discord always loads the proxy root "/" with the SDK params in
-        // the query string; the Embedded App SDK needs every one of them
-        // (frame_id, instance_id, platform, ...) present on the shell URL.
-        every { request.queryString } returns "instance_id=i-1&frame_id=abc&platform=mobile"
-
+        // the query string. The shell must render IN PLACE (no redirect):
+        // a redirect's absolute Location points at the real host, which
+        // the Discord sandbox treats as opening a disallowed web page —
+        // and an in-place render keeps frame_id et al in location.search
+        // where the Embedded App SDK reads them.
         val view = home(frameId = "abc")
 
-        assertEquals("redirect:/activity?instance_id=i-1&frame_id=abc&platform=mobile", view)
-        // The redirect branch must not touch the model or the stats
-        // service — it renders nothing.
+        assertEquals("activity", view)
+        verify { model.addAttribute("clientId", clientId) }
+        // The activity branch must not run the homepage population.
         verify(exactly = 0) { homeStatsService.get() }
     }
 

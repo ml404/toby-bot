@@ -27,11 +27,16 @@ class HomeController(
     ): String {
         // Discord Activity launches always load the proxy root "/" — there
         // is no entry-path setting in the Developer Portal. The launch is
-        // recognisable by the SDK params Discord appends (frame_id et al);
-        // forward those to the activity bootstrap shell INTACT, since the
-        // Embedded App SDK reads frame_id/instance_id from location.search.
+        // recognisable by the SDK params Discord appends (frame_id et al).
+        // Render the activity shell DIRECTLY rather than redirecting to
+        // /activity: the servlet container turns a redirect into an
+        // absolute Location on the real host, which the Discord sandbox
+        // treats as opening a disallowed web page and kills the activity.
+        // An in-place render keeps the iframe URL on *.discordsays.com and
+        // leaves the SDK params intact in location.search.
         if (frameId != null) {
-            return "redirect:/activity?${request.queryString}"
+            model.addAttribute("clientId", discordClientId.trim())
+            return "activity"
         }
         model.addAttribute("inviteUrl", DiscordInvite.urlFor(discordClientId))
         model.addAttribute("username", user?.getAttribute<String>("username"))
