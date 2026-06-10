@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Hint at Scryfall's exact-name operator in the Advanced search placeholder",
+    "summary": "Follow-up to #706. The Advanced field passes its text verbatim to Scryfall, so `!\"exact name\"` is the easy way to do a single-card search from the same three grid-search fields — but the operator is non-obvious. Surface it in the placeholder:",
+    "emoji": "✨",
+    "prNumber": 708
+  },
+  {
+    "date": "June 2026",
     "title": "Card search: fix anonymous access + autosearch + click-through to details",
     "summary": "Makes the web Magic **card search** fully work for anonymous users, plus two Scryfall-style UX upgrades. (The autosearch + click-through commits from #707 were folded onto this branch.)",
     "emoji": "✨",
