@@ -34,7 +34,7 @@ class WebSecurityConfig {
                     // shared cube (/magic/c/**) are public; the saved-lists and
                     // share-create APIs are deliberately NOT listed here so they
                     // fall through to anyRequest().authenticated().
-                    "/magic", "/magic/c/**", "/magic/api/asfan", "/magic/api/preview", "/magic/api/generate", "/magic/api/diff", "/magic/api/card", "/magic/api/rulings", "/magic/api/legality", "/magic/api/combos", "/magic/api/set", "/magic/api/rule",
+                    "/magic", "/magic/c/**", "/magic/api/asfan", "/magic/api/preview", "/magic/api/generate", "/magic/api/diff", "/magic/api/search", "/magic/api/card", "/magic/api/rulings", "/magic/api/legality", "/magic/api/combos", "/magic/api/set", "/magic/api/rule",
                     "/sitemap.xml", "/robots.txt",
                     // Service worker for web push must be reachable
                     // unauthenticated — the browser registers it on
