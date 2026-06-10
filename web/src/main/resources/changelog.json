@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix activity \"disallowed web page\" kill: mount casino in a nested iframe (Activities must be SPAs)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 700
+  },
+  {
+    "date": "June 2026",
     "title": "Keep the Discord Activity inside the proxy sandbox (fix \"disallowed web page\" kill)",
     "summary": "## What",
     "emoji": "✨",
