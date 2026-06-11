@@ -38,8 +38,9 @@ class ActivityControllerTest {
     }
 
     @Test
-    fun `casino picker renders for guild members with guild context`() {
+    fun `casino picker renders for guild members with guild context and wallet`() {
         every { economyWebService.isMember(100L, 42L) } returns true
+        every { economyWebService.getCredits(100L, 42L) } returns 1234L
         every { jda.getGuildById(42L) } returns mockk<Guild> { every { name } returns "Test Guild" }
         val model = ConcurrentModel()
 
@@ -48,6 +49,7 @@ class ActivityControllerTest {
         assertEquals("activity-casino", view)
         assertEquals("42", model.getAttribute("guildId"))
         assertEquals("Test Guild", model.getAttribute("guildName"))
+        assertEquals(1234L, model.getAttribute("credits"))
     }
 
     @Test
