@@ -35,6 +35,34 @@
         }
     }
 
+    // The activity is single-guild by nature (the launch guild comes from
+    // the Discord voice channel), and the cross-guild pickers can't render
+    // on the activity auth path anyway — they need an OAuth2 authorized
+    // client that activity sessions don't register, so a fresh activity
+    // user would bounce into the external OAuth redirect and the sandbox
+    // would kill the iframe. Remember the launch guild (the selector page
+    // /activity/casino/{guildId} is always the first page in the nested
+    // frame) so picker-bound links can be retargeted to it.
+    function activityGuildId() {
+        try {
+            const fromPath = window.location.pathname.match(/^\/activity\/casino\/(\d+)$/);
+            if (fromPath) {
+                try { sessionStorage.setItem('tobyActivityGuildId', fromPath[1]); } catch (e) { /* sandboxed */ }
+                return fromPath[1];
+            }
+            return sessionStorage.getItem('tobyActivityGuildId') || '';
+        } catch (e) {
+            return '';
+        }
+    }
+    activityGuildId(); // stash at load so later game pages can read it back
+
+    // Matches the `/{section}/guilds` picker landings ("← All servers",
+    // navbar dropdown entries). Query strings (?pick=true, ?game=…) ride
+    // on top of these paths and are dropped on retarget — the activity
+    // selector lists every game already.
+    const GUILD_PICKER_PATH = /^\/[a-z-]+\/guilds$/;
+
     function withActivityAuth(headers) {
         const token = activityToken();
         if (token) headers['Authorization'] = 'Bearer ' + token;
@@ -94,8 +122,11 @@
     // Full-page navigations can't carry a bearer header, so when an
     // activity token is live, append it to same-origin links as they're
     // clicked (capture phase, before the browser follows the href). This
-    // keeps "← All servers" / navbar navigation working inside the
-    // Activity iframe without threading the token through every template.
+    // keeps navbar navigation working inside the Activity iframe without
+    // threading the token through every template. Links bound for a
+    // cross-guild picker are retargeted to the activity's own games
+    // selector first (see activityGuildId for why pickers can't render
+    // inside the activity).
     function rewriteActivityLinks() {
         document.addEventListener('click', function (e) {
             // Resolved per click, not at load: outside the activity this is
@@ -113,12 +144,45 @@
                 return;
             }
             if (url.origin !== window.location.origin) return;
+            if (GUILD_PICKER_PATH.test(url.pathname)) {
+                const guildId = activityGuildId();
+                if (guildId) url = new URL('/activity/casino/' + guildId, window.location.href);
+            }
             if (url.searchParams.get('activityToken')) return;
             url.searchParams.set('activityToken', token);
             anchor.setAttribute('href', url.pathname + url.search + url.hash);
         }, true);
     }
     rewriteActivityLinks();
+
+    // The click-time retarget above is the safety net; the visible
+    // "← All servers" back-links also get rewritten at load so the label
+    // and hover target are honest about where the link now goes. Only the
+    // dedicated back-link anchors are touched (music-player styles its
+    // back-link as btn-tertiary) — navbar entries keep their labels and
+    // rely on the click-time retarget.
+    function retargetActivityBackLinks() {
+        const token = activityToken();
+        const guildId = activityGuildId();
+        if (!token || !guildId) return;
+        document.querySelectorAll('a.back-link[href], a.btn-tertiary[href]').forEach(function (anchor) {
+            let url;
+            try {
+                url = new URL(anchor.getAttribute('href'), window.location.href);
+            } catch (err) {
+                return;
+            }
+            if (url.origin !== window.location.origin) return;
+            if (!GUILD_PICKER_PATH.test(url.pathname)) return;
+            anchor.setAttribute('href', '/activity/casino/' + guildId);
+            anchor.textContent = '← All games';
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', retargetActivityBackLinks);
+    } else {
+        retargetActivityBackLinks();
+    }
 
     window.TobyApi = { postJson: postJson, del: del, activityToken: activityToken, authHeaders: authHeaders };
 
