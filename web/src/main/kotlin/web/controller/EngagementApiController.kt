@@ -1,10 +1,12 @@
 package web.controller
 
+import common.leveling.LevelCurve
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.service.guild.AchievementService
 import database.service.social.LoginStreakService
 import database.service.user.UserNotificationPrefService
+import database.service.user.UserService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.core.user.OAuth2User
@@ -39,6 +41,7 @@ class EngagementApiController(
     private val loginStreakService: LoginStreakService,
     private val achievementService: AchievementService,
     private val notificationPrefService: UserNotificationPrefService,
+    private val userService: UserService,
     private val membership: GuildMembership,
 ) {
 
@@ -50,9 +53,14 @@ class EngagementApiController(
         val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
         if (!membership.isMember(discordId, guildId)) return ResponseEntity.status(403).build()
 
+        // The claim mutates XP and credits in the user row; re-read it so the
+        // response carries the post-claim level/XP/balance and the profile
+        // page can refresh the Level and Economy cards in place — no reload.
         return when (val result = loginStreakService.claim(discordId, guildId)) {
             is LoginStreakService.ClaimResult.Granted -> ResponseEntity.ok(
-                DailyClaimResponse(
+                dailyClaimResponse(
+                    discordId = discordId,
+                    guildId = guildId,
                     status = "granted",
                     currentStreak = result.currentStreak,
                     longestStreak = result.longestStreak,
@@ -62,7 +70,9 @@ class EngagementApiController(
                 )
             )
             is LoginStreakService.ClaimResult.AlreadyClaimed -> ResponseEntity.ok(
-                DailyClaimResponse(
+                dailyClaimResponse(
+                    discordId = discordId,
+                    guildId = guildId,
                     status = "already_claimed",
                     currentStreak = result.currentStreak,
                     longestStreak = result.longestStreak,
@@ -72,6 +82,38 @@ class EngagementApiController(
                 )
             )
         }
+    }
+
+    private fun dailyClaimResponse(
+        discordId: Long,
+        guildId: Long,
+        status: String,
+        currentStreak: Int,
+        longestStreak: Int,
+        xpGranted: Long,
+        creditsGranted: Long,
+        newBest: Boolean,
+    ): DailyClaimResponse {
+        val user = userService.getUserById(discordId, guildId)
+        val totalXp = user?.xp ?: 0L
+        val balance = user?.socialCredit ?: 0L
+        val progress = LevelCurve.progress(totalXp)
+        return DailyClaimResponse(
+            status = status,
+            currentStreak = currentStreak,
+            longestStreak = longestStreak,
+            xpGranted = xpGranted,
+            creditsGranted = creditsGranted,
+            newBest = newBest,
+            totalXp = totalXp,
+            level = progress.level,
+            xpIntoLevel = progress.xpIntoLevel,
+            xpForNextLevel = progress.xpForNextLevel,
+            xpProgressPercent = if (progress.xpForNextLevel > 0)
+                ((progress.xpIntoLevel.toDouble() / progress.xpForNextLevel) * 100).toInt().coerceIn(0, 100)
+            else 100,
+            balance = balance,
+        )
     }
 
     @GetMapping("/daily")
@@ -187,7 +229,15 @@ class EngagementApiController(
         val longestStreak: Int,
         val xpGranted: Long,
         val creditsGranted: Long,
-        val newBest: Boolean
+        val newBest: Boolean,
+        // Post-claim snapshot of the user's level/XP/balance so the profile
+        // page can update the Level and Economy cards without a reload.
+        val totalXp: Long = 0L,
+        val level: Int = 0,
+        val xpIntoLevel: Long = 0L,
+        val xpForNextLevel: Long = 0L,
+        val xpProgressPercent: Int = 0,
+        val balance: Long = 0L,
     )
 
     data class StreakStatusResponse(

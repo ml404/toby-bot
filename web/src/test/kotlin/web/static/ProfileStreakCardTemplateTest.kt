@@ -156,6 +156,28 @@ class ProfileStreakCardTemplateTest {
     }
 
     @Test
+    fun `claim JS refreshes the Level and Economy cards in place`() {
+        val js = resource("static/js/profile.js")
+        assertTrue(
+            js.contains("updateLevelCard") && js.contains("updateBalance"),
+            "profile.js must update the Level and Economy cards after a claim — the " +
+                "claim awards XP and credits, and previously only the streak card moved " +
+                "so the user had to reload to see their new XP/balance.",
+        )
+        assertTrue(
+            js.contains(".level-progress-bar") && js.contains(".level-total-xp") &&
+                js.contains(".level-badge-value"),
+            "the Level card refresh must drive the progress bar, total XP, and level " +
+                "badge off the claim response's post-claim snapshot.",
+        )
+        assertTrue(
+            html.contains("class=\"profile-balance\""),
+            "profile.html must mark the balance with `.profile-balance` so the claim " +
+                "handler can update it without a reload.",
+        )
+    }
+
+    @Test
     fun `profile css styles the streak card so it is not plain`() {
         // The bug this redesign fixed: the markup existed but no CSS did,
         // so the card rendered unstyled. Pin that the styling is present.
