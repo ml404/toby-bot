@@ -554,7 +554,7 @@
         facts.appendChild(link);
 
         // On-demand rulings: a button that fetches /magic/api/rulings for this
-        // card and renders them into the box below (wired in wireCardLookup).
+        // card and renders them into the box below (wired in wireCardDetail).
         const rulingsBtn = document.createElement('button');
         rulingsBtn.type = 'button';
         rulingsBtn.className = 'btn btn-secondary cube-rulings-btn';
@@ -1462,10 +1462,38 @@
         if (!form) return;
         const status = statusFor(doc, 'search');
         const result = q(doc, '[data-result="search"]');
-        // Clicking a result opens its full details in the lookup panel below,
-        // reusing that panel's rulings/combos wiring.
+        // The full-detail panel below the grid (rulings/combos wired separately
+        // in wireCardDetail). It opens on click-through from a multi-result grid,
+        // or automatically when a search narrows to exactly one card.
         const cardResult = q(doc, '[data-result="card"]');
         const cardStatus = statusFor(doc, 'card');
+
+        // Loads a card's full details into the detail panel below the grid.
+        // [scroll] brings it into view (a click-through), but is skipped on an
+        // auto-open so an as-you-type search doesn't yank the page around.
+        function openCardDetail(name, scroll) {
+            if (!name || !cardResult) return;
+            setStatus(cardStatus, 'Loading ' + name + '…');
+            hide(cardResult);
+            getJson(cardUrl(name))
+                .then(function (json) {
+                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
+                    setStatus(cardStatus, '');
+                    renderCardLookup(cardResult, json.card);
+                    show(cardResult);
+                    if (scroll && cardResult.scrollIntoView) cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                })
+                .catch(function () { setStatus(cardStatus, 'Something went wrong. Try again.'); });
+        }
+
+        // Clears the detail panel — used when a search widens back to many (or
+        // zero) results, so a stale single-card detail doesn't linger.
+        function clearCardDetail() {
+            if (!cardResult) return;
+            hide(cardResult);
+            cardResult.replaceChildren();
+            setStatus(cardStatus, '');
+        }
 
         // Delegated so it survives each grid re-render: a left-click on a result
         // tile loads that card's detail panel instead of leaving for Scryfall.
@@ -1477,17 +1505,7 @@
             const name = tile.getAttribute('data-card-name') || tile.getAttribute('title');
             if (!name || !cardResult) return;
             e.preventDefault();
-            setStatus(cardStatus, 'Loading ' + name + '…');
-            hide(cardResult);
-            getJson(cardUrl(name))
-                .then(function (json) {
-                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
-                    setStatus(cardStatus, '');
-                    renderCardLookup(cardResult, json.card);
-                    show(cardResult);
-                    if (cardResult.scrollIntoView) cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                })
-                .catch(function () { setStatus(cardStatus, 'Something went wrong. Try again.'); });
+            openCardDetail(name, true);
         });
 
         let timer = null;
@@ -1509,6 +1527,7 @@
             if (!filters.name && !filters.type && !filters.query) {
                 setStatus(status, 'Enter a name, a type, or a Scryfall query to search.');
                 hide(result);
+                clearCardDetail();
                 return;
             }
             // Supersede any in-flight request so its response is dropped.
@@ -1521,10 +1540,18 @@
                 .then(function (r) { return r.json(); })
                 .then(function (json) {
                     if (token !== seq) return;
-                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); return; }
+                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); clearCardDetail(); return; }
                     setStatus(status, searchSentence(json.total, json.capped));
-                    renderSearchResults(result, json.cards || []);
+                    const cards = json.cards || [];
+                    renderSearchResults(result, cards);
                     show(result);
+                    // Narrowed to a single card? Open its full details inline,
+                    // saving the extra click. A wider result clears any stale one.
+                    if (json.total === 1 && cards.length === 1) {
+                        openCardDetail(cards[0].name, false);
+                    } else {
+                        clearCardDetail();
+                    }
                 })
                 .catch(function (e) {
                     if (e && e.name === 'AbortError') return; // superseded — leave the UI to the newer search
@@ -1553,6 +1580,7 @@
                     seq++; // drop any in-flight response
                     setStatus(status, '');
                     hide(result);
+                    clearCardDetail();
                     return;
                 }
                 if (f.name.length >= AUTO_SEARCH_MIN || f.type.length >= AUTO_SEARCH_MIN || f.query.length >= AUTO_SEARCH_MIN) {
@@ -1565,14 +1593,18 @@
         });
     }
 
-    function wireCardLookup(doc) {
-        const form = q(doc, '[data-form="card"]');
-        if (!form) return;
-        const status = statusFor(doc, 'card');
+    /**
+     * Wires the on-demand "Show rulings" / "Show combos" buttons on the card
+     * detail panel. The panel itself is populated by the card search (a
+     * click-through, or an auto-open when a search narrows to one card); this
+     * just delegates the two reveal buttons, surviving each re-render of the
+     * panel's contents.
+     */
+    function wireCardDetail(doc) {
         const result = q(doc, '[data-result="card"]');
+        if (!result) return;
 
-        // Delegated so it survives each re-render of the lookup result: the
-        // "Show rulings" button fetches that card's rulings on demand.
+        // The "Show rulings" button fetches that card's rulings on demand.
         result.addEventListener('click', function (e) {
             const btn = e.target.closest && e.target.closest('[data-load-rulings]');
             if (!btn) return;
@@ -1608,24 +1640,6 @@
                     btn.hidden = true;
                 })
                 .catch(function () { btn.disabled = false; btn.textContent = 'Show combos'; });
-        });
-
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const name = (new FormData(form).get('name') || '').trim();
-            if (!name) { setStatus(status, 'Enter a card name.'); return; }
-            setStatus(status, 'Looking up…');
-            hide(result);
-            withBusy(form, true);
-            getJson(cardUrl(name))
-                .then(function (json) {
-                    if (!json.ok) { setStatus(status, json.error || 'No card found.'); return; }
-                    setStatus(status, '');
-                    renderCardLookup(result, json.card);
-                    show(result);
-                })
-                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
-                .then(function () { withBusy(form, false); });
         });
     }
 
@@ -2245,7 +2259,7 @@
         wireAsFan(doc);
         wireCompare(doc);
         wireSearch(doc);
-        wireCardLookup(doc);
+        wireCardDetail(doc);
         wireLegality(doc);
         wireReference(doc);
         wireWatch(doc);

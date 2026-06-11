@@ -358,7 +358,9 @@
             <p class="cube-panel-intro">
                 Search Magic cards by name and type and see every match as a grid of images, the
                 way Scryfall does — results update as you type. Click any card for its full
-                details, rulings and combos, or look one up by name below.
+                details, rulings and combos; a search that narrows to a single card opens those
+                details automatically. The website twin of the
+                <code th:text="${mtgCmd.cardLookup}">/mtgcard lookup</code> Discord command.
             </p>
             <form class="cube-form cube-search-form" data-form="search" autocomplete="off">
                 <label id="card-search-name-label">Name includes
@@ -378,24 +380,6 @@
             <p class="cube-status" data-status="search" aria-live="polite"></p>
             <div class="cube-card-grid" data-result="search" hidden></div>
 
-            <hr class="cube-divider">
-
-            <p class="cube-panel-intro">
-                Look up a single card by name for its image and details — the website twin of
-                the <code th:text="${mtgCmd.cardLookup}">/mtgcard lookup</code> Discord command.
-            </p>
-            <form class="cube-form" data-form="card" autocomplete="off">
-                <label id="card-lookup-label">Card name
-                    <div class="cube-list-wrap">
-                        <input type="text" name="name" placeholder="e.g. Lightning Bolt"
-                               autocomplete="off"
-                               aria-labelledby="card-lookup-label"
-                               aria-autocomplete="list" aria-controls="card-lookup-suggest" required>
-                        <ul class="cube-card-suggest" id="card-lookup-suggest" data-card-suggest role="listbox" hidden></ul>
-                    </div>
-                </label>
-                <button type="submit" class="btn cube-submit">Look up</button>
-            </form>
             <p class="cube-status" data-status="card" aria-live="polite"></p>
             <div class="cube-cardlookup-wrap" data-result="card" hidden></div>
         </section>
