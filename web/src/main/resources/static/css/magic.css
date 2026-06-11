@@ -1654,6 +1654,23 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
         align-self: start;
     }
 
+    /* Tighten the card detail panel on phones. By default the 240px image
+       wraps to its own full-width row, pushing the facts — and the
+       rulings/combos buttons below them — a whole screen down. Shrink the
+       image and drop the facts' min-width so the two sit side by side as a
+       compact thumbnail + details block, keeping the actions in view. */
+    .cube-cardlookup {
+        gap: var(--space-3);
+    }
+
+    .cube-cardlookup-img {
+        width: 140px;
+    }
+
+    .cube-cardlookup-facts {
+        min-width: 0;
+    }
+
     .cube-bar-row,
     .cube-group-head {
         grid-template-columns: 90px 1fr;
