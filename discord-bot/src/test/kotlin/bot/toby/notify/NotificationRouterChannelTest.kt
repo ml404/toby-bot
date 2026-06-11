@@ -15,7 +15,11 @@ import net.dv8tion.jda.api.Permission
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.SelfMember
+import net.dv8tion.jda.api.entities.channel.ChannelType
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
+import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel
+import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel
+import net.dv8tion.jda.api.entities.channel.middleman.GuildMessageChannel
 import net.dv8tion.jda.api.requests.restaction.MessageCreateAction
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder
 import net.dv8tion.jda.api.utils.messages.MessageCreateData
@@ -79,6 +83,12 @@ class NotificationRouterChannelTest {
         every { fallbackChannel.idLong } returns 2L
         every { originChannel.idLong } returns 3L
         every { systemChannel.idLong } returns 4L
+        // hasSendPerms branches on type.isThread; pin TEXT explicitly so
+        // the relaxed mocks don't feed it an arbitrary enum constant.
+        every { primaryChannel.type } returns ChannelType.TEXT
+        every { fallbackChannel.type } returns ChannelType.TEXT
+        every { originChannel.type } returns ChannelType.TEXT
+        every { systemChannel.type } returns ChannelType.TEXT
         every { primaryChannel.name } returns "primary"
         every { fallbackChannel.name } returns "fallback"
         every { originChannel.name } returns "origin"
@@ -140,7 +150,9 @@ class NotificationRouterChannelTest {
     @Test
     fun `falls through to originChannelId when configs miss`() {
         stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
-        every { guild.getTextChannelById(3L) } returns originChannel
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 3L) } returns originChannel
 
         router.sendChannel(
             guildId, ChannelRouteKey.LEVEL_UP,
@@ -149,6 +161,70 @@ class NotificationRouterChannelTest {
         )
 
         verify(exactly = 1) { originChannel.sendMessage(payload) }
+    }
+
+    @Test
+    fun `voice-channel origin resolves - activity PvP pings land in text-in-voice`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
+        val voice = mockk<VoiceChannel>(relaxed = true) {
+            every { type } returns ChannelType.VOICE
+            every { sendMessage(any<MessageCreateData>()) } returns createAction
+        }
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 5L) } returns voice
+        every { bot.hasPermission(voice, *anyVararg<Permission>()) } returns true
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, originChannelId = 5L, message = builder)
+
+        verify(exactly = 1) { voice.sendMessage(payload) }
+    }
+
+    @Test
+    fun `thread origin resolves and is gated on MESSAGE_SEND_IN_THREADS`() {
+        // Message XP earned inside a thread carries the thread id; the
+        // level-up announcement must land in that thread, not divert to
+        // the system channel (the pre-fix behaviour).
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
+        val thread = mockk<ThreadChannel>(relaxed = true) {
+            every { type } returns ChannelType.GUILD_PUBLIC_THREAD
+            every { isArchived } returns false
+            every { isLocked } returns false
+            every { sendMessage(any<MessageCreateData>()) } returns createAction
+        }
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 6L) } returns thread
+        every { guild.systemChannel } returns systemChannel
+        every { bot.hasPermission(thread, *anyVararg<Permission>()) } returns true
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, originChannelId = 6L, message = builder)
+
+        verify(exactly = 1) { thread.sendMessage(payload) }
+        verify(exactly = 0) { systemChannel.sendMessage(any<MessageCreateData>()) }
+        // Threads gate on MESSAGE_SEND_IN_THREADS, not MESSAGE_SEND.
+        verify(exactly = 1) {
+            bot.hasPermission(thread, Permission.MESSAGE_SEND_IN_THREADS, Permission.MESSAGE_EMBED_LINKS)
+        }
+    }
+
+    @Test
+    fun `archived thread origin falls through to the system channel`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
+        val thread = mockk<ThreadChannel>(relaxed = true) {
+            every { type } returns ChannelType.GUILD_PUBLIC_THREAD
+            every { isArchived } returns true
+            every { isLocked } returns false
+        }
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 6L) } returns thread
+        every { guild.systemChannel } returns systemChannel
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, originChannelId = 6L, message = builder)
+
+        verify(exactly = 0) { thread.sendMessage(any<MessageCreateData>()) }
+        verify(exactly = 1) { systemChannel.sendMessage(payload) }
     }
 
     @Test
@@ -180,6 +256,76 @@ class NotificationRouterChannelTest {
 
         verify(exactly = 0) { primaryChannel.sendMessage(any<MessageCreateData>()) }
         verify(exactly = 0) { fallbackChannel.sendMessage(any<MessageCreateData>()) }
+        verify(exactly = 0) { systemChannel.sendMessage(any<MessageCreateData>()) }
+    }
+
+    // ---- best-effort last resort (pre-#492 behaviour pins) ----
+    //
+    // Before channel routing was centralised, LevelUpListener (and the
+    // other notifiers) never permission-checked at resolution time: the
+    // post was attempted on the first existing channel in the chain and
+    // a real Discord rejection surfaced in the queue-failure callback.
+    // #492's hasSendPerms gate turned "computed perms say no" into a
+    // silent drop — if JDA's view of the permissions is stricter than
+    // what Discord actually enforces (or the only candidate genuinely
+    // lacks perms), notifications that used to deliver (or at least
+    // log a real error) just vanish. These tests pin the old contract:
+    // never drop silently while a target channel exists.
+
+    @Test
+    fun `config channel failing the permission check is still attempted when nothing else exists`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { bot.hasPermission(primaryChannel, *anyVararg<Permission>()) } returns false
+        every { guild.systemChannel } returns null
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { primaryChannel.sendMessage(payload) }
+    }
+
+    @Test
+    fun `system channel failing the permission check is still attempted as the last resort`() {
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, null)
+        every { guild.systemChannel } returns systemChannel
+        every { bot.hasPermission(systemChannel, *anyVararg<Permission>()) } returns false
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { systemChannel.sendMessage(payload) }
+    }
+
+    @Test
+    fun `unwritable config channel is routed around when a writable origin exists`() {
+        // The route-around introduced by #492 is kept: best-effort only
+        // kicks in when NO candidate passes the permission check.
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { bot.hasPermission(primaryChannel, *anyVararg<Permission>()) } returns false
+        every {
+            hint(GuildMessageChannel::class)
+            guild.getChannelById(GuildMessageChannel::class.java, 3L)
+        } returns originChannel
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, originChannelId = 3L, message = builder)
+
+        verify(exactly = 1) { originChannel.sendMessage(payload) }
+        verify(exactly = 0) { primaryChannel.sendMessage(any<MessageCreateData>()) }
+    }
+
+    @Test
+    fun `best-effort prefers the config channel over later existing candidates`() {
+        // When everything fails the perm check, the attempt goes to the
+        // FIRST existing candidate — the admin-configured channel — not
+        // whatever happened to be inspected last.
+        stub(ConfigDto.Configurations.LEVEL_UP_CHANNEL, "1")
+        every { guild.getTextChannelById(1L) } returns primaryChannel
+        every { guild.systemChannel } returns systemChannel
+        every { bot.hasPermission(any<TextChannel>(), *anyVararg<Permission>()) } returns false
+
+        router.sendChannel(guildId, ChannelRouteKey.LEVEL_UP, message = builder)
+
+        verify(exactly = 1) { primaryChannel.sendMessage(payload) }
         verify(exactly = 0) { systemChannel.sendMessage(any<MessageCreateData>()) }
     }
 
