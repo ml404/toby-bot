@@ -1380,6 +1380,26 @@ describe('tap-to-enlarge (touch / no-hover devices)', () => {
 
         document.body.removeChild(card);
     });
+
+    test('a search-result tile is left to the detail panel — no lightbox', () => {
+        fakeHoverNone(true);
+        // A tile inside the search grid opens the full detail panel (price,
+        // rulings, combos) on tap, the same as a desktop click — so the
+        // bare-image lightbox must not also fire over the top.
+        const grid = document.createElement('div');
+        grid.setAttribute('data-result', 'search');
+        const card = document.createElement('a');
+        card.className = 'cube-card';
+        card.setAttribute('data-large', 'https://img/big.jpg');
+        card.href = 'https://scryfall.com/x';
+        grid.appendChild(card);
+        document.body.appendChild(grid);
+
+        card.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        expect(document.querySelector('.cube-lightbox').hidden).toBe(true);
+
+        document.body.removeChild(grid);
+    });
 });
 
 describe('renderDistribution (the secondary balance bars)', () => {

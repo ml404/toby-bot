@@ -2229,10 +2229,14 @@
             // A flip-button tap is handled by wireCardFlip, not the lightbox.
             if (e.target.closest && e.target.closest('.cube-card-flip')) return;
             const card = e.target.closest && e.target.closest('.cube-card[data-large]');
-            if (card && prefersTap()) {
-                e.preventDefault();
-                open(card);
-            }
+            if (!card || !prefersTap()) return;
+            // Search-result tiles open the full detail panel (price, rulings,
+            // combos) instead — same as a desktop click — so the bare-image
+            // lightbox is reserved for the preview/generate grids, which have
+            // no panel to open.
+            if (card.closest && card.closest('[data-result="search"]')) return;
+            e.preventDefault();
+            open(card);
         });
         closeBtn.addEventListener('click', close);
         modal.addEventListener('click', function (e) {

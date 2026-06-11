@@ -1643,8 +1643,32 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
         align-items: stretch;
     }
 
+    /* Stacked into a column, the search filters must size to their content —
+       otherwise the desktop `flex: 1 1 180px` (meant to share one row) grows
+       each field down the panel's full height, ballooning the inputs. */
+    .cube-search-form label {
+        flex: 0 0 auto;
+    }
+
     .cube-submit {
         align-self: start;
+    }
+
+    /* Tighten the card detail panel on phones. By default the 240px image
+       wraps to its own full-width row, pushing the facts — and the
+       rulings/combos buttons below them — a whole screen down. Shrink the
+       image and drop the facts' min-width so the two sit side by side as a
+       compact thumbnail + details block, keeping the actions in view. */
+    .cube-cardlookup {
+        gap: var(--space-3);
+    }
+
+    .cube-cardlookup-img {
+        width: 140px;
+    }
+
+    .cube-cardlookup-facts {
+        min-width: 0;
     }
 
     .cube-bar-row,
