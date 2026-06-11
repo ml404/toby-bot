@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Polish the unified card search on mobile",
+    "summary": "Three mobile refinements to the unified card search/viewer.",
+    "emoji": "✨",
+    "prNumber": 714
+  },
+  {
+    "date": "June 2026",
     "title": "Extend the never-drop-silently posting contract to the non-router posters",
     "summary": "## Context",
     "emoji": "✨",
