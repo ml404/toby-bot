@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix level-up announcement regression: restore pre-#492 \"always attempt the post\" behaviour + thread origins",
+    "summary": "## Context",
+    "emoji": "✨",
+    "prNumber": 710
+  },
+  {
+    "date": "June 2026",
     "title": "Hint at Scryfall's exact-name operator in the Advanced search placeholder",
     "summary": "Follow-up to #706. The Advanced field passes its text verbatim to Scryfall, so `!\"exact name\"` is the easy way to do a single-card search from the same three grid-search fields — but the operator is non-obvious. Surface it in the placeholder:",
     "emoji": "✨",
