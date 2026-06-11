@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Magic card tab: collapse into one unified search",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 712
+  },
+  {
+    "date": "June 2026",
     "title": "Activity landing: surface the guild's full games list",
     "summary": "## Why",
     "emoji": "🎲",
