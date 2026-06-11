@@ -352,8 +352,8 @@ class MonthlyLeaderboardJobTest {
         every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
         every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
         every { configService.getConfigByName(any(), guildId.toString()) } returns null
-        // System channel has no perms → resolveChannel returns null → no post, but snapshot still written.
-        every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns false
+        // No channel exists at all → nothing to post to, but snapshot still written.
+        every { guild.systemChannel } returns null
 
         val snapshots = mutableListOf<MonthlyCreditSnapshotDto>()
         every { snapshotService.upsertIfMissing(capture(snapshots)) } answers { firstArg() }
@@ -362,6 +362,48 @@ class MonthlyLeaderboardJobTest {
 
         verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
         assertEquals(1, snapshots.size)
+    }
+
+    @Test
+    fun `system channel failing the permission check is still attempted as the last resort`() {
+        // Same contract as NotificationRouter: a computed-permission "no"
+        // must degrade to an attempted send (failure logged by JDA's
+        // callback), never a silent drop, while a channel exists.
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 500L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        every { guild.selfMember.hasPermission(channel, *anyVararg<Permission>()) } returns false
+
+        job.postMonthlyLeaderboard()
+
+        verify(exactly = 1) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `unwritable configured channel is preferred over the system channel in the best-effort attempt`() {
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 500L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+
+        val configuredChannel = mockk<TextChannel>(relaxed = true)
+        val configDto = ConfigDto(name = "LEADERBOARD_CHANNEL", value = "777", guildId = guildId.toString())
+        every { configService.getConfigByName(any(), guildId.toString()) } answers {
+            if (firstArg<String>() == "LEADERBOARD_CHANNEL") configDto else null
+        }
+        every { guild.getTextChannelById(777L) } returns configuredChannel
+        // Nothing passes the perm check; the attempt goes to the
+        // admin-configured channel, not the system channel.
+        every { guild.selfMember.hasPermission(any<TextChannel>(), *anyVararg<Permission>()) } returns false
+
+        job.postMonthlyLeaderboard()
+
+        verify(exactly = 1) { configuredChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 0) { channel.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 
     // ---------------------------------------------------------------------

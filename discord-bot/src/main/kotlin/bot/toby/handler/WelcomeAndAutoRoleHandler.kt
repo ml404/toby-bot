@@ -32,9 +32,10 @@ import org.springframework.stereotype.Service
  *
  * Channel resolution prefers the configured `*_CHANNEL`; if that row is
  * blank, unparseable, missing, or non-postable, falls back to the
- * guild's system channel. If neither is postable the listener logs and
- * returns silently — never let a transient JDA-side failure kill the
- * dispatch thread.
+ * guild's system channel. If neither passes the permission check the
+ * post is still attempted on the first channel that exists (a computed-
+ * permission false negative degrades to a logged send failure, never a
+ * silent drop); only a guild with no candidate at all skips.
  */
 @Service
 class WelcomeAndAutoRoleHandler(
@@ -120,13 +121,23 @@ class WelcomeAndAutoRoleHandler(
         configService.getConfigByName(key.configValue, guildId)?.value
 
     private fun resolveChannel(guild: Guild, key: Configurations): TextChannel? {
-        val raw = readConfig(guild.id, key)
-        val configured = raw?.takeIf { it.isNotBlank() }
+        val configured = readConfig(guild.id, key)
+            ?.takeIf { it.isNotBlank() }
             ?.toLongOrNull()
             ?.let { guild.getTextChannelById(it) }
-            ?.takeIf { canPost(guild, it) }
-        if (configured != null) return configured
-        return guild.systemChannel?.takeIf { canPost(guild, it) }
+        val candidates = listOfNotNull(configured, guild.systemChannel)
+        candidates.firstOrNull { canPost(guild, it) }?.let { return it }
+        // Same contract as NotificationRouter.resolveChannel: when no
+        // candidate passes the permission check but one exists, attempt
+        // the send there rather than dropping the announcement — a
+        // computed-permission false negative degrades to a logged send
+        // failure instead of a silent drop.
+        return candidates.firstOrNull()?.also {
+            logger.warn {
+                "No ${key.configValue} candidate for guild ${guild.id} passes the permission check; " +
+                    "attempting best-effort post to #${it.name} anyway."
+            }
+        }
     }
 
     private fun canPost(guild: Guild, channel: TextChannel): Boolean {

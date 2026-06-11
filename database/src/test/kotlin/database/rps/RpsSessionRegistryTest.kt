@@ -204,11 +204,15 @@ class RpsSessionRegistryTest {
         val ids = (1..10).map {
             registry.register(guildId, initiatorId + it, opponentId + it, stake = 0L).id
         }
-        // Caffeine performs eviction asynchronously; nudge it with a
-        // synchronous read so the cleanup completes before we assert.
-        ids.forEach { registry.get(it) }
-        Thread.sleep(50)
-        val surviving = ids.count { registry.get(it) != null }
+        // Caffeine evicts asynchronously on its maintenance pass; a fixed
+        // sleep flakes on CPU-starved CI runners. Poll with a generous
+        // deadline instead — every get() also nudges the maintenance pass.
+        val deadline = System.currentTimeMillis() + 5_000
+        var surviving = ids.count { registry.get(it) != null }
+        while (surviving > 3 && System.currentTimeMillis() < deadline) {
+            Thread.sleep(25)
+            surviving = ids.count { registry.get(it) != null }
+        }
         assertTrue(surviving <= 3, "expected at most 3 survivors with maximumSessions=3, got $surviving")
     }
 

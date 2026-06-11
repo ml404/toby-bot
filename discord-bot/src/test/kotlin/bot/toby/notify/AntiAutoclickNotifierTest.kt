@@ -193,11 +193,31 @@ class AntiAutoclickNotifierTest {
     }
 
     @Test
-    fun `SessionOpened skips when bot lacks permission on the system channel`() {
+    fun `SessionOpened still attempts the system channel when permissions compute false`() {
+        // Same contract as NotificationRouter: a computed-permission "no"
+        // must degrade to an attempted send (failure logged by JDA's
+        // callback), never a silent drop, while a channel exists.
         every { selfMember.hasPermission(systemChannel, *anyVararg<Permission>()) } returns false
 
         notifier.onOpened(openEvent())
 
+        verify(exactly = 1) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `best-effort prefers the unwritable configured mod-log channel over the system channel`() {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID.configValue,
+                guildId.toString(),
+            )
+        } returns ConfigDto(name = "x", value = configChannelId.toString(), guildId = guildId.toString())
+        every { selfMember.hasPermission(configChannel, *anyVararg<Permission>()) } returns false
+        every { selfMember.hasPermission(systemChannel, *anyVararg<Permission>()) } returns false
+
+        notifier.onOpened(openEvent())
+
+        verify(exactly = 1) { configChannel.sendMessageEmbeds(any<MessageEmbed>()) }
         verify(exactly = 0) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
     }
 
