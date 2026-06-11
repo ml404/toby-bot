@@ -179,12 +179,49 @@ class WelcomeAndAutoRoleHandlerTest {
     }
 
     @Test
-    fun `welcome enabled with no postable channel skips silently`() {
+    fun `welcome enabled with unwritable system channel still attempts it as the last resort`() {
+        // Same contract as NotificationRouter: a computed-permission "no"
+        // must degrade to an attempted send (failure logged by JDA's
+        // callback), never a silent drop, while a channel exists.
         stubFlag(Configurations.WELCOME_ENABLED, "true")
         stubKey(Configurations.WELCOME_CHANNEL, "")
         every {
             selfMember.hasPermission(systemChannel, *anyVararg<Permission>())
         } returns false
+        every { autoRoleService.listForGuild(guildId) } returns emptyList()
+
+        val event = mockk<GuildMemberJoinEvent>(relaxed = true).also {
+            every { it.guild } returns guild
+            every { it.member } returns joinedMember
+        }
+        handler.onGuildMemberJoin(event)
+
+        verify(exactly = 1) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `welcome best-effort prefers the unwritable configured channel over the system channel`() {
+        stubFlag(Configurations.WELCOME_ENABLED, "true")
+        stubKey(Configurations.WELCOME_CHANNEL, configuredChannelId.toString())
+        every { guild.getTextChannelById(configuredChannelId) } returns configuredChannel
+        every { selfMember.hasPermission(any<TextChannel>(), *anyVararg<Permission>()) } returns false
+        every { autoRoleService.listForGuild(guildId) } returns emptyList()
+
+        val event = mockk<GuildMemberJoinEvent>(relaxed = true).also {
+            every { it.guild } returns guild
+            every { it.member } returns joinedMember
+        }
+        handler.onGuildMemberJoin(event)
+
+        verify(exactly = 1) { configuredChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+        verify(exactly = 0) { systemChannel.sendMessageEmbeds(any<MessageEmbed>()) }
+    }
+
+    @Test
+    fun `welcome enabled with no channel existing at all skips silently`() {
+        stubFlag(Configurations.WELCOME_ENABLED, "true")
+        stubKey(Configurations.WELCOME_CHANNEL, "")
+        every { guild.systemChannel } returns null
         every { autoRoleService.listForGuild(guildId) } returns emptyList()
 
         val event = mockk<GuildMemberJoinEvent>(relaxed = true).also {

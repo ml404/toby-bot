@@ -200,15 +200,21 @@ class MonthlyLeaderboardJob @Autowired constructor(
         val configured = configService.getConfigByName(
             ConfigDto.Configurations.LEADERBOARD_CHANNEL.configValue,
             guild.id
-        )?.value?.toLongOrNull()
-        configured?.let {
-            val channel = guild.getTextChannelById(it)
-            if (channel != null && bot.hasPermission(channel, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)) {
-                return channel
-            }
-        }
-        return guild.systemChannel?.takeIf {
+        )?.value?.toLongOrNull()?.let { guild.getTextChannelById(it) }
+        val candidates = listOfNotNull(configured, guild.systemChannel)
+        candidates.firstOrNull {
             bot.hasPermission(it, Permission.MESSAGE_SEND, Permission.MESSAGE_EMBED_LINKS)
+        }?.let { return it }
+        // Same contract as NotificationRouter.resolveChannel: when no
+        // candidate passes the permission check but one exists, attempt
+        // the send there rather than dropping the post — a computed-
+        // permission false negative degrades to a logged send failure
+        // instead of a silent drop.
+        return candidates.firstOrNull()?.also {
+            logger.warn(
+                "No leaderboard channel for guild ${guild.idLong} passes the send/embed permission check; " +
+                    "attempting best-effort post to #${it.name} anyway."
+            )
         }
     }
 

@@ -180,16 +180,32 @@ class AntiAutoclickNotifier(
     }
 
     private fun resolveChannel(guild: Guild): TextChannel? {
-        val configuredId = configService.getConfigByName(
+        val configured = configService.getConfigByName(
             ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID.configValue,
             guild.idLong.toString(),
-        )?.value?.toLongOrNull()
-        if (configuredId != null) {
-            val configured = guild.getTextChannelById(configuredId)
-            if (configured != null && hasWritePermissions(guild, configured)) return configured
-            logger.warn("Configured CASINO_MODLOG_CHANNEL_ID=$configuredId for guild ${guild.idLong} is not usable; falling back to system channel.")
+        )?.value?.toLongOrNull()?.let { id ->
+            guild.getTextChannelById(id).also {
+                if (it == null) {
+                    logger.warn(
+                        "Configured CASINO_MODLOG_CHANNEL_ID=$id for guild ${guild.idLong} no longer " +
+                            "exists; falling back to system channel."
+                    )
+                }
+            }
         }
-        return guild.systemChannel?.takeIf { hasWritePermissions(guild, it) }
+        val candidates = listOfNotNull(configured, guild.systemChannel)
+        candidates.firstOrNull { hasWritePermissions(guild, it) }?.let { return it }
+        // Same contract as NotificationRouter.resolveChannel: when no
+        // candidate passes the permission check but one exists, attempt
+        // the send there rather than dropping the mod-log post — a
+        // computed-permission false negative degrades to a logged send
+        // failure instead of a silent drop.
+        return candidates.firstOrNull()?.also {
+            logger.warn(
+                "No casino mod-log candidate for guild ${guild.idLong} passes the permission check; " +
+                    "attempting best-effort post to #${it.name} anyway."
+            )
+        }
     }
 
     private fun hasWritePermissions(guild: Guild, channel: TextChannel): Boolean =
