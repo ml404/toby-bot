@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Activity landing: surface the guild's full games list",
+    "summary": "## Why",
+    "emoji": "🎲",
+    "prNumber": 709
+  },
+  {
+    "date": "June 2026",
     "title": "Fix level-up announcement regression: restore pre-#492 \"always attempt the post\" behaviour + thread origins",
     "summary": "## Context",
     "emoji": "✨",
