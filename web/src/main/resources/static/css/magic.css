@@ -1643,6 +1643,13 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
         align-items: stretch;
     }
 
+    /* Stacked into a column, the search filters must size to their content —
+       otherwise the desktop `flex: 1 1 180px` (meant to share one row) grows
+       each field down the panel's full height, ballooning the inputs. */
+    .cube-search-form label {
+        flex: 0 0 auto;
+    }
+
     .cube-submit {
         align-self: start;
     }
