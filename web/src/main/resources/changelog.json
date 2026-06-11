@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Open card details in a dismissible overlay",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 717
+  },
+  {
+    "date": "June 2026",
     "title": "Activity: back-links return to the games selector, not the cross-guild pickers",
     "summary": "## Why",
     "emoji": "✨",
