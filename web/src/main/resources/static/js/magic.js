@@ -1457,6 +1457,49 @@
         field.addEventListener('blur', function () { setTimeout(close, 150); });
     }
 
+    /**
+     * Presents the card-detail panel as a dismissible modal overlay. Creates
+     * one shared backdrop + close button in the document and toggles the
+     * panel's `is-modal` class to lift it into a centered, scrollable sheet
+     * over the backdrop. Dismissed by the close button, a backdrop click, or
+     * Escape, each running `onClose` (to clear the panel and restore focus).
+     * Returns { open, close, isOpen }, or null when there's nowhere to mount.
+     */
+    function cardDetailModal(doc, panel, onClose) {
+        if (!doc.body || !panel) return null;
+        const backdrop = doc.createElement('div');
+        backdrop.className = 'cube-detail-backdrop';
+        backdrop.hidden = true;
+        const closeBtn = doc.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'cube-detail-close';
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.textContent = '✕';
+        backdrop.appendChild(closeBtn);
+        doc.body.appendChild(backdrop);
+
+        let isOpen = false;
+        function open() {
+            isOpen = true;
+            panel.classList.add('is-modal');
+            backdrop.hidden = false;
+            if (closeBtn.focus) closeBtn.focus();
+        }
+        function close() {
+            if (!isOpen) return;
+            isOpen = false;
+            panel.classList.remove('is-modal');
+            backdrop.hidden = true;
+            if (typeof onClose === 'function') onClose();
+        }
+        // A click on the dark backdrop dismisses; the lifted panel is a
+        // separate subtree, so clicks inside it never reach here.
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+        closeBtn.addEventListener('click', close);
+        doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen) close(); });
+        return { open: open, close: close, isOpen: function () { return isOpen; } };
+    }
+
     function wireSearch(doc) {
         const form = q(doc, '[data-form="search"]');
         if (!form) return;
@@ -1472,12 +1515,33 @@
         // touch it, so a slow load can't overwrite (or a clear can't wipe) a
         // newer one's card.
         let detailSeq = 0;
+        // The tile that opened the modal, so focus returns to it on dismiss.
+        let lastTrigger = null;
 
-        // Loads a card's full details into the shared panel. `opts.scroll`
-        // brings it into view (for an explicit click), but not when a one-match
-        // search auto-opens it under the grid.
+        // Hides the detail panel and drops any pending/stale load. The visual
+        // teardown, shared by an explicit dismiss and a fresh search.
+        function hideDetailPanel() {
+            detailSeq++;
+            setStatus(cardStatus, '');
+            hide(cardResult);
+        }
+
+        // The detail panel can be lifted into a dismissible overlay (for an
+        // explicit click). Dismissing it tears the panel down and hands focus
+        // back to the tile that opened it.
+        const modal = cardDetailModal(doc, cardResult, function () {
+            hideDetailPanel();
+            if (lastTrigger && lastTrigger.focus) lastTrigger.focus();
+        });
+
+        // Loads a card's full details into the shared panel. `opts.modal` lifts
+        // it into a centered overlay (an explicit click on a result); without
+        // it the panel renders inline and `opts.scroll` brings it into view —
+        // used when a one-match search auto-opens the detail under the grid.
         function openDetail(name, opts) {
             if (!name || !cardResult) return;
+            const wantModal = !!(opts && opts.modal && modal);
+            if (opts && opts.trigger) lastTrigger = opts.trigger;
             const token = ++detailSeq;
             setStatus(cardStatus, 'Loading ' + name + '…');
             hide(cardResult);
@@ -1488,23 +1552,26 @@
                     setStatus(cardStatus, '');
                     renderCardLookup(cardResult, json.card);
                     show(cardResult);
-                    if (opts && opts.scroll && cardResult.scrollIntoView) {
+                    if (wantModal) {
+                        modal.open();
+                    } else if (opts && opts.scroll && cardResult.scrollIntoView) {
                         cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 })
                 .catch(function () { if (token === detailSeq) setStatus(cardStatus, 'Something went wrong. Try again.'); });
         }
 
-        // Drops any pending/stale detail load and hides the panel.
+        // Closes the overlay (if open) and hides the panel — funnelled so a
+        // dismiss and a fresh search share one teardown without double-firing.
         function clearDetail() {
-            detailSeq++;
-            setStatus(cardStatus, '');
-            hide(cardResult);
+            if (modal && modal.isOpen()) modal.close(); // its onClose hides the panel
+            else hideDetailPanel();
         }
 
         // Delegated so it survives each grid re-render: a left-click on a result
-        // tile loads that card's detail panel instead of leaving for Scryfall.
-        // Modifier/middle clicks fall through to the tile's href (open Scryfall).
+        // tile opens that card's full details in a dismissible overlay instead
+        // of leaving for Scryfall. Modifier/middle clicks fall through to the
+        // tile's href (open Scryfall).
         result.addEventListener('click', function (e) {
             if (e.defaultPrevented || e.button === 1 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
             const tile = e.target.closest && e.target.closest('.cube-card');
@@ -1512,7 +1579,7 @@
             const name = tile.getAttribute('data-card-name') || tile.getAttribute('title');
             if (!name || !cardResult) return;
             e.preventDefault();
-            openDetail(name, { scroll: true });
+            openDetail(name, { modal: true, trigger: tile });
         });
 
         let timer = null;
@@ -2353,6 +2420,7 @@
         totalValueText: totalValueText,
         formatMoney: formatMoney,
         renderCardLookup: renderCardLookup,
+        cardDetailModal: cardDetailModal,
         renderRulings: renderRulings,
         renderTotalValue: renderTotalValue,
         renderValueExtremes: renderValueExtremes,
