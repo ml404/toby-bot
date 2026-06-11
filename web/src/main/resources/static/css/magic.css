@@ -1626,6 +1626,53 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     margin-top: var(--space-2);
 }
 
+/* An explicit click on a search result lifts the same detail panel into a
+   dismissible overlay — a centered, scrollable sheet over a dark backdrop —
+   so the card's info (price, rulings, combos) appears in focus instead of
+   parked below a long grid. A one-match auto-open stays inline (no class). */
+.cube-cardlookup-wrap.is-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1100;
+    width: min(760px, calc(100vw - 2 * var(--space-4)));
+    max-height: 88vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+}
+
+.cube-detail-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1099;
+    background: rgba(0, 0, 0, 0.82);
+}
+
+.cube-detail-backdrop[hidden] {
+    display: none;
+}
+
+.cube-detail-close {
+    position: fixed;
+    top: var(--space-3);
+    right: var(--space-3);
+    z-index: 1101;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
 @media (max-width: 600px) {
     .cube-hero h1 {
         font-size: 1.7rem;

@@ -1402,6 +1402,72 @@ describe('tap-to-enlarge (touch / no-hover devices)', () => {
     });
 });
 
+describe('cardDetailModal (the dismissible detail overlay)', () => {
+    // Each build mounts its own panel + backdrop and cleans up after, so the
+    // shared document keydown listener can't cross-fire between cases.
+    let panel;
+    let backdrop;
+    let modal;
+    let closed;
+
+    afterEach(() => {
+        // Close first so the (never-unregistered) document keydown listener is
+        // inert — close() early-returns once shut — and can't cross-fire into a
+        // later test's Escape.
+        if (modal) modal.close();
+        if (backdrop && backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+        if (panel && panel.parentNode) panel.parentNode.removeChild(panel);
+        panel = backdrop = modal = null;
+    });
+
+    function build() {
+        panel = document.createElement('div');
+        panel.className = 'cube-cardlookup-wrap';
+        document.body.appendChild(panel);
+        closed = 0;
+        modal = Cube.cardDetailModal(document, panel, () => { closed += 1; });
+        backdrop = document.querySelector('.cube-detail-backdrop');
+        return modal;
+    }
+
+    test('open lifts the panel into a modal over a shown backdrop', () => {
+        const modal = build();
+        expect(modal.isOpen()).toBe(false);
+        modal.open();
+        expect(modal.isOpen()).toBe(true);
+        expect(panel.classList.contains('is-modal')).toBe(true);
+        expect(backdrop.hidden).toBe(false);
+    });
+
+    test('Escape dismisses and runs onClose, dropping the modal class', () => {
+        const modal = build();
+        modal.open();
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        expect(modal.isOpen()).toBe(false);
+        expect(panel.classList.contains('is-modal')).toBe(false);
+        expect(backdrop.hidden).toBe(true);
+        expect(closed).toBe(1);
+    });
+
+    test('the close button dismisses', () => {
+        const modal = build();
+        modal.open();
+        backdrop.querySelector('.cube-detail-close').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(modal.isOpen()).toBe(false);
+        expect(closed).toBe(1);
+    });
+
+    test('a backdrop click dismisses, but a click inside the lifted panel does not', () => {
+        const modal = build();
+        modal.open();
+        panel.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(modal.isOpen()).toBe(true);
+        backdrop.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(modal.isOpen()).toBe(false);
+        expect(closed).toBe(1);
+    });
+});
+
 describe('renderDistribution (the secondary balance bars)', () => {
     test('renders one colour-coded, length-scaled bar per category', () => {
         const container = document.createElement('div');
