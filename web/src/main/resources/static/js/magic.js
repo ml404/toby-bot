@@ -1462,10 +1462,45 @@
         if (!form) return;
         const status = statusFor(doc, 'search');
         const result = q(doc, '[data-result="search"]');
-        // Clicking a result opens its full details in the lookup panel below,
-        // reusing that panel's rulings/combos wiring.
+        // The shared detail panel below the grid: a clicked tile — or a search
+        // that narrows to exactly one card — opens its full details there,
+        // reusing the panel's rulings/combos wiring (wireCardLookup).
         const cardResult = q(doc, '[data-result="card"]');
         const cardStatus = statusFor(doc, 'card');
+
+        // Monotonic token for the detail panel: only the latest openDetail may
+        // touch it, so a slow load can't overwrite (or a clear can't wipe) a
+        // newer one's card.
+        let detailSeq = 0;
+
+        // Loads a card's full details into the shared panel. `opts.scroll`
+        // brings it into view (for an explicit click), but not when a one-match
+        // search auto-opens it under the grid.
+        function openDetail(name, opts) {
+            if (!name || !cardResult) return;
+            const token = ++detailSeq;
+            setStatus(cardStatus, 'Loading ' + name + '…');
+            hide(cardResult);
+            getJson(cardUrl(name))
+                .then(function (json) {
+                    if (token !== detailSeq) return;
+                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
+                    setStatus(cardStatus, '');
+                    renderCardLookup(cardResult, json.card);
+                    show(cardResult);
+                    if (opts && opts.scroll && cardResult.scrollIntoView) {
+                        cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                })
+                .catch(function () { if (token === detailSeq) setStatus(cardStatus, 'Something went wrong. Try again.'); });
+        }
+
+        // Drops any pending/stale detail load and hides the panel.
+        function clearDetail() {
+            detailSeq++;
+            setStatus(cardStatus, '');
+            hide(cardResult);
+        }
 
         // Delegated so it survives each grid re-render: a left-click on a result
         // tile loads that card's detail panel instead of leaving for Scryfall.
@@ -1477,17 +1512,7 @@
             const name = tile.getAttribute('data-card-name') || tile.getAttribute('title');
             if (!name || !cardResult) return;
             e.preventDefault();
-            setStatus(cardStatus, 'Loading ' + name + '…');
-            hide(cardResult);
-            getJson(cardUrl(name))
-                .then(function (json) {
-                    if (!json.ok) { setStatus(cardStatus, json.error || 'No card found.'); return; }
-                    setStatus(cardStatus, '');
-                    renderCardLookup(cardResult, json.card);
-                    show(cardResult);
-                    if (cardResult.scrollIntoView) cardResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                })
-                .catch(function () { setStatus(cardStatus, 'Something went wrong. Try again.'); });
+            openDetail(name, { scroll: true });
         });
 
         let timer = null;
@@ -1509,6 +1534,7 @@
             if (!filters.name && !filters.type && !filters.query) {
                 setStatus(status, 'Enter a name, a type, or a Scryfall query to search.');
                 hide(result);
+                clearDetail();
                 return;
             }
             // Supersede any in-flight request so its response is dropped.
@@ -1521,14 +1547,25 @@
                 .then(function (r) { return r.json(); })
                 .then(function (json) {
                     if (token !== seq) return;
-                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); return; }
+                    if (!json.ok) { setStatus(status, json.error || 'No cards matched that search.'); hide(result); clearDetail(); return; }
                     setStatus(status, searchSentence(json.total, json.capped));
-                    renderSearchResults(result, json.cards || []);
-                    show(result);
+                    const cards = json.cards || [];
+                    // A search that pins down a single card opens its full
+                    // details straight away (no scroll — it sits under the
+                    // grid), in place of a one-tile grid. Otherwise show the
+                    // grid and drop any detail from a previous search.
+                    if (cards.length === 1) {
+                        hide(result);
+                        openDetail(cards[0].name, { scroll: false });
+                    } else {
+                        clearDetail();
+                        renderSearchResults(result, cards);
+                        show(result);
+                    }
                 })
                 .catch(function (e) {
                     if (e && e.name === 'AbortError') return; // superseded — leave the UI to the newer search
-                    if (token === seq) setStatus(status, 'Something went wrong. Try again.');
+                    if (token === seq) { setStatus(status, 'Something went wrong. Try again.'); clearDetail(); }
                 })
                 .then(function () { if (token === seq) withBusy(form, false); });
         }
@@ -1553,6 +1590,7 @@
                     seq++; // drop any in-flight response
                     setStatus(status, '');
                     hide(result);
+                    clearDetail();
                     return;
                 }
                 if (f.name.length >= AUTO_SEARCH_MIN || f.type.length >= AUTO_SEARCH_MIN || f.query.length >= AUTO_SEARCH_MIN) {
@@ -1566,10 +1604,13 @@
     }
 
     function wireCardLookup(doc) {
-        const form = q(doc, '[data-form="card"]');
-        if (!form) return;
-        const status = statusFor(doc, 'card');
+        // The detail panel is shared with the search grid (which opens it on a
+        // tile click or a one-match search), so its rulings/combos handlers are
+        // wired whether or not a standalone lookup form is present.
         const result = q(doc, '[data-result="card"]');
+        if (!result) return;
+        const form = q(doc, '[data-form="card"]');
+        const status = statusFor(doc, 'card');
 
         // Delegated so it survives each re-render of the lookup result: the
         // "Show rulings" button fetches that card's rulings on demand.
@@ -1610,23 +1651,25 @@
                 .catch(function () { btn.disabled = false; btn.textContent = 'Show combos'; });
         });
 
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-            const name = (new FormData(form).get('name') || '').trim();
-            if (!name) { setStatus(status, 'Enter a card name.'); return; }
-            setStatus(status, 'Looking up…');
-            hide(result);
-            withBusy(form, true);
-            getJson(cardUrl(name))
-                .then(function (json) {
-                    if (!json.ok) { setStatus(status, json.error || 'No card found.'); return; }
-                    setStatus(status, '');
-                    renderCardLookup(result, json.card);
-                    show(result);
-                })
-                .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
-                .then(function () { withBusy(form, false); });
-        });
+        if (form) {
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const name = (new FormData(form).get('name') || '').trim();
+                if (!name) { setStatus(status, 'Enter a card name.'); return; }
+                setStatus(status, 'Looking up…');
+                hide(result);
+                withBusy(form, true);
+                getJson(cardUrl(name))
+                    .then(function (json) {
+                        if (!json.ok) { setStatus(status, json.error || 'No card found.'); return; }
+                        setStatus(status, '');
+                        renderCardLookup(result, json.card);
+                        show(result);
+                    })
+                    .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
+                    .then(function () { withBusy(form, false); });
+            });
+        }
     }
 
     function wireCompare(doc) {

@@ -533,13 +533,6 @@
     flex: 1 1 180px;
 }
 
-/* Separates the Scryfall-style search grid from the single-card lookup. */
-.cube-divider {
-    border: none;
-    border-top: 1px solid var(--border);
-    margin: var(--space-5) 0 var(--space-4);
-}
-
 .cube-checkbox {
     flex-direction: row;
     align-items: center;
