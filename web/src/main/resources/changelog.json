@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Refresh profile Level and Economy cards on streak claim",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 716
+  },
+  {
+    "date": "June 2026",
     "title": "Polish the unified card search on mobile",
     "summary": "Three mobile refinements to the unified card search/viewer.",
     "emoji": "✨",
