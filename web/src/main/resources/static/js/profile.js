@@ -39,6 +39,51 @@
         if (!isNaN(n)) total.textContent = String(n + 1);
     }
 
+    // Reflect the claim's XP award on the Level card so level, progress bar,
+    // and totals stay accurate without a reload. The claim response carries
+    // the authoritative post-claim figures computed server-side.
+    function updateLevelCard(resp) {
+        const levelCard = document.querySelector('.level-card');
+        if (!levelCard) return;
+        if (typeof resp.xpForNextLevel !== 'number' || resp.xpForNextLevel <= 0) return;
+
+        const badge = levelCard.querySelector('.level-badge-value');
+        if (badge) badge.textContent = String(resp.level);
+
+        const current = levelCard.querySelector('.level-current');
+        if (current) current.textContent = resp.xpIntoLevel + ' XP';
+
+        const next = levelCard.querySelector('.level-next');
+        if (next) next.textContent = resp.xpForNextLevel + ' XP';
+
+        const progress = levelCard.querySelector('.level-progress');
+        if (progress) progress.setAttribute('aria-valuenow', String(resp.xpProgressPercent));
+
+        const bar = levelCard.querySelector('.level-progress-bar');
+        if (bar) bar.style.width = resp.xpProgressPercent + '%';
+
+        const totalXp = levelCard.querySelector('.level-total-xp');
+        if (totalXp) totalXp.textContent = String(resp.totalXp);
+
+        // Keep the tier styling (bronze/silver/gold/diamond) in sync with the
+        // new level — mirrors the Thymeleaf threshold logic.
+        const tier = resp.level >= 50 ? 'diamond'
+            : resp.level >= 25 ? 'gold'
+            : resp.level >= 10 ? 'silver' : 'bronze';
+        levelCard.classList.remove(
+            'level-tier-bronze', 'level-tier-silver', 'level-tier-gold', 'level-tier-diamond'
+        );
+        levelCard.classList.add('level-tier-' + tier);
+    }
+
+    // Reflect granted credits on the Economy card's balance line.
+    function updateBalance(resp) {
+        if (typeof resp.balance !== 'number') return;
+        const el = document.querySelector('.profile-balance');
+        if (!el) return;
+        el.textContent = resp.balance + ' credits';
+    }
+
     // "N days to your next 7-day milestone" — mirrors the Thymeleaf
     // calculation so the line stays correct after an in-place claim.
     function updateMilestone(card, currentStreak) {
@@ -135,6 +180,12 @@
                     if (countdownId) { window.clearInterval(countdownId); countdownId = null; }
                     card.querySelectorAll('.profile-streak-alert, .profile-streak-preview')
                         .forEach(function (n) { n.remove(); });
+
+                    // The claim mutates XP and credits server-side; mirror
+                    // those onto the Level and Economy cards so the page
+                    // doesn't need a manual refresh to reflect the reward.
+                    updateLevelCard(resp);
+                    updateBalance(resp);
 
                     if (!alreadyClaimed) {
                         bumpTotal(card);

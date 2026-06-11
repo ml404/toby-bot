@@ -4,12 +4,14 @@ import common.notification.NotificationChannelKind
 import common.notification.Surface
 import database.dto.guild.AchievementDto
 import database.dto.social.LoginStreakDto
+import database.dto.user.UserDto
 import database.dto.user.UserNotificationPrefDto
 import database.service.guild.AchievementService
 import database.service.guild.AchievementService.AchievementView
 import database.service.social.LoginStreakService
 import database.service.social.LoginStreakService.ClaimResult
 import database.service.user.UserNotificationPrefService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -33,6 +35,7 @@ class EngagementApiControllerTest {
     private lateinit var loginStreakService: LoginStreakService
     private lateinit var achievementService: AchievementService
     private lateinit var notificationPrefService: UserNotificationPrefService
+    private lateinit var userService: UserService
     private lateinit var membership: GuildMembership
     private lateinit var user: OAuth2User
     private lateinit var controller: EngagementApiController
@@ -42,13 +45,14 @@ class EngagementApiControllerTest {
         loginStreakService = mockk(relaxed = true)
         achievementService = mockk(relaxed = true)
         notificationPrefService = mockk(relaxed = true)
+        userService = mockk(relaxed = true)
         membership = mockk(relaxed = true)
         user = mockk {
             every { getAttribute<String>("id") } returns discordId.toString()
         }
         every { membership.isMember(discordId, guildId) } returns true
         controller = EngagementApiController(
-            loginStreakService, achievementService, notificationPrefService, membership
+            loginStreakService, achievementService, notificationPrefService, userService, membership
         )
     }
 
@@ -79,6 +83,9 @@ class EngagementApiControllerTest {
                 creditsGranted = 45L,
                 isNewBest = true
             )
+        // Post-claim user state drives the Level/Economy card refresh fields.
+        every { userService.getUserById(discordId, guildId) } returns
+            UserDto(discordId = discordId, guildId = guildId, xp = 355L, socialCredit = 500L)
 
         val response = controller.claimDaily(guildId, user)
 
@@ -90,6 +97,13 @@ class EngagementApiControllerTest {
         assertEquals(70L, body.xpGranted)
         assertEquals(45L, body.creditsGranted)
         assertTrue(body.newBest)
+        // Authoritative post-claim level snapshot (xp 355 -> level 2, 100/220 in).
+        assertEquals(355L, body.totalXp)
+        assertEquals(2, body.level)
+        assertEquals(100L, body.xpIntoLevel)
+        assertEquals(220L, body.xpForNextLevel)
+        assertEquals(45, body.xpProgressPercent)
+        assertEquals(500L, body.balance)
     }
 
     @Test
