@@ -12,9 +12,12 @@
     the NESTED frame only, so the SDK connection in the shell document
     is untouched.
 
-    api.js is loaded so the ?activityToken= the shell appended gets
-    stashed in sessionStorage and re-appended to every game link on
-    click — each game page then authenticates the same way this one did.
+    api.js is loaded so the ?activityToken= the shell appended (and the
+    launch guild id from this page's path) get stashed in sessionStorage:
+    the token is re-appended to every game link on click — each game page
+    then authenticates the same way this one did — and the guild id lets
+    game pages retarget their "← All servers" back-links here instead of
+    at the cross-guild pickers the activity can't render.
 -->
 <head>
     <meta charset="UTF-8">
