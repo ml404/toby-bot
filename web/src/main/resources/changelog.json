@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix price-watch remove button swallowing clicks on its SVG icon",
+    "summary": "## The bug The price-watch **Remove** button renders an inline `<svg>` X icon. The delegated click handler guarded with:",
+    "emoji": "💰",
+    "prNumber": 721
+  },
+  {
+    "date": "June 2026",
     "title": "Make the site footer stick to the bottom on short pages",
     "summary": "## Why The footer looked \"off\" on the new coin **portfolio** page: it floated in the middle of the screen with empty space beneath it. Root cause isn't portfolio-specific — `base.css` set `body { min-height: 100vh }` but **nothing pinned the footer to the bottom**. Tall pages (the market, leaderboard) happened to fill the viewport so the footer landed at the bottom; short pages (portfolio, empty states) exposed the gap. So it was a uniformity gap, not a one-page bug.",
     "emoji": "✨",
