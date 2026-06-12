@@ -6,6 +6,7 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.DefaultCommandContext
 import bot.toby.economy.TobyCoinChartRenderer
+import common.economy.Coin
 import database.dto.economy.TobyCoinMarketDto
 import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
@@ -56,6 +57,12 @@ internal class TobyCoinCommandTest : CommandTest {
     private fun intOpt(value: Long): OptionMapping {
         val o = mockk<OptionMapping>(relaxed = true)
         every { o.asLong } returns value
+        return o
+    }
+
+    private fun strOpt(value: String): OptionMapping {
+        val o = mockk<OptionMapping>(relaxed = true)
+        every { o.asString } returns value
         return o
     }
 
@@ -158,5 +165,49 @@ internal class TobyCoinCommandTest : CommandTest {
         command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
 
         verify(exactly = 1) { marketService.listHistory(guildId, any()) }
+    }
+
+    @Test
+    fun `markets subcommand loads a market for every coin in the catalogue`() {
+        every { event.subcommandName } returns "markets"
+        every { tradeService.loadOrCreateMarket(guildId, any()) } returns market(100.0)
+        every { marketService.listHistory(guildId, any(), any()) } returns emptyList()
+
+        command.handle(DefaultCommandContext(event), UserDto(discordId, guildId), 5)
+
+        Coin.entries.forEach { coin ->
+            verify(exactly = 1) { tradeService.loadOrCreateMarket(guildId, coin) }
+        }
+    }
+
+    @Test
+    fun `buy routes to the coin chosen via the coin option`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { event.subcommandName } returns "buy"
+        every { event.getOption("amount") } returns intOpt(5L)
+        every { event.getOption("coin") } returns strOpt("MOON")
+        every { tradeService.buy(discordId, guildId, 5L, coin = Coin.MOON) } returns TradeOutcome.Ok(
+            amount = 5L, transactedCredits = 500L, newCoins = 5L, newCredits = 500L, newPrice = 100.2
+        )
+
+        command.handle(DefaultCommandContext(event), user, 5)
+
+        verify(exactly = 1) { tradeService.buy(discordId, guildId, 5L, coin = Coin.MOON) }
+        verify(exactly = 0) { tradeService.buy(discordId, guildId, 5L, coin = Coin.TOBY) }
+    }
+
+    @Test
+    fun `buy with no coin option defaults to TOBY`() {
+        val user = UserDto(discordId = discordId, guildId = guildId)
+        every { event.subcommandName } returns "buy"
+        every { event.getOption("amount") } returns intOpt(2L)
+        every { event.getOption("coin") } returns null
+        every { tradeService.buy(discordId, guildId, 2L, coin = Coin.TOBY) } returns TradeOutcome.Ok(
+            amount = 2L, transactedCredits = 200L, newCoins = 2L, newCredits = 800L, newPrice = 100.1
+        )
+
+        command.handle(DefaultCommandContext(event), user, 5)
+
+        verify(exactly = 1) { tradeService.buy(discordId, guildId, 2L, coin = Coin.TOBY) }
     }
 }
