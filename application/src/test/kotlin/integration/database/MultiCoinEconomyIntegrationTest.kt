@@ -52,7 +52,11 @@ class MultiCoinEconomyIntegrationTest {
 
     private fun newFixture(openingCredits: Long = 1_000_000L): Fixture {
         val id = seq.incrementAndGet()
-        val fx = Fixture(discordId = 800_000L + id, guildId = 800_000L + id)
+        // 6_400_000+ keeps this test's ids disjoint from the other integration
+        // tests that share the reused Postgres container (TitlesBuyWithTobyCoin
+        // uses 800_000+, EconomyTradeService 900_000+) — overlapping ids
+        // corrupt each other's users/markets across tests.
+        val fx = Fixture(discordId = 6_400_000L + id, guildId = 6_400_000L + id)
         userService.clearCache()
         userService.createNewUser(UserDto(fx.discordId, fx.guildId).apply { socialCredit = openingCredits })
         return fx
