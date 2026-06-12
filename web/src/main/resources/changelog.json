@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add volatile multi-coin markets to the fake economy",
+    "summary": "## Why",
+    "emoji": "♠️",
+    "prNumber": 718
+  },
+  {
+    "date": "June 2026",
     "title": "Open card details in a dismissible overlay",
     "summary": "## Problem",
     "emoji": "✨",
