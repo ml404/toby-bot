@@ -266,3 +266,81 @@ describe('TobyWatches.renderWatches', () => {
         expect(listEl.children.length).toBe(1);
     });
 });
+
+// ---------------------------------------------------------------------------
+// DOM-wiring (IIFE): the remove button's icon is an inline <svg>. Clicking it
+// must still delete the watch. Regression: the delegated click handler used
+// `instanceof HTMLElement`, which is false for SVG nodes, so clicks landing on
+// the icon (most of the button) were silently swallowed.
+// ---------------------------------------------------------------------------
+describe('economy-watches.js remove-button wiring', () => {
+    const MODULE = '../../main/resources/static/js/economy-watches';
+    const WATCH = {
+        id: 7, side: 'BUY', amount: 5, threshold: 80,
+        priceAtCreation: 100, enabled: true, firedAt: null, createdAt: 0,
+    };
+    let delMock;
+
+    beforeEach(() => {
+        jest.resetModules();
+        document.body.innerHTML = `
+            <main data-guild-id="1" data-coin="TOBY"></main>
+            <form id="economy-watch-form">
+                <input id="economy-watch-price">
+                <select id="economy-watch-side"><option value="BUY">BUY</option></select>
+                <input id="economy-watch-amount">
+                <button id="economy-watch-submit" type="submit"></button>
+            </form>
+            <ul id="economy-watch-list"></ul>
+            <p id="economy-watch-empty" hidden></p>
+        `;
+        delMock = jest.fn(() => Promise.resolve({ ok: true }));
+        window.TobyApi = { del: delMock, postJson: jest.fn(() => Promise.resolve({ ok: true })) };
+        window.toast = jest.fn();
+        // The IIFE calls loadAndRender() on boot; return an empty list so it
+        // doesn't fight the row we paint explicitly below.
+        global.fetch = jest.fn(() => Promise.resolve({
+            json: () => Promise.resolve({ ok: true, price: 100, watches: [] }),
+        }));
+    });
+
+    afterEach(() => {
+        delete window.TobyApi;
+        delete window.toast;
+        delete window.TobyWatches;
+        delete global.fetch;
+    });
+
+    // Boot the module (binds the delegated listener via the IIFE) and paint
+    // one watch row with the same renderWatches the page uses — so the
+    // inline-SVG remove button is present and wired to the live listener.
+    async function bootWithOneRow() {
+        require(MODULE);
+        // Cross a macrotask boundary so the boot-time loadAndRender
+        // (fetch -> render empty) fully settles before we paint our row;
+        // otherwise its async empty render runs as a later microtask and
+        // wipes the row out from under the click.
+        await new Promise(function (resolve) { setTimeout(resolve, 0); });
+        window.TobyWatches.renderWatches(
+            document.getElementById('economy-watch-list'),
+            document.getElementById('economy-watch-empty'),
+            [WATCH],
+            100,
+        );
+    }
+
+    test('clicking the SVG icon inside the remove button deletes the watch', async () => {
+        await bootWithOneRow();
+        const iconPath = document.querySelector('.economy-watch-remove svg path');
+        expect(iconPath).not.toBeNull(); // the icon is SVG — the regression surface
+        iconPath.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(delMock).toHaveBeenCalledWith('/economy/1/watches/7');
+    });
+
+    test('clicking the remove button text also deletes the watch', async () => {
+        await bootWithOneRow();
+        const text = document.querySelector('.economy-watch-remove-text');
+        text.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        expect(delMock).toHaveBeenCalledWith('/economy/1/watches/7');
+    });
+});
