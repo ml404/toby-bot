@@ -93,6 +93,13 @@ body {
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    /* Column flex + `margin-top:auto` on .site-footer (footer.css) is the
+       sticky-footer mechanism: short pages (e.g. the coin portfolio) push
+       the footer to the viewport bottom instead of leaving it floating
+       mid-screen. On tall pages the auto-margin collapses, so the footer
+       sits naturally after the content. */
+    display: flex;
+    flex-direction: column;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
 }
