@@ -32,9 +32,11 @@ internal class TobyCoinEngineMultiCoinTest {
         val toby = dailySpread(Coin.TOBY)
         val ruff = dailySpread(Coin.RUFF)
         val moon = dailySpread(Coin.MOON)
+        val tism = dailySpread(Coin.TISM)
         assertTrue(stbl < toby, "TOBL spread $stbl should be < TOBY $toby")
         assertTrue(toby < ruff, "TOBY spread $toby should be < RUFF $ruff")
         assertTrue(ruff < moon, "RUFF spread $ruff should be < MOON $moon")
+        assertTrue(moon < tism, "MOON spread $moon should be < TISM $tism")
     }
 
     @Test

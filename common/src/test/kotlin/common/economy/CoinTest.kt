@@ -54,6 +54,7 @@ internal class CoinTest {
         assertTrue(Coin.TOBL.volatility < Coin.TOBY.volatility, "TOBL calmer than TOBY")
         assertTrue(Coin.TOBY.volatility < Coin.RUFF.volatility, "TOBY calmer than RUFF")
         assertTrue(Coin.RUFF.volatility < Coin.MOON.volatility, "RUFF calmer than MOON")
+        assertTrue(Coin.MOON.volatility < Coin.TISM.volatility, "MOON calmer than TISM")
     }
 
     @Test
@@ -61,6 +62,7 @@ internal class CoinTest {
         assertTrue(Coin.TOBL.tradeImpact < Coin.TOBY.tradeImpact)
         assertTrue(Coin.TOBY.tradeImpact < Coin.RUFF.tradeImpact)
         assertTrue(Coin.RUFF.tradeImpact < Coin.MOON.tradeImpact)
+        assertTrue(Coin.MOON.tradeImpact < Coin.TISM.tradeImpact)
     }
 
     @Test
