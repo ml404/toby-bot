@@ -16,6 +16,7 @@ import io.mockk.verify
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -129,6 +130,34 @@ internal class EconomyWebServiceMultiCoinTest {
 
         val toby = service.listWatches(discordId, guildId, Coin.TOBY)
         assertEquals(listOf(1L), toby.map { it.id })
+    }
+
+    @Test
+    fun `getPortfolio lists every held coin with its value plus the credit balance`() {
+        every { userService.getUserById(discordId, guildId) } returns
+                UserDto(discordId, guildId).apply { tobyCoins = 5L; socialCredit = 250L }
+        every { holdingService.getAmount(discordId, guildId, Coin.MOON) } returns 10L
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns market(Coin.TOBY, 100.0)
+        every { marketService.getMarket(guildId, Coin.MOON) } returns market(Coin.MOON, 50.0)
+
+        val view = service.getPortfolio(guildId, discordId)!!
+
+        assertEquals(250L, view.credits)
+        // Only the coins with a positive balance appear, in catalogue order.
+        assertEquals(listOf("TOBY", "MOON"), view.holdings.map { it.symbol })
+        val toby = view.holdings.first { it.symbol == "TOBY" }
+        assertEquals(5L, toby.amount)
+        assertEquals(500L, toby.value, "5 TOBY @ 100")
+        val moon = view.holdings.first { it.symbol == "MOON" }
+        assertEquals(10L, moon.amount)
+        assertEquals(500L, moon.value, "10 MOON @ 50")
+        assertEquals(1_000L, view.totalCoinValue)
+    }
+
+    @Test
+    fun `getPortfolio returns null when the bot is not in the guild`() {
+        every { jda.getGuildById(guildId) } returns null
+        assertNull(service.getPortfolio(guildId, discordId))
     }
 
     @Test

@@ -223,6 +223,36 @@ class EconomyWebService(
     fun currentPrice(guildId: Long, coin: Coin = Coin.DEFAULT): Double =
         tradeService.loadOrCreateMarket(guildId, coin).price
 
+    /**
+     * The signed-in user's whole portfolio in [guildId]: every coin they
+     * hold (TOBY from the legacy column, the rest from `user_coin_holding`)
+     * with its live value, plus their social-credit balance. `null` when
+     * the bot isn't in the guild.
+     */
+    fun getPortfolio(guildId: Long, discordId: Long): PortfolioView? {
+        val guild = jda.getGuildById(guildId) ?: return null
+        val user = userService.getUserById(discordId, guildId)
+        val holdings = Coin.entries.mapNotNull { coin ->
+            val amount = balanceOf(user, discordId, guildId, coin)
+            if (amount <= 0L) return@mapNotNull null
+            val price = marketService.getMarket(guildId, coin)?.price ?: coin.initialPrice
+            PortfolioHolding(
+                symbol = coin.symbol,
+                name = coin.displayName,
+                riskLabel = coin.riskLabel,
+                amount = amount,
+                price = price,
+                value = (amount.toDouble() * price).toLong(),
+            )
+        }
+        return PortfolioView(
+            guildName = guild.name,
+            credits = user?.socialCredit ?: 0L,
+            holdings = holdings,
+            totalCoinValue = holdings.sumOf { it.value },
+        )
+    }
+
     private fun UserPriceTriggerDto.toView() = WatchView(
         id = id ?: 0L,
         side = side,
@@ -289,6 +319,23 @@ data class EconomyCoinTab(
     val name: String,
     val riskLabel: String,
     val selected: Boolean,
+)
+
+data class PortfolioView(
+    val guildName: String,
+    val credits: Long,
+    val holdings: List<PortfolioHolding>,
+    /** Sum of every holding's market value, in credits. */
+    val totalCoinValue: Long,
+)
+
+data class PortfolioHolding(
+    val symbol: String,
+    val name: String,
+    val riskLabel: String,
+    val amount: Long,
+    val price: Double,
+    val value: Long,
 )
 
 data class PricePoint(

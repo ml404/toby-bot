@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/head :: head('TobyBot - Portfolio', '/css/economy.css')}"></head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main id="main" class="container-wide">
+    <div class="economy-header">
+        <div>
+            <a class="back-link" th:href="@{/economy/{g}(g=${guildId})}">&larr; Market</a>
+            <h1 th:text="'Your portfolio • ' + ${portfolio.guildName}">Your portfolio</h1>
+            <p class="economy-coin-sub muted">Every coin you hold here, valued at the live market price.</p>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/alerts :: error}"></div>
+
+    <section class="economy-card">
+        <div class="economy-row">
+            <span class="muted">Social credit</span>
+            <strong th:text="${portfolio.credits} + ' credits'">0 credits</strong>
+        </div>
+        <div class="economy-row">
+            <span class="muted">Total coin value</span>
+            <strong th:text="${portfolio.totalCoinValue} + ' credits'">0 credits</strong>
+        </div>
+    </section>
+
+    <section class="economy-card" th:if="${not #lists.isEmpty(portfolio.holdings)}">
+        <h2>Your coins</h2>
+        <ul class="economy-portfolio-list">
+            <li class="economy-portfolio-row" th:each="h : ${portfolio.holdings}">
+                <a class="economy-portfolio-link"
+                   th:href="@{/economy/{g}(g=${guildId}, coin=${h.symbol})}"
+                   th:title="'Trade ' + ${h.symbol}">
+                    <span class="economy-portfolio-coin">
+                        <span class="economy-portfolio-sym" th:text="${h.symbol}">TOBY</span>
+                        <span class="economy-portfolio-name muted"
+                              th:text="${h.name} + ' · ' + ${h.riskLabel}">Toby Coin · Baseline</span>
+                    </span>
+                    <span class="economy-portfolio-amount"><strong th:text="${h.amount}">0</strong> coins</span>
+                    <span class="economy-portfolio-value">
+                        <strong th:text="${h.value} + ' cr'">0 cr</strong>
+                        <span class="muted economy-portfolio-price"
+                              th:text="'@ ' + ${#numbers.formatDecimal(h.price, 1, 2)}">@ 0.00</span>
+                    </span>
+                </a>
+            </li>
+        </ul>
+    </section>
+
+    <div class="empty-hero" th:if="${#lists.isEmpty(portfolio.holdings)}">
+        <span class="emoji" aria-hidden="true">🪙</span>
+        <h2>No coins yet</h2>
+        <p class="mb-5">
+            You don't hold any coins in this server. Head to the
+            <a th:href="@{/economy/{g}(g=${guildId})}">market</a> to buy some.
+        </p>
+    </div>
+</main>
+<footer th:replace="~{fragments/footer :: footer}"></footer>
+</body>
+</html>

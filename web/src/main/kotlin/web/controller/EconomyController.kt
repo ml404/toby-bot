@@ -91,6 +91,53 @@ class EconomyController(
         "economy"
     }
 
+    @GetMapping("/portfolio")
+    fun portfolioPicker(
+        @RegisteredOAuth2AuthorizedClient("discord") client: OAuth2AuthorizedClient,
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false, defaultValue = "false") pick: Boolean,
+        request: HttpServletRequest,
+        model: Model
+    ): String {
+        val discordId = user.discordIdOrNull()
+        val guilds = if (discordId != null) {
+            economyWebService.getGuildsWhereUserCanView(client.accessToken.tokenValue, discordId)
+        } else emptyList()
+
+        val defaultGuildId = DefaultGuildCookie.read(request)
+        GuildPickerSupport.resolveRedirect(
+            guildIds = guilds.mapNotNull { it.id.toLongOrNull() },
+            cookieGuildId = defaultGuildId,
+            pick = pick,
+        ) { "/economy/$it/portfolio" }?.let { return it }
+
+        // Zero or many guilds with no default — fall back to the market guild
+        // list so the user can pick which server's portfolio to view.
+        model.addAttribute("guilds", guilds)
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("defaultGuildId", defaultGuildId)
+        return "economy-guilds"
+    }
+
+    @GetMapping("/{guildId}/portfolio")
+    fun portfolioPage(
+        @PathVariable guildId: Long,
+        @AuthenticationPrincipal user: OAuth2User,
+        model: Model,
+        ra: RedirectAttributes
+    ): String = WebGuildAccess.requireMemberForPage(
+        user, guildId, economyWebService, ra, lobbyPath = "/economy/guilds"
+    ) { discordId ->
+        val view = economyWebService.getPortfolio(guildId, discordId) ?: run {
+            ra.addFlashAttribute("error", "Bot is not in that server.")
+            return@requireMemberForPage "redirect:/economy/guilds"
+        }
+        model.addAttribute("portfolio", view)
+        model.addAttribute("guildId", guildId.toString())
+        model.addAttribute("username", user.displayName())
+        "economy-portfolio"
+    }
+
     @GetMapping("/{guildId}/history")
     @ResponseBody
     fun history(
