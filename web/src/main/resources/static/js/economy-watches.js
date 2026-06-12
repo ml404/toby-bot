@@ -256,7 +256,11 @@
 
     listEl.addEventListener('click', function (event) {
         const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
+        // Element, not HTMLElement: the remove button's icon is an inline
+        // <svg>/<path>, and SVG nodes are SVGElements (not HTMLElements).
+        // Guarding on HTMLElement swallowed clicks that landed on the icon —
+        // i.e. most of the button — so Remove silently did nothing.
+        if (!(target instanceof Element)) return;
         const btn = target.closest('.economy-watch-remove');
         if (!btn) return;
         const watchId = btn.dataset.watchId;
