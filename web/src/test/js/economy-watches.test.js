@@ -316,9 +316,11 @@ describe('economy-watches.js remove-button wiring', () => {
     // inline-SVG remove button is present and wired to the live listener.
     async function bootWithOneRow() {
         require(MODULE);
-        await Promise.resolve();
-        await Promise.resolve();
-        await Promise.resolve();
+        // Cross a macrotask boundary so the boot-time loadAndRender
+        // (fetch -> render empty) fully settles before we paint our row;
+        // otherwise its async empty render runs as a later microtask and
+        // wipes the row out from under the click.
+        await new Promise(function (resolve) { setTimeout(resolve, 0); });
         window.TobyWatches.renderWatches(
             document.getElementById('economy-watch-list'),
             document.getElementById('economy-watch-empty'),
