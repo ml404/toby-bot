@@ -11,4 +11,7 @@ import database.dto.economy.UserCoinHoldingDto
 interface UserCoinHoldingService {
     fun getAmount(discordId: Long, guildId: Long, coin: Coin): Long
     fun listForUser(discordId: Long, guildId: Long): List<UserCoinHoldingDto>
+
+    /** Every non-zero holding in a guild — used to value all portfolios for the leaderboard. */
+    fun listForGuild(guildId: Long): List<UserCoinHoldingDto>
 }

@@ -1,8 +1,10 @@
 package web.service
 
+import common.economy.Coin
 import database.service.guild.AchievementService
 import database.service.activity.ActivityMonthlyRollupService
 import database.service.economy.MonthlyCreditSnapshotService
+import database.service.economy.UserCoinHoldingService
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
@@ -25,6 +27,7 @@ class LeaderboardWebService(
     private val membership: GuildMembership,
     private val rollupService: ActivityMonthlyRollupService,
     private val achievementService: AchievementService,
+    private val holdingService: UserCoinHoldingService,
 ) {
 
     companion object {
@@ -331,7 +334,16 @@ class LeaderboardWebService(
 
     private fun buildTobyCoinLeaders(guildId: Long): List<TobyCoinLeaderRow> {
         val guild = jda.getGuildById(guildId) ?: return emptyList()
-        val price = marketService.getMarket(guildId)?.price ?: 0.0
+        // Current price for every coin (0.0 when a coin's market isn't seeded
+        // yet). The leaderboard ranks by total portfolio value across ALL
+        // coins, not just TOBY.
+        val prices = Coin.entries.associateWith { marketService.getMarket(guildId, it)?.price ?: 0.0 }
+        val tobyPrice = prices[Coin.TOBY] ?: 0.0
+        // Non-TOBY balances, grouped by user. Best-effort so a holdings read
+        // failure degrades to TOBY-only rather than 500-ing the page.
+        val holdingsByUser = runCatching {
+            holdingService.listForGuild(guildId).groupBy { it.discordId }
+        }.getOrDefault(emptyMap())
         val thisMonthStart = LocalDate.now(ZoneOffset.UTC).withDayOfMonth(1)
         // Best-effort: if the snapshot table read fails (schema drift on an old
         // deploy), degrade gracefully and skip the delta rather than 500 the page.
@@ -365,10 +377,23 @@ class LeaderboardWebService(
         }
 
         return allUsers.asSequence()
-            .filter { it.tobyCoins > 0L }
-            .sortedByDescending { it.tobyCoins }
+            .map { dto ->
+                // Total portfolio value = TOBY (legacy column) + every other
+                // coin held, each at its current market price.
+                var value = floor(dto.tobyCoins.toDouble() * tobyPrice).toLong()
+                val userHoldings = holdingsByUser[dto.discordId]
+                userHoldings?.forEach { h ->
+                    value += floor(h.amount.toDouble() * (prices[Coin.fromSymbol(h.coin)] ?: 0.0)).toLong()
+                }
+                val holdsAnyCoin = dto.tobyCoins > 0L || !userHoldings.isNullOrEmpty()
+                Triple(dto, value, holdsAnyCoin)
+            }
+            // Anyone holding any coin appears (even at a 0-price market); rank
+            // is by total portfolio value across all coins.
+            .filter { it.third }
+            .sortedByDescending { it.second }
             .take(TOBY_COIN_LEADERBOARD_LIMIT)
-            .mapIndexed { index, dto ->
+            .mapIndexed { index, (dto, value, _) ->
                 val member = guild.getMemberById(dto.discordId)
                 val title = runCatching {
                     dto.activeTitleId?.let { titleService.getById(it) }?.label
@@ -383,7 +408,7 @@ class LeaderboardWebService(
                     level = common.leveling.LevelCurve.progress(dto.xp).level,
                     coins = dto.tobyCoins,
                     coinsThisMonth = coinsThisMonth,
-                    portfolioCredits = floor(dto.tobyCoins.toDouble() * price).toLong()
+                    portfolioCredits = value
                 )
             }
             .toList()

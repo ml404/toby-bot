@@ -16,4 +16,7 @@ class DefaultUserCoinHoldingService(
 
     override fun listForUser(discordId: Long, guildId: Long): List<UserCoinHoldingDto> =
         persistence.listForUser(discordId, guildId)
+
+    override fun listForGuild(guildId: Long): List<UserCoinHoldingDto> =
+        persistence.listForGuild(guildId)
 }

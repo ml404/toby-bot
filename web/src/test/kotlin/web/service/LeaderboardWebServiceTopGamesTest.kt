@@ -56,6 +56,7 @@ class LeaderboardWebServiceTopGamesTest {
             membership = GuildMembership(jda),
             rollupService = rollupService,
             achievementService = mockk(relaxed = true),
+            holdingService = mockk(relaxed = true),
         )
     }
 
