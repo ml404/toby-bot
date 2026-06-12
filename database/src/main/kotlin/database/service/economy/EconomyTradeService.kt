@@ -212,16 +212,7 @@ class EconomyTradeService(
     ): SellToCoverResult {
         if (shortfall <= 0L) return SellToCoverResult(0L, covered = true, 0L, null, 0L)
 
-        val tobyHeld = userService.getUserById(discordId, guildId)?.tobyCoins ?: 0L
-        val legs = buildList {
-            priceFor(guildId, Coin.TOBY)?.let { p -> if (tobyHeld > 0L) add(Leg(Coin.TOBY, tobyHeld, p)) }
-            for (coin in Coin.entries) {
-                if (coin == Coin.TOBY) continue
-                val held = holdingPersistence.getAmount(discordId, guildId, coin)
-                if (held <= 0L) continue
-                priceFor(guildId, coin)?.let { p -> add(Leg(coin, held, p)) }
-            }
-        }
+        val legs = coinLegs(discordId, guildId)
         val capacity = legs.sumOf { TobyCoinEngine.proceedsForSell(it.price, it.held, feeRate, it.coin) }
         if (capacity < shortfall) {
             return SellToCoverResult(0L, covered = false, 0L, null, capacity)
@@ -253,6 +244,28 @@ class EconomyTradeService(
             }
         }
         return SellToCoverResult(raised, covered = raised >= shortfall, tobyCoinsSold, tobyNewPrice, capacity)
+    }
+
+    /**
+     * Credits the player could raise right now by liquidating every coin
+     * they hold (TOBY + the holdings table), under midpoint slippage and
+     * the given fee. Read-only — used to gate "buy with coins" buttons and
+     * to pre-check [sellToCover].
+     */
+    fun liquidationCapacity(discordId: Long, guildId: Long, feeRate: Double = TobyCoinEngine.TRADE_FEE): Long =
+        coinLegs(discordId, guildId).sumOf { TobyCoinEngine.proceedsForSell(it.price, it.held, feeRate, it.coin) }
+
+    private fun coinLegs(discordId: Long, guildId: Long): List<Leg> {
+        val tobyHeld = userService.getUserById(discordId, guildId)?.tobyCoins ?: 0L
+        return buildList {
+            priceFor(guildId, Coin.TOBY)?.let { p -> if (tobyHeld > 0L) add(Leg(Coin.TOBY, tobyHeld, p)) }
+            for (coin in Coin.entries) {
+                if (coin == Coin.TOBY) continue
+                val held = holdingPersistence.getAmount(discordId, guildId, coin)
+                if (held <= 0L) continue
+                priceFor(guildId, coin)?.let { p -> add(Leg(coin, held, p)) }
+            }
+        }
     }
 
     private data class Leg(val coin: Coin, val held: Long, val price: Double)

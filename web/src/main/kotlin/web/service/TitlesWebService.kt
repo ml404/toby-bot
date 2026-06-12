@@ -4,12 +4,10 @@ import common.leveling.LevelCurve
 import common.logging.DiscordLogger
 import database.dto.guild.TitleDto
 import database.service.economy.EconomyTradeService
-import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.guild.TitlePurchasePolicy
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
-import common.economy.TobyCoinEngine
 import net.dv8tion.jda.api.JDA
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -79,6 +77,11 @@ class TitlesWebService(
         val marketPrice = safely("market price for $guildId", 0.0) {
             marketService.getMarket(guildId)?.price ?: 0.0
         }
+        // Credits the player could raise by liquidating every coin they hold
+        // — drives the "Buy with coins" button gating across all coins.
+        val liquidationCapacity = safely("liquidation capacity for $actorDiscordId@$guildId", 0L) {
+            tradeService.liquidationCapacity(actorDiscordId, guildId)
+        }
         return TitleShopView(
             catalog = catalog,
             ownedTitleIds = ownedIds,
@@ -86,6 +89,7 @@ class TitlesWebService(
             balance = balance,
             tobyCoins = tobyCoins,
             marketPrice = marketPrice,
+            liquidationCapacity = liquidationCapacity,
             actorLevel = actorLevel
         )
     }
@@ -144,36 +148,26 @@ class TitlesWebService(
         val shortfall = (title.cost - currentCredits).coerceAtLeast(0L)
 
         var soldCoins = 0L
-        val priceAfterSell: Double
+        var priceAfterSell = marketService.getMarket(guildId)?.price ?: 0.0
         if (shortfall > 0L) {
-            val market = marketService.getMarketForUpdate(guildId)
-                ?: return BuyWithTobyOutcome.Error("No market yet for this server — try a Discord trade first.")
-            if (market.price <= 0.0) {
-                return BuyWithTobyOutcome.Error("Market price is not available right now.")
-            }
-            // EconomyTradeService fills sells at the midpoint of pre-
-            // and post-pressure prices (slippage) AND skims a flat
-            // TRADE_FEE off the proceeds for the jackpot pool. Naive
-            // ceil(shortfall / price) under-counts; ask the engine for
-            // the right N.
-            val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(
-                shortfall, market.price, feeRate = tradeService.sellFeeRate(guildId)
+            // Liquidate across ALL the player's coins (TOBY first), the same
+            // path the casino auto top-up uses — so MOON/RUFF/TOBL can fund a
+            // title too. sellToCover handles slippage + the jackpot fee and
+            // sells nothing if it can't reach the shortfall.
+            val result = tradeService.sellToCover(
+                actorDiscordId, guildId, shortfall, tradeService.sellFeeRate(guildId)
             )
-            if (actor.tobyCoins < coinsNeeded) {
-                return BuyWithTobyOutcome.InsufficientCoins(needed = coinsNeeded, have = actor.tobyCoins)
+            if (!result.covered) {
+                return if (result.capacity <= 0L) {
+                    BuyWithTobyOutcome.Error("No market yet for this server — try a Discord trade first.")
+                } else {
+                    // needed/have are CREDITS now: the shortfall vs. the most
+                    // the player's whole portfolio could raise.
+                    BuyWithTobyOutcome.InsufficientCoins(needed = shortfall, have = result.capacity)
+                }
             }
-
-            val sellOutcome = tradeService.sell(
-                actorDiscordId, guildId, coinsNeeded,
-                reason = EconomyTradeService.REASON_TITLE_TOPUP
-            )
-            if (sellOutcome !is TradeOutcome.Ok) {
-                return BuyWithTobyOutcome.Error("Sell failed: $sellOutcome")
-            }
-            soldCoins = coinsNeeded
-            priceAfterSell = sellOutcome.newPrice
-        } else {
-            priceAfterSell = marketService.getMarket(guildId)?.price ?: 0.0
+            soldCoins = result.tobyCoinsSold
+            result.tobyNewPrice?.let { priceAfterSell = it }
         }
 
         // Re-read under the same transaction; persistence context returns the
@@ -249,6 +243,8 @@ data class TitleShopView(
     val balance: Long,
     val tobyCoins: Long = 0L,
     val marketPrice: Double = 0.0,
+    /** Credits the player could raise by selling every coin they hold. */
+    val liquidationCapacity: Long = 0L,
     val actorLevel: Int = 0
 )
 

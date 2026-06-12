@@ -126,7 +126,10 @@ class TitlesController(
                 )
             )
             is BuyWithTobyOutcome.InsufficientCoins -> ResponseEntity.badRequest().body(
-                BuyWithTobyResponse(false, "Need ${outcome.needed} TOBY, you have ${outcome.have}.")
+                BuyWithTobyResponse(
+                    false,
+                    "Not enough coins — you need ${outcome.needed} more credits but selling all your coins raises only ${outcome.have}."
+                )
             )
             BuyWithTobyOutcome.AlreadyOwns -> ResponseEntity.badRequest().body(
                 BuyWithTobyResponse(false, "You already own this title.")

@@ -5,7 +5,6 @@ import database.dto.economy.TobyCoinMarketDto
 import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService
-import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
@@ -82,30 +81,23 @@ class TitlesWebServicePurchaseTest {
         every { titleService.getById(9L) } returns title
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-        every {
-            tradeService.sell(discordId, guildId, 205L, EconomyTradeService.REASON_TITLE_TOPUP)
-        } answers {
-            actor.socialCredit = 502L  // net proceeds at N=205 / P=2.5: 507 gross − 5 fee
+        // Multi-coin top-up now liquidates via sellToCover; here it sells TOBY.
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } answers {
+            actor.socialCredit = 502L  // proceeds after slippage + 1% fee
             actor.tobyCoins -= 205L
-            TradeOutcome.Ok(
-                amount = 205L,
-                transactedCredits = 502L,
-                newCoins = actor.tobyCoins,
-                newCredits = actor.socialCredit ?: 0L,
-                newPrice = 2.44875,
-                fee = 5L
+            EconomyTradeService.SellToCoverResult(
+                creditsRaised = 502L, covered = true, tobyCoinsSold = 205L, tobyNewPrice = 2.44875, capacity = 2_000L,
             )
         }
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val ok = assertInstanceOf(BuyWithTobyOutcome.Ok::class.java, outcome)
-        assertEquals(205L, ok.soldTobyCoins, "fee + slippage push ceil(500/2.5)=200 up to 205")
-        assertEquals(2L, ok.newCredits, "credits = 502 sold − 500 cost")
+        assertEquals(205L, ok.soldTobyCoins, "the TOBY leg sold surfaces as soldTobyCoins")
+        assertEquals(2L, ok.newCredits, "credits = 502 raised − 500 cost")
         assertEquals(2.44875, ok.newPrice, 1e-9)
         verify(exactly = 1) {
-            tradeService.sell(discordId, guildId, 205L, EconomyTradeService.REASON_TITLE_TOPUP)
+            tradeService.sellToCover(discordId, guildId, 500L, any())
         }
         verify(exactly = 1) { titleService.recordPurchase(discordId, 9L) }
     }
@@ -120,22 +112,12 @@ class TitlesWebServicePurchaseTest {
         every { titleService.getById(9L) } returns title
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
-        every { marketService.getMarketForUpdate(guildId) } returns market(10.0)
-        // shortfall = 500 − 200 = 300, price = 10. ceil(300/10) = 30,
-        // but with midpoint slippage + the 1 % fee N=30 nets only 297.
-        // The compensator bumps to N=31 (gross 309, fee 3, net 306).
-        every {
-            tradeService.sell(discordId, guildId, 31L, EconomyTradeService.REASON_TITLE_TOPUP)
-        } answers {
-            actor.socialCredit = (actor.socialCredit ?: 0L) + 306L  // net proceeds at N=31
+        // shortfall = 500 − 200 = 300; sellToCover raises it (here from TOBY).
+        every { tradeService.sellToCover(discordId, guildId, 300L, any()) } answers {
+            actor.socialCredit = (actor.socialCredit ?: 0L) + 306L
             actor.tobyCoins -= 31L
-            TradeOutcome.Ok(
-                amount = 31L,
-                transactedCredits = 306L,
-                newCoins = actor.tobyCoins,
-                newCredits = actor.socialCredit ?: 0L,
-                newPrice = 9.969,
-                fee = 3L
+            EconomyTradeService.SellToCoverResult(
+                creditsRaised = 306L, covered = true, tobyCoinsSold = 31L, tobyNewPrice = 9.969, capacity = 5_000L,
             )
         }
 
@@ -146,7 +128,7 @@ class TitlesWebServicePurchaseTest {
         assertEquals(6L, ok.newCredits, "200 + 306 − 500 = 6 (fee + slippage land in the leftover credits)")
         assertEquals(69L, ok.newCoins, "100 TOBY − 31 sold")
         verify(exactly = 1) {
-            tradeService.sell(discordId, guildId, 31L, EconomyTradeService.REASON_TITLE_TOPUP)
+            tradeService.sellToCover(discordId, guildId, 300L, any())
         }
     }
 
@@ -173,7 +155,7 @@ class TitlesWebServicePurchaseTest {
     }
 
     @Test
-    fun `insufficient TOBY reports slippage-adjusted needed vs have without touching state`() {
+    fun `uncoverable shortfall reports credit shortfall vs max raisable without touching state`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
             socialCredit = 0L
@@ -182,14 +164,15 @@ class TitlesWebServicePurchaseTest {
         every { titleService.getById(9L) } returns title
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
+        // Selling everything raises only 12 credits — short of the 500 shortfall.
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+            EconomyTradeService.SellToCoverResult(0L, covered = false, 0L, null, capacity = 12L)
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val insufficient = assertInstanceOf(BuyWithTobyOutcome.InsufficientCoins::class.java, outcome)
-        assertEquals(205L, insufficient.needed, "fee + slippage compensator bumps ceil(500/2.5)=200 to 205")
-        assertEquals(5L, insufficient.have)
-        verify(exactly = 0) { tradeService.sell(any(), any(), any(), any()) }
+        assertEquals(500L, insufficient.needed, "needed is the credit shortfall")
+        assertEquals(12L, insufficient.have, "have is the max raisable across all coins")
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
         verify(exactly = 0) { userService.updateUser(any()) }
     }
@@ -374,7 +357,7 @@ class TitlesWebServicePurchaseTest {
     }
 
     @Test
-    fun `sell failure from trade service is propagated as Error`() {
+    fun `nothing priced to liquidate is reported as a market Error`() {
         val title = TitleDto(id = 9L, label = "Gold", cost = 500L)
         val actor = UserDto(discordId = discordId, guildId = guildId).apply {
             socialCredit = 0L
@@ -383,13 +366,14 @@ class TitlesWebServicePurchaseTest {
         every { titleService.getById(9L) } returns title
         every { titleService.owns(discordId, 9L) } returns false
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns actor
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-        every { tradeService.sell(any(), any(), any(), any()) } returns TradeOutcome.InvalidAmount
+        // Covered=false with zero capacity → no priced market to sell into.
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+            EconomyTradeService.SellToCoverResult(0L, covered = false, 0L, null, capacity = 0L)
 
         val outcome = service.buyTitleWithTobyCoin(discordId, guildId, 9L)
 
         val err = assertInstanceOf(BuyWithTobyOutcome.Error::class.java, outcome)
-        assertTrue(err.message.contains("Sell failed"))
+        assertTrue(err.message.contains("market"))
         verify(exactly = 0) { titleService.recordPurchase(any(), any()) }
     }
 }

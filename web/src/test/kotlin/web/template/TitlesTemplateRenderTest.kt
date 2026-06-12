@@ -170,6 +170,7 @@ class TitlesTemplateRenderTest {
             balance = 0L,
             tobyCoins = 1_000_000L, // plenty of TOBY — without the level gate the button would be enabled
             marketPrice = 1.0,
+            liquidationCapacity = 1_000_000L, // can cover — so only the level gate disables it
             actorLevel = 50,
         )
 

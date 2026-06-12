@@ -64,8 +64,9 @@ class TitlesControllerBuyWithTobyTest {
         val body = response.body!!
         assertFalse(body.ok)
         val error = body.error!!
-        assertTrue(error.contains("200 TOBY"))
-        assertTrue(error.contains("5"))
+        // needed/have are credits now: 200-credit shortfall vs. 5 raisable.
+        assertTrue(error.contains("200 more credits"), error)
+        assertTrue(error.contains("only 5"), error)
     }
 
     @Test
