@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Add TISM coin, a user portfolio page, and an all-coin wealth leaderboard",
+    "summary": "Follow-ups to the multi-coin market (PR #718, merged).",
+    "emoji": "💰",
+    "prNumber": 719
+  },
+  {
+    "date": "June 2026",
     "title": "Add volatile multi-coin markets to the fake economy",
     "summary": "## Why",
     "emoji": "♠️",
