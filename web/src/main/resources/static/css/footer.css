@@ -7,6 +7,10 @@
    fragment does, which is why the head fragment links this directly. */
 .site-footer {
     position: relative;
+    /* Sticky footer: with body as a flex column (base.css), auto top margin
+       eats the leftover space on short pages so the footer hugs the bottom;
+       on tall pages it collapses to 0 and the footer follows the content. */
+    margin-top: auto;
     padding: 36px 24px;
     text-align: center;
     color: var(--text-dim);
