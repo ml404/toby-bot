@@ -65,6 +65,14 @@
     <script th:src="@{/js/casino-game.js}"></script>
     <script th:src="@{/js/casino-minigame-dom.js}"></script>
     <script th:src="@{/js/casino-bot-suspicion.js}"></script>
+    <!--
+        Coin-convert panel: a JSON island of the player's coin balances and
+        the script that renders a "cash any coin into credits" panel, so a
+        player holding MOON/RUFF/TOBL can fund a wager without leaving the
+        game. Reuses the /economy/{guildId}/sell?coin= endpoint.
+    -->
+    <script type="application/json" id="casino-coin-holdings" th:utext="${coinHoldingsJson}">[]</script>
+    <script th:src="@{/js/casino-convert.js}"></script>
 </th:block>
 
 </body>

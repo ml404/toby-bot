@@ -1,13 +1,17 @@
 package web.casino
 
+import common.economy.Coin
+import database.dto.economy.TobyCoinMarketDto
 import database.dto.user.UserDto
 import database.service.economy.JackpotGame
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserCoinHoldingService
 import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertTrue
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -28,6 +32,7 @@ class CasinoPageContextTest {
     private lateinit var userService: UserService
     private lateinit var jackpotService: JackpotService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var holdingService: UserCoinHoldingService
     private lateinit var jda: JDA
     private lateinit var guild: Guild
     private lateinit var user: OAuth2User
@@ -41,6 +46,7 @@ class CasinoPageContextTest {
         userService = mockk(relaxed = true)
         jackpotService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        holdingService = mockk(relaxed = true)
         jda = mockk(relaxed = true)
         guild = mockk(relaxed = true)
         user = mockk(relaxed = true)
@@ -54,7 +60,37 @@ class CasinoPageContextTest {
         every { jackpotService.getPool(guildId) } returns 0L
         every { jackpotService.winProbabilityDisplay(guildId) } returns "1"
         every { jackpotService.stakeAnchor(guildId) } returns 500L
-        ctx = CasinoPageContext(userService, jackpotService, marketService, jda)
+        ctx = CasinoPageContext(userService, jackpotService, marketService, jda, holdingService)
+    }
+
+    private fun market(coin: Coin, price: Double) =
+        TobyCoinMarketDto(guildId = guildId, coin = coin.symbol, price = price)
+
+    @Test
+    fun `populate serialises only the coins the player actually holds`() {
+        every { userService.getUserById(discordId, guildId) } returns
+                UserDto(discordId = discordId, guildId = guildId).apply { tobyCoins = 5L }
+        every { holdingService.getAmount(discordId, guildId, Coin.MOON) } returns 12L
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns market(Coin.TOBY, 100.0)
+        every { marketService.getMarket(guildId, Coin.MOON) } returns market(Coin.MOON, 50.0)
+        val model = ConcurrentModel()
+
+        ctx.populate(model, guildId, discordId, user, game = null)
+
+        val json = model.getAttribute("coinHoldingsJson") as String
+        assertTrue(json.contains("\"symbol\":\"TOBY\""), json)
+        assertTrue(json.contains("\"symbol\":\"MOON\""), json)
+        assertTrue(json.contains("\"amount\":5"), json)
+        assertTrue(json.contains("\"amount\":12"), json)
+        // Coins the player doesn't hold are omitted entirely.
+        assertTrue(!json.contains("RUFF") && !json.contains("TOBL"), json)
+    }
+
+    @Test
+    fun `populate emits an empty holdings array when the player holds nothing`() {
+        val model = ConcurrentModel()
+        ctx.populate(model, guildId, discordId, user, game = null)
+        assertEquals("[]", model.getAttribute("coinHoldingsJson"))
     }
 
     @Test
