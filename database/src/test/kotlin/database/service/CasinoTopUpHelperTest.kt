@@ -1,9 +1,13 @@
 package database.service
 
-import database.dto.economy.TobyCoinMarketDto
-import database.dto.user.UserDto
 import common.economy.TobyCoinEngine
-import database.service.economy.EconomyTradeService.TradeOutcome
+import database.dto.user.UserDto
+import database.service.casino.CasinoTopUpHelper
+import database.service.casino.TopUpResult
+import database.service.economy.EconomyTradeService
+import database.service.economy.EconomyTradeService.SellToCoverResult
+import database.service.economy.TobyCoinMarketService
+import database.service.user.UserService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -11,13 +15,13 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.time.Instant
-import database.service.casino.CasinoTopUpHelper
-import database.service.economy.EconomyTradeService
-import database.service.economy.TobyCoinMarketService
-import database.service.user.UserService
-import database.service.casino.TopUpResult
 
+/**
+ * The casino auto-top-up now liquidates across all of a player's coins via
+ * [EconomyTradeService.sellToCover] (TOBY first), so these mock that method
+ * and assert the helper maps its result onto the [TopUpResult] variants the
+ * minigame services consume.
+ */
 class CasinoTopUpHelperTest {
 
     private val discordId = 100L
@@ -32,9 +36,6 @@ class CasinoTopUpHelperTest {
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
         userService = mockk(relaxed = true)
-        // Default the per-guild sell fee to the engine's 1% fallback so
-        // the slippage/fee maths in these tests match the historical
-        // hardcoded behaviour. Individual tests can override.
         every { tradeService.sellFeeRate(guildId) } returns TobyCoinEngine.TRADE_FEE
     }
 
@@ -44,111 +45,68 @@ class CasinoTopUpHelperTest {
             tobyCoins = coins
         }
 
-    private fun market(price: Double): TobyCoinMarketDto =
-        TobyCoinMarketDto(guildId = guildId, price = price, lastTickAt = Instant.now())
-
-    @Test
-    fun `MarketUnavailable when no market row exists`() {
-        every { marketService.getMarketForUpdate(guildId) } returns null
-
-        val result = CasinoTopUpHelper.ensureCreditsForWager(
+    private fun call(currentBalance: Long, stake: Long, user: UserDto = userWith(currentBalance, 1_000L)) =
+        CasinoTopUpHelper.ensureCreditsForWager(
             tradeService, marketService, userService,
-            user = userWith(balance = 0L, coins = 1_000L),
-            guildId = guildId, currentBalance = 0L, stake = 100L
+            user = user, guildId = guildId, currentBalance = currentBalance, stake = stake
         )
 
-        assertEquals(TopUpResult.MarketUnavailable, result)
-        verify(exactly = 0) { tradeService.sell(any(), any(), any(), any()) }
-    }
-
     @Test
-    fun `MarketUnavailable when price is zero or negative`() {
-        every { marketService.getMarketForUpdate(guildId) } returns market(0.0)
-
-        val result = CasinoTopUpHelper.ensureCreditsForWager(
-            tradeService, marketService, userService,
-            user = userWith(balance = 0L, coins = 1_000L),
-            guildId = guildId, currentBalance = 0L, stake = 100L
-        )
-
-        assertEquals(TopUpResult.MarketUnavailable, result)
-    }
-
-    @Test
-    fun `InsufficientCoins when user holds fewer TOBY than needed`() {
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-
-        val result = CasinoTopUpHelper.ensureCreditsForWager(
-            tradeService, marketService, userService,
-            user = userWith(balance = 0L, coins = 5L),  // way short of ~205 needed
-            guildId = guildId, currentBalance = 0L, stake = 500L
-        )
-
-        val ic = assertInstanceOf(TopUpResult.InsufficientCoins::class.java, result)
-        assertEquals(5L, ic.have)
-        // True needed is computed by TobyCoinEngine — we just sanity-
-        // check it's much greater than what the user has.
-        assert(ic.needed > 5L) { "needed should reflect the engine's computation, was ${ic.needed}" }
-        verify(exactly = 0) { tradeService.sell(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `ToppedUp delegates to tradeService sell with CASINO_TOPUP reason`() {
-        val user = userWith(balance = 0L, coins = 1_000L)
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-        every {
-            tradeService.sell(discordId, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
-        } answers {
-            val sold = thirdArg<Long>()
-            user.tobyCoins -= sold
-            user.socialCredit = (user.socialCredit ?: 0L) + 502L
-            TradeOutcome.Ok(
-                amount = sold,
-                transactedCredits = 502L,
-                newCoins = user.tobyCoins,
-                newCredits = user.socialCredit ?: 0L,
-                newPrice = 2.44875,
-                fee = 5L
-            )
-        }
-        every { userService.getUserByIdForUpdate(discordId, guildId) } returns user
-
-        val result = CasinoTopUpHelper.ensureCreditsForWager(
-            tradeService, marketService, userService,
-            user = user, guildId = guildId, currentBalance = 0L, stake = 500L
-        )
-
+    fun `no-op ToppedUp when the player already has enough credits`() {
+        val result = call(currentBalance = 500L, stake = 500L)
         val topped = assertInstanceOf(TopUpResult.ToppedUp::class.java, result)
-        assertEquals(502L, topped.balance, "post-topup balance is the user's new credit total")
-        assert(topped.soldCoins > 0L) { "soldCoins should be the engine's computed N" }
-        assertEquals(2.44875, topped.newPrice, 1e-9)
-        verify(exactly = 1) {
-            tradeService.sell(discordId, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
-        }
+        assertEquals(0L, topped.soldCoins)
+        verify(exactly = 0) { tradeService.sellToCover(any(), any(), any(), any()) }
     }
 
     @Test
-    fun `ToppedUp returns the post-sell user when re-read succeeds`() {
-        val user = userWith(balance = 0L, coins = 1_000L)
+    fun `covered top-up carries the TOBY leg and the post-sell balance`() {
         val refreshed = userWith(balance = 502L, coins = 795L)
-        every { marketService.getMarketForUpdate(guildId) } returns market(2.5)
-        every {
-            tradeService.sell(any(), any(), any(), any())
-        } returns TradeOutcome.Ok(
-            amount = 205L, transactedCredits = 502L,
-            newCoins = 795L, newCredits = 502L, newPrice = 2.44875, fee = 5L
-        )
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+                SellToCoverResult(creditsRaised = 502L, covered = true, tobyCoinsSold = 205L, tobyNewPrice = 2.44875, capacity = 2_000L)
         every { userService.getUserByIdForUpdate(discordId, guildId) } returns refreshed
 
-        val result = CasinoTopUpHelper.ensureCreditsForWager(
-            tradeService, marketService, userService,
-            user = user, guildId = guildId, currentBalance = 0L, stake = 500L
-        )
+        val result = call(currentBalance = 0L, stake = 500L)
 
         val topped = assertInstanceOf(TopUpResult.ToppedUp::class.java, result)
-        // The handle returned IS the re-read entity — important so the
-        // wager that follows operates on the post-sell balance.
-        assertEquals(refreshed, topped.user)
+        assertEquals(refreshed, topped.user, "wager must see the post-sell entity")
         assertEquals(502L, topped.balance)
+        assertEquals(205L, topped.soldCoins)
+        assertEquals(2.44875, topped.newPrice, 1e-9)
+    }
+
+    @Test
+    fun `covered by non-TOBY coins reports a zero TOBY leg`() {
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+                SellToCoverResult(creditsRaised = 540L, covered = true, tobyCoinsSold = 0L, tobyNewPrice = null, capacity = 900L)
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns userWith(540L, 0L)
+
+        val result = call(currentBalance = 0L, stake = 500L, user = userWith(0L, 0L))
+
+        val topped = assertInstanceOf(TopUpResult.ToppedUp::class.java, result)
+        assertEquals(0L, topped.soldCoins, "no TOBY sold → no TOBY receipt line")
+        assertEquals(540L, topped.balance)
+    }
+
+    @Test
+    fun `InsufficientCoins in credit terms when selling everything still falls short`() {
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+                SellToCoverResult(creditsRaised = 0L, covered = false, tobyCoinsSold = 0L, tobyNewPrice = null, capacity = 120L)
+
+        val result = call(currentBalance = 0L, stake = 500L)
+
+        val ic = assertInstanceOf(TopUpResult.InsufficientCoins::class.java, result)
+        assertEquals(500L, ic.needed, "needed is the credit shortfall")
+        assertEquals(120L, ic.have, "have is the max raisable credits")
+    }
+
+    @Test
+    fun `MarketUnavailable when there is nothing priced to liquidate`() {
+        every { tradeService.sellToCover(discordId, guildId, 500L, any()) } returns
+                SellToCoverResult(creditsRaised = 0L, covered = false, tobyCoinsSold = 0L, tobyNewPrice = null, capacity = 0L)
+
+        val result = call(currentBalance = 0L, stake = 500L)
+
+        assertEquals(TopUpResult.MarketUnavailable, result)
     }
 }

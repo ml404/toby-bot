@@ -173,9 +173,15 @@
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const coin = main.dataset.coin || 'TOBY';
     const Api = window.TobyApi;
     const Watches = window.TobyWatches;
     if (!Api || !Watches) return;
+
+    // Scope every watches call to the coin this page is showing.
+    function withCoin(url) {
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'coin=' + encodeURIComponent(coin);
+    }
 
     const form = document.getElementById('economy-watch-form');
     const priceInput = document.getElementById('economy-watch-price');
@@ -194,7 +200,7 @@
     }
 
     function loadAndRender() {
-        return fetch('/economy/' + guildId + '/watches', {
+        return fetch(withCoin('/economy/' + guildId + '/watches'), {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         }).then(function (r) {
@@ -227,7 +233,7 @@
             return;
         }
         submitBtn.disabled = true;
-        Api.postJson('/economy/' + guildId + '/watches', {
+        Api.postJson(withCoin('/economy/' + guildId + '/watches'), {
             threshold: threshold,
             side: side,
             amount: amount

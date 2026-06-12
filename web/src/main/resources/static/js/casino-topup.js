@@ -37,6 +37,34 @@
         return n;
     }
 
+    // proceedsForSell with a per-coin trade impact — the wilder coins slip
+    // harder, so the button's capacity estimate matches the server.
+    function proceedsWith(price, coins, impact) {
+        if (coins <= 0 || price <= 0) return 0;
+        const imp = (typeof impact === 'number' && impact > 0) ? impact : TRADE_IMPACT;
+        const newPrice = Math.max(1.0, price * (1.0 - imp * coins));
+        const midpoint = (price + newPrice) / 2.0;
+        const gross = Math.floor(midpoint * coins);
+        const fee = Math.floor(gross * TRADE_FEE);
+        return gross - fee;
+    }
+
+    // Non-TOBY holdings from the JSON island the convert panel also reads.
+    // Empty off a game page / under tests, so the multi-coin branch stays
+    // dormant and TOBY-only behaviour is byte-for-byte unchanged.
+    function readNonTobyHoldings() {
+        if (typeof document === 'undefined') return [];
+        const el = document.getElementById('casino-coin-holdings');
+        if (!el) return [];
+        try {
+            const parsed = JSON.parse(el.textContent || '[]');
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(function (h) {
+                return h && h.symbol !== 'TOBY' && typeof h.amount === 'number' && h.amount > 0;
+            });
+        } catch (e) { return []; }
+    }
+
     /**
      * Wire the second "Bet (sell TOBY)" submit button. Recomputes the
      * required coin count whenever the stake input changes, hides the
@@ -68,12 +96,40 @@
 
         if (!form || !stakeInput || !tobyBtn) return null;
 
-        const coinsLabel = tobyBtn.querySelector('.casino-bet-toby-coins');
+        // The other coins the player holds, and the original structured
+        // button label so we can flip between "sell N TOBY" and a generic
+        // "sell coins" label without per-game template changes.
+        const nonTobyHoldings = readNonTobyHoldings();
+        const originalBtnHtml = tobyBtn.innerHTML;
+        const verb = ((tobyBtn.textContent || '').split('(')[0].trim()) || 'Bet';
+        let genericMode = false;
 
         function liveBalance() {
             if (!balanceEl) return 0;
             const parsed = parseInt(balanceEl.textContent, 10);
             return isNaN(parsed) ? 0 : parsed;
+        }
+
+        function nonTobyCapacity() {
+            return nonTobyHoldings.reduce(function (sum, h) {
+                return sum + proceedsWith(h.price, h.amount, h.impact);
+            }, 0);
+        }
+
+        // TOBY can cover on its own → restore/keep the exact "sell N TOBY"
+        // label (identical to the original single-coin behaviour).
+        function showTobyLabel(coinsNeeded) {
+            if (genericMode) { tobyBtn.innerHTML = originalBtnHtml; genericMode = false; }
+            const lbl = tobyBtn.querySelector('.casino-bet-toby-coins');
+            if (lbl) lbl.textContent = String(coinsNeeded);
+            tobyBtn.hidden = false;
+        }
+
+        // TOBY can't cover but the wider portfolio can → generic label; the
+        // server's sellToCover decides which coins to liquidate.
+        function showGenericLabel() {
+            if (!genericMode) { tobyBtn.textContent = verb + ' (sell coins)'; genericMode = true; }
+            tobyBtn.hidden = false;
         }
 
         function refresh() {
@@ -86,14 +142,19 @@
                 return;
             }
             const shortfall = stake - balance;
-            const coinsNeeded = coinsNeededForShortfall(shortfall, marketPrice, tobyCoins);
-            if (marketPrice <= 0 || coinsNeeded > tobyCoins) {
-                // Either no market yet or the player's TOBY can't cover.
-                tobyBtn.hidden = true;
+            const tobyCoinsNeeded = coinsNeededForShortfall(shortfall, marketPrice, tobyCoins);
+            if (marketPrice > 0 && tobyCoinsNeeded <= tobyCoins) {
+                showTobyLabel(tobyCoinsNeeded);
                 return;
             }
-            if (coinsLabel) coinsLabel.textContent = String(coinsNeeded);
-            tobyBtn.hidden = false;
+            // TOBY alone can't cover. If the player also holds other coins
+            // and selling everything would clear the shortfall, offer it.
+            const capacity = proceedsForSell(marketPrice, tobyCoins) + nonTobyCapacity();
+            if (nonTobyHoldings.length > 0 && capacity >= shortfall) {
+                showGenericLabel();
+                return;
+            }
+            tobyBtn.hidden = true;
         }
 
         function setTobyCoins(n) {

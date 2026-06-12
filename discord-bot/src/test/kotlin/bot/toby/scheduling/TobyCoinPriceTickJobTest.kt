@@ -36,8 +36,10 @@ class TobyCoinPriceTickJobTest {
         every { cache.iterator() } answers { mutableListOf(guild).iterator() }
         every { jda.guildCache } returns cache
 
+        // The job now ticks every coin in the catalogue per guild; stub the
+        // market read for any coin so each tick walks from the running price.
         var currentPrice = 100.0
-        every { marketService.getMarket(1L) } answers {
+        every { marketService.getMarket(1L, any()) } answers {
             TobyCoinMarketDto(guildId = 1L, price = currentPrice, lastTickAt = Instant.now())
         }
         val saved = slot<TobyCoinMarketDto>()

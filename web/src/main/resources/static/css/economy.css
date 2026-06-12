@@ -37,6 +37,55 @@
     margin-top: 2px;
 }
 
+.economy-coin-sub {
+    margin: 2px 0 0;
+    font-size: 0.9rem;
+}
+
+/* Coin selector — a row of pill links, one per coin, that reload the
+   page scoped to that coin (?coin=SYMBOL). The active coin is filled. */
+.economy-coin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
+}
+
+.economy-coin-tab {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 10px);
+    background: var(--surface-elevated, rgba(255, 255, 255, 0.02));
+    color: var(--text, #e0e0e0);
+    text-decoration: none;
+    line-height: 1.15;
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.economy-coin-tab:hover {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.04));
+    border-color: var(--accent, #57F287);
+}
+
+.economy-coin-tab.is-active {
+    border-color: var(--accent, #57F287);
+    background: rgba(87, 242, 135, 0.12);
+}
+
+.economy-coin-tab-sym {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+}
+
+.economy-coin-tab-risk {
+    font-size: 0.72rem;
+}
+
 .economy-chart-card {
     background: var(--bg-elevated);
     border: 1px solid var(--border);

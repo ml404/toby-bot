@@ -1,5 +1,6 @@
 package database.service.economy.impl
 
+import common.economy.Coin
 import database.dto.economy.TobyCoinMarketDto
 import database.dto.economy.TobyCoinPricePointDto
 import database.dto.economy.TobyCoinTradeDto
@@ -24,21 +25,23 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
     @Autowired
     private lateinit var tradePersistence: TobyCoinTradePersistence
 
-    @Cacheable(value = ["tobyCoinMarkets"], key = "#guildId")
-    override fun getMarket(guildId: Long): TobyCoinMarketDto? {
-        return marketPersistence.getByGuild(guildId)
+    // Cache key carries the coin so different coins for one guild don't
+    // collide. '#coin.name' keeps the key a stable String.
+    @Cacheable(value = ["tobyCoinMarkets"], key = "#guildId + ':' + #coin.name")
+    override fun getMarket(guildId: Long, coin: Coin): TobyCoinMarketDto? {
+        return marketPersistence.getByGuild(guildId, coin)
     }
 
     // Bypass cache deliberately: the trade path needs a fresh DB row + row lock.
-    override fun getMarketForUpdate(guildId: Long): TobyCoinMarketDto? {
-        return marketPersistence.getByGuildForUpdate(guildId)
+    override fun getMarketForUpdate(guildId: Long, coin: Coin): TobyCoinMarketDto? {
+        return marketPersistence.getByGuildForUpdate(guildId, coin)
     }
 
     override fun listMarkets(): List<TobyCoinMarketDto> {
         return marketPersistence.listAll()
     }
 
-    @CachePut(value = ["tobyCoinMarkets"], key = "#market.guildId")
+    @CachePut(value = ["tobyCoinMarkets"], key = "#market.guildId + ':' + #market.coin")
     override fun saveMarket(market: TobyCoinMarketDto): TobyCoinMarketDto {
         return marketPersistence.upsert(market)
     }
@@ -47,12 +50,12 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
         return historyPersistence.append(point)
     }
 
-    override fun listHistory(guildId: Long, since: Instant): List<TobyCoinPricePointDto> {
-        return historyPersistence.listSince(guildId, since)
+    override fun listHistory(guildId: Long, since: Instant, coin: Coin): List<TobyCoinPricePointDto> {
+        return historyPersistence.listSince(guildId, since, coin)
     }
 
-    override fun listAllHistory(guildId: Long): List<TobyCoinPricePointDto> {
-        return historyPersistence.listAll(guildId)
+    override fun listAllHistory(guildId: Long, coin: Coin): List<TobyCoinPricePointDto> {
+        return historyPersistence.listAll(guildId, coin)
     }
 
     override fun pruneHistoryOlderThan(cutoff: Instant): Int {
@@ -63,8 +66,8 @@ class DefaultTobyCoinMarketService : TobyCoinMarketService {
         return tradePersistence.record(trade)
     }
 
-    override fun listTradesSince(guildId: Long, since: Instant): List<TobyCoinTradeDto> {
-        return tradePersistence.listSince(guildId, since)
+    override fun listTradesSince(guildId: Long, since: Instant, coin: Coin): List<TobyCoinTradeDto> {
+        return tradePersistence.listSince(guildId, since, coin)
     }
 
     override fun pruneTradesOlderThan(cutoff: Instant): Int {

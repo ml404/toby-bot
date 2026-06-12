@@ -1,5 +1,6 @@
 package database.persistence.economy.impl
 
+import common.economy.Coin
 import database.dto.economy.TobyCoinTradeDto
 import database.persistence.economy.TobyCoinTradePersistence
 import jakarta.persistence.EntityManager
@@ -21,11 +22,12 @@ class DefaultTobyCoinTradePersistence : TobyCoinTradePersistence {
         return trade
     }
 
-    override fun listSince(guildId: Long, since: Instant): List<TobyCoinTradeDto> {
+    override fun listSince(guildId: Long, since: Instant, coin: Coin): List<TobyCoinTradeDto> {
         val q: TypedQuery<TobyCoinTradeDto> = entityManager.createNamedQuery(
             "TobyCoinTradeDto.listSince", TobyCoinTradeDto::class.java
         )
         q.setParameter("guildId", guildId)
+        q.setParameter("coin", coin.symbol)
         q.setParameter("since", since)
         return q.resultList
     }

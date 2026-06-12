@@ -7,6 +7,7 @@ import common.notification.NotificationChannelKind
 import database.dto.economy.TobyCoinMarketDto
 import database.dto.economy.TobyCoinPricePointDto
 import database.dto.economy.UserPriceTriggerDto
+import common.economy.Coin
 import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService
 import database.service.economy.TobyCoinMarketService
@@ -62,8 +63,13 @@ class TobyCoinPriceTickJob @Autowired constructor(
     fun tickAllGuilds() {
         val now = Instant.now()
         jda.guildCache.forEach { guild ->
-            runCatching { tickGuild(guild.idLong, now) }
-                .onFailure { logger.error("Toby coin tick failed for guild ${guild.idLong}: ${it.message}") }
+            // Each guild runs an independent market per coin in the catalogue.
+            Coin.entries.forEach { coin ->
+                runCatching { tickGuild(guild.idLong, coin, now) }
+                    .onFailure {
+                        logger.error("Toby coin tick failed for guild ${guild.idLong} / $coin: ${it.message}")
+                    }
+            }
         }
         val cutoff = now.minus(HISTORY_RETENTION)
         runCatching { marketService.pruneHistoryOlderThan(cutoff) }
@@ -74,24 +80,25 @@ class TobyCoinPriceTickJob @Autowired constructor(
         }.onFailure { logger.warn("Toby coin trade prune failed: ${it.message}") }
     }
 
-    private fun tickGuild(guildId: Long, now: Instant) {
-        val market = marketService.getMarket(guildId) ?: TobyCoinMarketDto(
+    private fun tickGuild(guildId: Long, coin: Coin, now: Instant) {
+        val market = marketService.getMarket(guildId, coin) ?: TobyCoinMarketDto(
             guildId = guildId,
-            price = TobyCoinEngine.INITIAL_PRICE,
+            coin = coin.symbol,
+            price = coin.initialPrice,
             lastTickAt = now
         )
-        val newPrice = TobyCoinEngine.tickRandomWalk(market.price, random = random)
+        val newPrice = TobyCoinEngine.tickRandomWalk(market.price, coin, random = random)
         market.price = newPrice
         market.lastTickAt = now
         marketService.saveMarket(market)
         marketService.appendPricePoint(
-            TobyCoinPricePointDto(guildId = guildId, sampledAt = now, price = newPrice)
+            TobyCoinPricePointDto(guildId = guildId, coin = coin.symbol, sampledAt = now, price = newPrice)
         )
-        handleTriggered(guildId, newPrice, now)
+        handleTriggered(guildId, coin, newPrice, now)
     }
 
-    private fun handleTriggered(guildId: Long, newPrice: Double, now: Instant) {
-        val rows = triggerService.findTriggered(guildId, newPrice)
+    private fun handleTriggered(guildId: Long, coin: Coin, newPrice: Double, now: Instant) {
+        val rows = triggerService.findTriggered(guildId, newPrice, coin)
         if (rows.isEmpty()) return
         rows.forEach { row ->
             runCatching { executeTrigger(row, guildId, now) }
@@ -121,9 +128,10 @@ class TobyCoinPriceTickJob @Autowired constructor(
             triggerService.markFired(row.id!!, now)
             return
         }
+        val coin = row.coinEnum
         val outcome = when (side) {
-            UserPriceTriggerDto.Side.BUY -> tradeService.buy(row.discordId, guildId, row.amount)
-            UserPriceTriggerDto.Side.SELL -> tradeService.sell(row.discordId, guildId, row.amount)
+            UserPriceTriggerDto.Side.BUY -> tradeService.buy(row.discordId, guildId, row.amount, coin = coin)
+            UserPriceTriggerDto.Side.SELL -> tradeService.sell(row.discordId, guildId, row.amount, coin = coin)
         }
         notificationRouter.dispatch(NotificationChannelKind.PRICE_ALERT, row.discordId, guildId) {
             dm { PriceAlertReceiptBuilder.buildDm(row, outcome) }

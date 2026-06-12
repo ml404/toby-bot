@@ -74,12 +74,11 @@
                                 th:disabled="${titleShop.balance &lt; t.cost or locked}"
                                 th:title="${locked ? lockTooltip : ''}">Buy</button>
                         <button type="button" class="btn title-buy-toby"
-                                th:if="${!titleShop.ownedTitleIds.contains(t.id) and titleShop.tobyCoins > 0 and titleShop.marketPrice > 0}"
-                                th:with="shortfall=${t.cost - titleShop.balance &gt; 0 ? t.cost - titleShop.balance : 0},
-                                         coinsNeeded=${T(java.lang.Math).ceil(shortfall / titleShop.marketPrice)}"
-                                th:disabled="${coinsNeeded > titleShop.tobyCoins or locked}"
-                                th:title="${locked ? lockTooltip : (shortfall > 0 ? 'Sells ~' + coinsNeeded + ' TOBY at live market price' : 'Buys with credits (no TOBY sold)')}">
-                            Buy with TOBY
+                                th:if="${!titleShop.ownedTitleIds.contains(t.id) and titleShop.liquidationCapacity > 0}"
+                                th:with="shortfall=${t.cost - titleShop.balance &gt; 0 ? t.cost - titleShop.balance : 0}"
+                                th:disabled="${(shortfall > 0 and titleShop.liquidationCapacity &lt; shortfall) or locked}"
+                                th:title="${locked ? lockTooltip : (shortfall > 0 ? 'Sells your coins at the live market price to cover the shortfall' : 'Buys with credits (no coins sold)')}">
+                            Buy with coins
                         </button>
                         <button type="button" class="btn title-equip"
                                 th:if="${titleShop.ownedTitleIds.contains(t.id) and titleShop.equippedTitleId != t.id}">Equip</button>

@@ -46,11 +46,14 @@ class CasinoOutcomeMapperTest {
     }
 
     @Test
-    fun `insufficientCoinsForTopUp surfaces needed and held coin amounts`() {
+    fun `insufficientCoinsForTopUp surfaces the credit shortfall and max raisable`() {
         val response = mapper.insufficientCoinsForTopUp(needed = 5L, have = 1L)
 
         assertEquals(400, response.statusCode.value())
-        assertEquals("Need 5 TOBY to cover the shortfall, you have 1.", response.body!!.error)
+        assertEquals(
+            "Not enough coins to cover the shortfall — you need 5 more credits but selling all your coins raises only 1.",
+            response.body!!.error
+        )
     }
 
     @Test

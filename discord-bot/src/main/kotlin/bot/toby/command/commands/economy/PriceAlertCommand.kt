@@ -1,5 +1,6 @@
 package bot.toby.command.commands.economy
 
+import common.economy.Coin
 import common.notification.NotificationChannelKind
 import common.notification.Surface
 import core.command.Command.Companion.replyEphemeralAndDelete
@@ -36,6 +37,7 @@ class PriceAlertCommand @Autowired constructor(
         private const val OPT_SIDE = "side"
         private const val OPT_AMOUNT = "amount"
         private const val OPT_ID = "id"
+        private const val OPT_COIN = "coin"
 
         // Same precision as the threshold column (NUMERIC(20,6)).
         // Rejecting threshold == currentPrice (rounded to 4dp) avoids
@@ -53,7 +55,9 @@ class PriceAlertCommand @Autowired constructor(
                     .addChoice("BUY", UserPriceTriggerDto.Side.BUY.name)
                     .addChoice("SELL", UserPriceTriggerDto.Side.SELL.name),
                 OptionData(OptionType.INTEGER, OPT_AMOUNT, "Coins to trade", true)
-                    .setMinValue(1)
+                    .setMinValue(1),
+                OptionData(OptionType.STRING, OPT_COIN, "Which coin (defaults to TOBY)", false)
+                    .apply { Coin.entries.forEach { addChoice("${it.displayName} (${it.riskLabel})", it.symbol) } }
             ),
         SubcommandData("list", "Show your active price-alert triggers."),
         SubcommandData("remove", "Delete one of your triggers.")
@@ -105,8 +109,9 @@ class PriceAlertCommand @Autowired constructor(
                     "Side must be BUY or SELL.", deleteDelay
                 ); return
             }
+        val coin = Coin.fromSymbol(event.getOption(OPT_COIN)?.asString)
 
-        val market = tradeService.loadOrCreateMarket(guildId)
+        val market = tradeService.loadOrCreateMarket(guildId, coin)
         val currentPrice = market.price
 
         if (abs(threshold - currentPrice) < PARITY_EPSILON) {
@@ -126,6 +131,7 @@ class PriceAlertCommand @Autowired constructor(
             priceAtCreation = currentPrice,
             side = side,
             amount = amount,
+            coin = coin,
         )
 
         // Auto-enable PRICE_ALERT DM so the receipt is actually
@@ -144,8 +150,8 @@ class PriceAlertCommand @Autowired constructor(
         val direction = if (threshold < currentPrice) "drop" else "rise"
         val movePct = abs(threshold - currentPrice) / currentPrice * 100.0
         val description = buildString {
-            append("Trigger **#${trigger.id}** set. Current price ")
-            append("**${"%.4f".format(currentPrice)}**; when TobyCoin reaches ")
+            append("Trigger **#${trigger.id}** set on **${coin.symbol}**. Current price ")
+            append("**${"%.4f".format(currentPrice)}**; when ${coin.symbol} reaches ")
             append("**${"%.4f".format(threshold)}** (a $direction of ")
             append("${"%.2f".format(movePct)}%) you'll auto-**${side.name} ${amount}** ")
             append("and get a DM receipt.")
@@ -178,10 +184,17 @@ class PriceAlertCommand @Autowired constructor(
             return
         }
 
-        val currentPrice = tradeService.loadOrCreateMarket(guildId).price
+        // One current-price lookup per distinct coin the user has alerts on.
+        val priceByCoin = triggers.map { it.coinEnum }.distinct().associateWith {
+            tradeService.loadOrCreateMarket(guildId, it).price
+        }
         val embed = EmbedBuilder()
             .setTitle("Your price-alert triggers")
-            .setDescription("Current TobyCoin price: **${"%.4f".format(currentPrice)}**")
+            .setDescription(
+                priceByCoin.entries.joinToString("\n") { (coin, price) ->
+                    "Current ${coin.symbol} price: **${"%.4f".format(price)}**"
+                }
+            )
 
         triggers.forEach { t ->
             val status = when {
@@ -191,7 +204,7 @@ class PriceAlertCommand @Autowired constructor(
             }
             val direction = if (t.thresholdPrice < t.priceAtCreation) "↓ drop to" else "↑ rise to"
             embed.addField(
-                "#${t.id} • ${t.side} ${t.amount}",
+                "#${t.id} • ${t.coinEnum.symbol} ${t.side} ${t.amount}",
                 "$direction **${"%.4f".format(t.thresholdPrice)}** " +
                         "(created at ${"%.4f".format(t.priceAtCreation)}) — $status",
                 false

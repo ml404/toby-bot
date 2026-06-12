@@ -2,10 +2,12 @@ package web.service
 
 import common.notification.NotificationChannelKind
 import common.notification.Surface
+import common.economy.Coin
 import database.dto.economy.UserPriceTriggerDto
-import common.economy.TobyCoinEngine
+import database.dto.user.UserDto
 import database.service.economy.EconomyTradeService
 import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserCoinHoldingService
 import database.service.user.UserNotificationPrefService
 import database.service.economy.UserPriceTriggerService
 import database.service.user.UserService
@@ -26,6 +28,7 @@ class EconomyWebService(
     private val membership: GuildMembership,
     private val priceTriggerService: UserPriceTriggerService,
     private val notificationPrefService: UserNotificationPrefService,
+    private val holdingService: UserCoinHoldingService,
 ) {
 
     companion object {
@@ -73,41 +76,65 @@ class EconomyWebService(
     fun getCredits(discordId: Long, guildId: Long): Long =
         userService.getUserById(discordId, guildId)?.socialCredit ?: 0L
 
-    fun getEconomyView(guildId: Long, discordId: Long): EconomyView? {
+    fun getEconomyView(guildId: Long, discordId: Long, coin: Coin = Coin.DEFAULT): EconomyView? {
         val guild = jda.getGuildById(guildId) ?: return null
-        val market = tradeService.loadOrCreateMarket(guildId)
+        val market = tradeService.loadOrCreateMarket(guildId, coin)
         val user = userService.getUserById(discordId, guildId)
+        val coins = balanceOf(user, discordId, guildId, coin)
 
         return EconomyView(
             guildName = guild.name,
+            coin = coin.symbol,
+            coinName = coin.displayName,
+            riskLabel = coin.riskLabel,
+            // One tab per coin so the page can render the selector and link
+            // to /economy/{guildId}?coin=SYMBOL for each.
+            coinOptions = Coin.entries.map { c ->
+                EconomyCoinTab(
+                    symbol = c.symbol,
+                    name = c.displayName,
+                    riskLabel = c.riskLabel,
+                    selected = c == coin,
+                )
+            },
             price = market.price,
             lastTickAt = market.lastTickAt,
-            coins = user?.tobyCoins ?: 0L,
+            coins = coins,
             credits = user?.socialCredit ?: 0L,
-            portfolioCredits = ((user?.tobyCoins ?: 0L).toDouble() * market.price).toLong(),
+            portfolioCredits = (coins.toDouble() * market.price).toLong(),
             // Raw rates (1 % == 0.01) so the JS preview math can use them
             // directly. Templates multiply by 100 for the percent label.
             buyFeeRate = tradeService.buyFeeRate(guildId),
             sellFeeRate = tradeService.sellFeeRate(guildId),
-            tradeImpact = TobyCoinEngine.TRADE_IMPACT
+            // Per-coin trade impact so the client-side slippage preview
+            // matches what the server applies for the wilder coins.
+            tradeImpact = coin.tradeImpact
         )
     }
 
-    fun getHistory(guildId: Long, window: String): List<PricePoint> {
+    /**
+     * Where a coin's balance lives: TOBY in [UserDto.tobyCoins], every
+     * other coin in `user_coin_holding`. Mirrors EconomyTradeService.
+     */
+    private fun balanceOf(user: UserDto?, discordId: Long, guildId: Long, coin: Coin): Long =
+        if (coin == Coin.TOBY) user?.tobyCoins ?: 0L
+        else holdingService.getAmount(discordId, guildId, coin)
+
+    fun getHistory(guildId: Long, window: String, coin: Coin = Coin.DEFAULT): List<PricePoint> {
         val samples = when (val since = windowSince(window)) {
-            null -> marketService.listAllHistory(guildId)
-            else -> marketService.listHistory(guildId, since)
+            null -> marketService.listAllHistory(guildId, coin)
+            else -> marketService.listHistory(guildId, since, coin)
         }
         return samples.map { PricePoint(it.sampledAt.toEpochMilli(), it.price) }
     }
 
-    fun getTrades(guildId: Long, window: String): List<TradeMarker> {
+    fun getTrades(guildId: Long, window: String, coin: Coin = Coin.DEFAULT): List<TradeMarker> {
         // The "all" window has no lower bound for prices, but trades are
         // capped at 30 days by retention regardless. Pick a generous upper
         // bound so we don't pretend trades older than the prune cutoff
         // exist; "all" still returns whatever's left in the table.
         val since = windowSince(window) ?: Instant.now().minus(Duration.ofDays(365))
-        val trades = marketService.listTradesSince(guildId, since)
+        val trades = marketService.listTradesSince(guildId, since, coin)
         if (trades.isEmpty()) return emptyList()
 
         val guild = jda.getGuildById(guildId)
@@ -138,14 +165,16 @@ class EconomyWebService(
         }
     }
 
-    fun buy(discordId: Long, guildId: Long, amount: Long): EconomyTradeService.TradeOutcome =
-        tradeService.buy(discordId, guildId, amount)
+    fun buy(discordId: Long, guildId: Long, amount: Long, coin: Coin = Coin.DEFAULT): EconomyTradeService.TradeOutcome =
+        tradeService.buy(discordId, guildId, amount, coin = coin)
 
-    fun sell(discordId: Long, guildId: Long, amount: Long): EconomyTradeService.TradeOutcome =
-        tradeService.sell(discordId, guildId, amount)
+    fun sell(discordId: Long, guildId: Long, amount: Long, coin: Coin = Coin.DEFAULT): EconomyTradeService.TradeOutcome =
+        tradeService.sell(discordId, guildId, amount, coin = coin)
 
-    fun listWatches(discordId: Long, guildId: Long): List<WatchView> =
-        priceTriggerService.listForUser(discordId, guildId).map { it.toView() }
+    fun listWatches(discordId: Long, guildId: Long, coin: Coin = Coin.DEFAULT): List<WatchView> =
+        priceTriggerService.listForUser(discordId, guildId)
+            .filter { it.coinEnum == coin }
+            .map { it.toView() }
 
     fun createWatch(
         discordId: Long,
@@ -153,10 +182,11 @@ class EconomyWebService(
         threshold: Double,
         side: UserPriceTriggerDto.Side,
         amount: Long,
+        coin: Coin = Coin.DEFAULT,
     ): CreateWatchResult {
         if (amount <= 0) return CreateWatchResult.InvalidAmount
 
-        val currentPrice = tradeService.loadOrCreateMarket(guildId).price
+        val currentPrice = tradeService.loadOrCreateMarket(guildId, coin).price
         if (abs(threshold - currentPrice) < PARITY_EPSILON) {
             return CreateWatchResult.ParityRejected(threshold, currentPrice)
         }
@@ -168,6 +198,7 @@ class EconomyWebService(
             priceAtCreation = currentPrice,
             side = side,
             amount = amount,
+            coin = coin,
         )
 
         // Auto-enable PRICE_ALERT DM so the receipt is actually
@@ -189,7 +220,8 @@ class EconomyWebService(
     fun removeWatch(id: Long, requestingDiscordId: Long): Boolean =
         priceTriggerService.remove(id, requestingDiscordId)
 
-    fun currentPrice(guildId: Long): Double = tradeService.loadOrCreateMarket(guildId).price
+    fun currentPrice(guildId: Long, coin: Coin = Coin.DEFAULT): Double =
+        tradeService.loadOrCreateMarket(guildId, coin).price
 
     private fun UserPriceTriggerDto.toView() = WatchView(
         id = id ?: 0L,
@@ -240,8 +272,23 @@ data class EconomyView(
     val buyFeeRate: Double = 0.01,
     /** Raw sell fee rate. */
     val sellFeeRate: Double = 0.01,
-    /** [TobyCoinEngine.TRADE_IMPACT] copy so the page can compute slippage client-side. */
-    val tradeImpact: Double = 0.0001
+    /** Per-coin trade impact so the page can compute slippage client-side. */
+    val tradeImpact: Double = 0.0001,
+    /** The coin this view is for — its ticker, e.g. "TOBY" / "MOON". */
+    val coin: String = "TOBY",
+    /** Human name of [coin], e.g. "Moonpup". */
+    val coinName: String = "Toby Coin",
+    /** Risk label of [coin], e.g. "High risk". */
+    val riskLabel: String = "Baseline",
+    /** Every coin, for rendering the selector tabs. */
+    val coinOptions: List<EconomyCoinTab> = emptyList(),
+)
+
+data class EconomyCoinTab(
+    val symbol: String,
+    val name: String,
+    val riskLabel: String,
+    val selected: Boolean,
 )
 
 data class PricePoint(

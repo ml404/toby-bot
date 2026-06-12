@@ -51,6 +51,7 @@ class EconomyWebServiceTest {
         service = EconomyWebService(
             jda, introWebService, tradeService, marketService, userService,
             GuildMembership(jda), priceTriggerService, notificationPrefService,
+            mockk(relaxed = true),
         )
     }
 

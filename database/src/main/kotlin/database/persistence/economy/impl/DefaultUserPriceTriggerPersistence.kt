@@ -1,5 +1,6 @@
 package database.persistence.economy.impl
 
+import common.economy.Coin
 import database.dto.economy.UserPriceTriggerDto
 import database.persistence.economy.UserPriceTriggerPersistence
 import jakarta.persistence.EntityManager
@@ -22,11 +23,12 @@ class DefaultUserPriceTriggerPersistence : UserPriceTriggerPersistence {
     override fun findById(id: Long): UserPriceTriggerDto? =
         entityManager.find(UserPriceTriggerDto::class.java, id)
 
-    override fun listEnabledByGuild(guildId: Long): List<UserPriceTriggerDto> {
+    override fun listEnabledByGuildAndCoin(guildId: Long, coin: Coin): List<UserPriceTriggerDto> {
         val q: TypedQuery<UserPriceTriggerDto> = entityManager.createNamedQuery(
-            "UserPriceTriggerDto.listEnabledByGuild", UserPriceTriggerDto::class.java
+            "UserPriceTriggerDto.listEnabledByGuildAndCoin", UserPriceTriggerDto::class.java
         )
         q.setParameter("guildId", guildId)
+        q.setParameter("coin", coin.symbol)
         return q.resultList
     }
 

@@ -1,5 +1,6 @@
 package web.controller
 
+import common.economy.Coin
 import database.dto.economy.UserPriceTriggerDto
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.ResponseEntity
@@ -74,11 +75,12 @@ class EconomyController(
         @PathVariable guildId: Long,
         @AuthenticationPrincipal user: OAuth2User,
         model: Model,
-        ra: RedirectAttributes
+        ra: RedirectAttributes,
+        @RequestParam(required = false) coin: String? = null
     ): String = WebGuildAccess.requireMemberForPage(
         user, guildId, economyWebService, ra, lobbyPath = "/economy/guilds"
     ) { discordId ->
-        val view = economyWebService.getEconomyView(guildId, discordId) ?: run {
+        val view = economyWebService.getEconomyView(guildId, discordId, Coin.fromSymbol(coin)) ?: run {
             ra.addFlashAttribute("error", "Bot is not in that server.")
             return@requireMemberForPage "redirect:/economy/guilds"
         }
@@ -94,14 +96,16 @@ class EconomyController(
     fun history(
         @PathVariable guildId: Long,
         @RequestParam(defaultValue = "1d") window: String,
-        @AuthenticationPrincipal user: OAuth2User
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) coin: String? = null
     ): ResponseEntity<HistoryResponse> = WebGuildAccess.requireMemberForJsonNoBody(
         user, guildId, economyWebService
     ) { _ ->
+        val c = Coin.fromSymbol(coin)
         ResponseEntity.ok(
             HistoryResponse(
-                points = economyWebService.getHistory(guildId, window),
-                trades = economyWebService.getTrades(guildId, window)
+                points = economyWebService.getHistory(guildId, window, c),
+                trades = economyWebService.getTrades(guildId, window, c)
             )
         )
     }
@@ -111,9 +115,10 @@ class EconomyController(
     fun buy(
         @PathVariable guildId: Long,
         @RequestBody request: TradeRequest,
-        @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<TradeResponse> = trade(user, guildId, request) { discordId ->
-        economyWebService.buy(discordId, guildId, request.amount)
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) coin: String? = null
+    ): ResponseEntity<TradeResponse> = trade(user, guildId, request, Coin.fromSymbol(coin)) { discordId ->
+        economyWebService.buy(discordId, guildId, request.amount, Coin.fromSymbol(coin))
     }
 
     @PostMapping("/{guildId}/sell")
@@ -121,16 +126,18 @@ class EconomyController(
     fun sell(
         @PathVariable guildId: Long,
         @RequestBody request: TradeRequest,
-        @AuthenticationPrincipal user: OAuth2User
-    ): ResponseEntity<TradeResponse> = trade(user, guildId, request) { discordId ->
-        economyWebService.sell(discordId, guildId, request.amount)
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) coin: String? = null
+    ): ResponseEntity<TradeResponse> = trade(user, guildId, request, Coin.fromSymbol(coin)) { discordId ->
+        economyWebService.sell(discordId, guildId, request.amount, Coin.fromSymbol(coin))
     }
 
     @GetMapping("/{guildId}/watches")
     @ResponseBody
     fun listWatches(
         @PathVariable guildId: Long,
-        @AuthenticationPrincipal user: OAuth2User
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) coin: String? = null
     ): ResponseEntity<WatchesListResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService,
         errorBuilder = { status ->
@@ -142,11 +149,12 @@ class EconomyController(
             )
         }
     ) { discordId ->
+        val c = Coin.fromSymbol(coin)
         ResponseEntity.ok(
             WatchesListResponse(
                 ok = true,
-                watches = economyWebService.listWatches(discordId, guildId).map { WatchEntry.of(it) },
-                price = economyWebService.currentPrice(guildId),
+                watches = economyWebService.listWatches(discordId, guildId, c).map { WatchEntry.of(it) },
+                price = economyWebService.currentPrice(guildId, c),
             )
         )
     }
@@ -156,7 +164,8 @@ class EconomyController(
     fun createWatch(
         @PathVariable guildId: Long,
         @RequestBody request: CreateWatchRequest,
-        @AuthenticationPrincipal user: OAuth2User
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) coin: String? = null
     ): ResponseEntity<CreateWatchResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService,
         errorBuilder = { status ->
@@ -180,7 +189,9 @@ class EconomyController(
                 )
             }
         when (val outcome =
-            economyWebService.createWatch(discordId, guildId, request.threshold, side, request.amount)) {
+            economyWebService.createWatch(
+                discordId, guildId, request.threshold, side, request.amount, Coin.fromSymbol(coin)
+            )) {
             is CreateWatchResult.Ok -> ResponseEntity.ok(
                 CreateWatchResponse(
                     ok = true,
@@ -233,6 +244,7 @@ class EconomyController(
         user: OAuth2User,
         guildId: Long,
         request: TradeRequest,
+        coin: Coin,
         action: (Long) -> TradeOutcome
     ): ResponseEntity<TradeResponse> = WebGuildAccess.requireMemberForJson(
         user, guildId, economyWebService,
@@ -274,7 +286,7 @@ class EconomyController(
                 TradeResponse(false, "Need ${outcome.needed} credits, you have ${outcome.have}.")
             )
             is TradeOutcome.InsufficientCoins -> ResponseEntity.badRequest().body(
-                TradeResponse(false, "Need ${outcome.needed} TOBY, you have ${outcome.have}.")
+                TradeResponse(false, "Need ${outcome.needed} ${coin.symbol}, you have ${outcome.have}.")
             )
             TradeOutcome.InvalidAmount -> ResponseEntity.badRequest().body(
                 TradeResponse(false, "Amount must be a positive number.")

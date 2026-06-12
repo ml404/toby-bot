@@ -26,10 +26,11 @@ object TobyCoinEngine {
     const val TICK_INTERVAL_SECONDS = 5L * 60L
 
     /**
-     * Annualised volatility. 1.5 ≈ memecoin / small-cap territory — gives
-     * roughly ±0.5 % per 5-min tick and ±8 % per day, dramatic enough that
-     * the chart visibly moves but recoverable enough that holders aren't
-     * wiped out by a bad afternoon.
+     * Baseline annualised volatility — [Coin.TOBY]'s sigma. 1.5 ≈ memecoin
+     * / small-cap territory — gives roughly ±0.5 % per 5-min tick and ±8 %
+     * per day, dramatic enough that the chart visibly moves but recoverable
+     * enough that holders aren't wiped out by a bad afternoon. Other coins
+     * dial this up or down via [Coin.volatility].
      */
     const val VOLATILITY = 1.5
 
@@ -38,13 +39,19 @@ object TobyCoinEngine {
      * median path trends upward instead of being flat. With pure
      * `0.5 * σ²` the median is technically flat but human eyes read the
      * lognormal asymmetry as "always sinking"; a small bias counters that.
+     * The bias is the same for every coin so none of them is a guaranteed
+     * loser regardless of how wild its swings are.
      */
-    const val DRIFT = 0.5 * VOLATILITY * VOLATILITY + 0.05
+    const val DRIFT_BIAS = 0.05
+
+    /** Baseline drift ([Coin.TOBY]). Retained for callers/tests that read it. */
+    const val DRIFT = 0.5 * VOLATILITY * VOLATILITY + DRIFT_BIAS
 
     /**
-     * Per-coin trade impact on price. 1000 coins moves the market ~10 %.
-     * Whales can still shift the chart but a single big sell no longer nukes
-     * the market for everyone else.
+     * Baseline per-coin trade impact on price ([Coin.TOBY]). 1000 coins
+     * moves the market ~10 %. Whales can still shift the chart but a single
+     * big sell no longer nukes the market for everyone else. Other coins
+     * scale this via [Coin.tradeImpact].
      */
     const val TRADE_IMPACT = 0.0001
 
@@ -71,25 +78,30 @@ object TobyCoinEngine {
     private const val SECONDS_PER_YEAR = 365.0 * 24.0 * 60.0 * 60.0
 
     /**
-     * Apply one GBM tick of length [dtSeconds] (default = one scheduled tick).
-     * Uses [random] for reproducibility in tests.
+     * Apply one GBM tick of length [dtSeconds] (default = one scheduled tick)
+     * for [coin] — its [Coin.volatility] is the sigma that decides how wild
+     * the move is. Uses [random] for reproducibility in tests. Defaults to
+     * [Coin.TOBY] so legacy single-coin callers are unchanged.
      */
     fun tickRandomWalk(
         price: Double,
+        coin: Coin = Coin.TOBY,
         dtSeconds: Long = TICK_INTERVAL_SECONDS,
         random: Random = Random.Default
     ): Double {
         val dt = dtSeconds.toDouble() / SECONDS_PER_YEAR
         val z = gaussian(random)
-        val factor = exp((DRIFT - 0.5 * VOLATILITY * VOLATILITY) * dt + VOLATILITY * sqrt(dt) * z)
+        val sigma = coin.volatility
+        val drift = 0.5 * sigma * sigma + DRIFT_BIAS
+        val factor = exp((drift - 0.5 * sigma * sigma) * dt + sigma * sqrt(dt) * z)
         return max(PRICE_FLOOR, price * factor)
     }
 
-    fun applyBuyPressure(price: Double, coins: Long): Double =
-        max(PRICE_FLOOR, price * (1.0 + TRADE_IMPACT * coins))
+    fun applyBuyPressure(price: Double, coins: Long, coin: Coin = Coin.TOBY): Double =
+        max(PRICE_FLOOR, price * (1.0 + coin.tradeImpact * coins))
 
-    fun applySellPressure(price: Double, coins: Long): Double =
-        max(PRICE_FLOOR, price * (1.0 - TRADE_IMPACT * coins))
+    fun applySellPressure(price: Double, coins: Long, coin: Coin = Coin.TOBY): Double =
+        max(PRICE_FLOOR, price * (1.0 - coin.tradeImpact * coins))
 
     /**
      * Net credits the seller actually receives for [coins] sold at
@@ -100,9 +112,9 @@ object TobyCoinEngine {
      *
      * = floor(midpoint × N) − floor(floor(midpoint × N) × TRADE_FEE)
      */
-    fun proceedsForSell(price: Double, coins: Long, feeRate: Double = TRADE_FEE): Long {
+    fun proceedsForSell(price: Double, coins: Long, feeRate: Double = TRADE_FEE, coin: Coin = Coin.TOBY): Long {
         if (coins <= 0L || price <= 0.0) return 0L
-        val newPrice = applySellPressure(price, coins)
+        val newPrice = applySellPressure(price, coins, coin)
         val midpoint = (price + newPrice) / 2.0
         val gross = kotlin.math.floor(midpoint * coins).toLong()
         val fee = kotlin.math.floor(gross * feeRate).toLong()
@@ -120,13 +132,13 @@ object TobyCoinEngine {
      * user actually holds — callers compare against the balance and
      * surface "insufficient coins" themselves.
      */
-    fun coinsNeededForShortfall(shortfall: Long, price: Double, feeRate: Double = TRADE_FEE): Long {
+    fun coinsNeededForShortfall(shortfall: Long, price: Double, feeRate: Double = TRADE_FEE, coin: Coin = Coin.TOBY): Long {
         if (shortfall <= 0L || price <= 0.0) return 0L
         var n = kotlin.math.ceil(shortfall.toDouble() / price).toLong().coerceAtLeast(1L)
         // 16 iterations: empirically the loop converges in 1–2 for sane
         // shortfalls. The cap is just paranoia for adversarial inputs.
         repeat(16) {
-            if (proceedsForSell(price, n, feeRate) >= shortfall) return n
+            if (proceedsForSell(price, n, feeRate, coin) >= shortfall) return n
             n += 1L
         }
         return n

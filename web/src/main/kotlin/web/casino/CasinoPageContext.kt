@@ -1,8 +1,11 @@
 package web.casino
 
+import common.economy.Coin
+import database.dto.user.UserDto
 import database.service.economy.JackpotGame
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserCoinHoldingService
 import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
 import net.dv8tion.jda.api.entities.Guild
@@ -34,6 +37,7 @@ class CasinoPageContext(
     private val jackpotService: JackpotService,
     private val marketService: TobyCoinMarketService,
     private val jda: JDA,
+    private val holdingService: UserCoinHoldingService,
 ) {
     fun populate(
         model: Model,
@@ -49,6 +53,10 @@ class CasinoPageContext(
         model.addAttribute("balance", profile?.socialCredit ?: 0L)
         model.addAttribute("tobyCoins", profile?.tobyCoins ?: 0L)
         model.addAttribute("marketPrice", marketService.getMarket(guildId)?.price ?: 0.0)
+        // Every coin the player holds (TOBY from the legacy column, the rest
+        // from user_coin_holding), as a JSON island the convert panel reads
+        // so players can cash any coin into credits without leaving the game.
+        model.addAttribute("coinHoldingsJson", coinHoldingsJson(discordId, guildId, profile))
         model.addAttribute("jackpotPool", jackpotService.getPool(guildId))
         model.addAttribute("jackpotWinPct", jackpotService.winProbabilityDisplay(guildId))
         model.addAttribute("jackpotStakeAnchor", jackpotService.stakeAnchor(guildId))
@@ -87,6 +95,25 @@ class CasinoPageContext(
         }
         model.addAttribute("username", user.displayName())
         return guild
+    }
+
+    /**
+     * Serialises the player's non-empty coin balances to a small JSON
+     * array `[{"symbol","name","amount","price"}, ...]`. TOBY's balance
+     * comes from `user.toby_coins`; the rest from `user_coin_holding`.
+     * Prices are the current per-coin market price (falling back to the
+     * coin's initial price if a market hasn't been seeded yet). Built by
+     * hand — coin symbols/names are alphanumeric so no escaping is needed.
+     */
+    private fun coinHoldingsJson(discordId: Long, guildId: Long, profile: UserDto?): String {
+        val entries = Coin.entries.mapNotNull { coin ->
+            val amount = if (coin == Coin.TOBY) profile?.tobyCoins ?: 0L
+                         else holdingService.getAmount(discordId, guildId, coin)
+            if (amount <= 0L) return@mapNotNull null
+            val price = marketService.getMarket(guildId, coin)?.price ?: coin.initialPrice
+            """{"symbol":"${coin.symbol}","name":"${coin.displayName}","amount":$amount,"price":$price,"impact":${coin.tradeImpact}}"""
+        }
+        return entries.joinToString(prefix = "[", postfix = "]", separator = ",")
     }
 }
 

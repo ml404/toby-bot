@@ -631,20 +631,20 @@ class PokerServiceTest {
                 lastTickAt = java.time.Instant.now()
             )
         // Seller mutates the seeded user — RecordingUserService re-reads
-        // by id after sell, so the post-sell balance reflects whatever
-        // we credited here.
+        // by id after sellToCover, so the post-sell balance reflects whatever
+        // we credited here. The casino top-up now liquidates across coins via
+        // EconomyTradeService.sellToCover (TOBY first), so stub that.
         every {
-            tradeService.sell(seedUser.discordId, seedUser.guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+            tradeService.sellToCover(seedUser.discordId, seedUser.guildId, any(), any())
         } answers {
             seedUser.tobyCoins -= coinsSold
             seedUser.socialCredit = startingBalance + creditsDelivered
-            TradeOutcome.Ok(
-                amount = thirdArg(),
-                transactedCredits = creditsDelivered,
-                newCoins = seedUser.tobyCoins,
-                newCredits = seedUser.socialCredit ?: 0L,
-                newPrice = newPrice,
-                fee = 0L
+            EconomyTradeService.SellToCoverResult(
+                creditsRaised = creditsDelivered,
+                covered = true,
+                tobyCoinsSold = coinsSold,
+                tobyNewPrice = newPrice,
+                capacity = creditsDelivered * 4L,
             )
         }
         val service = PokerService(
@@ -702,7 +702,7 @@ class PokerServiceTest {
         // After topup (50 + 200 = 250) and 200-buy-in debit, balance is 50.
         assertEquals(50L, userService.current(host)?.socialCredit)
         verify(exactly = 1) {
-            harness.tradeService.sell(host, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+            harness.tradeService.sellToCover(host, guildId, any(), any())
         }
         val table = registry.get(outcome.tableId)!!
         assertEquals(200L, table.seats[0].chips, "seat funded with the full buy-in")
@@ -745,7 +745,7 @@ class PokerServiceTest {
         val outcome = harness.service.buyIn(joiner, guildId, tableId, buyIn = 300L, autoTopUp = true)
         assertEquals(PokerService.BuyInOutcome.AlreadySeated, outcome)
         verify(exactly = 0) {
-            harness.tradeService.sell(any(), any(), any(), any())
+            harness.tradeService.sellToCover(any(), any(), any(), any())
         }
     }
 
@@ -761,11 +761,13 @@ class PokerServiceTest {
         // The harness mock sets balance to startingBalance + creditsDelivered = 300.
         io.mockk.clearMocks(harness.tradeService, answers = false)
         every {
-            harness.tradeService.sell(host, guildId, any(), EconomyTradeService.REASON_CASINO_TOPUP)
+            harness.tradeService.sellToCover(host, guildId, any(), any())
         } answers {
             user.tobyCoins -= 80L
             user.socialCredit = 300L
-            TradeOutcome.Ok(thirdArg(), 300L, user.tobyCoins, 300L, 2.5, 0L)
+            EconomyTradeService.SellToCoverResult(
+                creditsRaised = 300L, covered = true, tobyCoinsSold = 80L, tobyNewPrice = 2.5, capacity = 1_200L,
+            )
         }
 
         val outcome = harness.service.rebuy(host, guildId, tableId, amount = 300L, autoTopUp = true)
@@ -792,7 +794,7 @@ class PokerServiceTest {
 
         assertTrue(outcome is PokerService.RebuyOutcome.StackCapped)
         verify(exactly = 0) {
-            harness.tradeService.sell(any(), any(), any(), any())
+            harness.tradeService.sellToCover(any(), any(), any(), any())
         }
     }
 
