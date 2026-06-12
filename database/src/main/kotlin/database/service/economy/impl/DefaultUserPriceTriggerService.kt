@@ -1,5 +1,6 @@
 package database.service.economy.impl
 
+import common.economy.Coin
 import database.dto.economy.UserPriceTriggerDto
 import database.persistence.economy.UserPriceTriggerPersistence
 import database.service.economy.UserPriceTriggerService
@@ -18,6 +19,7 @@ class DefaultUserPriceTriggerService(
         priceAtCreation: Double,
         side: UserPriceTriggerDto.Side,
         amount: Long,
+        coin: Coin,
     ): UserPriceTriggerDto {
         require(amount > 0L) { "amount must be positive (was $amount)" }
         require(threshold > 0.0) { "threshold must be positive (was $threshold)" }
@@ -25,6 +27,7 @@ class DefaultUserPriceTriggerService(
             UserPriceTriggerDto(
                 discordId = discordId,
                 guildId = guildId,
+                coin = coin.symbol,
                 thresholdPrice = threshold,
                 priceAtCreation = priceAtCreation,
                 side = side.name,
@@ -44,8 +47,8 @@ class DefaultUserPriceTriggerService(
         return persistence.deleteById(id)
     }
 
-    override fun findTriggered(guildId: Long, newPrice: Double): List<UserPriceTriggerDto> {
-        return persistence.listEnabledByGuild(guildId).filter { row ->
+    override fun findTriggered(guildId: Long, newPrice: Double, coin: Coin): List<UserPriceTriggerDto> {
+        return persistence.listEnabledByGuildAndCoin(guildId, coin).filter { row ->
             // Target reached from the original side: equivalent to
             //   (priceAtCreation > threshold && newPrice <= threshold) ||
             //   (priceAtCreation < threshold && newPrice >= threshold).

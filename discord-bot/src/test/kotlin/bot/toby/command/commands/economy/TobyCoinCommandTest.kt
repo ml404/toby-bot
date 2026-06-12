@@ -12,6 +12,7 @@ import common.economy.TobyCoinEngine
 import database.service.economy.EconomyTradeService
 import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.economy.TobyCoinMarketService
+import database.service.economy.UserCoinHoldingService
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -27,6 +28,7 @@ import java.time.Instant
 internal class TobyCoinCommandTest : CommandTest {
     private lateinit var tradeService: EconomyTradeService
     private lateinit var marketService: TobyCoinMarketService
+    private lateinit var holdingService: UserCoinHoldingService
     private lateinit var chartRenderer: TobyCoinChartRenderer
     private lateinit var command: TobyCoinCommand
 
@@ -38,8 +40,9 @@ internal class TobyCoinCommandTest : CommandTest {
         setUpCommonMocks()
         tradeService = mockk(relaxed = true)
         marketService = mockk(relaxed = true)
+        holdingService = mockk(relaxed = true)
         chartRenderer = mockk(relaxed = true)
-        command = TobyCoinCommand(marketService, tradeService, chartRenderer)
+        command = TobyCoinCommand(marketService, tradeService, holdingService, chartRenderer)
         every { guild.name } returns "Test Guild"
         every { tradeService.loadOrCreateMarket(guildId) } returns market(100.0)
     }

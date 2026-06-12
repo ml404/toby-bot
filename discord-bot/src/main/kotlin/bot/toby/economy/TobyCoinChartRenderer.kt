@@ -1,5 +1,6 @@
 package bot.toby.economy
 
+import common.economy.Coin
 import database.dto.economy.TobyCoinPricePointDto
 import org.jfree.chart.ChartFactory
 import org.jfree.chart.ChartUtils
@@ -31,16 +32,17 @@ class TobyCoinChartRenderer {
     fun renderPng(
         guildName: String,
         points: List<TobyCoinPricePointDto>,
+        coin: Coin = Coin.DEFAULT,
         width: Int = 900,
         height: Int = 400
     ): ByteArray {
-        val series = TimeSeries("TOBY/SC")
+        val series = TimeSeries("${coin.symbol}/SC")
         points.forEach { p ->
             series.addOrUpdate(Second(Date.from(p.sampledAt)), p.price)
         }
         val dataset = TimeSeriesCollection(series)
 
-        val title = "TOBY • $guildName"
+        val title = "${coin.symbol} • $guildName"
         val chart: JFreeChart = ChartFactory.createTimeSeriesChart(
             title,
             "Time",

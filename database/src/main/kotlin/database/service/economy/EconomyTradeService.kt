@@ -4,12 +4,15 @@ import database.dto.guild.ConfigDto
 import database.dto.economy.TobyCoinMarketDto
 import database.dto.economy.TobyCoinPricePointDto
 import database.dto.economy.TobyCoinTradeDto
+import database.dto.user.UserDto
+import common.economy.Coin
 import common.economy.TobyCoinEngine
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
 import kotlin.math.ceil
 import kotlin.math.floor
+import database.persistence.economy.UserCoinHoldingPersistence
 import database.service.guild.ConfigService
 import database.service.economy.JackpotService
 import database.service.economy.TobyCoinMarketService
@@ -48,7 +51,8 @@ class EconomyTradeService(
     private val userService: UserService,
     private val marketService: TobyCoinMarketService,
     private val jackpotService: JackpotService,
-    private val configService: ConfigService
+    private val configService: ConfigService,
+    private val holdingPersistence: UserCoinHoldingPersistence,
 ) {
 
     sealed interface TradeOutcome {
@@ -69,18 +73,19 @@ class EconomyTradeService(
         data object UnknownUser : TradeOutcome
     }
 
-    fun loadOrCreateMarket(guildId: Long): TobyCoinMarketDto {
-        val existing = marketService.getMarket(guildId)
+    fun loadOrCreateMarket(guildId: Long, coin: Coin = Coin.DEFAULT): TobyCoinMarketDto {
+        val existing = marketService.getMarket(guildId, coin)
         if (existing != null) return existing
         val now = Instant.now()
         val fresh = TobyCoinMarketDto(
             guildId = guildId,
-            price = TobyCoinEngine.INITIAL_PRICE,
+            coin = coin.symbol,
+            price = coin.initialPrice,
             lastTickAt = now
         )
         marketService.saveMarket(fresh)
         marketService.appendPricePoint(
-            TobyCoinPricePointDto(guildId = guildId, sampledAt = now, price = fresh.price)
+            TobyCoinPricePointDto(guildId = guildId, coin = coin.symbol, sampledAt = now, price = fresh.price)
         )
         return fresh
     }
@@ -89,16 +94,19 @@ class EconomyTradeService(
         discordId: Long,
         guildId: Long,
         amount: Long,
-        reason: String = REASON_USER
+        reason: String = REASON_USER,
+        coin: Coin = Coin.DEFAULT,
     ): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
-        // Lock order — user first, then market. Same in sell() to avoid deadlock.
+        // Lock order — user, then (for non-TOBY) the holding row, then the
+        // market. The same order is used in sell() to avoid deadlock.
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return TradeOutcome.UnknownUser
-        val market = loadOrCreateMarketForUpdate(guildId)
+        val balance = lockBalance(user, coin)
+        val market = loadOrCreateMarketForUpdate(guildId, coin)
 
         val prePrice = market.price
-        val newPrice = TobyCoinEngine.applyBuyPressure(prePrice, amount)
+        val newPrice = TobyCoinEngine.applyBuyPressure(prePrice, amount, coin)
         val executionPrice = (prePrice + newPrice) / 2.0
         // Buyer pays the midpoint price plus the fee on top — the fee
         // lives in the jackpot pool, not on the user's coin allotment.
@@ -109,17 +117,17 @@ class EconomyTradeService(
         if (credits < cost) return TradeOutcome.InsufficientCredits(cost, credits)
 
         user.socialCredit = credits - cost
-        user.tobyCoins += amount
+        val newCoins = balance.add(amount)
         userService.updateUser(user)
 
         if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
-        commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount, reason)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "BUY", amount, reason, coin)
 
         return TradeOutcome.Ok(
             amount = amount,
             transactedCredits = cost,
-            newCoins = user.tobyCoins,
+            newCoins = newCoins,
             newCredits = user.socialCredit ?: 0L,
             newPrice = newPrice,
             fee = fee,
@@ -130,40 +138,76 @@ class EconomyTradeService(
         discordId: Long,
         guildId: Long,
         amount: Long,
-        reason: String = REASON_USER
+        reason: String = REASON_USER,
+        coin: Coin = Coin.DEFAULT,
     ): TradeOutcome {
         if (amount <= 0) return TradeOutcome.InvalidAmount
-        // Lock order — user first, then market. Same in buy() to avoid deadlock.
+        // Lock order — user, then (for non-TOBY) the holding row, then the
+        // market. The same order is used in buy() to avoid deadlock.
         val user = userService.getUserByIdForUpdate(discordId, guildId)
             ?: return TradeOutcome.UnknownUser
-        val market = loadOrCreateMarketForUpdate(guildId)
+        val balance = lockBalance(user, coin)
+        val market = loadOrCreateMarketForUpdate(guildId, coin)
 
-        if (user.tobyCoins < amount) return TradeOutcome.InsufficientCoins(amount, user.tobyCoins)
+        if (balance.current < amount) return TradeOutcome.InsufficientCoins(amount, balance.current)
 
         val prePrice = market.price
-        val newPrice = TobyCoinEngine.applySellPressure(prePrice, amount)
+        val newPrice = TobyCoinEngine.applySellPressure(prePrice, amount, coin)
         val executionPrice = (prePrice + newPrice) / 2.0
         // Seller's fee is taken off the midpoint proceeds before they
         // hit the wallet — the fee feeds the jackpot pool.
         val gross = floor(executionPrice * amount).toLong()
         val fee = floor(gross * sellFeeRate(guildId)).toLong()
         val proceeds = gross - fee
-        user.tobyCoins -= amount
+        val newCoins = balance.add(-amount)
         user.socialCredit = (user.socialCredit ?: 0L) + proceeds
         userService.updateUser(user)
 
         if (fee > 0L) jackpotService.addToPool(guildId, fee)
 
-        commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount, reason)
+        commitPriceChange(market, newPrice, executionPrice, discordId, "SELL", amount, reason, coin)
 
         return TradeOutcome.Ok(
             amount = amount,
             transactedCredits = proceeds,
-            newCoins = user.tobyCoins,
+            newCoins = newCoins,
             newCredits = user.socialCredit ?: 0L,
             newPrice = newPrice,
             fee = fee,
         )
+    }
+
+    /**
+     * Abstracts where a coin's balance lives: TOBY in [UserDto.tobyCoins]
+     * (so titles / casino / leaderboard keep settling in it), every other
+     * coin in its own `user_coin_holding` row. For the non-TOBY case the
+     * row is fetched under a pessimistic lock so concurrent trades of the
+     * same coin serialise the same way TOBY trades do via the user lock.
+     */
+    private fun lockBalance(user: UserDto, coin: Coin): CoinBalance {
+        if (coin == Coin.TOBY) {
+            return object : CoinBalance {
+                override val current: Long get() = user.tobyCoins
+                override fun add(delta: Long): Long {
+                    user.tobyCoins += delta
+                    return user.tobyCoins
+                }
+            }
+        }
+        val holding = holdingPersistence.getForUpdateOrCreate(user.discordId, user.guildId, coin)
+        return object : CoinBalance {
+            override val current: Long get() = holding.amount
+            override fun add(delta: Long): Long {
+                holding.amount += delta
+                holdingPersistence.save(holding)
+                return holding.amount
+            }
+        }
+    }
+
+    private interface CoinBalance {
+        val current: Long
+        fun add(delta: Long): Long
     }
 
     /**
@@ -201,11 +245,11 @@ class EconomyTradeService(
     // Seed the market row if missing, then re-read it with a write lock. Only
     // the first trade for a brand-new guild hits the seed branch; after that
     // `getMarketForUpdate` finds the row immediately.
-    private fun loadOrCreateMarketForUpdate(guildId: Long): TobyCoinMarketDto {
-        marketService.getMarketForUpdate(guildId)?.let { return it }
-        loadOrCreateMarket(guildId)
-        return marketService.getMarketForUpdate(guildId)
-            ?: error("Market row for guild $guildId could not be locked after creation")
+    private fun loadOrCreateMarketForUpdate(guildId: Long, coin: Coin): TobyCoinMarketDto {
+        marketService.getMarketForUpdate(guildId, coin)?.let { return it }
+        loadOrCreateMarket(guildId, coin)
+        return marketService.getMarketForUpdate(guildId, coin)
+            ?: error("Market row for guild $guildId / $coin could not be locked after creation")
     }
 
     private fun commitPriceChange(
@@ -215,18 +259,20 @@ class EconomyTradeService(
         discordId: Long,
         side: String,
         amount: Long,
-        reason: String
+        reason: String,
+        coin: Coin,
     ) {
         val now = Instant.now()
         market.price = newPrice
         market.lastTickAt = now
         marketService.saveMarket(market)
         marketService.appendPricePoint(
-            TobyCoinPricePointDto(guildId = market.guildId, sampledAt = now, price = newPrice)
+            TobyCoinPricePointDto(guildId = market.guildId, coin = coin.symbol, sampledAt = now, price = newPrice)
         )
         marketService.recordTrade(
             TobyCoinTradeDto(
                 guildId = market.guildId,
+                coin = coin.symbol,
                 discordId = discordId,
                 side = side,
                 amount = amount,

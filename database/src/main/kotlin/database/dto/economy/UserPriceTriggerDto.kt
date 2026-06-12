@@ -1,5 +1,6 @@
 package database.dto.economy
 
+import common.economy.Coin
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -25,9 +26,9 @@ import java.time.Instant
  */
 @NamedQueries(
     NamedQuery(
-        name = "UserPriceTriggerDto.listEnabledByGuild",
+        name = "UserPriceTriggerDto.listEnabledByGuildAndCoin",
         query = "select t from UserPriceTriggerDto t " +
-                "where t.guildId = :guildId and t.enabled = true"
+                "where t.guildId = :guildId and t.coin = :coin and t.enabled = true"
     ),
     NamedQuery(
         name = "UserPriceTriggerDto.listByUser",
@@ -51,6 +52,9 @@ class UserPriceTriggerDto(
 
     @Column(name = "guild_id", nullable = false)
     var guildId: Long = 0,
+
+    @Column(name = "coin", nullable = false, length = 16)
+    var coin: String = Coin.DEFAULT.symbol,
 
     @Column(name = "threshold_price", nullable = false)
     var thresholdPrice: Double = 0.0,
@@ -88,4 +92,9 @@ class UserPriceTriggerDto(
     var sideEnum: Side
         get() = Side.valueOf(side)
         set(value) { side = value.name }
+
+    /** Typed view over the stringly-typed [coin] column. */
+    var coinEnum: Coin
+        get() = Coin.fromSymbol(coin)
+        set(value) { coin = value.symbol }
 }

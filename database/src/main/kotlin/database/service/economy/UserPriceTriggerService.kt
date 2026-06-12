@@ -1,5 +1,6 @@
 package database.service.economy
 
+import common.economy.Coin
 import database.dto.economy.UserPriceTriggerDto
 import java.time.Instant
 
@@ -11,6 +12,7 @@ interface UserPriceTriggerService {
         priceAtCreation: Double,
         side: UserPriceTriggerDto.Side,
         amount: Long,
+        coin: Coin = Coin.DEFAULT,
     ): UserPriceTriggerDto
 
     fun listForUser(discordId: Long, guildId: Long): List<UserPriceTriggerDto>
@@ -22,12 +24,12 @@ interface UserPriceTriggerService {
     fun remove(id: Long, requestingDiscordId: Long): Boolean
 
     /**
-     * Returns every enabled trigger in [guildId] whose target was
-     * reached by [newPrice] from the side the price was on at the
+     * Returns every enabled trigger in [guildId] for [coin] whose target
+     * was reached by [newPrice] from the side the price was on at the
      * trigger's creation. Direction is implicit:
      *   (priceAtCreation - threshold) * (newPrice - threshold) <= 0.
      */
-    fun findTriggered(guildId: Long, newPrice: Double): List<UserPriceTriggerDto>
+    fun findTriggered(guildId: Long, newPrice: Double, coin: Coin = Coin.DEFAULT): List<UserPriceTriggerDto>
 
     /** Mark [id] fired at [firedAt] and disable it. */
     fun markFired(id: Long, firedAt: Instant)

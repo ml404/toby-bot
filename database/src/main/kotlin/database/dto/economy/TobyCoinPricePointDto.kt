@@ -1,5 +1,6 @@
 package database.dto.economy
 
+import common.economy.Coin
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -16,13 +17,13 @@ import java.time.Instant
     NamedQuery(
         name = "TobyCoinPricePointDto.listSince",
         query = "select p from TobyCoinPricePointDto p " +
-                "where p.guildId = :guildId and p.sampledAt >= :since " +
+                "where p.guildId = :guildId and p.coin = :coin and p.sampledAt >= :since " +
                 "order by p.sampledAt asc"
     ),
     NamedQuery(
         name = "TobyCoinPricePointDto.listAll",
         query = "select p from TobyCoinPricePointDto p " +
-                "where p.guildId = :guildId order by p.sampledAt asc"
+                "where p.guildId = :guildId and p.coin = :coin order by p.sampledAt asc"
     ),
     NamedQuery(
         name = "TobyCoinPricePointDto.deleteOlderThan",
@@ -40,6 +41,9 @@ class TobyCoinPricePointDto(
 
     @Column(name = "guild_id", nullable = false)
     var guildId: Long = 0,
+
+    @Column(name = "coin", nullable = false, length = 16)
+    var coin: String = Coin.DEFAULT.symbol,
 
     @Column(name = "sampled_at", nullable = false)
     var sampledAt: Instant = Instant.now(),

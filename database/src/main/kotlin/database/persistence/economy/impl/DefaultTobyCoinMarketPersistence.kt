@@ -1,6 +1,8 @@
 package database.persistence.economy.impl
 
+import common.economy.Coin
 import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.TobyCoinMarketId
 import database.persistence.economy.TobyCoinMarketPersistence
 import jakarta.persistence.EntityManager
 import jakarta.persistence.LockModeType
@@ -15,18 +17,19 @@ class DefaultTobyCoinMarketPersistence : TobyCoinMarketPersistence {
     @PersistenceContext
     private lateinit var entityManager: EntityManager
 
-    override fun getByGuild(guildId: Long): TobyCoinMarketDto? {
+    override fun getByGuild(guildId: Long, coin: Coin): TobyCoinMarketDto? {
         val q: TypedQuery<TobyCoinMarketDto> = entityManager.createNamedQuery(
-            "TobyCoinMarketDto.getByGuild", TobyCoinMarketDto::class.java
+            "TobyCoinMarketDto.getByGuildAndCoin", TobyCoinMarketDto::class.java
         )
         q.setParameter("guildId", guildId)
+        q.setParameter("coin", coin.symbol)
         return runCatching { q.singleResult }.getOrNull()
     }
 
-    override fun getByGuildForUpdate(guildId: Long): TobyCoinMarketDto? {
+    override fun getByGuildForUpdate(guildId: Long, coin: Coin): TobyCoinMarketDto? {
         return entityManager.find(
             TobyCoinMarketDto::class.java,
-            guildId,
+            TobyCoinMarketId(guildId, coin.symbol),
             LockModeType.PESSIMISTIC_WRITE
         )
     }
@@ -39,7 +42,10 @@ class DefaultTobyCoinMarketPersistence : TobyCoinMarketPersistence {
     }
 
     override fun upsert(market: TobyCoinMarketDto): TobyCoinMarketDto {
-        val existing = entityManager.find(TobyCoinMarketDto::class.java, market.guildId)
+        val existing = entityManager.find(
+            TobyCoinMarketDto::class.java,
+            TobyCoinMarketId(market.guildId, market.coin)
+        )
         val saved = if (existing == null) {
             entityManager.persist(market)
             market

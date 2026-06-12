@@ -49,7 +49,7 @@ class UserPriceTriggerServiceTest {
     fun `downward target fires when newPrice reaches or passes through threshold`() {
         // Buy at 100 when price was 120 — fires the first time price hits 100 or below.
         val trigger = row(id = 1, threshold = 100.0, priceAtCreation = 120.0)
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(trigger)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(trigger)
 
         assertTrue(service.findTriggered(guildId, newPrice = 100.0).isNotEmpty())
         assertTrue(service.findTriggered(guildId, newPrice = 99.5).isNotEmpty())
@@ -59,7 +59,7 @@ class UserPriceTriggerServiceTest {
     @Test
     fun `downward target does not fire while price stays above threshold`() {
         val trigger = row(id = 1, threshold = 100.0, priceAtCreation = 120.0)
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(trigger)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(trigger)
 
         assertTrue(service.findTriggered(guildId, newPrice = 110.0).isEmpty())
         assertTrue(service.findTriggered(guildId, newPrice = 120.0).isEmpty())
@@ -75,7 +75,7 @@ class UserPriceTriggerServiceTest {
             priceAtCreation = 120.0,
             side = UserPriceTriggerDto.Side.SELL,
         )
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(trigger)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(trigger)
 
         assertTrue(service.findTriggered(guildId, newPrice = 150.0).isNotEmpty())
         assertTrue(service.findTriggered(guildId, newPrice = 151.0).isNotEmpty())
@@ -90,7 +90,7 @@ class UserPriceTriggerServiceTest {
             priceAtCreation = 120.0,
             side = UserPriceTriggerDto.Side.SELL,
         )
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(trigger)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(trigger)
 
         assertTrue(service.findTriggered(guildId, newPrice = 149.99).isEmpty())
         assertTrue(service.findTriggered(guildId, newPrice = 120.0).isEmpty())
@@ -101,7 +101,7 @@ class UserPriceTriggerServiceTest {
     fun `price gap past threshold in a single tick still fires`() {
         // Created when price was 120; tick goes 120 → 95 (gaps past 100).
         val trigger = row(id = 3, threshold = 100.0, priceAtCreation = 120.0)
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(trigger)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(trigger)
 
         assertTrue(service.findTriggered(guildId, newPrice = 95.0).isNotEmpty())
     }
@@ -113,7 +113,7 @@ class UserPriceTriggerServiceTest {
         // returned by the mock get evaluated against the crossing check.
         val armed = row(id = 1, threshold = 100.0, priceAtCreation = 120.0)
         val notReached = row(id = 2, threshold = 50.0, priceAtCreation = 120.0)
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(armed, notReached)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(armed, notReached)
 
         val fired = service.findTriggered(guildId, newPrice = 99.0)
         assertEquals(listOf(1L), fired.map { it.id })
@@ -123,7 +123,7 @@ class UserPriceTriggerServiceTest {
     fun `multiple triggers for same user can fire on same tick`() {
         val a = row(id = 1, threshold = 100.0, priceAtCreation = 120.0)
         val b = row(id = 2, threshold = 110.0, priceAtCreation = 120.0)
-        every { persistence.listEnabledByGuild(guildId) } returns listOf(a, b)
+        every { persistence.listEnabledByGuildAndCoin(guildId, any()) } returns listOf(a, b)
 
         val fired = service.findTriggered(guildId, newPrice = 99.0)
         assertEquals(listOf(1L, 2L), fired.map { it.id })

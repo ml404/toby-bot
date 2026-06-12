@@ -1,5 +1,6 @@
 package database.dto.economy
 
+import common.economy.Coin
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.GeneratedValue
@@ -16,7 +17,7 @@ import java.time.Instant
     NamedQuery(
         name = "TobyCoinTradeDto.listSince",
         query = "select t from TobyCoinTradeDto t " +
-                "where t.guildId = :guildId and t.executedAt >= :since " +
+                "where t.guildId = :guildId and t.coin = :coin and t.executedAt >= :since " +
                 "order by t.executedAt asc"
     ),
     NamedQuery(
@@ -35,6 +36,9 @@ class TobyCoinTradeDto(
 
     @Column(name = "guild_id", nullable = false)
     var guildId: Long = 0,
+
+    @Column(name = "coin", nullable = false, length = 16)
+    var coin: String = Coin.DEFAULT.symbol,
 
     @Column(name = "discord_id", nullable = false)
     var discordId: Long = 0,
