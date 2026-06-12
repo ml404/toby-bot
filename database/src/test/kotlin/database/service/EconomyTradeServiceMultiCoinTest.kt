@@ -151,4 +151,45 @@ internal class EconomyTradeServiceMultiCoinTest {
         verify(exactly = 0) { userService.getUserByIdForUpdate(any(), any()) }
         verify(exactly = 0) { holdingPersistence.getForUpdateOrCreate(any(), any(), any()) }
     }
+
+    @Test
+    fun `sellToCover sells nothing and reports not covered when capacity is below the shortfall`() {
+        every { userService.getUserById(discordId, guildId) } returns user(toby = 2L)
+        // A near-worthless TOBY market and no other holdings → tiny capacity.
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+                TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0)
+
+        val result = service.sellToCover(discordId, guildId, shortfall = 500L)
+
+        org.junit.jupiter.api.Assertions.assertFalse(result.covered)
+        assertEquals(0L, result.creditsRaised)
+        org.junit.jupiter.api.Assertions.assertTrue(result.capacity < 500L)
+        verify(exactly = 0) { marketService.saveMarket(any()) }
+    }
+
+    @Test
+    fun `sellToCover covers a shortfall from TOBY first`() {
+        val u = user(credits = 0L, toby = 1_000L)
+        every { userService.getUserById(discordId, guildId) } returns u
+        every { userService.getUserByIdForUpdate(discordId, guildId) } returns u
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+                TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 100.0)
+        stubMarket(Coin.TOBY, price = 100.0)   // for the locked sell
+        every { marketService.saveMarket(any()) } answers { firstArg() }
+
+        val result = service.sellToCover(discordId, guildId, shortfall = 500L)
+
+        org.junit.jupiter.api.Assertions.assertTrue(result.covered)
+        org.junit.jupiter.api.Assertions.assertTrue(result.tobyCoinsSold > 0L, "TOBY leg should be the one sold")
+        org.junit.jupiter.api.Assertions.assertTrue(result.creditsRaised >= 500L)
+        org.junit.jupiter.api.Assertions.assertTrue(u.tobyCoins < 1_000L, "TOBY balance debited")
+    }
+
+    @Test
+    fun `sellToCover is a covered no-op for a non-positive shortfall`() {
+        val result = service.sellToCover(discordId, guildId, shortfall = 0L)
+        org.junit.jupiter.api.Assertions.assertTrue(result.covered)
+        assertEquals(0L, result.creditsRaised)
+        verify(exactly = 0) { userService.getUserById(any(), any()) }
+    }
 }

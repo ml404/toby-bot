@@ -75,8 +75,11 @@ class CasinoOutcomeMapper<R : CasinoResponseLike>(
         fun insufficientCreditsMessage(stake: Long, have: Long): String =
             "Need $stake credits, you have $have."
 
+        // `needed`/`have` are in CREDITS now (the auto-top-up draws from
+        // every coin, not just TOBY): how much the wager is still short vs.
+        // how much liquidating all the player's coins would raise.
         fun insufficientCoinsForTopUpMessage(needed: Long, have: Long): String =
-            "Need $needed TOBY to cover the shortfall, you have $have."
+            "Not enough coins to cover the shortfall — you need $needed more credits but selling all your coins raises only $have."
 
         fun invalidStakeMessage(min: Long, max: Long): String =
             "Stake must be between $min and $max credits."

@@ -1,8 +1,6 @@
 package database.service.casino
 
 import database.dto.user.UserDto
-import common.economy.TobyCoinEngine
-import database.service.economy.EconomyTradeService.TradeOutcome
 import database.service.economy.EconomyTradeService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
@@ -36,10 +34,21 @@ internal sealed interface TopUpResult {
 internal object CasinoTopUpHelper {
 
     /**
-     * Sell exactly enough TOBY to lift [user]'s balance from
-     * [currentBalance] up to at least [stake], using the live market
-     * price. No-op responsibility lives in the caller — only invoke
-     * this when balance < stake.
+     * Lift [user]'s balance from [currentBalance] up to at least [stake] by
+     * liquidating the player's coins via [EconomyTradeService.sellToCover]
+     * — TOBY first, then the other coins. So a player who holds MOON/RUFF/
+     * TOBL but not TOBY can still cover a wager. No-op responsibility lives
+     * in the caller — only invoke this when balance < stake.
+     *
+     * Returns:
+     *  - [TopUpResult.ToppedUp] when the shortfall was covered. `soldCoins`/
+     *    `newPrice` carry the TOBY leg (0 / 0.0 when only other coins sold),
+     *    so the existing "Sold N TOBY" receipt stays correct; the non-TOBY
+     *    legs are reflected in the new balance.
+     *  - [TopUpResult.InsufficientCoins] (`needed`/`have` in CREDITS) when
+     *    selling everything still falls short of the stake.
+     *  - [TopUpResult.MarketUnavailable] when there's nothing to liquidate
+     *    (no coins, or no priced market for any held coin).
      */
     fun ensureCreditsForWager(
         tradeService: EconomyTradeService,
@@ -56,39 +65,28 @@ internal object CasinoTopUpHelper {
             return TopUpResult.ToppedUp(user, currentBalance, soldCoins = 0L, newPrice = 0.0)
         }
 
-        val market = marketService.getMarketForUpdate(guildId)
-            ?: return TopUpResult.MarketUnavailable
-        if (market.price <= 0.0) return TopUpResult.MarketUnavailable
-
-        val coinsNeeded = TobyCoinEngine.coinsNeededForShortfall(
-            shortfall, market.price, feeRate = tradeService.sellFeeRate(guildId)
-        )
-        if (user.tobyCoins < coinsNeeded) {
-            return TopUpResult.InsufficientCoins(needed = coinsNeeded, have = user.tobyCoins)
-        }
-
-        val sell = tradeService.sell(
+        val result = tradeService.sellToCover(
             discordId = user.discordId,
             guildId = guildId,
-            amount = coinsNeeded,
-            reason = EconomyTradeService.REASON_CASINO_TOPUP
+            shortfall = shortfall,
+            feeRate = tradeService.sellFeeRate(guildId),
         )
-        if (sell !is TradeOutcome.Ok) {
-            // Sell shouldn't realistically fail here — we already checked
-            // coin count and market price. But surface as MarketUnavailable
-            // rather than crashing the wager.
-            return TopUpResult.MarketUnavailable
+        if (!result.covered) {
+            // Nothing priced to sell at all → present it as the existing
+            // "no market" path (which surfaces as plain insufficient
+            // credits); otherwise the player has coins but not enough.
+            return if (result.capacity <= 0L) TopUpResult.MarketUnavailable
+            else TopUpResult.InsufficientCoins(needed = shortfall, have = result.capacity)
         }
 
-        // Re-read the user under the same transaction so the wager sees
-        // the post-sell balance — Hibernate returns the same managed
-        // entity, no extra round-trip.
+        // Re-read the user under the same transaction so the wager sees the
+        // post-sell balance — Hibernate returns the same managed entity.
         val refreshed = userService.getUserByIdForUpdate(user.discordId, guildId) ?: user
         return TopUpResult.ToppedUp(
             user = refreshed,
             balance = refreshed.socialCredit ?: 0L,
-            soldCoins = coinsNeeded,
-            newPrice = sell.newPrice
+            soldCoins = result.tobyCoinsSold,
+            newPrice = result.tobyNewPrice ?: 0.0
         )
     }
 }

@@ -111,7 +111,7 @@ class CasinoPageContext(
                          else holdingService.getAmount(discordId, guildId, coin)
             if (amount <= 0L) return@mapNotNull null
             val price = marketService.getMarket(guildId, coin)?.price ?: coin.initialPrice
-            """{"symbol":"${coin.symbol}","name":"${coin.displayName}","amount":$amount,"price":$price}"""
+            """{"symbol":"${coin.symbol}","name":"${coin.displayName}","amount":$amount,"price":$price,"impact":${coin.tradeImpact}}"""
         }
         return entries.joinToString(prefix = "[", postfix = "]", separator = ",")
     }

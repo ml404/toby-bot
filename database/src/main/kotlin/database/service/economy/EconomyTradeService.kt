@@ -178,6 +178,89 @@ class EconomyTradeService(
     }
 
     /**
+     * Outcome of [sellToCover]. [creditsRaised] is what the liquidation
+     * actually banked; [covered] is whether it reached the target. The
+     * `toby*` fields carry the TOBY leg specifically so casino receipts
+     * (which only ever named TOBY) keep working — non-TOBY legs still
+     * raise credits, they just don't get a per-coin receipt line.
+     * [capacity] is the most the player could raise by selling everything.
+     */
+    data class SellToCoverResult(
+        val creditsRaised: Long,
+        val covered: Boolean,
+        val tobyCoinsSold: Long,
+        val tobyNewPrice: Double?,
+        val capacity: Long,
+    )
+
+    /**
+     * Raise at least [shortfall] credits by selling the player's coins,
+     * TOBY first (so the common case is identical to the old TOBY-only
+     * top-up and keeps its receipt), then the other coins by descending
+     * liquidation value. Used by the casino auto-top-up so a player who
+     * holds MOON/RUFF/TOBL but not TOBY can still fund a wager.
+     *
+     * Sells nothing and reports `covered=false` when even liquidating
+     * everything can't reach [shortfall], so the caller can reject cleanly
+     * rather than leaving the player part-sold but still short.
+     */
+    fun sellToCover(
+        discordId: Long,
+        guildId: Long,
+        shortfall: Long,
+        feeRate: Double = TobyCoinEngine.TRADE_FEE,
+    ): SellToCoverResult {
+        if (shortfall <= 0L) return SellToCoverResult(0L, covered = true, 0L, null, 0L)
+
+        val tobyHeld = userService.getUserById(discordId, guildId)?.tobyCoins ?: 0L
+        val legs = buildList {
+            priceFor(guildId, Coin.TOBY)?.let { p -> if (tobyHeld > 0L) add(Leg(Coin.TOBY, tobyHeld, p)) }
+            for (coin in Coin.entries) {
+                if (coin == Coin.TOBY) continue
+                val held = holdingPersistence.getAmount(discordId, guildId, coin)
+                if (held <= 0L) continue
+                priceFor(guildId, coin)?.let { p -> add(Leg(coin, held, p)) }
+            }
+        }
+        val capacity = legs.sumOf { TobyCoinEngine.proceedsForSell(it.price, it.held, feeRate, it.coin) }
+        if (capacity < shortfall) {
+            return SellToCoverResult(0L, covered = false, 0L, null, capacity)
+        }
+
+        // TOBY first, then the most valuable holdings, so the fewest coins
+        // and the friendliest receipt cover the gap.
+        val ordered = legs.sortedWith(
+            compareByDescending<Leg> { it.coin == Coin.TOBY }
+                .thenByDescending { TobyCoinEngine.proceedsForSell(it.price, it.held, feeRate, it.coin) }
+        )
+        var raised = 0L
+        var tobyCoinsSold = 0L
+        var tobyNewPrice: Double? = null
+        for (leg in ordered) {
+            if (raised >= shortfall) break
+            val remaining = shortfall - raised
+            val need = TobyCoinEngine
+                .coinsNeededForShortfall(remaining, leg.price, feeRate, leg.coin)
+                .coerceAtMost(leg.held)
+            if (need <= 0L) continue
+            val outcome = sell(discordId, guildId, need, REASON_CASINO_TOPUP, leg.coin)
+            if (outcome is TradeOutcome.Ok) {
+                raised += outcome.transactedCredits
+                if (leg.coin == Coin.TOBY) {
+                    tobyCoinsSold = need
+                    tobyNewPrice = outcome.newPrice
+                }
+            }
+        }
+        return SellToCoverResult(raised, covered = raised >= shortfall, tobyCoinsSold, tobyNewPrice, capacity)
+    }
+
+    private data class Leg(val coin: Coin, val held: Long, val price: Double)
+
+    private fun priceFor(guildId: Long, coin: Coin): Double? =
+        marketService.getMarket(guildId, coin)?.price?.takeIf { it > 0.0 }
+
+    /**
      * Abstracts where a coin's balance lives: TOBY in [UserDto.tobyCoins]
      * (so titles / casino / leaderboard keep settling in it), every other
      * coin in its own `user_coin_holding` row. For the non-TOBY case the

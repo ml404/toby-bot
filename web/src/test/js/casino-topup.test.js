@@ -263,3 +263,68 @@ describe('casino-game → TobyTopUp refresh on balance updates', () => {
         expect(tobyBtn.hidden).toBe(true);
     });
 });
+
+// ---------------------------------------------------------------------------
+// Multi-coin top-up: when the player can't cover with TOBY but holds other
+// coins (read from the #casino-coin-holdings island the convert panel ships),
+// the button still appears with a generic label and the server's sellToCover
+// liquidates across coins.
+// ---------------------------------------------------------------------------
+describe('init multi-coin top-up', () => {
+    function setupDom(opts) {
+        const holdings = opts.holdings ? JSON.stringify(opts.holdings) : '[]';
+        document.body.innerHTML = `
+            <form id="form">
+                <input id="stake" type="number" value="${opts.stake || ''}">
+                <button id="primary" type="submit"></button>
+                <button id="toby" type="submit" hidden>Bet (sell <span class="casino-bet-toby-coins">0</span> TOBY)</button>
+            </form>
+            <span id="balance">${opts.balance || 0}</span>
+            <script type="application/json" id="casino-coin-holdings">${holdings}</script>
+        `;
+        return TobyTopUp.init({
+            form: document.getElementById('form'),
+            stakeInput: document.getElementById('stake'),
+            primaryBtn: document.getElementById('primary'),
+            tobyBtn: document.getElementById('toby'),
+            balanceEl: document.getElementById('balance'),
+            tobyCoins: opts.tobyCoins || 0,
+            marketPrice: opts.marketPrice || 0,
+            onSubmit: opts.onSubmit || jest.fn(),
+        });
+    }
+
+    test('shows a generic "sell coins" label when MOON covers what TOBY cannot', () => {
+        setupDom({
+            stake: 500, balance: 0, tobyCoins: 0, marketPrice: 0,
+            holdings: [{ symbol: 'MOON', name: 'Moonpup', amount: 1000, price: 100, impact: 0.00025 }],
+        });
+        const btn = document.getElementById('toby');
+        expect(btn.hidden).toBe(false);
+        expect(btn.textContent.trim()).toBe('Bet (sell coins)');
+    });
+
+    test('keeps the exact "sell N TOBY" label when TOBY alone can cover', () => {
+        setupDom({
+            stake: 500, balance: 0, tobyCoins: 1000, marketPrice: 2.5,
+            holdings: [{ symbol: 'MOON', name: 'Moonpup', amount: 1000, price: 100, impact: 0.00025 }],
+        });
+        const btn = document.getElementById('toby');
+        expect(btn.hidden).toBe(false);
+        expect(btn.querySelector('.casino-bet-toby-coins').textContent).toBe('205');
+    });
+
+    test('hides when neither TOBY nor the other coins can cover the shortfall', () => {
+        setupDom({
+            stake: 500, balance: 0, tobyCoins: 0, marketPrice: 0,
+            holdings: [{ symbol: 'MOON', name: 'Moonpup', amount: 1, price: 1, impact: 0.00025 }],
+        });
+        expect(document.getElementById('toby').hidden).toBe(true);
+    });
+
+    test('ignores a missing/empty holdings island (TOBY-only behaviour)', () => {
+        setupDom({ stake: 500, balance: 0, tobyCoins: 5, marketPrice: 2.5 });
+        // tobyCoins=5 can't cover and there are no other coins → hidden.
+        expect(document.getElementById('toby').hidden).toBe(true);
+    });
+});
