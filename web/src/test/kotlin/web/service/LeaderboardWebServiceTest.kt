@@ -45,6 +45,7 @@ class LeaderboardWebServiceTest {
             GuildMembership(jda),
             mockk(relaxed = true),
             achievementService,
+            mockk(relaxed = true),
         )
     }
 

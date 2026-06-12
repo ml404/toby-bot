@@ -82,6 +82,20 @@ enum class Coin(
         volatility = 6.0,
         tradeImpact = 0.00025,
     ),
+
+    /**
+     * The wildest coin on the board — even more volatile than MOON. Swings
+     * are violent and a single order shoves the price hard. Strictly for
+     * adrenaline; blink and the chart has done something insane.
+     */
+    TISM(
+        displayName = "Tismcoin",
+        blurb = "Maximum chaos — the most unhinged coin here. Astronomical swings, zero chill.",
+        riskLabel = "Unhinged",
+        initialPrice = 100.0,
+        volatility = 10.0,
+        tradeImpact = 0.0004,
+    ),
     ;
 
     /** Stored code / ticker. Same as the enum constant name. */

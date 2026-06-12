@@ -54,4 +54,12 @@ class DefaultUserCoinHoldingPersistence : UserCoinHoldingPersistence {
             .setParameter("guildId", guildId)
             .resultList
     }
+
+    override fun listForGuild(guildId: Long): List<UserCoinHoldingDto> {
+        return entityManager.createQuery(
+            "select h from UserCoinHoldingDto h where h.guildId = :guildId and h.amount > 0",
+            UserCoinHoldingDto::class.java
+        ).setParameter("guildId", guildId)
+            .resultList
+    }
 }

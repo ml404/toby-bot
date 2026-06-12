@@ -1,10 +1,13 @@
 package web.service
 
+import common.economy.Coin
 import database.dto.economy.MonthlyCreditSnapshotDto
 import database.dto.guild.TitleDto
 import database.dto.economy.TobyCoinMarketDto
+import database.dto.economy.UserCoinHoldingDto
 import database.dto.user.UserDto
 import database.service.economy.MonthlyCreditSnapshotService
+import database.service.economy.UserCoinHoldingService
 import database.service.guild.TitleService
 import database.service.economy.TobyCoinMarketService
 import database.service.user.UserService
@@ -31,6 +34,7 @@ class LeaderboardWebServiceTobyCoinTest {
     private lateinit var marketService: TobyCoinMarketService
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
+    private lateinit var holdingService: UserCoinHoldingService
     private lateinit var service: LeaderboardWebService
 
     @BeforeEach
@@ -41,6 +45,7 @@ class LeaderboardWebServiceTobyCoinTest {
         marketService = mockk(relaxed = true)
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
+        holdingService = mockk(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
         every { guild.name } returns "Test Guild"
 
@@ -57,6 +62,7 @@ class LeaderboardWebServiceTobyCoinTest {
             membership = GuildMembership(jda),
             rollupService = mockk(relaxed = true),
             achievementService = mockk(relaxed = true),
+            holdingService = holdingService,
         )
     }
 
@@ -178,6 +184,53 @@ class LeaderboardWebServiceTobyCoinTest {
 
         assertEquals(LeaderboardWebService.TOBY_COIN_LEADERBOARD_LIMIT, leaders.size)
         assertEquals("U15", leaders.first().name)
+    }
+
+    // ---- multi-coin portfolio valuation ----
+
+    @Test
+    fun `tobyCoinLeaders values every coin held and ranks by total portfolio value`() {
+        // TOBY @ 1, MOON @ 10.
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 50L },   // value 50
+            UserDto(discordId = 2L, guildId = guildId).apply { tobyCoins = 0L },    // 20 MOON → value 200
+            UserDto(discordId = 3L, guildId = guildId).apply { tobyCoins = 300L },  // value 300
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 2L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { guild.getMemberById(2L) } returns member(2L, "Bob")
+        every { guild.getMemberById(3L) } returns member(3L, "Carol")
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        // Ranked by total value: Carol 300, Bob 200 (MOON-only!), Alice 50.
+        assertEquals(listOf("Carol", "Bob", "Alice"), leaders.map { it.name })
+        assertEquals(300L, leaders[0].portfolioCredits)
+        assertEquals(200L, leaders[1].portfolioCredits, "a MOON-only holder is valued from holdings")
+        assertEquals(50L, leaders[2].portfolioCredits)
+        assertEquals(0L, leaders.first { it.name == "Bob" }.coins, "Bob holds 0 TOBY but still ranks by portfolio")
+    }
+
+    @Test
+    fun `tobyCoinLeaders degrades to TOBY-only when the holdings read fails`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 2.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 10L }
+        )
+        every { holdingService.listForGuild(guildId) } throws RuntimeException("holdings table unavailable")
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+
+        val leaders = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders
+
+        assertEquals(1, leaders.size, "page still renders on a holdings failure")
+        assertEquals(20L, leaders[0].portfolioCredits, "falls back to TOBY-only value (10 * 2)")
     }
 
     // ---- +/- this month ----

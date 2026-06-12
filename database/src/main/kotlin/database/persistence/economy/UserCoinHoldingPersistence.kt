@@ -18,4 +18,7 @@ interface UserCoinHoldingPersistence {
 
     /** All non-zero holdings a user has in a guild, for portfolio views. */
     fun listForUser(discordId: Long, guildId: Long): List<UserCoinHoldingDto>
+
+    /** Every non-zero holding in a guild, for leaderboard aggregation. */
+    fun listForGuild(guildId: Long): List<UserCoinHoldingDto>
 }

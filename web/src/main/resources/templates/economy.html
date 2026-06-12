@@ -18,6 +18,7 @@
     <div class="economy-header">
         <div>
             <a class="back-link" th:href="@{/economy/guilds(pick=true)}">&larr; All markets</a>
+            <a class="back-link" th:href="@{/economy/{g}/portfolio(g=${guildId})}">Your portfolio &rarr;</a>
             <h1 th:text="${view.coin} + ' • ' + ${view.guildName}">TOBY</h1>
             <p class="economy-coin-sub muted"
                th:text="${view.coinName} + ' · ' + ${view.riskLabel}">Toby Coin · Baseline</p>
