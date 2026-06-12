@@ -7,6 +7,7 @@
 
 <main id="main" class="container-wide"
       th:attr="data-guild-id=${guildId},
+               data-coin=${view.coin},
                data-price=${view.price},
                data-coins=${view.coins},
                data-credits=${view.credits},
@@ -17,7 +18,9 @@
     <div class="economy-header">
         <div>
             <a class="back-link" th:href="@{/economy/guilds(pick=true)}">&larr; All markets</a>
-            <h1 th:text="'TOBY • ' + ${view.guildName}">TOBY</h1>
+            <h1 th:text="${view.coin} + ' • ' + ${view.guildName}">TOBY</h1>
+            <p class="economy-coin-sub muted"
+               th:text="${view.coinName} + ' · ' + ${view.riskLabel}">Toby Coin · Baseline</p>
         </div>
         <div class="economy-price">
             <div class="economy-price-value" id="economy-price"
@@ -32,6 +35,17 @@
             </div>
         </div>
     </div>
+
+    <nav class="economy-coin-tabs" aria-label="Choose a coin to trade">
+        <a th:each="opt : ${view.coinOptions}"
+           class="economy-coin-tab"
+           th:href="@{/economy/{g}(g=${guildId}, coin=${opt.symbol})}"
+           th:classappend="${opt.selected} ? ' is-active' : ''"
+           th:attr="aria-current=${opt.selected} ? 'page' : null">
+            <span class="economy-coin-tab-sym" th:text="${opt.symbol}">TOBY</span>
+            <span class="economy-coin-tab-risk muted" th:text="${opt.riskLabel}">Baseline</span>
+        </a>
+    </nav>
 
     <div th:replace="~{fragments/alerts :: error}"></div>
 
@@ -70,8 +84,8 @@
         <section class="economy-card">
             <h2>Your wallet</h2>
             <div class="economy-row">
-                <span class="muted">Toby Coin</span>
-                <strong id="economy-coins" th:text="${view.coins} + ' TOBY'">0 TOBY</strong>
+                <span class="muted" th:text="${view.coinName}">Toby Coin</span>
+                <strong id="economy-coins" th:text="${view.coins} + ' ' + ${view.coin}">0 TOBY</strong>
             </div>
             <div class="economy-row">
                 <span class="muted">Value at market</span>
@@ -95,6 +109,7 @@
                         Max buy
                     </button>
                     <button type="button" class="btn-ghost" id="economy-max-sell"
+                            th:title="'Fill in your full ' + ${view.coin} + ' balance'"
                             title="Fill in your full TOBY balance">
                         Max sell
                     </button>

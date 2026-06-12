@@ -5,7 +5,14 @@
     if (!main) return;
 
     const guildId = main.dataset.guildId;
+    const coin = main.dataset.coin || 'TOBY';
     const postJson = window.TobyApi.postJson;
+
+    // Appends ?coin=/&coin= so every market call targets the coin this
+    // page is rendered for. The endpoints default to TOBY when absent.
+    function withCoin(url) {
+        return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'coin=' + encodeURIComponent(coin);
+    }
 
     // Trade-math state. The page is rendered with the live values from
     // EconomyView; we mutate them client-side as trades land so the preview
@@ -144,7 +151,7 @@
             data: {
                 datasets: [
                     {
-                        label: 'TOBY',
+                        label: coin,
                         data: data,
                         borderColor: '#57F287',
                         backgroundColor: 'rgba(87, 242, 135, 0.15)',
@@ -228,7 +235,7 @@
         windowButtons.forEach(function (b) {
             b.setAttribute('aria-pressed', b.dataset.window === windowCode ? 'true' : 'false');
         });
-        fetch('/economy/' + guildId + '/history?window=' + encodeURIComponent(windowCode), {
+        fetch(withCoin('/economy/' + guildId + '/history?window=' + encodeURIComponent(windowCode)), {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         }).then(function (r) { return r.json(); })
@@ -306,7 +313,7 @@
 
     function formatTradeMessage(kind, amount, r) {
         const verb = kind === 'buy' ? 'Bought' : 'Sold';
-        const head = verb + ' ' + amount + ' TOBY';
+        const head = verb + ' ' + amount + ' ' + coin;
         if (r.transactedCredits == null) return head + '.';
         const base = head + ' for ' + r.transactedCredits + ' credits';
         if (!r.fee) return base + '.';
@@ -320,7 +327,7 @@
     function applyTradeResult(r) {
         if (r.newCoins !== null) {
             state.coins = r.newCoins;
-            if (coinsEl) coinsEl.textContent = r.newCoins + ' TOBY';
+            if (coinsEl) coinsEl.textContent = r.newCoins + ' ' + coin;
         }
         if (r.newCredits !== null) {
             state.credits = r.newCredits;
@@ -340,7 +347,7 @@
         const amount = parseInt(amountInput.value, 10);
         if (!amount || amount <= 0) { toast('Enter a positive amount.', 'error'); return; }
         btn.disabled = true;
-        postJson('/economy/' + guildId + '/' + kind, { amount: amount })
+        postJson(withCoin('/economy/' + guildId + '/' + kind), { amount: amount })
             .then(function (r) {
                 btn.disabled = false;
                 if (r && r.ok) {
