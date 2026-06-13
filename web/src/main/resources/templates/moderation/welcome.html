@@ -171,7 +171,7 @@
                         </thead>
                         <tbody>
                             <tr th:each="r : ${welcome.autoRoles}" th:data-role-id="${r.roleId}">
-                                <td>
+                                <td data-label="Role">
                                     <span class="title-pill"
                                           th:style="${r.roleColorHex != null ? 'color: ' + r.roleColorHex : ''}"
                                           th:text="${r.roleName}">Role</span>

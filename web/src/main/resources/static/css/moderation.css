@@ -1639,6 +1639,11 @@ details.config-section.is-hidden { display: none; }
         justify-content: space-between;
         align-items: center;
         gap: var(--space-2);
+        /* On the narrowest phones (~320px) the data-label caption plus the
+           stake input and its Save button can't share one line; let the
+           input+Save group wrap below the label instead of pushing the
+           card past the viewport edge. */
+        flex-wrap: wrap;
     }
     .settings-stakes-table tbody td::before {
         content: attr(data-label);

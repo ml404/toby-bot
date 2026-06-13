@@ -104,9 +104,19 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-/* ---- Layout ---- */
-.container { max-width: 900px; margin: 40px auto; padding: 0 var(--space-6); }
-.container-wide { max-width: 1100px; margin: 40px auto; padding: 0 var(--space-6); }
+/* ---- Layout ----
+   `width: 100%` is load-bearing, not redundant with `max-width`. `body`
+   is a column flexbox (sticky-footer mechanism above), which makes these
+   containers flex items. A flex item with `width: auto` is sized by its
+   content's min-content width, so a single non-wrapping child wider than
+   the viewport — e.g. the moderation `.mod-subnav` horizontal-scroll tab
+   strip — would stretch the container past 100vw and push the whole page
+   into horizontal scroll on phones. Pinning the width to 100% (clamped by
+   max-width, centred by the auto margins) gives the flex item a definite
+   cross size so it tracks the viewport and its overflowing children scroll
+   inside their own `overflow-x` boxes instead. */
+.container { width: 100%; max-width: 900px; margin: 40px auto; padding: 0 var(--space-6); }
+.container-wide { width: 100%; max-width: 1100px; margin: 40px auto; padding: 0 var(--space-6); }
 
 h1 { font-size: 1.6rem; color: var(--heading); }
 h2 { font-size: 1.1rem; color: var(--heading-soft); }

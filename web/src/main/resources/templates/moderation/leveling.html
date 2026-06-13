@@ -169,8 +169,8 @@
                         </thead>
                         <tbody>
                             <tr th:each="r : ${leveling.levelRewards}" th:data-level="${r.level}">
-                                <td th:text="${r.level}">1</td>
-                                <td>
+                                <td data-label="Level" th:text="${r.level}">1</td>
+                                <td data-label="Role">
                                     <span class="title-pill"
                                           th:style="${r.roleColorHex != null ? 'color: ' + r.roleColorHex : ''}"
                                           th:text="${r.roleName}">Role</span>
@@ -357,13 +357,13 @@
                     </thead>
                     <tbody>
                         <tr th:each="t : ${leveling.titles}" th:data-title-id="${t.id}">
-                            <td>
+                            <td data-label="Title">
                                 <span class="title-pill"
                                       th:style="${t.colorHex != null ? 'color: ' + t.colorHex : ''}"
                                       th:text="${t.label}">Title</span>
                             </td>
-                            <td th:text="${t.cost}">0</td>
-                            <td>
+                            <td data-label="Cost" th:text="${t.cost}">0</td>
+                            <td data-label="Required level">
                                 <input type="number" class="leveling-title-level-input"
                                        min="0" max="1000"
                                        th:value="${t.requiredLevel}"

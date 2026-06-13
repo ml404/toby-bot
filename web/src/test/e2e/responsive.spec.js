@@ -15,6 +15,7 @@ const { test, expect } = require('@playwright/test');
 const PAGES = [
     { url: '/home.html', name: 'home' },
     { url: '/moderation-users.html', name: 'moderation-users' },
+    { url: '/moderation-settings.html', name: 'moderation-settings' },
     { url: '/blackjack-table.html', name: 'blackjack' },
     { url: '/roulette.html', name: 'roulette' },
     { url: '/leaderboard.html', name: 'leaderboard' },
