@@ -1,10 +1,14 @@
 package bot.toby.scheduling
 
 import database.dto.guild.ConfigDto
+import database.dto.economy.MonthlyCoinHoldingSnapshotDto
 import database.dto.economy.MonthlyCreditSnapshotDto
+import database.dto.economy.UserCoinHoldingDto
 import database.dto.user.UserDto
 import database.service.guild.ConfigService
+import database.service.economy.MonthlyCoinHoldingSnapshotService
 import database.service.economy.MonthlyCreditSnapshotService
+import database.service.economy.UserCoinHoldingService
 import database.service.activity.UbiDailyService
 import database.service.user.UserService
 import database.service.activity.VoiceSessionService
@@ -38,6 +42,8 @@ class MonthlyLeaderboardJobTest {
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var configService: ConfigService
     private lateinit var ubiDailyService: UbiDailyService
+    private lateinit var coinHoldingService: UserCoinHoldingService
+    private lateinit var coinHoldingSnapshotService: MonthlyCoinHoldingSnapshotService
     private lateinit var hourGate: GuildHourGate
     private lateinit var guild: Guild
     private lateinit var channel: TextChannel
@@ -61,6 +67,8 @@ class MonthlyLeaderboardJobTest {
         snapshotService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         ubiDailyService = mockk(relaxed = true)
+        coinHoldingService = mockk(relaxed = true)
+        coinHoldingSnapshotService = mockk(relaxed = true)
         // Relaxed configService → getConfigByName null → gate uses default hour 12.
         hourGate = GuildHourGate(configService)
         guild = mockk(relaxed = true)
@@ -83,7 +91,7 @@ class MonthlyLeaderboardJobTest {
 
         job = MonthlyLeaderboardJob(
             jda, userService, voiceSessionService, snapshotService, configService,
-            ubiDailyService, hourGate, clock,
+            ubiDailyService, hourGate, coinHoldingService, coinHoldingSnapshotService, clock,
         )
     }
 
@@ -95,7 +103,7 @@ class MonthlyLeaderboardJobTest {
         )
         return MonthlyLeaderboardJob(
             jda, userService, voiceSessionService, snapshotService, configService,
-            ubiDailyService, hourGate, c,
+            ubiDailyService, hourGate, coinHoldingService, coinHoldingSnapshotService, c,
         )
     }
 
@@ -158,6 +166,30 @@ class MonthlyLeaderboardJobTest {
         // month rolls over.
         assertEquals(7L, byUser[1L]?.tobyCoins)
         assertEquals(11L, byUser[2L]?.tobyCoins)
+    }
+
+    @Test
+    fun `postMonthlyLeaderboard freezes each non-TOBY coin holding for the current month`() {
+        val alice = UserDto(discordId = 1L, guildId = guildId).apply { socialCredit = 500L; tobyCoins = 7L }
+        every { userService.listGuildUsers(guildId) } returns listOf(alice)
+        member(1L, "Alice")
+        every { snapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        every { voiceSessionService.sumCountedSecondsInRangeByUser(guildId, any(), any()) } returns emptyMap()
+        every { configService.getConfigByName(any(), guildId.toString()) } returns null
+        // Alice holds two non-TOBY coins at the boundary.
+        every { coinHoldingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = "MOON", amount = 20L),
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = "RUFF", amount = 5L),
+        )
+        val frozen = mutableListOf<MonthlyCoinHoldingSnapshotDto>()
+        every { coinHoldingSnapshotService.upsertIfMissing(capture(frozen)) } answers { firstArg() }
+
+        job.postMonthlyLeaderboard()
+
+        val byCoin = frozen.associateBy { it.coin }
+        assertEquals(20L, byCoin["MOON"]?.amount, "MOON balance must be frozen at the boundary")
+        assertEquals(5L, byCoin["RUFF"]?.amount, "RUFF balance must be frozen at the boundary")
+        assertEquals(1L, byCoin["MOON"]?.discordId)
     }
 
     @Test

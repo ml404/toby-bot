@@ -166,7 +166,6 @@ class RichMemberStylingTest {
             "data-label=\"Credits\"",
             "data-label=\"Coins held\"",
             "data-label=\"This month\"",
-            "data-label=\"TOBY this month\"",
             "data-label=\"Voice\"",
             "data-label=\"Portfolio\"",
         ).forEach { selector ->

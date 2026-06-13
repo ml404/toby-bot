@@ -46,6 +46,7 @@ class LeaderboardWebServiceTest {
             mockk(relaxed = true),
             achievementService,
             mockk(relaxed = true),
+            mockk(relaxed = true),
         )
     }
 

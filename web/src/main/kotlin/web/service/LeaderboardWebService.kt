@@ -3,6 +3,7 @@ package web.service
 import common.economy.Coin
 import database.service.guild.AchievementService
 import database.service.activity.ActivityMonthlyRollupService
+import database.service.economy.MonthlyCoinHoldingSnapshotService
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.economy.UserCoinHoldingService
 import database.service.guild.TitleService
@@ -28,6 +29,7 @@ class LeaderboardWebService(
     private val rollupService: ActivityMonthlyRollupService,
     private val achievementService: AchievementService,
     private val holdingService: UserCoinHoldingService,
+    private val holdingSnapshotService: MonthlyCoinHoldingSnapshotService,
 ) {
 
     companion object {
@@ -351,6 +353,13 @@ class LeaderboardWebService(
             snapshotService.listForGuildDate(guildId, thisMonthStart)
                 .associateBy { it.discordId }
         }.getOrDefault(emptyMap()).toMutableMap()
+        // Per-coin (non-TOBY) baselines frozen at this month's 1st, grouped
+        // discordId -> (coin symbol -> amount). Same best-effort contract as the
+        // TOBY baseline above. Drives the per-coin "+/- this month" badge.
+        val holdingBaselines: MutableMap<Long, MutableMap<String, Long>> = HashMap()
+        runCatching { holdingSnapshotService.listForGuildDate(guildId, thisMonthStart) }
+            .getOrDefault(emptyList())
+            .forEach { snap -> holdingBaselines.getOrPut(snap.discordId) { HashMap() }[snap.coin] = snap.amount }
 
         val allUsers = userService.listGuildUsers(guildId).filterNotNull()
 
@@ -374,6 +383,30 @@ class LeaderboardWebService(
                     )
                 }.getOrNull()?.let { baselines[dto.discordId] = it }
             }
+            // Same lazy-baseline for the user's non-TOBY coins: if no boundary
+            // freeze exists for them this month, seed it from current holdings so
+            // the per-coin delta starts at 0 (and reflects real trades from the
+            // next one on) instead of falsely reporting the whole balance.
+            if (!holdingBaselines.containsKey(dto.discordId)) {
+                val current = holdingsByUser[dto.discordId].orEmpty()
+                if (current.isNotEmpty()) {
+                    val frozen = HashMap<String, Long>()
+                    current.forEach { h ->
+                        runCatching {
+                            holdingSnapshotService.upsertIfMissing(
+                                database.dto.economy.MonthlyCoinHoldingSnapshotDto(
+                                    discordId = dto.discordId,
+                                    guildId = guildId,
+                                    snapshotDate = thisMonthStart,
+                                    coin = h.coin,
+                                    amount = h.amount
+                                )
+                            )
+                        }.getOrNull()?.let { frozen[it.coin] = it.amount }
+                    }
+                    if (frozen.isNotEmpty()) holdingBaselines[dto.discordId] = frozen
+                }
+            }
         }
 
         return allUsers.asSequence()
@@ -386,7 +419,9 @@ class LeaderboardWebService(
                 val holdings = buildCoinHoldings(
                     tobyCoins = dto.tobyCoins,
                     tobyPrice = tobyPrice,
+                    tobyBaseline = baselines[dto.discordId]?.tobyCoins,
                     userHoldings = holdingsByUser[dto.discordId].orEmpty(),
+                    holdingBaseline = holdingBaselines[dto.discordId].orEmpty(),
                     prices = prices,
                 )
                 val value = holdings.sumOf { it.valueCredits }
@@ -425,11 +460,17 @@ class LeaderboardWebService(
      * a member actually holds across every coin rather than just TOBY. Coins
      * with a zero balance are skipped; a held coin whose market isn't seeded
      * yet still appears at a 0 value so the holding isn't silently dropped.
+     *
+     * Each coin also carries its net unit change since this month's boundary
+     * ([tobyBaseline] for TOBY, [holdingBaseline] per symbol for the rest); a
+     * missing baseline degrades to 0 rather than reporting the whole balance.
      */
     private fun buildCoinHoldings(
         tobyCoins: Long,
         tobyPrice: Double,
+        tobyBaseline: Long?,
         userHoldings: List<database.dto.economy.UserCoinHoldingDto>,
+        holdingBaseline: Map<String, Long>,
         prices: Map<Coin, Double>,
     ): List<CoinHolding> {
         val holdings = ArrayList<CoinHolding>(userHoldings.size + 1)
@@ -439,6 +480,7 @@ class LeaderboardWebService(
                 displayName = Coin.TOBY.displayName,
                 amount = tobyCoins,
                 valueCredits = floor(tobyCoins.toDouble() * tobyPrice).toLong(),
+                changeThisMonth = tobyBaseline?.let { tobyCoins - it } ?: 0L,
             )
         }
         userHoldings.forEach { h ->
@@ -449,6 +491,7 @@ class LeaderboardWebService(
                     displayName = coin.displayName,
                     amount = h.amount,
                     valueCredits = floor(h.amount.toDouble() * (prices[coin] ?: 0.0)).toLong(),
+                    changeThisMonth = holdingBaseline[coin.symbol]?.let { h.amount - it } ?: 0L,
                 )
             }
         }
@@ -536,6 +579,8 @@ data class CoinHolding(
     val displayName: String,
     val amount: Long,
     val valueCredits: Long,
+    /** Net unit change in this coin since the start-of-month boundary snapshot. */
+    val changeThisMonth: Long = 0L,
 )
 
 data class TopGameRow(

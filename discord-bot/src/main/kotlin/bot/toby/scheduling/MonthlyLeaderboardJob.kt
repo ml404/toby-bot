@@ -2,9 +2,12 @@ package bot.toby.scheduling
 
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto
+import database.dto.economy.MonthlyCoinHoldingSnapshotDto
 import database.dto.economy.MonthlyCreditSnapshotDto
 import database.service.guild.ConfigService
+import database.service.economy.MonthlyCoinHoldingSnapshotService
 import database.service.economy.MonthlyCreditSnapshotService
+import database.service.economy.UserCoinHoldingService
 import database.service.activity.UbiDailyService
 import database.service.user.UserService
 import database.service.activity.VoiceSessionService
@@ -33,6 +36,8 @@ class MonthlyLeaderboardJob @Autowired constructor(
     private val configService: ConfigService,
     private val ubiDailyService: UbiDailyService,
     private val hourGate: GuildHourGate,
+    private val coinHoldingService: UserCoinHoldingService,
+    private val coinHoldingSnapshotService: MonthlyCoinHoldingSnapshotService,
     private val clock: Clock = Clock.systemUTC()
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -97,6 +102,11 @@ class MonthlyLeaderboardJob @Autowired constructor(
                 // upsertIfMissing keeps whatever was written first — the 00:00
                 // tick — so a later posting tick reads the midnight values.
                 val boundarySnapshots = freezeMonthBoundary(guild.idLong, today, users)
+                // Freeze the same boundary for every NON-TOBY coin so the wallet
+                // leaderboard's per-coin "+/- this month" has a baseline. Best
+                // effort: a holdings failure must not block the credit snapshot
+                // or the post.
+                freezeMonthBoundaryHoldings(guild.idLong, today)
 
                 if (isPosting) {
                     postForGuild(guild, today, previousMonthStart, users, boundarySnapshots)
@@ -125,6 +135,31 @@ class MonthlyLeaderboardJob @Autowired constructor(
                 tobyCoins = dto.tobyCoins
             )
         )
+    }
+
+    /**
+     * Freezes every non-zero NON-TOBY coin balance in the guild as the
+     * month-boundary baseline for [boundaryDate], unless one already exists for
+     * that (user, coin). TOBY is captured separately in [freezeMonthBoundary];
+     * this only covers `user_coin_holding`. Wrapped so a holdings read/write
+     * failure degrades to "no per-coin delta" rather than aborting the job.
+     */
+    private fun freezeMonthBoundaryHoldings(guildId: Long, boundaryDate: LocalDate) {
+        runCatching {
+            coinHoldingService.listForGuild(guildId).forEach { holding ->
+                coinHoldingSnapshotService.upsertIfMissing(
+                    MonthlyCoinHoldingSnapshotDto(
+                        discordId = holding.discordId,
+                        guildId = guildId,
+                        snapshotDate = boundaryDate,
+                        coin = holding.coin,
+                        amount = holding.amount,
+                    )
+                )
+            }
+        }.onFailure {
+            logger.error("Failed to freeze coin holdings for guild $guildId: ${it.message}")
+        }
     }
 
     private fun postForGuild(

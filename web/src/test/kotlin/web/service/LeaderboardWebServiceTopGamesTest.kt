@@ -57,6 +57,7 @@ class LeaderboardWebServiceTopGamesTest {
             rollupService = rollupService,
             achievementService = mockk(relaxed = true),
             holdingService = mockk(relaxed = true),
+            holdingSnapshotService = mockk(relaxed = true),
         )
     }
 

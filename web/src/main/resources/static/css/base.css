@@ -1198,6 +1198,21 @@ td { font-size: 0.95rem; }
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
+/* Net unit change in this coin since the month boundary, shown inline on the
+   pill. Hidden entirely when the change is 0 so steady wallets stay quiet. */
+.lb-coin-pill .lb-coin-delta {
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.lb-coin-pill .lb-coin-delta-up { color: var(--success); }
+.lb-coin-pill .lb-coin-delta-down { color: var(--sell); }
+/* Faint qualifier in a column header, e.g. the "(Δ this month)" on Coins held. */
+.lb-col-hint {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.75rem;
+}
 
 /* ============================================================
    Mobile: tighter standings cards.
@@ -1213,8 +1228,7 @@ td { font-size: 0.95rem; }
             instead of three separate stacked rows.
    The column-area mappings reference the data-label values the
    leaderboard template emits ("#", "Member", "Prestige", and the per-
-   table metric labels — Credits/Coins held/This month/TOBY this month/
-   Voice/Portfolio).
+   table metric labels — Credits/Coins held/This month/Voice/Portfolio).
    Other mod-table consumers don't carry those labels so the grid
    override never fires for them.
    ============================================================ */
@@ -1270,7 +1284,6 @@ td { font-size: 0.95rem; }
     .lb-standings-table.mod-table td[data-label="Credits"],
     .lb-standings-table.mod-table td[data-label="Coins held"],
     .lb-standings-table.mod-table td[data-label="This month"],
-    .lb-standings-table.mod-table td[data-label="TOBY this month"],
     .lb-standings-table.mod-table td[data-label="Voice"],
     .lb-standings-table.mod-table td[data-label="Portfolio"],
     .lb-standings-table.mod-table td[data-label="XP"] {
@@ -1283,8 +1296,7 @@ td { font-size: 0.95rem; }
         grid-area: m1;
         align-items: flex-start;
     }
-    .lb-standings-table.mod-table td[data-label="This month"],
-    .lb-standings-table.mod-table td[data-label="TOBY this month"] {
+    .lb-standings-table.mod-table td[data-label="This month"] {
         grid-area: m2;
         align-items: center;
         text-align: center;
@@ -1306,7 +1318,6 @@ td { font-size: 0.95rem; }
     .lb-standings-table.mod-table td[data-label="Credits"]::before,
     .lb-standings-table.mod-table td[data-label="Coins held"]::before,
     .lb-standings-table.mod-table td[data-label="This month"]::before,
-    .lb-standings-table.mod-table td[data-label="TOBY this month"]::before,
     .lb-standings-table.mod-table td[data-label="Voice"]::before,
     .lb-standings-table.mod-table td[data-label="Portfolio"]::before,
     .lb-standings-table.mod-table td[data-label="XP"]::before {

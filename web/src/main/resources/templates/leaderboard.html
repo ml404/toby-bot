@@ -303,8 +303,7 @@
                         <th class="lb-col-rank">#</th>
                         <th>Member</th>
                         <th>Prestige</th>
-                        <th>🪙 Coins held</th>
-                        <th class="lb-col-value">TOBY this month</th>
+                        <th>🪙 Coins held <span class="lb-col-hint">(Δ this month)</span></th>
                         <th class="lb-col-value">💰 Portfolio</th>
                     </tr>
                     </thead>
@@ -329,20 +328,17 @@
                         <td data-label="Coins held">
                             <div class="lb-coin-holdings">
                                 <span class="lb-coin-pill" th:each="h : ${row.holdings}"
-                                      th:title="|${h.amount} ${h.displayName} · ${h.valueCredits} credits|">
+                                      th:title="|${h.amount} ${h.displayName} · ${h.valueCredits} credits · ${h.changeThisMonth > 0 ? '+' : ''}${h.changeThisMonth} this month|">
                                     <span class="lb-coin-amount" th:text="${h.amount}">0</span>
                                     <span class="lb-coin-symbol" th:text="${h.symbol}">TOBY</span>
+                                    <span th:if="${h.changeThisMonth > 0}"
+                                          class="lb-coin-delta lb-coin-delta-up"
+                                          th:text="'+' + ${h.changeThisMonth}">+0</span>
+                                    <span th:if="${h.changeThisMonth &lt; 0}"
+                                          class="lb-coin-delta lb-coin-delta-down"
+                                          th:text="${h.changeThisMonth}">-0</span>
                                 </span>
                             </div>
-                        </td>
-                        <td data-label="TOBY this month" class="lb-col-value">
-                            <span th:if="${row.coinsThisMonth > 0}"
-                                  class="lb-value-month"
-                                  th:text="'+' + ${row.coinsThisMonth}">+0</span>
-                            <span th:if="${row.coinsThisMonth &lt; 0}"
-                                  class="lb-value-month-down"
-                                  th:text="${row.coinsThisMonth}">-0</span>
-                            <span th:if="${row.coinsThisMonth == 0}" class="muted">—</span>
                         </td>
                         <td data-label="Portfolio" class="lb-col-value">
                             <span class="lb-value-portfolio" th:text="${row.portfolioCredits}">0</span>
