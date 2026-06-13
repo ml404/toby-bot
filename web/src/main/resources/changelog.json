@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix horizontal overflow on moderation settings/admin pages on mobile",
+    "summary": "## What & why",
+    "emoji": "🛡️",
+    "prNumber": 722
+  },
+  {
+    "date": "June 2026",
     "title": "Fix price-watch remove button swallowing clicks on its SVG icon",
     "summary": "## The bug The price-watch **Remove** button renders an inline `<svg>` X icon. The delegated click handler guarded with:",
     "emoji": "💰",
