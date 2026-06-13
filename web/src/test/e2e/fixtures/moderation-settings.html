@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Moderation: Settings (fixture)</title>
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/moderation.css">
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<nav>
+    <a class="brand" href="#">TobyBot</a>
+    <button class="nav-toggle" type="button" aria-expanded="false"><span class="nav-toggle-icon" aria-hidden="true"></span></button>
+    <div class="nav-links" id="nav-menu">
+        <div class="nav-drawer-header"><span class="nav-drawer-brand">TobyBot</span><button class="nav-drawer-close" type="button">✕</button></div>
+        <div class="nav-section"><div class="nav-section-eyebrow">Main</div><a class="nav-item" href="#"><span class="nav-item-icon">👤</span><span>Profile</span></a></div>
+        <div class="nav-section"><div class="nav-section-eyebrow">Moderation</div><a class="nav-item" href="#"><span class="nav-item-icon">🛡️</span><span>Admin</span></a></div>
+    </div>
+    <div class="nav-backdrop" id="nav-backdrop" hidden></div>
+</nav>
+
+<main id="main" class="container" data-guild-id="1" data-actor-id="1" data-is-owner="true">
+    <div>
+        <header class="mod-page-header">
+            <a class="back-link" href="#">← All servers</a>
+            <div class="mod-page-header__row">
+                <div class="mod-page-header__identity">
+                    <span class="mod-page-header__avatar mod-page-header__avatar--initial" aria-hidden="true">R</span>
+                    <div class="mod-page-header__titles">
+                        <p class="mod-page-header__eyebrow">REAL GAYMERS</p>
+                        <h1 class="mod-page-header__title">Settings</h1>
+                        <p class="mod-page-header__subtitle">Per-guild knobs for economy, casino, leveling, and shared bot behaviour.</p>
+                    </div>
+                </div>
+                <div class="mod-page-header__badges">
+                    <span class="mod-page-header__badge mod-page-header__badge--owner">Server owner</span>
+                </div>
+            </div>
+        </header>
+        <nav class="mod-subnav" aria-label="Moderation sections">
+            <a class="mod-subnav-link" href="#">Users</a>
+            <a class="mod-subnav-link" href="#">Actions</a>
+            <a class="mod-subnav-link active" href="#">Settings</a>
+            <a class="mod-subnav-link" href="#">Voice</a>
+            <a class="mod-subnav-link" href="#">Poll</a>
+            <a class="mod-subnav-link" href="#">Casino</a>
+            <a class="mod-subnav-link" href="#">Lottery</a>
+            <a class="mod-subnav-link" href="#">Leveling</a>
+            <a class="mod-subnav-link" href="#">Activity</a>
+            <a class="mod-subnav-link" href="#">Welcome</a>
+        </nav>
+    </div>
+
+    <section class="mod-panel" data-panel="settings">
+        <div class="settings-shell">
+            <aside class="settings-nav" aria-label="Settings sections">
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Server</p>
+                    <a href="#" class="settings-nav-link">Server features</a>
+                    <a href="#" class="settings-nav-link">Messages &amp; leaderboards</a>
+                    <a href="#" class="settings-nav-link">Magic: The Gathering</a>
+                </div>
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Economy</p>
+                    <a href="#" class="settings-nav-link">Economy</a>
+                </div>
+                <div class="settings-nav-group">
+                    <p class="settings-nav-heading">Casino</p>
+                    <a href="#" class="settings-nav-link">Jackpot</a>
+                    <a href="#" class="settings-nav-link">Anti-autoclicker</a>
+                    <a href="#" class="settings-nav-link">Poker</a>
+                    <a href="#" class="settings-nav-link">Blackjack</a>
+                    <a href="#" class="settings-nav-link">Game stake limits</a>
+                </div>
+            </aside>
+
+            <div class="settings-content">
+                <div class="mod-search config-search-bar">
+                    <label for="config-search" class="sr-only">Search settings</label>
+                    <input id="config-search" type="search" class="mod-search-input"
+                           placeholder="Search settings (e.g. jackpot, RTP, ante)…">
+                    <span id="config-search-count" class="mod-search-count"></span>
+                </div>
+
+                <h2 class="config-pillar">Server</h2>
+
+                <details class="config-section">
+                    <summary>Server features</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="MOVE">
+                            <label>Default move channel</label>
+                            <div class="user-picker" data-placeholder="— none —">
+                                <select data-channel-picker>
+                                    <option value="">— none —</option>
+                                    <option>General Voice Channel With A Long Name</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn save-config">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="config-section" open>
+                    <summary>Messages &amp; leaderboards</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="LEADERBOARD_CHANNEL">
+                            <label>Monthly leaderboard channel</label>
+                            <div class="user-picker"><select data-channel-picker><option value="">— system channel —</option><option>#monthly-leaderboard-channel</option></select></div>
+                            <button type="button" class="btn save-config">Save</button>
+                        </div>
+                        <div class="config-create-channel">
+                            <div class="config-create-channel-text">
+                                <strong>Create a read-only leaderboard channel</strong>
+                                <p class="muted">Creates a new text channel where @everyone can read but only TobyBot can post.</p>
+                            </div>
+                            <form class="config-create-channel-form" data-target-config="LEADERBOARD_CHANNEL" data-default-name="leaderboard">
+                                <label class="config-create-channel-field"><span>Channel name</span><input type="text" name="name" value="leaderboard" maxlength="90"></label>
+                                <label class="config-create-channel-field"><span>Category</span><select name="parentCategoryId"><option value="">— top-level —</option><option>A Very Long Existing Category Name Here</option></select></label>
+                                <label class="config-create-channel-field"><span>or new category name</span><input type="text" name="newCategoryName" maxlength="100" placeholder="(blank = use existing)"></label>
+                                <button type="submit" class="btn config-create-channel-btn">Create</button>
+                            </form>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="config-section" open>
+                    <summary>Jackpot</summary>
+                    <div class="config-grid">
+                        <div class="config-row config-row-wide" data-key="JACKPOT_WHEEL">
+                            <label>Wheel segments</label>
+                            <div class="jackpot-wheel-editor">
+                                <div class="jackpot-wheel-editor-rows">
+                                    <div class="jackpot-wheel-editor-row">
+                                        <span class="jackpot-wheel-row-label">1</span>
+                                        <label>weight<input type="number" value="10"></label>
+                                        <label>payout<input type="number" value="100"><span class="config-suffix">×</span></label>
+                                        <button type="button" class="btn-danger jw-remove">Remove</button>
+                                    </div>
+                                </div>
+                                <div class="jackpot-wheel-editor-actions">
+                                    <button type="button" class="btn btn-sm jackpot-wheel-add">Add segment</button>
+                                    <span class="muted jackpot-wheel-ev">EV: 0.95</span>
+                                </div>
+                            </div>
+                            <button type="button" class="btn jackpot-wheel-save">Save wheel</button>
+                        </div>
+                    </div>
+                </details>
+
+                <details class="config-section" open>
+                    <summary>Magic: The Gathering</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="CARD_MENTIONS">
+                            <label>Inline [[card]] Magic lookups</label>
+                            <select><option>Enabled</option><option>Disabled</option></select>
+                            <button type="button" class="btn save-config">Save</button>
+                        </div>
+                        <div class="config-row" data-key="CUBE_CURRENCY">
+                            <label>Cube value currency</label>
+                            <select><option>US Dollars ($)</option><option>Euros (€)</option><option>MTGO Tix</option></select>
+                            <button type="button" class="btn save-config">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <h2 class="config-pillar">Economy</h2>
+
+                <details class="config-section" open>
+                    <summary>Economy</summary>
+                    <div class="config-grid">
+                        <div class="config-row" data-key="TRADE_BUY_FEE_PCT">
+                            <label>Toby Coin BUY fee
+                                <span class="config-hint">Charged per leg and routed to the jackpot pool.</span>
+                            </label>
+                            <span class="config-input-group">
+                                <input type="number" min="0" max="25" step="0.01" placeholder="1">
+                                <span class="config-suffix">%</span>
+                            </span>
+                            <button type="button" class="btn save-config">Save</button>
+                        </div>
+                    </div>
+                </details>
+
+                <h2 class="config-pillar">Casino</h2>
+
+                <details class="config-section" open>
+                    <summary>Game stake limits</summary>
+                    <p class="muted config-section-lead">Min/max stake per game.</p>
+                    <div class="settings-stakes-bulk">
+                        <div class="settings-stakes-bulk-text">
+                            <strong>Set every game at once</strong>
+                            <p class="muted">Applies the same min/max to all games below.</p>
+                        </div>
+                        <form class="settings-stakes-bulk-fields">
+                            <label class="settings-stakes-bulk-field">Minimum<input type="number" min="1"></label>
+                            <label class="settings-stakes-bulk-field">Maximum<input type="number" min="0"></label>
+                            <button type="submit" class="btn">Apply to all</button>
+                        </form>
+                    </div>
+                    <div class="settings-stakes-wrap">
+                        <table class="settings-stakes-table">
+                            <thead>
+                                <tr><th scope="col">Game</th><th scope="col">Minimum stake</th><th scope="col">Maximum stake</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th scope="row">Dice</th>
+                                    <td data-label="Minimum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DICE_MIN_STAKE">
+                                            <label class="sr-only">Dice minimum stake</label>
+                                            <input type="number" min="1" placeholder="10">
+                                            <button type="button" class="btn btn-sm save-config">Save</button>
+                                        </div>
+                                    </td>
+                                    <td data-label="Maximum stake">
+                                        <div class="config-row settings-stake-cell" data-key="DICE_MAX_STAKE">
+                                            <label class="sr-only">Dice maximum stake</label>
+                                            <input type="number" min="0" placeholder="500">
+                                            <button type="button" class="btn btn-sm save-config">Save</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

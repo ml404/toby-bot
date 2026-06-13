@@ -24,12 +24,22 @@
         <h1>Moderation — Toby Test Server</h1>
         <p class="lede">Manage members, voice, polls, casino, and per-guild config.</p>
     </div>
+    <!-- Full ten-tab subnav, matching fragments/moderationHeader.html. The
+         real strip is the widest always-present element on these pages —
+         keeping the fixture's tab count in sync with production is what
+         lets the no-overflow contract catch the container shrink-wrap
+         regression on phones. -->
     <nav class="mod-subnav" aria-label="Moderation sections">
         <a class="mod-subnav-link active" href="#">Users</a>
+        <a class="mod-subnav-link" href="#">Actions</a>
+        <a class="mod-subnav-link" href="#">Settings</a>
         <a class="mod-subnav-link" href="#">Voice</a>
         <a class="mod-subnav-link" href="#">Poll</a>
         <a class="mod-subnav-link" href="#">Casino</a>
-        <a class="mod-subnav-link" href="#">Settings</a>
+        <a class="mod-subnav-link" href="#">Lottery</a>
+        <a class="mod-subnav-link" href="#">Leveling</a>
+        <a class="mod-subnav-link" href="#">Activity</a>
+        <a class="mod-subnav-link" href="#">Welcome</a>
     </nav>
     <div class="mod-search">
         <input class="mod-search-input" type="search" placeholder="Filter members…">
