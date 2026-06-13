@@ -1,11 +1,13 @@
 package web.service
 
 import common.economy.Coin
+import database.dto.economy.MonthlyCoinHoldingSnapshotDto
 import database.dto.economy.MonthlyCreditSnapshotDto
 import database.dto.guild.TitleDto
 import database.dto.economy.TobyCoinMarketDto
 import database.dto.economy.UserCoinHoldingDto
 import database.dto.user.UserDto
+import database.service.economy.MonthlyCoinHoldingSnapshotService
 import database.service.economy.MonthlyCreditSnapshotService
 import database.service.economy.UserCoinHoldingService
 import database.service.guild.TitleService
@@ -35,6 +37,7 @@ class LeaderboardWebServiceTobyCoinTest {
     private lateinit var titleService: TitleService
     private lateinit var snapshotService: MonthlyCreditSnapshotService
     private lateinit var holdingService: UserCoinHoldingService
+    private lateinit var holdingSnapshotService: MonthlyCoinHoldingSnapshotService
     private lateinit var service: LeaderboardWebService
 
     @BeforeEach
@@ -46,6 +49,7 @@ class LeaderboardWebServiceTobyCoinTest {
         titleService = mockk(relaxed = true)
         snapshotService = mockk(relaxed = true)
         holdingService = mockk(relaxed = true)
+        holdingSnapshotService = mockk(relaxed = true)
         every { jda.getGuildById(guildId) } returns guild
         every { guild.name } returns "Test Guild"
 
@@ -63,6 +67,7 @@ class LeaderboardWebServiceTobyCoinTest {
             rollupService = mockk(relaxed = true),
             achievementService = mockk(relaxed = true),
             holdingService = holdingService,
+            holdingSnapshotService = holdingSnapshotService,
         )
     }
 
@@ -218,6 +223,52 @@ class LeaderboardWebServiceTobyCoinTest {
     }
 
     @Test
+    fun `tobyCoinLeaders exposes a per-coin holdings breakdown ordered by value`() {
+        // TOBY @ 1, MOON @ 10. Alice holds 50 TOBY (value 50) and 20 MOON
+        // (value 200) — the breakdown must list MOON first (more valuable).
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 50L },
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+
+        assertEquals(listOf("MOON", "TOBY"), row.holdings.map { it.symbol },
+            "holdings are ordered most-valuable first")
+        assertEquals(listOf(20L, 50L), row.holdings.map { it.amount })
+        assertEquals(listOf(200L, 50L), row.holdings.map { it.valueCredits })
+        assertEquals(250L, row.portfolioCredits, "portfolio = sum of every holding's value")
+    }
+
+    @Test
+    fun `tobyCoinLeaders omits coins with a zero balance from the breakdown`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 0L },
+        )
+        // A stale 0-amount holding row must not produce a phantom pill, but a
+        // real one keeps the user on the board.
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 0L),
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.TISM.symbol, amount = 5L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+
+        assertEquals(listOf("TISM"), row.holdings.map { it.symbol },
+            "zero-amount TOBY and the 0-amount MOON row are both excluded")
+    }
+
+    @Test
     fun `tobyCoinLeaders degrades to TOBY-only when the holdings read fails`() {
         every { marketService.getMarket(guildId, Coin.TOBY) } returns
             TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 2.0, lastTickAt = Instant.now())
@@ -323,5 +374,89 @@ class LeaderboardWebServiceTobyCoinTest {
         assertEquals(40L, captured.captured.tobyCoins, "baseline must include current TOBY balance")
         assertEquals(500L, captured.captured.socialCredit,
             "baseline must also include social credit so the two leaderboards agree")
+    }
+
+    // ---- per-coin change this month (holding snapshot) ----
+
+    @Test
+    fun `each holding carries its net unit change since the month-boundary snapshot`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 120L },
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        // TOBY baseline 100 -> +20; MOON baseline 30 -> -10 (sold 10).
+        every { snapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCreditSnapshotDto(discordId = 1L, guildId = guildId,
+                snapshotDate = java.time.LocalDate.now().withDayOfMonth(1),
+                socialCredit = 0L, tobyCoins = 100L)
+        )
+        every { holdingSnapshotService.listForGuildDate(guildId, any()) } returns listOf(
+            MonthlyCoinHoldingSnapshotDto(discordId = 1L, guildId = guildId,
+                snapshotDate = java.time.LocalDate.now().withDayOfMonth(1),
+                coin = Coin.MOON.symbol, amount = 30L)
+        )
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+        val toby = row.holdings.first { it.symbol == Coin.TOBY.symbol }
+        val moon = row.holdings.first { it.symbol == Coin.MOON.symbol }
+
+        assertEquals(20L, toby.changeThisMonth, "TOBY change comes from the credit snapshot baseline")
+        assertEquals(-10L, moon.changeThisMonth, "MOON change comes from the holding snapshot baseline")
+    }
+
+    @Test
+    fun `holding change is zero on first visit and a baseline is lazy-written`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 0L },
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { holdingSnapshotService.listForGuildDate(guildId, any()) } returns emptyList()
+        val captured = slot<MonthlyCoinHoldingSnapshotDto>()
+        every { holdingSnapshotService.upsertIfMissing(capture(captured)) } answers { firstArg() }
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+        val moon = row.holdings.first { it.symbol == Coin.MOON.symbol }
+
+        assertEquals(0L, moon.changeThisMonth, "no snapshot -> lazy baseline = current -> delta 0")
+        assertEquals(Coin.MOON.symbol, captured.captured.coin)
+        assertEquals(20L, captured.captured.amount, "baseline freezes the current holding amount")
+    }
+
+    @Test
+    fun `holding change degrades to zero when the snapshot read fails`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 0L },
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+        every { holdingSnapshotService.listForGuildDate(guildId, any()) } throws
+            RuntimeException("monthly_coin_holding_snapshot missing")
+        every { holdingSnapshotService.upsertIfMissing(any()) } throws
+            RuntimeException("monthly_coin_holding_snapshot missing")
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+
+        assertEquals(20L, row.holdings.single().amount, "page still renders the holding on a snapshot failure")
+        assertEquals(0L, row.holdings.single().changeThisMonth, "delta degrades to 0")
     }
 }
