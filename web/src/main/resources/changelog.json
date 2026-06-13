@@ -1,5 +1,1335 @@
 [
   {
+    "date": "June 2026",
+    "title": "Generalize wallet leaderboard to show holdings across all coins",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 723
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix horizontal overflow on moderation settings/admin pages on mobile",
+    "summary": "## What & why",
+    "emoji": "🛡️",
+    "prNumber": 722
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix price-watch remove button swallowing clicks on its SVG icon",
+    "summary": "## The bug The price-watch **Remove** button renders an inline `<svg>` X icon. The delegated click handler guarded with:",
+    "emoji": "💰",
+    "prNumber": 721
+  },
+  {
+    "date": "June 2026",
+    "title": "Make the site footer stick to the bottom on short pages",
+    "summary": "## Why The footer looked \"off\" on the new coin **portfolio** page: it floated in the middle of the screen with empty space beneath it. Root cause isn't portfolio-specific — `base.css` set `body { min-height: 100vh }` but **nothing pinned the footer to the bottom**. Tall pages (the market, leaderboard) happened to fill the viewport so the footer landed at the bottom; short pages (portfolio, empty states) exposed the gap. So it was a uniformity gap, not a one-page bug.",
+    "emoji": "✨",
+    "prNumber": 720
+  },
+  {
+    "date": "June 2026",
+    "title": "Add TISM coin, a user portfolio page, and an all-coin wealth leaderboard",
+    "summary": "Follow-ups to the multi-coin market (PR #718, merged).",
+    "emoji": "💰",
+    "prNumber": 719
+  },
+  {
+    "date": "June 2026",
+    "title": "Add volatile multi-coin markets to the fake economy",
+    "summary": "## Why",
+    "emoji": "♠️",
+    "prNumber": 718
+  },
+  {
+    "date": "June 2026",
+    "title": "Open card details in a dismissible overlay",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 717
+  },
+  {
+    "date": "June 2026",
+    "title": "Activity: back-links return to the games selector, not the cross-guild pickers",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 715
+  },
+  {
+    "date": "June 2026",
+    "title": "Refresh profile Level and Economy cards on streak claim",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 716
+  },
+  {
+    "date": "June 2026",
+    "title": "Polish the unified card search on mobile",
+    "summary": "Three mobile refinements to the unified card search/viewer.",
+    "emoji": "✨",
+    "prNumber": 714
+  },
+  {
+    "date": "June 2026",
+    "title": "Extend the never-drop-silently posting contract to the non-router posters",
+    "summary": "## Context",
+    "emoji": "✨",
+    "prNumber": 713
+  },
+  {
+    "date": "June 2026",
+    "title": "Magic card tab: collapse into one unified search",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 712
+  },
+  {
+    "date": "June 2026",
+    "title": "Activity landing: surface the guild's full games list",
+    "summary": "## Why",
+    "emoji": "🎲",
+    "prNumber": 709
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix level-up announcement regression: restore pre-#492 \"always attempt the post\" behaviour + thread origins",
+    "summary": "## Context",
+    "emoji": "✨",
+    "prNumber": 710
+  },
+  {
+    "date": "June 2026",
+    "title": "Hint at Scryfall's exact-name operator in the Advanced search placeholder",
+    "summary": "Follow-up to #706. The Advanced field passes its text verbatim to Scryfall, so `!\"exact name\"` is the easy way to do a single-card search from the same three grid-search fields — but the operator is non-obvious. Surface it in the placeholder:",
+    "emoji": "✨",
+    "prNumber": 708
+  },
+  {
+    "date": "June 2026",
+    "title": "Card search: fix anonymous access + autosearch + click-through to details",
+    "summary": "Makes the web Magic **card search** fully work for anonymous users, plus two Scryfall-style UX upgrades. (The autosearch + click-through commits from #707 were folded onto this branch.)",
+    "emoji": "✨",
+    "prNumber": 706
+  },
+  {
+    "date": "June 2026",
+    "title": "Multi-card Scryfall search for the Magic card tools (Discord + web)",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 705
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix broken OAuth login: run ForwardedHeaderFilter before the security chain",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 704
+  },
+  {
+    "date": "June 2026",
+    "title": "Activity follow-up: poker tables + PvP challenge pings in the voice channel",
+    "summary": "## What",
+    "emoji": "♠️",
+    "prNumber": 703
+  },
+  {
+    "date": "June 2026",
+    "title": "Activity follow-up: PvP arena (duel, RPS, tic-tac-toe, connect 4)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 702
+  },
+  {
+    "date": "June 2026",
+    "title": "Activity follow-up: game-picker landing with multiplayer blackjack",
+    "summary": "## What",
+    "emoji": "♠️",
+    "prNumber": 701
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix activity \"disallowed web page\" kill: mount casino in a nested iframe (Activities must be SPAs)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 700
+  },
+  {
+    "date": "June 2026",
+    "title": "Keep the Discord Activity inside the proxy sandbox (fix \"disallowed web page\" kill)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 699
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix Discord Activity launch: iframe embedding, root-path launches, entry point command survival",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 698
+  },
+  {
+    "date": "June 2026",
+    "title": "Run the casino as a Discord Activity (Embedded App SDK)",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 697
+  },
+  {
+    "date": "June 2026",
+    "title": "Security audit pass 2: actuator lockdown, supply-chain pin, non-root container",
+    "summary": "Second security-audit pass over the codebase, following up #695. Three parallel deep-dives this round: browser-side code (DOM XSS, service worker, postMessage), server-side authorization (CSRF-exempt APIs, IDOR, SSE, admin), and economy integrity + infrastructure (wager race conditions, GitHub Actions, Docker, actuator). ### Findings fixed **Actuator lockdown (the significant one).** `WebSecurityConfig` permitted `/actuator/**` anonymously. Spring Boot's default only web-e…",
+    "emoji": "🎲",
+    "prNumber": 696
+  },
+  {
+    "date": "June 2026",
+    "title": "Security audit: fix open redirect and harden web-layer input handling",
+    "summary": "A security audit of the codebase (web layer, Discord bot, database, config). The database/bot layer came back clean — parameterized queries throughout, no command injection or path traversal, secrets via env vars, permission checks on privileged commands, and dependency CVEs already pinned in `build.gradle`. The web layer had one real vulnerability and a few hardening gaps, all fixed here.",
+    "emoji": "🎵",
+    "prNumber": 695
+  },
+  {
+    "date": "June 2026",
+    "title": "Promote solo blackjack tables to multiplayer when a second player joins",
+    "summary": "Removes the up-front \"solo vs multi\" decision in web blackjack. A solo table is now just a 1-seat multi table that hasn't been joined yet: when a second player joins, the table flips mode in place (`SOLO → MULTI`, `RESOLVED → LOBBY`, original solo player becomes the host) and proceeds through the standard multi flow. The reverse direction works without coordination too — a multi table that drops to one seat keeps running, because `MULTI_MIN_SEATS` is now 1.",
+    "emoji": "♠️",
+    "prNumber": 694
+  },
+  {
+    "date": "June 2026",
+    "title": "Expose multiplayer blackjack and ante limits in the web UI",
+    "summary": "Two related discoverability fixes for blackjack on the web surface. ### 1. Multiplayer blackjack reachable from the web casino picker The `/casino/{guildId}` picker linked Blackjack straight to `/blackjack/{id}/solo`, and the solo page had no cross-link to multi — so players going through that path had no way to find the multi lobby (where you create / join a table). `casino-guilds.html` Blackjack button now points at `/blackjack/{id}` (the multi lobby), matching how Poker…",
+    "emoji": "♠️",
+    "prNumber": 693
+  },
+  {
+    "date": "June 2026",
+    "title": "Settle multi blackjack hands per seat vs the dealer, not from a peer pool",
+    "summary": "The multi-table resolver pooled every losing seat's stake, then split the remainder among winners after a flat rake — so two players who both beat the dealer would just trade refunds with no winnings, and a single winner's payout scaled with how many others happened to lose. Players were effectively competing with each other, not the dealer. Now each hand-slot is settled independently against the dealer, matching how the solo flow already pays out: Win → 1:1 (2× stake) pai…",
+    "emoji": "♠️",
+    "prNumber": 692
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix crowded music dashboard by switching to 2-column layout",
+    "summary": "The music player dashboard was packing four cards into a 3-column grid that broke down badly at ~980px viewports — the Search input truncated to \"URL or sear\", playlist names collapsed to \"Pl…\", and the Save-queue/＋New buttons stacked on top of each other. This switches the dashboard to a 2-column layout: the now-playing hero on the left, and queue / playlists / voice stacked in a side column on the right. Every card gets enough width to breathe, and the page is promoted t…",
+    "emoji": "✨",
+    "prNumber": 691
+  },
+  {
+    "date": "June 2026",
+    "title": "Wire Scryfall autocomplete on every /magic card-input field",
+    "summary": "The cube-list textarea was the only field with Scryfall autocomplete. The legality decklist, card lookup, price-watch, and Compare textareas all had nothing — typing a partial name there gave no help even though the backend resolved full names fine. `wireCardAutocomplete` now iterates every `[data-card-suggest]` listbox on the page and wires its sibling `textarea`/`input`, so all five fields get the same arrow-key + mouse-pick suggestions. The helper handles single-line `<…",
+    "emoji": "✨",
+    "prNumber": 690
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix cube pack tiles stretching on desktop until whole row collapses",
+    "summary": "Each generated cube pack is a `<details>` element inside a CSS grid (`.cube-packs`). The grid relied on the default `align-items: stretch`, so every tile in a row was sized to the tallest open sibling. As a result, collapsing one pack appeared to do nothing on the desktop view until every pack in that row was also closed. Setting `align-items: start` lets each tile size to its own content, so collapsing an individual pack now shrinks just that tile.",
+    "emoji": "✨",
+    "prNumber": 689
+  },
+  {
+    "date": "June 2026",
+    "title": "Test coverage: add the two missing command-handler tests (/daily, /casinoholdem)",
+    "summary": "Last of the four follow-up directions — **test coverage**.",
+    "emoji": "✨",
+    "prNumber": 688
+  },
+  {
+    "date": "June 2026",
+    "title": "Web: add member search to the leaderboard standings",
+    "summary": "Third of the four follow-up directions — **web dashboard wins**.",
+    "emoji": "✨",
+    "prNumber": 687
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix web /meme 403s by using Reddit OAuth like the bot (#403)",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 686
+  },
+  {
+    "date": "June 2026",
+    "title": "Reliability: retry transient music loads, harden intro media download",
+    "summary": "Second of the four follow-up directions — **reliability hardening**, scoped to playback & media (the riskiest external-fetch surfaces). Two isolated commits.",
+    "emoji": "🎵",
+    "prNumber": 685
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix the nowPlaying stale-message bug (#85) and the broken /meme Reddit auth (#107)",
+    "summary": "Fixes two long-standing maintainer-filed bugs. Two isolated commits.",
+    "emoji": "✨",
+    "prNumber": 684
+  },
+  {
+    "date": "June 2026",
+    "title": "Player-side onboarding: first-game achievement, empty-state recovery, invite loop",
+    "summary": "Follow-up to #680/#681/#682. Those rewarded the **owner** at install; this turns attention to the **players** the owner is trying to keep, and closes the last onboarding dead-ends. Three isolated commits (disjoint files).",
+    "emoji": "✨",
+    "prNumber": 683
+  },
+  {
+    "date": "June 2026",
+    "title": "Add /install summary + a View setup control-panel button",
+    "summary": "Follow-up to #680/#681. Gives server owners a way to **audit their current setup and see what's still worth turning on** — without re-running the wizard.",
+    "emoji": "✨",
+    "prNumber": 682
+  },
+  {
+    "date": "June 2026",
+    "title": "Make the post-install launcher playable, persistent, and linked to the web app",
+    "summary": "Follow-up to #680. That PR turned the post-install \"done\" message into a one-click launcher (claim daily + help). This extends that launcher into a genuine, durable control panel. Three isolated commits:",
+    "emoji": "✨",
+    "prNumber": 681
+  },
+  {
+    "date": "June 2026",
+    "title": "Make toby-bot's value land in the first 30 seconds for new installers",
+    "summary": "Closes the gap between *\"setup done\"* and *\"value felt\"* in onboarding. The install wizard already tells new owners to go type `/blackjack`; these four changes make the bot **demonstrate** its value instead, in the first few seconds after install. Each feature is an isolated commit.",
+    "emoji": "✨",
+    "prNumber": 680
+  },
+  {
+    "date": "June 2026",
+    "title": "Build and edit playlists in the web UI without playing",
+    "summary": "Lets you **build and edit playlists entirely from the web UI without playing anything**. Before this, the only way to fill a playlist was to snapshot the live queue — so curating meant playing the tracks first. This decouples curation from playback end-to-end.",
+    "emoji": "✨",
+    "prNumber": 679
+  },
+  {
+    "date": "June 2026",
+    "title": "Reuse shared primitives on the music player (toasts, modal, member-cell)",
+    "summary": "Three consistency refactors so the music player leans on site-wide primitives instead of bespoke / native equivalents. (Independent of #677 — touches different file sections, so the two merge cleanly in either order.)",
+    "emoji": "✨",
+    "prNumber": 678
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix music player horizontal overflow on mobile",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 677
+  },
+  {
+    "date": "June 2026",
+    "title": "Polish music player to match other web surfaces",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 676
+  },
+  {
+    "date": "June 2026",
+    "title": "Onboarding: fix the new-user first-play dead-end + richer /help",
+    "summary": "Follow-up to #674. That pass made onboarding *tell* users to \"try `/blackjack solo` right now\" — this pass makes sure that actually works, and makes `/help` genuinely useful.",
+    "emoji": "✨",
+    "prNumber": 675
+  },
+  {
+    "date": "June 2026",
+    "title": "Improve first-time onboarding: in-Discord /help overview, value-forward copy, re-welcome on re-invite",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 674
+  },
+  {
+    "date": "June 2026",
+    "title": "Surface \"members reached\" as live social proof on the homepage",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 673
+  },
+  {
+    "date": "June 2026",
+    "title": "Unify Scryfall card parsing across the bot and web",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 672
+  },
+  {
+    "date": "June 2026",
+    "title": "Second DRY/SOLID pass over the Magic features",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 671
+  },
+  {
+    "date": "June 2026",
+    "title": "Refactor Magic features for DRY/SOLID and add missing test coverage",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 670
+  },
+  {
+    "date": "June 2026",
+    "title": "Polish the web MTG combo lookup (chips, labels, numbered cards)",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 669
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix shared /magic?q= links landing on the hidden Card lookup tab",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 668
+  },
+  {
+    "date": "June 2026",
+    "title": "Polish the navbar default-server (star) chip",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 667
+  },
+  {
+    "date": "June 2026",
+    "title": "Share + mobile-polish the two legacy guild-picker pages",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 666
+  },
+  {
+    "date": "June 2026",
+    "title": "Polish /admin/installs for mobile (card-per-row layout + reveal/count-up)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 665
+  },
+  {
+    "date": "June 2026",
+    "title": "Add health, liveness, feature-adoption and audience insights to /admin/installs",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 664
+  },
+  {
+    "date": "June 2026",
+    "title": "Add install metrics, churn tracking and UI polish to /admin/installs",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 663
+  },
+  {
+    "date": "June 2026",
+    "title": "Add operator-only /admin/installs page showing who installed the bot",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 662
+  },
+  {
+    "date": "June 2026",
+    "title": "Reprioritise the Magic toolkit page as a multi-tool hub (not cube-first)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 661
+  },
+  {
+    "date": "June 2026",
+    "title": "Prefix the Magic commands with \"mtg\" so they're obviously MTG in Discord",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 660
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix stale /cube command mentions + add a single source of truth for command names",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 659
+  },
+  {
+    "date": "June 2026",
+    "title": "Fix /magic 500 (Thymeleaf escaping) + render-test guard + rename cube.* → magic.*",
+    "summary": "**Production hotfix + cleanup.** `/magic` was returning **500 Internal Server Error**.",
+    "emoji": "✨",
+    "prNumber": 658
+  },
+  {
+    "date": "June 2026",
+    "title": "Reframe the Magic tools as a \"Magic toolkit\" at /magic (+ SEO)",
+    "summary": "The Magic web surface was a single tabbed page at `/cube` titled \"Cube workshop\" — a good hub pattern, but the title mislabelled the card/legality/reference/price-watch tabs as cube-only, and the `/cube` slug carries no \"magic\"/\"mtg\" keyword.",
+    "emoji": "✨",
+    "prNumber": 657
+  },
+  {
+    "date": "June 2026",
+    "title": "Split the /cube super-command into focused MTG commands",
+    "summary": "`/cube` had grown to **13 subcommands** spanning cube-building, card lookups, reference, and price watches. This breaks it into five themed top-level commands, so each is small and discoverable:",
+    "emoji": "✨",
+    "prNumber": 656
+  },
+  {
+    "date": "June 2026",
+    "title": "Add card price watch alerts (Discord + web)",
+    "summary": "Add card price watch alerts (Discord + web)",
+    "emoji": "✨",
+    "prNumber": 655
+  },
+  {
+    "date": "June 2026",
+    "title": "Surface the card-centric MTG tools in the navbar\n\nThe card tools (lookup, deck legality, sets & keywords) are generically\nuseful, not cube-specific, but were only reachable by wandering into the\ncube-builder page. Add them to the global Magic dropdown as hash deep-links\n(already wired on the cube page), so they're discoverable from any page,\nahead of the cube-builder entries. A navbar test pins the links.\n\nStacked on the reference branch (links to its new #reference tab); retarget\nto main as the chain merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
+    "summary": "Surface the card-centric MTG tools in the navbar\n\nThe card tools (lookup, deck legality, sets & keywords) are generically\nuseful, not cube-specific, but were only reachable by wandering into the\ncube-builder page. Add them to the global Magic dropdown as hash deep-links\n(already wired on the cube page), so they're discoverable from any page,\nahead of the cube-builder entries. A navbar test pins the links.\n\nStacked on the reference branch (links to its new #reference tab); retarget\nto main as the chain merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
+    "emoji": "✨",
+    "prNumber": 654
+  },
+  {
+    "date": "June 2026",
+    "title": "Add set lookup and a keyword glossary quick-reference (Discord + web)\n\nBeginner-friendly quick reference that broadens appeal beyond cube builders.\n\n- common: MtgSet value type; MtgGlossary — a curated, built-in map of\n  evergreen (+ popular) keywords to reminder text, with exact/prefix lookup.\n- Discord: /cube set <code> (Scryfall /sets/:code → setEmbed) and\n  /cube rule <keyword> (glossary → ruleEmbed, no network).\n- Web: new Reference tab with set + keyword forms, backed by\n  GET /cube/api/set and /cube/api/rule (anonymous).\n- Tests across common, web service/controller, jest and the Discord\n  embeds/fetcher/command; stylelint + kover gates green.\n\nStacked on the combo-finder branch; retarget to main after that merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
+    "summary": "Add set lookup and a keyword glossary quick-reference (Discord + web)\n\nBeginner-friendly quick reference that broadens appeal beyond cube builders.\n\n- common: MtgSet value type; MtgGlossary — a curated, built-in map of\n  evergreen (+ popular) keywords to reminder text, with exact/prefix lookup.\n- Discord: /cube set <code> (Scryfall /sets/:code → setEmbed) and\n  /cube rule <keyword> (glossary → ruleEmbed, no network).\n- Web: new Reference tab with set + keyword forms, backed by\n  GET /cube/api/set and /cube/api/rule (anonymous).\n- Tests across common, web service/controller, jest and the Discord\n  embeds/fetcher/command; stylelint + kover gates green.\n\nStacked on the combo-finder branch; retarget to main after that merges.\n\nhttps://claude.ai/code/session_01BB5Q4S4kpD1YgfqmNKhQFs",
+    "emoji": "✨",
+    "prNumber": 653
+  },
+  {
+    "date": "June 2026",
+    "title": "Add a combo finder via Commander Spellbook (Discord + web)",
+    "summary": "Look up the combos a Magic card is part of — the pieces it needs and the payoff — from the Commander Spellbook database.",
+    "emoji": "✨",
+    "prNumber": 652
+  },
+  {
+    "date": "June 2026",
+    "title": "Add a deck legality checker (Discord + web)",
+    "summary": "First of the four features picked from the \"what's next\" list. Paste a decklist (or check a saved cube) against a format and find out whether it's legal — every **banned**, **not-in-format**, and **restricted** card is flagged.",
+    "emoji": "✨",
+    "prNumber": 651
+  },
+  {
+    "date": "June 2026",
+    "title": "Surface cube value on generate, per-card prices in pack files, and value extremes",
+    "summary": "Three follow-ups that round out the cube-value tooling — the gaps noted after the prices/currency work landed.",
+    "emoji": "✨",
+    "prNumber": 650
+  },
+  {
+    "date": "June 2026",
+    "title": "Group the Magic settings into their own admin section",
+    "summary": "The two Magic config keys were buried in the generic **\"Messages & leaderboards\"** section of the moderation settings page, mixed in with delete-delay and leaderboard config. This gives Magic its own home.",
+    "emoji": "🛡️",
+    "prNumber": 649
+  },
+  {
+    "date": "June 2026",
+    "title": "Add card rulings lookup to the MTG tools (Discord + web)",
+    "summary": "Rounds out the \"card bot\" feature set: look up a Magic card's **official rulings** (the rules team's clarifications for tricky interactions) on both Discord and the web — the last of the three hot features picked earlier (prices ✅, legality ✅, rulings — this PR).",
+    "emoji": "✨",
+    "prNumber": 648
+  },
+  {
+    "date": "June 2026",
+    "title": "Add card prices, format legality and cube value to the MTG tools",
+    "summary": "Surfaces Scryfall **market prices** (USD / EUR / MTGO tix) and current **format legality** across every Magic card surface, plus a cube-wide **total value** — three of the most-requested \"card bot\" features, which broadens install appeal for trading/deckbuilding communities.",
+    "emoji": "🛡️",
+    "prNumber": 647
+  },
+  {
+    "date": "June 2026",
+    "title": "Richer, configurable card lookups: oracle text, DFC backs, opt-out toggle",
+    "summary": "## Why",
+    "emoji": "🛡️",
+    "prNumber": 646
+  },
+  {
+    "date": "June 2026",
+    "title": "Add inline [[card]] Magic lookups in chat",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 645
+  },
+  {
+    "date": "June 2026",
+    "title": "Harden the cube feature after an audit pass",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 644
+  },
+  {
+    "date": "June 2026",
+    "title": "Feature the MTG cube workshop on the homepage",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 643
+  },
+  {
+    "date": "June 2026",
+    "title": "Add a web single-card lookup (Card lookup tab)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 642
+  },
+  {
+    "date": "June 2026",
+    "title": "Add a Compare tab: diff two card lists on the web",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 641
+  },
+  {
+    "date": "June 2026",
+    "title": "Add /cube card &lt;name&gt; single-card lookup",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 640
+  },
+  {
+    "date": "June 2026",
+    "title": "Add \"open a sample pack\" to the web cube preview",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 639
+  },
+  {
+    "date": "June 2026",
+    "title": "Add colour-pair (guild) & pip-weighted colour balance to the cube report",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 638
+  },
+  {
+    "date": "June 2026",
+    "title": "Add copy / download of the cube list on the web preview",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 637
+  },
+  {
+    "date": "June 2026",
+    "title": "Add the cube report to the web /cube preview",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 636
+  },
+  {
+    "date": "June 2026",
+    "title": "Add the cube report to the Discord /cube preview embed",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 635
+  },
+  {
+    "date": "June 2026",
+    "title": "Add shared cube-analytics core (curve, types, rarity, duplicates)",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 634
+  },
+  {
+    "date": "June 2026",
+    "title": "Make cube packs & preview groups collapsible for easier navigation",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 633
+  },
+  {
+    "date": "June 2026",
+    "title": "Cube UX: hide the source on the As-fan tab; clearer saved-cube picker",
+    "summary": "## Usability pass on the `/cube` workshop page",
+    "emoji": "✨",
+    "prNumber": 632
+  },
+  {
+    "date": "June 2026",
+    "title": "Switch cube tab on hash change so navbar deep-links work in-page",
+    "summary": "## Bug",
+    "emoji": "✨",
+    "prNumber": 631
+  },
+  {
+    "date": "June 2026",
+    "title": "Richer cube preview cards: mana cost, DFC backs, copy counts",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 630
+  },
+  {
+    "date": "June 2026",
+    "title": "Skip deck-export section headers when parsing a cube list",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 629
+  },
+  {
+    "date": "June 2026",
+    "title": "Move /meme Reddit fetching onto ktor + coroutines",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 628
+  },
+  {
+    "date": "June 2026",
+    "title": "Move cube Scryfall fetching onto ktor + coroutines",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 627
+  },
+  {
+    "date": "June 2026",
+    "title": "Add /cube saved subcommand to list saved cubes in Discord",
+    "summary": "## What",
+    "emoji": "✨",
+    "prNumber": 626
+  },
+  {
+    "date": "June 2026",
+    "title": "Web cube UX: shareable query links, live card count, loading spinner",
+    "summary": "First of two UX-polish PRs (the other adds `/cube saved` in Discord). Closes three of the usability gaps from the review.",
+    "emoji": "✨",
+    "prNumber": 625
+  },
+  {
+    "date": "June 2026",
+    "title": "Bound oversized cube inputs (Scryfall lookups + stored text)",
+    "summary": "A second audit pass — three unbounded-input issues that could exhaust resources or get us rate-limited.",
+    "emoji": "✨",
+    "prNumber": 624
+  },
+  {
+    "date": "June 2026",
+    "title": "Surface dropped cards: Discord \"couldn't find\" + web pool-cap note",
+    "summary": "The remaining transparency items from the audit (\"do all\").",
+    "emoji": "✨",
+    "prNumber": 623
+  },
+  {
+    "date": "June 2026",
+    "title": "Guard pack generation against an Int-overflow OOM (web DoS)",
+    "summary": "Another from the deeper audit — a more serious one: an **OOM / DoS** in pack generation reachable from the web.",
+    "emoji": "✨",
+    "prNumber": 622
+  },
+  {
+    "date": "June 2026",
+    "title": "Classify modal land-back cards by their front face (as-fan fix)",
+    "summary": "From the \"any other latent bugs?\" audit — a real as-fan miscount.",
+    "emoji": "✨",
+    "prNumber": 621
+  },
+  {
+    "date": "June 2026",
+    "title": "Resolve full double-faced names by requesting Scryfall by front face",
+    "summary": "Fixes the screenshot bug: a cube whose list contains the **full** double-faced names (`Archangel Avacyn // Avacyn, the Purifier`, `Fire // Ice`, `Huntmaster of the Fells // Ravager of the Fells`, …) reported all 9 as \"Couldn't find\".",
+    "emoji": "✨",
+    "prNumber": 620
+  },
+  {
+    "date": "June 2026",
+    "title": "Resolve double-faced cards by either face in pasted cube lists",
+    "summary": "Fixes double-faced / transform cards not resolving from a pasted list when you write just one face.",
+    "emoji": "✨",
+    "prNumber": 619
+  },
+  {
+    "date": "June 2026",
+    "title": "Add shareable cube links (/cube/c/&lt;token&gt;)",
+    "summary": "Second of the two follow-ups (the first, #617, adds card image links to the Discord output). Per the choice of \"server-stored short link\".",
+    "emoji": "✨",
+    "prNumber": 618
+  },
+  {
+    "date": "June 2026",
+    "title": "Show card image links in the /cube Discord pack list",
+    "summary": "First of two follow-ups (the other, server-stored share links, is coming next). Per the choice of \"image links in the list\", the `/cube` Discord output now surfaces each card's image.",
+    "emoji": "✨",
+    "prNumber": 617
+  },
+  {
+    "date": "June 2026",
+    "title": "Autocomplete saved cubes (Discord + web) and card names (web)",
+    "summary": "Adds autocomplete to the cube tooling — saved cubes (Discord + web) and card names (web).",
+    "emoji": "✨",
+    "prNumber": 616
+  },
+  {
+    "date": "June 2026",
+    "title": "Draft your saved cubes from the /cube Discord command",
+    "summary": "Follow-up to #614 (merged) — lets the Discord `/cube` command draft a cube you saved on the website.",
+    "emoji": "✨",
+    "prNumber": 615
+  },
+  {
+    "date": "June 2026",
+    "title": "Draft from your own card list, saved to your account",
+    "summary": "Two related additions to the `/cube` web tool.",
+    "emoji": "✨",
+    "prNumber": 614
+  },
+  {
+    "date": "June 2026",
+    "title": "Show card images and thumbnails on the cube web page",
+    "summary": "Follow-up to #612 (merged). The `/cube` web page now shows **card images** instead of plain names.",
+    "emoji": "✨",
+    "prNumber": 613
+  },
+  {
+    "date": "June 2026",
+    "title": "Add MTG cube tooling: as-fan calculator and randomised pack generator",
+    "summary": "## What & why",
+    "emoji": "✨",
+    "prNumber": 612
+  },
+  {
+    "date": "June 2026",
+    "title": "Raise coverage to 85% line and pin a regression floor",
+    "summary": "## Goal",
+    "emoji": "🎟️",
+    "prNumber": 611
+  },
+  {
+    "date": "June 2026",
+    "title": "Monthly board posts a frozen midnight-boundary snapshot of last month",
+    "summary": "## Problem",
+    "emoji": "🔨",
+    "prNumber": 610
+  },
+  {
+    "date": "June 2026",
+    "title": "Per-guild configurable UTC hour for daily cron jobs",
+    "summary": "## Background",
+    "emoji": "🎟️",
+    "prNumber": 609
+  },
+  {
+    "date": "June 2026",
+    "title": "Extend the daily streak: PNG card badge, reset countdown, milestones",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 608
+  },
+  {
+    "date": "June 2026",
+    "title": "Surface richer daily-streak data on the profile card",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 607
+  },
+  {
+    "date": "June 2026",
+    "title": "Redesign the daily streak card on the profile page",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 606
+  },
+  {
+    "date": "June 2026",
+    "title": "Monthly board posts last-month snapshot, not current standings",
+    "summary": "## Problem",
+    "emoji": "🔨",
+    "prNumber": 605
+  },
+  {
+    "date": "May 2026",
+    "title": "Include bonus tickets in the lottery embed held-ticket total",
+    "summary": "## Problem",
+    "emoji": "🎟️",
+    "prNumber": 604
+  },
+  {
+    "date": "May 2026",
+    "title": "Surface lottery bonus tickets and milestone jackpot draws in embed buy",
+    "summary": "## Problem",
+    "emoji": "🎟️",
+    "prNumber": 603
+  },
+  {
+    "date": "May 2026",
+    "title": "Resolve winner names, drop ghost thinking, share resolution overlay",
+    "summary": "PvP polish across Discord and the web, addressing four reported issues: **TicTacToe / Connect 4 / RPS win embeds tagged the winner as a raw `<@id>` mention** when the Discord client couldn't resolve the user. The title now uses a JDA-resolved display name (with a `Player NNNN` fallback) while the description keeps the mention so the winner still gets pinged. **`/connect4` (and `/tictactoe`, `/rps`) button clicks left a ghost \"Toby is thinking…\" on every move.** Added a `de…",
+    "emoji": "🔨",
+    "prNumber": 601
+  },
+  {
+    "date": "May 2026",
+    "title": "Update D&D category blurb to remove tabletop-sessions copy",
+    "summary": "The D&D category blurb on the commands wiki page still read \"Roll dice, look up spells, and run tabletop sessions.\" but the tabletop-session features (`/campaign`, `/initiative`, `/character`, etc.) were removed when DnD Beyond shipped their official Discord bot. Replace the blurb with copy that matches what the category actually contains today (`/roll` and `/dnd` SRD lookups): \"Roll dice and look up D&D 5e content.\"",
+    "emoji": "✨",
+    "prNumber": 600
+  },
+  {
+    "date": "May 2026",
+    "title": "Follow-up coverage for voice, modals, web utilities, and DTOs",
+    "summary": "Picks up the four P1 follow-up areas from PR #597's analysis. **One source bug surfaced and is documented but not fixed in this PR** — flagged below. All new test files only; no production source changes. | Area | Files | Tests added | | --- | ---: | ---: | | discord-bot/voice (lifecycle + tracker) | 2 | 13 | | discord-bot/modal (excuse / poll / tip) | 3 | 19 | | web (HomeStats / ModerationAuthorizer / UtilsWebService / UtilsController / DndLookupController) | 5 | 22 | | d…",
+    "emoji": "✨",
+    "prNumber": 598
+  },
+  {
+    "date": "May 2026",
+    "title": "/buy committed then threw UnknownFormatConversionException",
+    "summary": "After #596 landed, `/tobycoin buy` started showing the \"Something went wrong running that command\" message — but the buy transaction was still landing in the DB (coins added, credit deducted, price moved). That looked like data corruption but wasn't: the writes succeed, then the reply builder throws, and the new listener safety-net surfaces the generic error. Real exception from the production logs (`tobybotlogs1779691184979.txt`): ``` java.util.UnknownFormatConversionExce…",
+    "emoji": "💰",
+    "prNumber": 599
+  },
+  {
+    "date": "May 2026",
+    "title": "Cover JDA dispatcher listeners and default managers",
+    "summary": "## Test coverage analysis + top-priority gap fix",
+    "emoji": "✨",
+    "prNumber": 597
+  },
+  {
+    "date": "May 2026",
+    "title": "Stop commands from getting stuck thinking without acknowledging",
+    "summary": "Tobybot occasionally showed the \"Bot is thinking...\" spinner forever (or \"interaction failed\") after a slash command or button click — visually indistinguishable from the bot being offline. You called out `/tobycoin buy` and the \"Click to Reroll\" button on `/roll` as reproducers; both turned out to be symptoms of separate bugs in the same area. ### Root causes & fixes **1. Manager pre-dispatch DB work ate the 3-second ack window.** `DefaultCommandManager.handle` ran `confi…",
+    "emoji": "🎰",
+    "prNumber": 596
+  },
+  {
+    "date": "May 2026",
+    "title": "Polyhedral dice shapes + quick-pick grid on /utils",
+    "summary": "Two related upgrades to the `/utils` dice card, shipped together since they share `makeDie` / `rollAndRender`: ### 1. Polyhedral dice shapes Every standard TTRPG die now renders as its actual silhouette instead of falling back to a generic rounded square: d4 → triangle (tetrahedron face) d6 → unchanged (pip patterns from PR #588) d8 → diamond / rhombus d10 → kite (pentagonal trapezohedron) d12 → pentagon d20 → hexagon Non-standard sides (d2, d7, d100, anything outside `{4,…",
+    "emoji": "✨",
+    "prNumber": 595
+  },
+  {
+    "date": "May 2026",
+    "title": "Lift remaining engine dirs into casino/ and pvp/ parents",
+    "summary": "Completes the common-module consolidation started in #592. The pre-existing top-level engine directories (`common/blackjack/`, `common/poker/`, `common/connect4/`, `common/rps/`, `common/tictactoe/`) moved under `common/casino/<game>/` and `common/pvp/<game>/` so the parallel paths now match the database service/persistence/dto layouts and the discord-bot game/button layouts.",
+    "emoji": "♠️",
+    "prNumber": 594
+  },
+  {
+    "date": "May 2026",
+    "title": "Polish /8ball /random /roll /meme to mirror the web utility page",
+    "summary": "Mirrors the `/utils` web polish (PR #588) into the four Discord slash commands that back it. Each command now uses a rich embed instead of plain text, has a colour/visual identity, and (where it makes sense) an in-place button to re-roll the last action without re-typing the inputs. ### Per command **`/8ball`** — Defers, edits original with a \"🎱 Shaking…\" embed, then schedules a second edit 1.2 s later with the answer embed + an **Ask again** button. Tom's punishment bran…",
+    "emoji": "🐉",
+    "prNumber": 593
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup events + lift casino engines from economy/",
+    "summary": "Follow-up to the packaging series (#586/#587/#589/#590/#591) extending the same theme to the `common` module, which the original plan deferred. Two changes: ### 1. `common/events/` regrouped (28 flat files → themed sub-packages) Every domain event sat side-by-side in one alphabetised bucket. Regroup mirrors the database-side layouts so events are discoverable from the directory tree: ``` events/casino/<game>/ — 14 per-game events (Baccarat, Blackjack, CasinoHoldem, Coinfli…",
+    "emoji": "🎰",
+    "prNumber": 592
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup 43 entity DTOs into themed sub-packages",
+    "summary": "Deferred follow-up to the packaging series (#586/#587/#589/#590). The flat `database/dto/` directory held **43 JPA entity DTOs** mixed together — opening it showed an alphabetised list of every entity type in the system. Re-package into themed sub-packages mirroring the service-side (#586) and persistence-side (#587) layouts so DTOs sit in parallel paths with the services and persistences that touch them.",
+    "emoji": "🎰",
+    "prNumber": 591
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup 19 button files into themed sub-packages",
+    "summary": "Eleventh wave — and **PR 4 of 4 in the packaging-only re-organisation series** (continuing from #586, #587, #589). With this PR the packaging plan is complete. The flat `discord-bot/.../button/buttons/` directory mixed casino-game buttons, PvP-game buttons, team-split buttons, music buttons, the lottery buy button, the DnD roll button, and two misc buttons — **19 files alphabetised together**.",
+    "emoji": "🎟️",
+    "prNumber": 590
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup 34 command/embeds files into per-game subdirs",
+    "summary": "Tenth wave of the refactor pass — and PR 3 of 4 in the packaging-only re-organisation series (continuing from #586, #587). The flat `discord-bot/.../command/commands/game/` directory mixed **all 14 casino games** (Baccarat, Blackjack, CasinoHoldem, Coinflip, Dice, Highlow, HorseRacing, Keno, Plinko, Poker, Roulette, Scratch, Slots, WheelOfFortune), **all 4 PvP games** (RPS, TicTacToe, Connect4, Duel), **5 shared helpers** (GameCommand, PvpButtonIdCodec, PvpChallengeCeremon…",
+    "emoji": "🎟️",
+    "prNumber": 589
+  },
+  {
+    "date": "May 2026",
+    "title": "Polish /utils page with animated 8-ball, dice, and reel",
+    "summary": "The `/utils` page used to be plain forms with a `<pre>` printing the answer in monospace text. Every utility now mirrors the thing it does: **Magic 8-ball** — a real ball that shakes for ~700 ms, then fades the answer into the triangular window. **Dice roller** — classic pip-faced d6s (six static SVGs) for 6-sided rolls; rounded numbered die for everything else. Dice tumble in, staggered, and settle. >24 dice collapse to \"+N more\" while the text output still lists every ro…",
+    "emoji": "✨",
+    "prNumber": 588
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup 77 files into themed sub-packages",
+    "summary": "Ninth wave of the refactor pass — and PR 2 of 4 in the packaging-only re-organisation series (continuing from #586). The flat `database/persistence/` (38) + `persistence/impl/` (38 + 1 helper) directory had the same **77-file-bucket** discoverability problem the service side did — casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild entity persistence types all sat alongside each other. Mirrors the service-side regroup landed in #586. Theme buc…",
+    "emoji": "🎰",
+    "prNumber": 587
+  },
+  {
+    "date": "May 2026",
+    "title": "Regroup 88 files into themed sub-packages",
+    "summary": "Eighth wave of the refactor pass — and the first of four planned packaging-only PRs to improve navigation ease. The flat `database/service/` (62) + `service/impl/` (26) directory had grown into an **88-file bucket** where casino, PvP, lottery, music, leveling, economy, social, activity, user, and guild-config services all sat alongside each other. Opening it in the IDE meant scrolling through 88 names to find one service. Regroup into themed sub-packages. Each theme mirror…",
+    "emoji": "🎰",
+    "prNumber": 586
+  },
+  {
+    "date": "May 2026",
+    "title": "Move PvpResolutionOutcome translation factories beside the DTO",
+    "summary": "Seventh wave of the refactor pass (continuing from #579, #580, #581, #582, #583, #584). The two `translate*Outcome` helpers in `PvpController` were private sealed-type → DTO mappings that called the existing factory methods (`rpsWin`, `rpsDraw`, `rpsDoubleRefund`, `boardWin`, `boardDraw`) already living on `PvpWebService.PvpResolutionOutcome.Companion`. They were invoked from 12 sites in the controller (5 RPS branches, 7 TTT/C4 branches) but logically belonged with the DTO…",
+    "emoji": "🧹",
+    "prNumber": 585
+  },
+  {
+    "date": "May 2026",
+    "title": "Extract shared button-handler helpers (decline + access checks)",
+    "summary": "Sixth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581, #582, #583). Symmetric follow-up to #583 (which extracted the slash-command challenge ceremony). The three PvP `*Button` handlers — `RpsButton`, `TicTacToeButton`, `Connect4Button` — carried verbatim copies of: The full `handleDecline` body (scoped-actor check → registry decline → message-edit with `pendingDeclineEmbed` + cleared components → ephemeral \"already-resolved\" reply on n…",
+    "emoji": "🧹",
+    "prNumber": 584
+  },
+  {
+    "date": "May 2026",
+    "title": "Lift shared challenge ceremony out of the three slash commands",
+    "summary": "Fifth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581, #582). `RpsCommand`, `TicTacToeCommand`, and `Connect4Command` each carried a verbatim copy of a ~60-line `handle()` body — guild / target / bot / self / stake validation, opponent lazy-create, service.startMatch pre-flight + error embed, registry.register with a pending-timeout embed-edit callback, and the final pending-embed send. The only per-game bits were the service / registr…",
+    "emoji": "🧹",
+    "prNumber": 583
+  },
+  {
+    "date": "May 2026",
+    "title": "Extract shared PvpButtonIdCodec for the three PvP embeds",
+    "summary": "Fourth wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579, #580, #581). Each of `RpsEmbeds`, `TicTacToeEmbeds`, and `Connect4Embeds` carried a line-for-line identical `encode()` and `parseButtonId()` body — same 4-segment colon-delimited wire format, same case-insensitive prefix check, same null-on-malformed contract. Only the `BUTTON_NAME` constant and the per-game `Action` enum type differed. Lift the wire-format halves to a new shared `PvpButtonId…",
+    "emoji": "🧹",
+    "prNumber": 582
+  },
+  {
+    "date": "May 2026",
+    "title": "Unify PvpController RPS endpoints onto the board helpers",
+    "summary": "Third wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579 and #580). `PvpController` already extracted shared challenge / accept / close-offer / forfeit helpers for the two turn-based games (TTT, C4), but the RPS section reinvented the same five endpoints inline — same access checks, same SSE fan-out shapes, same registry-call sequence, just with RPS-specific service/registry/event-name strings. ~340 lines of near-duplicate code. After the `PvpSession…",
+    "emoji": "🧹",
+    "prNumber": 581
+  },
+  {
+    "date": "May 2026",
+    "title": "Extract PvpSessionRegistry base + split ModerationController",
+    "summary": "Second wave of the test-coverage + DRY/SOLID refactor pass (continuing from #579). Two logically independent commits: 1. **`refactor(pvp): extract PvpSessionRegistry base + re-parent TurnBased and Rps`** — The two session registries had ~120 lines of identical plumbing (Caffeine cache, atomic PENDING→LIVE, indexers, primitives). Lifted the shared surface into `database.pvp.PvpSessionRegistry<TSession>`; `TurnBasedBoardSessionRegistry` and `RpsSessionRegistry` are now thin…",
+    "emoji": "🧹",
+    "prNumber": 580
+  },
+  {
+    "date": "May 2026",
+    "title": "Refactor+test+build: BoundedSessionCache, Kover wiring, activity-tracking coverage",
+    "summary": "First wave of the test-coverage + DRY/SOLID refactor pass scoped out [in the planning session](https://claude.ai/code/session_017zsUNUN5DRMTWA5ZZgJ2mM). Three logically independent commits chosen as the safest, highest-leverage foundation before the bigger PvP consolidation work: 1. **`refactor(pvp): extract BoundedSessionCache shared factory`** — Lifts the duplicated Caffeine `expireAfterWrite().maximumSize().build().asMap()` block out of `TurnBasedBoardSessionRegistry` a…",
+    "emoji": "✨",
+    "prNumber": 579
+  },
+  {
+    "date": "May 2026",
+    "title": "Split Casino + PvP, deep-link PvP games, promote Commands",
+    "summary": "PvP was nested under \"Economy\" in the navbar — bad fit, PvP has no market mechanics. The home page's numbers strip already treats Casino + PvP as peer categories (\"15 Casino games\" / \"4 PvP games\"); the navbar now mirrors that. Plus the broader correctness pass the user asked for. ### Navbar changes **New top-level \"PvP\" section** between Casino and Economy with a dropdown listing all four PvP games — Duel, Rock-Paper-Scissors, Tic-Tac-Toe, Connect 4 — each with the same e…",
+    "emoji": "✨",
+    "prNumber": 578
+  },
+  {
+    "date": "May 2026",
+    "title": "Bound suspicion-tracker map + cache 12-month rollup query",
+    "summary": "Follow-up to the audit after #574 landed — that PR trimmed `ProfileCardRenderer`, which is a rarely-exercised path. The real memory pressure comes from surfaces the bot exercises all day. This PR addresses two of them: **C) Bound `CasinoBotSuspicionService`** — the per-(user, guild, game) state map was an unbounded `ConcurrentHashMap`. `evictGuild` only fires on bot-leave and the idle-reset clears the deque but leaves the map entry, so a one-and-done casino player left a p…",
+    "emoji": "⚡",
+    "prNumber": 577
+  },
+  {
+    "date": "May 2026",
+    "title": "TicTacToe + Connect 4 frontends + home counter bump",
+    "summary": "**Stacked on top of #573 (TTT + C4 backends)** — this branch includes both PRs' commits. When #573 merges, GitHub will auto-strip those commits from this diff. Activates the last two PvP tabs end-to-end **and** bumps the home page counter to honestly advertise all four PvP games now that every tab is playable in the browser. After both #573 and this land, the original ask — \"should the home page counter advertise PvP games — maybe if they have a web UI?\" — is closed. ### F…",
+    "emoji": "✨",
+    "prNumber": 576
+  },
+  {
+    "date": "May 2026",
+    "title": "Cache profile avatars + drop alpha from card buffer",
+    "summary": "Container-memory audit of the ~30 PRs since #536 (`perf(memory): trim Hikari pool + gate non-core Lavaplayer sources`). Heap budget is tight: `-Xmx224m -XX:MaxDirectMemorySize=48m -XX:+UseSerialGC`. **Audit verdict — most recent additions are well-bounded:** Game/duel registries (RPS, TicTacToe, Connect4, PendingDuel, RecentDuelResolutions) all use Caffeine with `maximumSize(10_000)` + explicit TTL. Safe. SSE fan-out (`KeyedSseRegistry` backing PvP / Notifications / Music)…",
+    "emoji": "⚡",
+    "prNumber": 574
+  },
+  {
+    "date": "May 2026",
+    "title": "TicTacToe + Connect 4 web backends",
+    "summary": "Mirrors PR #568's RPS backend shape for the two turn-based PvP games (TicTacToe + Connect 4). Both tabs still show \"coming soon\" on the page — frontend (HTML / JS / CSS) lands in the follow-up alongside the home counter bump. ### Backend endpoints `POST /pvp/{guildId}/{tictactoe|connect4}/{challenge,accept,decline,cancel,move,forfeit}` — call into the existing `TicTacToeService` / `Connect4Service` + their session registries, so achievements / XP / `*ResolvedEvent` emissio…",
+    "emoji": "✨",
+    "prNumber": 573
+  },
+  {
+    "date": "May 2026",
+    "title": "Group forms into Member / Channel card grids",
+    "summary": "Phase 4 of the moderation dashboard refresh — Actions tab. The audit of the eight tabs that didn't get a deeper pass in earlier phases turned up just one outlier worth touching: **actions.html**. The other seven (users, voice, poll, casino, lottery, leveling, welcome) already compose cleanly under the new chrome. Actions was the last moderation tab still rendered as a flat scroll of forms. This pass groups it the same way the rest of the dashboard reads, without changing a…",
+    "emoji": "🛡️",
+    "prNumber": 572
+  },
+  {
+    "date": "May 2026",
+    "title": "Side-rail nav, stakes table, bulk apply",
+    "summary": "Phase 3 of the moderation dashboard refresh — the Settings tab. Replaces the ~986-line wall of stacked `<details>` accordions with a navigable layout, a real stake-limits table, and a bulk \"set every game at once\" widget that lets admins update many keys in one shot. **Sticky left-rail navigation** lists every section grouped by pillar (Server / Economy / Casino). Clicking a rail link opens the matching `<details>` and smooth-scrolls to it; an `IntersectionObserver` mirror…",
+    "emoji": "🛡️",
+    "prNumber": 571
+  },
+  {
+    "date": "May 2026",
+    "title": "RPS frontend — SSE-driven panel with challenge, accept, pick",
+    "summary": "Activates the **RPS tab on `/pvp/{guildId}` end-to-end**. The backend that merged in #568 is now reachable from the browser — challenge, accept/decline, pick, forfeit all work without leaving the page. ### What's in the panel **Challenge card**: opponent picker + stake input (RPS-specific per-guild min/max via new `StakeBounds.rps`) + submit button. **Pending offers** (incoming) with Accept / Decline buttons. **Outgoing offers** with Cancel button. **Live-match board** wit…",
+    "emoji": "✨",
+    "prNumber": 570
+  },
+  {
+    "date": "May 2026",
+    "title": "Unified dashboard header + .mod-page-intro shell",
+    "summary": "Phase 2 of the moderation dashboard refresh — unifies the shared chrome across all 10 tabs so each page reads as part of one designed dashboard instead of 10 stitched-together tabs. **New `.mod-page-header`** in `fragments/moderationHeader.html`: guild avatar (fed from a new `GuildOverview.guildIconUrl`, with a coloured-initial fallback when the guild has no icon) + \"Server name\" eyebrow + H1 with the active tab's label + a per-tab one-line description, plus a right-pinned…",
+    "emoji": "🛡️",
+    "prNumber": 569
+  },
+  {
+    "date": "May 2026",
+    "title": "RPS web backend — endpoints, SSE fan-out, view DTOs",
+    "summary": "First slice of PR 1b. Wires the **backend half of Rock-Paper-Scissors web play** onto the existing `/pvp` surface; the page still shows the \"coming soon\" RPS panel until the next slice adds JS/HTML/CSS. Established the SSE infrastructure that TicTacToe and Connect 4 will reuse. ### Backend endpoints `POST /pvp/{guildId}/rps/{challenge,accept,decline,cancel,pick,forfeit}` — all six mutations call into the existing `RpsService` + `RpsSessionRegistry`, so achievements / XP /…",
+    "emoji": "✨",
+    "prNumber": 568
+  },
+  {
+    "date": "May 2026",
+    "title": "Redesign Activity tab + pill-style sub-nav",
+    "summary": "The Moderation → Activity tab was previously two bare SVG polylines with a one-line \"total · peak\" caption — accurate but flat. This PR turns it into a small dashboard and gives the shared moderation sub-nav a chrome refresh that lifts every tab. ### Activity tab **Stat-tile row per metric**: Total · Average/day · Peak day · Active days, for both messages and voice hours. **Polished area charts**: gradient fill under the line, dashed Y-axis gridlines, Y/X axis labels, per-…",
+    "emoji": "🛡️",
+    "prNumber": 567
+  },
+  {
+    "date": "May 2026",
+    "title": "Migrate /duel web surface to /pvp with 4-tab unified page",
+    "summary": "First slice of the `/pvp` web surface plan. Migrates the existing Duel web UI out of `/duel/*` into a new unified `/pvp/{guildId}` page with a four-tab strip — **Duel** (fully wired, same DuelService + PendingDuelRegistry as before) plus three \"coming soon\" placeholders for **Rock-Paper-Scissors**, **Tic-Tac-Toe**, **Connect 4**. The placeholders point visitors at the existing Discord slash commands (`/rps`, `/tictactoe`, `/connect4`) while the web play surfaces for those…",
+    "emoji": "💰",
+    "prNumber": 566
+  },
+  {
+    "date": "May 2026",
+    "title": "Drive category visibility from section.hidden, not a hardcoded allowlist",
+    "summary": "Fixes the empty **Games** filter on `/commands/wiki` (regression from #563): the previous CSS enumerated every valid `data-active-cat` slug, the new `games` slug wasn't on the list, so clicking the chip hit the `:not(...)` fallback and hid every section. Refactors the visibility model so the bug class can't recur: `applyFilters()` already iterates every section and knows whether each matches the active chip, so it now sets `section.hidden` for the category miss too. The `.…",
+    "emoji": "🔨",
+    "prNumber": 565
+  },
+  {
+    "date": "May 2026",
+    "title": "Unbreak channel picker after reinvite — keep configured channels visible + request Administrator on invite",
+    "summary": "Two related changes from the same user report: lottery announce channel \"defaulted back to general\" after a TobyBot uninstall/reinstall, and the saved channel was missing from the picker so it couldn't be re-selected.",
+    "emoji": "🛡️",
+    "prNumber": 564
+  },
+  {
+    "date": "May 2026",
+    "title": "GameCommand interface + surface PvP in home counter",
+    "summary": "Introduces a `GameCommand` marker interface (sibling to `EconomyCommand`) so the type system can finally tell games apart from real economy commands. Migrates **19 commands** off `EconomyCommand` and into a new `commands/game/` package: the 12 casino minigames, Poker, Blackjack, Lottery, the 3 PvP games (RPS, TicTacToe, Connect 4), and Duel. The 5 remaining economy commands (Tip, TobyCoin, Title, PriceAlert) stay put. Threads the new bucket through `CommandManager` / `Defa…",
+    "emoji": "🎟️",
+    "prNumber": 563
+  },
+  {
+    "date": "May 2026",
+    "title": "Left-align mobile XP + client-side sort the Members tab",
+    "summary": "Two follow-ups on the Members tab from screenshot review: ### 1. Mobile XP card — left-align under Credits PR #560 added the XP cell as a third row spanning all three grid columns, centred. User reported it \"still looks wonky\" and wanted XP aligned under the Credits column instead. One-rule CSS change in `base.css`: drop `text-align: center` and switch `align-items` from `center` to `flex-start`, mirroring the m1 / Credits alignment. The cell still spans the full row; only…",
+    "emoji": "🔨",
+    "prNumber": 562
+  },
+  {
+    "date": "May 2026",
+    "title": "Broken activity page — pre-compute chart view in controller",
+    "summary": "The Activity sub-page at `/moderation/{guildId}/activity` (added in PR #558) is rendering the bot's generic \"Something went wrong / Error 200 — OK\" error block mid-page and cutting off the second chart. User reproduced on a deployed guild — screenshot showed the page intro and \"MESSAGES PER DAY\" heading render correctly, then \"Total over window:\" with no value, then the error block + footer. ### Root cause The template called `T(web.service.ActivityChartsService).totalValu…",
+    "emoji": "🛡️",
+    "prNumber": 561
+  },
+  {
+    "date": "May 2026",
+    "title": "Label XP on mobile leaderboard cards",
+    "summary": "PR #558 added an XP column to the Members standings table but missed updating the mobile card view (≤ 600px). The standings table collapses to a CSS-grid card per row on mobile; the XP cell had `data-label=\"XP\"` set in the template but no `grid-area` rule and wasn't in the `::before { content: attr(data-label) }` allow-list. CSS Grid auto-placed it into row 3 col 1 as a bare unlabelled number floating below the three labelled metric cells. User confirmed via screenshot — t…",
+    "emoji": "🔨",
+    "prNumber": 560
+  },
+  {
+    "date": "May 2026",
+    "title": "Champions tab + XP ranking + Activity charts",
+    "summary": "Three additive gaps in the existing leaderboard + moderation surface, all leveraging data that's already in the database. ### 1. Champions tab on `/leaderboards` Fourth tab that ranks users by total PvP wins across `/duel`, `/rps`, `/tictactoe`, `/connect4`. Reads the smallest-tier `*_wins_10` achievement counters — each counter holds the user's actual win count for that game regardless of higher-tier unlocks, so a single per-guild aggregation query produces the leaderboar…",
+    "emoji": "🛡️",
+    "prNumber": 558
+  },
+  {
+    "date": "May 2026",
+    "title": "/connect4 + extract TurnBasedBoardWager/SessionRegistry bases",
+    "summary": "Adds `/connect4 @opponent [stake:<int>]` — head-to-head 7×6 Connect 4. Third and final of the planned PvP mini-games trio (after `/rps` #553 and `/tictactoe` #556). Initiator plays 🔴 (drops first); opponent plays 🟡. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute. Free-play (stake omitted or 0) is also accepted — winner gets XP, no credits change hands. Draws refund both. Same PR also extracts the two ab…",
+    "emoji": "🛡️",
+    "prNumber": 557
+  },
+  {
+    "date": "May 2026",
+    "title": "/tictactoe slash command with optional social-credit wager",
+    "summary": "Adds `/tictactoe @opponent [stake:<int>]` — head-to-head 3×3 Tic-Tac-Toe between two users. Second of the three planned PvP mini-games (after `/rps` in #553; Connect 4 is the next follow-up). The initiator plays ❌ and moves first; the opponent plays ⭕. Stake-bearing matches debit both players on accept and the winner takes the pot minus the per-guild jackpot tribute (same model as `/rps` and `/duel`). Free-play (stake omitted or 0) is also accepted — winner gets XP, no cre…",
+    "emoji": "🛡️",
+    "prNumber": 556
+  },
+  {
+    "date": "May 2026",
+    "title": "Move pure game engines from database/ to common/",
+    "summary": "The casino / mini-game engines and their supporting value types (cards, hands, tables) are pure logic — no Spring, JPA, or JDA dependencies — so they belong in the `common` module alongside the other shared types rather than in `database` where they were originally placed. Moved from `database/` → `common/`: **Engines** (pure logic): `Blackjack`, `PokerEngine`, `CasinoHoldem`, `RpsEngine`, `Coinflip`, `Dice`, `Roulette`, `Keno`, `Plinko`, `SlotMachine`, `Highlow`, `Baccara…",
+    "emoji": "🎰",
+    "prNumber": 555
+  },
+  {
+    "date": "May 2026",
+    "title": "Back PendingDuelRegistry + RecentDuelResolutions with Caffeine",
+    "summary": "Brings the two duel-area in-memory registries onto the same belt-and-suspenders memory protection that `RpsSessionRegistry` got in #553's review pass. Both `PendingDuelRegistry` and `RecentDuelResolutions` used raw `ConcurrentHashMap + ScheduledExecutorService` — fine on the happy path but no upper bound on heap and no backstop if a scheduled task throws or the executor queue saturates.",
+    "emoji": "🧹",
+    "prNumber": 554
+  },
+  {
+    "date": "May 2026",
+    "title": "/rps slash command with optional social-credit wager (first of 3 mini-games)",
+    "summary": "First of the planned mini PvP games — Rock-Paper-Scissors as a 2-player challenge with hidden picks. Mirrors `/duel`'s offer + accept + resolve lifecycle but adds a pick-phase between accept and resolution: ``` PENDING (no debit) → opponent Accept → LIVE (both debited) ↘ Decline / timeout (no-op) LIVE → both pick → resolve (winner credited pot − jackpot tribute) → one picks → other forfeits (picker wins by walkover) → neither picks → DoubleRefund ``` Stake is optional — `/…",
+    "emoji": "🛡️",
+    "prNumber": 553
+  },
+  {
+    "date": "May 2026",
+    "title": "Break Spring cycle by removing JDA from ProfileCardAggregator",
+    "summary": "**Hotfix — production bot crash-looping on main.** Spring fails to start with: ``` APPLICATION FAILED TO START The dependencies of some of the beans in the application context form a cycle: JdaListenerRegistrar ┌─────┐ | jda ↑ ↓ | StartUpHandler ↑ ↓ | CommandManager ↑ ↓ | HelpCommand ↑ ↓ | ProfileCommand ↑ ↓ | ProfileCardAggregator ← cycle closes here └─────┘ ``` `CommandManager` and `HelpCommand` both inject `List<Command>` (Spring fills with every `Command` bean), so any…",
+    "emoji": "🔨",
+    "prNumber": 551
+  },
+  {
+    "date": "May 2026",
+    "title": "Show role names in autorole errors, unbreak mobile forms",
+    "summary": "Reporter (mobile) tried to bind an auto-role on **Welcome → Auto-assigned roles on join** and saw the rejection toast as a raw role mention (`<@&765616866554544130>` sits above TobyBot's role…), plus the **Message template** input above it was clipped to ~200px alongside its Save button so they could only see `{user.name`. Two fixes: ### 1. Autorole error: render role name, not Discord mention `AutoRoleValidator` interpolated `role.asMention`, which Discord turns into a ch…",
+    "emoji": "🛡️",
+    "prNumber": 549
+  },
+  {
+    "date": "May 2026",
+    "title": "Shared searchable channel picker across moderation pages",
+    "summary": "Every channel `<select>` dropdown in the moderation UI now uses a searchable typeahead combobox that mirrors the existing `userPicker` UX (filter-as-you-type, keyboard nav, accessible combobox roles). The new `channelPicker` fragment + JS module progressively enhances a native `<select>`, so the form-save handlers in `moderationCommon.js`, `actions.js`, `poll.js`, `voice.js`, `lottery.js`, and `leveling.js` keep reading `.value` unchanged. Eleven sites migrated across: `se…",
+    "emoji": "🛡️",
+    "prNumber": 547
+  },
+  {
+    "date": "May 2026",
+    "title": "Per-guild welcome/goodbye announcements + auto-role-on-join",
+    "summary": "Adds the table-stakes \"this bot greets new members\" feature that big servers expect from a main bot. Three independently-toggleable surfaces, configurable from both Discord (`/welcome` slash command) and the web dashboard (`/moderation/{guild}/welcome` tab). This is the first wave from the [feature-recommendations plan](https://claude.ai/code/session_017tRi5q6K3NYHvYeZYzLzBD) — picked as the single biggest unlock for admin appeal.",
+    "emoji": "🛡️",
+    "prNumber": 546
+  },
+  {
+    "date": "May 2026",
+    "title": "Keep commands toolbar below the nav drawer stacking context",
+    "summary": "When the mobile nav drawer is open on `/commands/wiki`, the sticky `.commands-toolbar` (search input + category chips) visibly renders **on top of** the drawer instead of being covered by it. **Cause:** stacking-context isolation. `body > nav` (`nav.css` line 32) sets `position: relative; z-index: 10`, making the entire navbar a stacking context at z=10. The drawer panel inside it bumps to `z-index: 1000` (`nav.css` line 360), but that 1000 is only meaningful within the na…",
+    "emoji": "🔨",
+    "prNumber": 545
+  },
+  {
+    "date": "May 2026",
+    "title": "Channel picker modals — min_values=1, plus Activity announce channels",
+    "summary": "**Two changes in one PR — hotfix + small follow-up.** ### 1. Hotfix: `min_values >= 1` on every picker modal Every wizard channel-picker modal (Quick channels, Jackpot, Lottery) failed to open with \"Interaction failed\". Discord rejects modal payloads where a `Label`-wrapped `EntitySelectMenu` has `min_values=0` — `Label` children are implicitly required, and required + min=0 is a contradiction the API enforces: ``` 50035 Invalid Form Body data.components[0].component.min_v…",
+    "emoji": "🎰",
+    "prNumber": 544
+  },
+  {
+    "date": "May 2026",
+    "title": "Quick channels picker for jackpot + lottery sections",
+    "summary": "Follow-up to the revert PR. The General section already has a \"Quick channels\" entry (Move + Leaderboard channel pickers via `InstallQuickChannelsModal`). This adds the same UX to the Jackpot and Lottery sections so owners never have to type a channel ID anywhere in the wizard. > **Stacks on top of #542** (the revert). Merge that one first; this PR is independent of its content but its branch was created from #542 to avoid conflicts. ### New modals | Modal | Section | Writ…",
+    "emoji": "🎰",
+    "prNumber": 543
+  },
+  {
+    "date": "May 2026",
+    "title": "Revert mixed-modal channel pickers — Discord rejects them",
+    "summary": "**Hotfix**: PR #541 broke the setconfig modals for General, Jackpot, and Lottery pools — all show client-side \"Interaction failed\" on open. Discord's modal API rejects modals that mix `TextInput` and `EntitySelectMenu` components. Reproduced by the user on General; same root cause for the other two mixed modals. This PR reverts the rendering change. Channel fields render as `TextInput` again across every setconfig modal, restoring the pre-#541 working behavior. Picker UX i…",
+    "emoji": "🔨",
+    "prNumber": 542
+  },
+  {
+    "date": "May 2026",
+    "title": "Channel pickers replace typed-ID boxes",
+    "summary": "Replaces the typed-channel-ID `TextInput` boxes in `/setconfig` with Discord's native `EntitySelectMenu` channel picker — owners click their channel from a list, no IDs to copy. Affects four channel fields across three modals: `MOVE` (voice, store name) — `SetConfigGeneralModal` `LEADERBOARD_CHANNEL` (text, store id) — `SetConfigGeneralModal` `CASINO_MODLOG_CHANNEL_ID` (text, store id) — `SetConfigJackpotModal` `LOTTERY_CHANNEL` (text, store id) — `SetConfigLotteryPoolsMod…",
+    "emoji": "🛡️",
+    "prNumber": 541
+  },
+  {
+    "date": "May 2026",
+    "title": "Un-overlap the commands search icon and placeholder",
+    "summary": "The search SVG on `/commands/wiki` was overlapping the first character of the \"Search commands…\" placeholder text (visible in user screenshot of the input). **Cause:** CSS specificity collision with the shared input styling. `web/src/main/resources/static/css/commands.css` line 81: `.commands-search-input { padding: 11px 44px 11px 40px }` — specificity **(0,1,0)**. `web/src/main/resources/static/css/base.css` line 282: `input[type=search] { padding: 10px 12px }` — specific…",
+    "emoji": "🔨",
+    "prNumber": 540
+  },
+  {
+    "date": "May 2026",
+    "title": "Commands wiki was truncating mid-render — host loop on th:block",
+    "summary": "`/commands/wiki` was shipping a truncated `200 OK` to production — the response cut off mid-stream at `<div class=\"cmd-grid\">` (14,233 bytes, no `</main>`, no `</body>`, no script tag). Browsers drew the static fallback and the empty-state 🔍 sat visible mid-page because `commands.js` never loaded. **Cause:** the cmd-grid loop placed `th:each` and `th:replace` on the same `<div>`. Thymeleaf attribute precedence is `th:replace = 100` and `th:each = 200` (lower runs first),…",
+    "emoji": "🔨",
+    "prNumber": 538
+  },
+  {
+    "date": "May 2026",
+    "title": "Unstick custom-setup section pick (deferEdit + bot-webhook)",
+    "summary": "Fixes the install wizard hanging after the first section pick in Custom setup. The embed swapped to the section-detail header but the components stayed as the disabled previous view (section menu + Optional features/Finish row) — owner stuck. ### Root cause Race between `DefaultMenuManager.handle` and `InstallCategoryMenu`'s non-modal branches: 1. **Manager** (bot-webhook): `event.message.editMessageComponents(disabledRows).queue()` queued *before* dispatch. 2. **Handler**…",
+    "emoji": "🔨",
+    "prNumber": 539
+  },
+  {
+    "date": "May 2026",
+    "title": "Redesign the commands wiki as a searchable catalog",
+    "summary": "`/commands/wiki` used to render every slash command as raw bordered tables with enum-style type badges (`STRING`, `INTEGER`, `BOOLEAN`…) and nested bullet lists — readable as developer docs but a poor first impression for the two homepage CTAs that point at it. This rebuilds the page as a polished, searchable catalog. **Hero** with eyebrow + h1 + lede + live counts (N commands · M categories). **Sticky translucent toolbar** with a search input (placeholder hint, `/` to foc…",
+    "emoji": "✨",
+    "prNumber": 537
+  },
+  {
+    "date": "May 2026",
+    "title": "Trim Hikari pool + gate non-core Lavaplayer sources",
+    "summary": "Memory dashboard shows the 512 MB dyno sitting pinned at the cap with 102% peaks. Daily reset means this is a **steady-state baseline** problem, not a multi-day leak — so the unbounded-cache fixes I considered first (`IntroHelper.pendingIntros`, `EventWaiter`, `TrackScheduler` overflow, push-row prune) are deferred; they're bounded within a day's runtime and wouldn't move this graph. Two unaddressed contributors to the per-restart baseline: **HikariCP** had no explicit siz…",
+    "emoji": "🎵",
+    "prNumber": 536
+  },
+  {
+    "date": "May 2026",
+    "title": "ConfigService.upsertAll — collapse multi-row config writes",
+    "summary": "Adds `ConfigService.upsertAll(guildId, rows): List<UpsertResult>` so multi-row config writes land in **one transactional commit** instead of N sequential commits. Migrates every looping / multi-row caller in `discord-bot`. ### Why `InstallAllStakesModal.handle` writes up to 20 rows in a `forEach` loop, each one its own JPA transaction (the persistence layer is `@Transactional` per-method, the service layer wasn't). The TODO comment on that loop already flagged `upsertAll(l…",
+    "emoji": "✨",
+    "prNumber": 535
+  },
+  {
+    "date": "May 2026",
+    "title": "In-Discord install wizard (Express + Custom paths)",
+    "summary": "Server owners now get a **welcome message + `/install` slash command** that opens a streamlined setup wizard with two paths: **Express setup** — one click; writes `INSTALL_MODE=express` + `INSTALLED_AT` and shows a done embed. Defaults handle everything else. **Custom setup** — picks categories to tune via a two-tier section menu. Selecting a category opens the existing `SetConfig*Modal` (no modal duplication). **Skip for now** — dismiss; `/install` is still available late…",
+    "emoji": "🛡️",
+    "prNumber": 534
+  },
+  {
+    "date": "May 2026",
+    "title": "Split head fragments — stops the double in-page toast",
+    "summary": "Closes the double-toast loop. Root cause traced via PR #532's `[diag]` logging: ``` [diag] NotificationSseService.onLevelUp fired ... # once [diag] fanOut key=… eventName=levelUp bucketSize=6 # but bucket has 6 [diag] publish AchievementUnlockedEvent ... # once [diag] NotificationSseService.onAchievementUnlocked # once [diag] fanOut key=… eventName=achievement bucketSize=2 # bucket has 2 ``` Server-side fires exactly **once** at every layer. The doubling is in the wire-to-…",
+    "emoji": "🔨",
+    "prNumber": 533
+  },
+  {
+    "date": "May 2026",
+    "title": "Surface engagement events as in-page toasts via per-user SSE",
+    "summary": "New per-user SSE endpoint `GET /api/notifications/stream` opens an authenticated stream that fans out four engagement events as in-page toasts: achievement unlocks, level-ups, tips received, and lottery draws (your ticket). Fan-out is in-process via Spring's `ApplicationEventPublisher`. Toasts pop on whatever page the user has open — no opt-in (the user is already on the site) and no service-worker dependency. Click-through navigates to the deep link (`/profile/{guildId}`)…",
+    "emoji": "🎟️",
+    "prNumber": 531
+  },
+  {
+    "date": "May 2026",
+    "title": "Polish leaderboard LVL + title pill formatting",
+    "summary": "The Prestige cell on the leaderboard had three issues visible in the attached screenshot: 1. **No gap between pills.** The `LVL 7` pill and `💎 Diamond Hands` pill rendered as adjacent `inline-block` siblings with no spacing, so they touched each other. 2. **Mobile grid mismatch.** The phone-width grid in `base.css` targeted `td[data-label=\"Title\"]`, but the template emits `data-label=\"Prestige\"` — so on mobile the cell auto-placed into the member column and collided with…",
+    "emoji": "🔨",
+    "prNumber": 530
+  },
+  {
+    "date": "May 2026",
+    "title": "Restore MemberCachePolicy.ALL — offline users broke leaderboards and auth",
+    "summary": "The narrowed `MemberCachePolicy` introduced in #525 (`online != OFFLINE`, voice, owner) silently breaks any feature that walks the member list for offline users: **Leaderboards** render \"Unknown\" for every offline player (as @user reported with screenshot). **`GuildMembership.isMember(id, guildId)`** returns `false` for an offline user who *is* in the guild — locks them out of pages. **`isOwner(...)`** returns `false` for an offline owner — they look like a regular user. *…",
+    "emoji": "🔨",
+    "prNumber": 529
+  },
+  {
+    "date": "May 2026",
+    "title": "Bump metaspace cap to stop startup OOM crash",
+    "summary": "Production crashed with: ``` 2026-05-20 08:58:42 [main] INFO o.s.o.jpa.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default' Terminating due to java.lang.OutOfMemoryError: Metaspace ``` The OOM fired ~500ms after JPA finished initialising — i.e. while Spring was still wiring the remaining beans (JDA listeners, controllers, scheduled jobs). My previous `-XX:MaxMetaspaceSize=96m` cut was too aggressive for Spring Boot +…",
+    "emoji": "🔨",
+    "prNumber": 527
+  },
+  {
+    "date": "May 2026",
+    "title": "Tighten JVM/JDA caps and evict per-guild caches on leave",
+    "summary": "Dyno memory profile was sitting at **~441 MB avg / 557 MB peak** against the 512 MB quota — R14/R15s on most peaks. Two-pronged fix: **Cap JVM + native footprint** so the process can't grow past the dyno quota. **Stop per-guild caches from drifting upward** as the bot leaves guilds. ### JVM ceiling (Procfile + Dockerfile) The Procfile previously passed *no memory flags*, so `-Xmx` defaulted to ~25% of container memory and Netty's direct memory mirrored `Runtime.maxMemory()…",
+    "emoji": "♠️",
+    "prNumber": 525
+  },
+  {
+    "date": "May 2026",
+    "title": "Include site footer on every page",
+    "summary": "Adds the site footer fragment to every page template that was missing it: game tables (blackjack, roulette, slots, plinko, …), guild pickers, dashboards, settings, moderation surfaces, public utilities (`utils`, `dndLookup`), the error page, and the previously-orphaned `profile.html` / `excuses.html`. Also adds the footer to both fragments inside `fragments/guildListPage.html` (`singleAction` and `dualAction`) so the four pages that delegate their entire body through it —…",
+    "emoji": "🎟️",
+    "prNumber": 526
+  },
+  {
+    "date": "May 2026",
+    "title": "Load footer styles on every page, not just home",
+    "summary": "The site footer renders flush-left and unstyled on every public page except `/` — visible on `/commands`, `/commands/wiki`, `/changelog`, `/login`, `/terms`, `/privacy`. Root cause: `.site-footer*` rules lived in `home.css`, but the footer fragment is included from pages that load their own per-page sheet (`commands.css`, `legal.css`, etc.) and never pull in `home.css`. The shared head fragment only loads `base.css` + `nav.css` + one per-page sheet. Fix: extract the footer…",
+    "emoji": "🔨",
+    "prNumber": 523
+  },
+  {
     "date": "May 2026",
     "title": "Wire 13 casino games to their reserved achievement events",
     "summary": "Follow-up to #520. That PR reserved 13 hidden roadmap stubs in `AchievementCatalog` for casino games that didn't yet publish domain events. This PR wires them up so every stub is `hidden = false` and `PENDING_HIDDEN_CODES` is empty. ### What changed **13 new event classes** under `common.events` — one per game, mirroring `BlackjackNaturalEvent`'s minimal `(discordId, guildId)` shape (Highlow adds an `isWin` flag). **13 modified services** under `database.service` — each ge…",
