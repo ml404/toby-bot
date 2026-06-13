@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Generalize wallet leaderboard to show holdings across all coins",
+    "summary": "## Why",
+    "emoji": "✨",
+    "prNumber": 723
+  },
+  {
+    "date": "June 2026",
     "title": "Fix horizontal overflow on moderation settings/admin pages on mobile",
     "summary": "## What & why",
     "emoji": "🛡️",
