@@ -1165,6 +1165,40 @@ td { font-size: 0.95rem; }
 .lb-value-month { color: var(--success); font-weight: 600; }
 .lb-value-month-down { color: var(--sell); font-weight: 600; }
 
+/* Per-coin holdings breakdown on the wallet leaderboard. Each coin a
+   member holds renders as its own amount+ticker pill so the column shows
+   the whole multi-coin wallet instead of a single TOBY figure. Pills wrap
+   so a member holding every coin still lays out cleanly. */
+.lb-coin-holdings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+}
+.lb-coin-pill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.lb-coin-pill .lb-coin-amount {
+    color: var(--buy);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.lb-coin-pill .lb-coin-symbol {
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 /* ============================================================
    Mobile: tighter standings cards.
    The shared .mod-table mobile rules in moderation.css turn each
@@ -1178,8 +1212,9 @@ td { font-size: 0.95rem; }
             a small "label / value" pair so they read as a set
             instead of three separate stacked rows.
    The column-area mappings reference the data-label values the
-   leaderboard template emits ("#", "Member", "Title", and the per-
-   table metric labels — Credits/TOBY/This month/Voice/Portfolio).
+   leaderboard template emits ("#", "Member", "Prestige", and the per-
+   table metric labels — Credits/Coins held/This month/TOBY this month/
+   Voice/Portfolio).
    Other mod-table consumers don't carry those labels so the grid
    override never fires for them.
    ============================================================ */
@@ -1233,8 +1268,9 @@ td { font-size: 0.95rem; }
        left-aligns under the rank/member, the centre aligns under
        the member, and the rightmost right-aligns under the title. */
     .lb-standings-table.mod-table td[data-label="Credits"],
-    .lb-standings-table.mod-table td[data-label="TOBY"],
+    .lb-standings-table.mod-table td[data-label="Coins held"],
     .lb-standings-table.mod-table td[data-label="This month"],
+    .lb-standings-table.mod-table td[data-label="TOBY this month"],
     .lb-standings-table.mod-table td[data-label="Voice"],
     .lb-standings-table.mod-table td[data-label="Portfolio"],
     .lb-standings-table.mod-table td[data-label="XP"] {
@@ -1243,11 +1279,12 @@ td { font-size: 0.95rem; }
         gap: 1px;
     }
     .lb-standings-table.mod-table td[data-label="Credits"],
-    .lb-standings-table.mod-table td[data-label="TOBY"] {
+    .lb-standings-table.mod-table td[data-label="Coins held"] {
         grid-area: m1;
         align-items: flex-start;
     }
-    .lb-standings-table.mod-table td[data-label="This month"] {
+    .lb-standings-table.mod-table td[data-label="This month"],
+    .lb-standings-table.mod-table td[data-label="TOBY this month"] {
         grid-area: m2;
         align-items: center;
         text-align: center;
@@ -1267,8 +1304,9 @@ td { font-size: 0.95rem; }
         align-items: flex-start;
     }
     .lb-standings-table.mod-table td[data-label="Credits"]::before,
-    .lb-standings-table.mod-table td[data-label="TOBY"]::before,
+    .lb-standings-table.mod-table td[data-label="Coins held"]::before,
     .lb-standings-table.mod-table td[data-label="This month"]::before,
+    .lb-standings-table.mod-table td[data-label="TOBY this month"]::before,
     .lb-standings-table.mod-table td[data-label="Voice"]::before,
     .lb-standings-table.mod-table td[data-label="Portfolio"]::before,
     .lb-standings-table.mod-table td[data-label="XP"]::before {

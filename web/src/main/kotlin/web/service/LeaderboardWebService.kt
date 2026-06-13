@@ -378,22 +378,26 @@ class LeaderboardWebService(
 
         return allUsers.asSequence()
             .map { dto ->
-                // Total portfolio value = TOBY (legacy column) + every other
-                // coin held, each at its current market price.
-                var value = floor(dto.tobyCoins.toDouble() * tobyPrice).toLong()
-                val userHoldings = holdingsByUser[dto.discordId]
-                userHoldings?.forEach { h ->
-                    value += floor(h.amount.toDouble() * (prices[Coin.fromSymbol(h.coin)] ?: 0.0)).toLong()
-                }
-                val holdsAnyCoin = dto.tobyCoins > 0L || !userHoldings.isNullOrEmpty()
-                Triple(dto, value, holdsAnyCoin)
+                // Per-coin breakdown of everything this user holds: TOBY (the
+                // legacy column) plus every other coin in `user_coin_holding`,
+                // each valued at its current market price. The total portfolio
+                // value is the sum, so ranking and the displayed holdings tell
+                // the same multi-coin story instead of a TOBY-only one.
+                val holdings = buildCoinHoldings(
+                    tobyCoins = dto.tobyCoins,
+                    tobyPrice = tobyPrice,
+                    userHoldings = holdingsByUser[dto.discordId].orEmpty(),
+                    prices = prices,
+                )
+                val value = holdings.sumOf { it.valueCredits }
+                Triple(dto, value, holdings)
             }
             // Anyone holding any coin appears (even at a 0-price market); rank
             // is by total portfolio value across all coins.
-            .filter { it.third }
+            .filter { it.third.isNotEmpty() }
             .sortedByDescending { it.second }
             .take(TOBY_COIN_LEADERBOARD_LIMIT)
-            .mapIndexed { index, (dto, value, _) ->
+            .mapIndexed { index, (dto, value, holdings) ->
                 val member = guild.getMemberById(dto.discordId)
                 val title = runCatching {
                     dto.activeTitleId?.let { titleService.getById(it) }?.label
@@ -408,10 +412,47 @@ class LeaderboardWebService(
                     level = common.leveling.LevelCurve.progress(dto.xp).level,
                     coins = dto.tobyCoins,
                     coinsThisMonth = coinsThisMonth,
-                    portfolioCredits = value
+                    portfolioCredits = value,
+                    holdings = holdings,
                 )
             }
             .toList()
+    }
+
+    /**
+     * Flatten one user's balances into a per-coin breakdown ordered by current
+     * credit value (most valuable first), so the wallet leaderboard shows what
+     * a member actually holds across every coin rather than just TOBY. Coins
+     * with a zero balance are skipped; a held coin whose market isn't seeded
+     * yet still appears at a 0 value so the holding isn't silently dropped.
+     */
+    private fun buildCoinHoldings(
+        tobyCoins: Long,
+        tobyPrice: Double,
+        userHoldings: List<database.dto.economy.UserCoinHoldingDto>,
+        prices: Map<Coin, Double>,
+    ): List<CoinHolding> {
+        val holdings = ArrayList<CoinHolding>(userHoldings.size + 1)
+        if (tobyCoins > 0L) {
+            holdings += CoinHolding(
+                symbol = Coin.TOBY.symbol,
+                displayName = Coin.TOBY.displayName,
+                amount = tobyCoins,
+                valueCredits = floor(tobyCoins.toDouble() * tobyPrice).toLong(),
+            )
+        }
+        userHoldings.forEach { h ->
+            if (h.amount > 0L) {
+                val coin = Coin.fromSymbol(h.coin)
+                holdings += CoinHolding(
+                    symbol = coin.symbol,
+                    displayName = coin.displayName,
+                    amount = h.amount,
+                    valueCredits = floor(h.amount.toDouble() * (prices[coin] ?: 0.0)).toLong(),
+                )
+            }
+        }
+        return holdings.sortedByDescending { it.valueCredits }
     }
 }
 
@@ -478,9 +519,23 @@ data class TobyCoinLeaderRow(
     val avatarUrl: String?,
     val title: String?,
     val level: Int = 0,
+    /** TOBY balance — the legacy settle currency, used to drive the month delta. */
     val coins: Long,
     val coinsThisMonth: Long = 0L,
-    val portfolioCredits: Long
+    val portfolioCredits: Long,
+    /** Every coin this member holds, value-descending, for the holdings column. */
+    val holdings: List<CoinHolding> = emptyList(),
+)
+
+/**
+ * One coin a member holds on the wallet leaderboard: the ticker, a friendly
+ * name for tooltips, the raw amount, and its current value in credits.
+ */
+data class CoinHolding(
+    val symbol: String,
+    val displayName: String,
+    val amount: Long,
+    val valueCredits: Long,
 )
 
 data class TopGameRow(

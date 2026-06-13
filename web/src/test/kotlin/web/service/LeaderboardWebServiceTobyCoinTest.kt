@@ -218,6 +218,52 @@ class LeaderboardWebServiceTobyCoinTest {
     }
 
     @Test
+    fun `tobyCoinLeaders exposes a per-coin holdings breakdown ordered by value`() {
+        // TOBY @ 1, MOON @ 10. Alice holds 50 TOBY (value 50) and 20 MOON
+        // (value 200) — the breakdown must list MOON first (more valuable).
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { marketService.getMarket(guildId, Coin.MOON) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.MOON.symbol, price = 10.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 50L },
+        )
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 20L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+
+        assertEquals(listOf("MOON", "TOBY"), row.holdings.map { it.symbol },
+            "holdings are ordered most-valuable first")
+        assertEquals(listOf(20L, 50L), row.holdings.map { it.amount })
+        assertEquals(listOf(200L, 50L), row.holdings.map { it.valueCredits })
+        assertEquals(250L, row.portfolioCredits, "portfolio = sum of every holding's value")
+    }
+
+    @Test
+    fun `tobyCoinLeaders omits coins with a zero balance from the breakdown`() {
+        every { marketService.getMarket(guildId, Coin.TOBY) } returns
+            TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 1.0, lastTickAt = Instant.now())
+        every { userService.listGuildUsers(guildId) } returns listOf(
+            UserDto(discordId = 1L, guildId = guildId).apply { tobyCoins = 0L },
+        )
+        // A stale 0-amount holding row must not produce a phantom pill, but a
+        // real one keeps the user on the board.
+        every { holdingService.listForGuild(guildId) } returns listOf(
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.MOON.symbol, amount = 0L),
+            UserCoinHoldingDto(discordId = 1L, guildId = guildId, coin = Coin.TISM.symbol, amount = 5L),
+        )
+        every { guild.getMemberById(1L) } returns member(1L, "Alice")
+
+        val row = checkNotNull(service.getGuildView(guildId)).tobyCoinLeaders.single()
+
+        assertEquals(listOf("TISM"), row.holdings.map { it.symbol },
+            "zero-amount TOBY and the 0-amount MOON row are both excluded")
+    }
+
+    @Test
     fun `tobyCoinLeaders degrades to TOBY-only when the holdings read fails`() {
         every { marketService.getMarket(guildId, Coin.TOBY) } returns
             TobyCoinMarketDto(guildId = guildId, coin = Coin.TOBY.symbol, price = 2.0, lastTickAt = Instant.now())

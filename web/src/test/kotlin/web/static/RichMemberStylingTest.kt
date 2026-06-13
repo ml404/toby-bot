@@ -164,8 +164,9 @@ class RichMemberStylingTest {
         // collapse onto the rank row and ruin the layout.
         listOf(
             "data-label=\"Credits\"",
-            "data-label=\"TOBY\"",
+            "data-label=\"Coins held\"",
             "data-label=\"This month\"",
+            "data-label=\"TOBY this month\"",
             "data-label=\"Voice\"",
             "data-label=\"Portfolio\"",
         ).forEach { selector ->
