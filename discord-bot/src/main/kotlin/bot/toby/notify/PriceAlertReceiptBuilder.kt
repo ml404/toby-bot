@@ -54,11 +54,11 @@ object PriceAlertReceiptBuilder {
         val title = "TobyCoin price alert"
         val body = when (outcome) {
             is TradeOutcome.Ok ->
-                "${pastTense(trigger.sideEnum)} ${outcome.amount} TOBY at ${"%.4f".format(outcome.newPrice)}."
+                "${pastTense(trigger.sideEnum)} ${outcome.amount} ${trigger.coin} at ${"%.4f".format(outcome.newPrice)}."
             is TradeOutcome.InsufficientCredits ->
-                "Trigger #${trigger.id} fired but you lacked credits to BUY."
+                "Trigger #${trigger.id} fired but you lacked credits to BUY ${trigger.coin}."
             is TradeOutcome.InsufficientCoins ->
-                "Trigger #${trigger.id} fired but you lacked TOBY to SELL."
+                "Trigger #${trigger.id} fired but you lacked ${trigger.coin} to SELL."
             TradeOutcome.InvalidAmount ->
                 "Trigger #${trigger.id} fired but the trade was rejected as invalid."
             TradeOutcome.UnknownUser ->
@@ -98,7 +98,7 @@ object PriceAlertReceiptBuilder {
             )
             .addField(
                 "Trade",
-                "**$verb ${ok.amount} TOBY** @ ${"%.4f".format(executionPrice)}",
+                "**$verb ${ok.amount} ${trigger.coin}** @ ${"%.4f".format(executionPrice)}",
                 false
             )
 
@@ -122,7 +122,7 @@ object PriceAlertReceiptBuilder {
 
         embed.addField(
             "New balance",
-            "**${ok.newCoins}** TOBY • **${ok.newCredits}** credits",
+            "**${ok.newCoins}** ${trigger.coin} • **${ok.newCredits}** credits",
             false
         )
         embed.setFooter("Trigger one-shot — use /pricealert add to set another.")
@@ -137,7 +137,7 @@ object PriceAlertReceiptBuilder {
         .setColor(FAILURE_COLOR)
         .setDescription(
             "Target ${"%.4f".format(trigger.thresholdPrice)} was reached, but you didn't " +
-                    "have enough credits to BUY ${trigger.amount} TOBY: needed " +
+                    "have enough credits to BUY ${trigger.amount} ${trigger.coin}: needed " +
                     "**${outcome.needed}** credits (price + fee), had **${outcome.have}**. " +
                     "No trade made. Trigger disabled."
         )
@@ -151,7 +151,7 @@ object PriceAlertReceiptBuilder {
         .setColor(FAILURE_COLOR)
         .setDescription(
             "Target ${"%.4f".format(trigger.thresholdPrice)} was reached, but you didn't " +
-                    "have enough TOBY to SELL ${trigger.amount}: needed **${outcome.needed}** " +
+                    "have enough ${trigger.coin} to SELL ${trigger.amount}: needed **${outcome.needed}** " +
                     "coins, had **${outcome.have}**. No trade made. Trigger disabled."
         )
         .build()
