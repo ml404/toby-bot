@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix price-alert receipt mislabelling every trade as TOBY",
+    "summary": "## Problem",
+    "emoji": "✨",
+    "prNumber": 724
+  },
+  {
+    "date": "June 2026",
     "title": "Generalize wallet leaderboard to show holdings across all coins",
     "summary": "## Why",
     "emoji": "✨",
