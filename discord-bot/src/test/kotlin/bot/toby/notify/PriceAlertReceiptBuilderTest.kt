@@ -10,10 +10,15 @@ import org.junit.jupiter.api.Test
 
 class PriceAlertReceiptBuilderTest {
 
-    private fun trigger(side: UserPriceTriggerDto.Side, amount: Long = 10) = UserPriceTriggerDto(
+    private fun trigger(
+        side: UserPriceTriggerDto.Side,
+        amount: Long = 10,
+        coin: String = "TOBY",
+    ) = UserPriceTriggerDto(
         id = 42,
         discordId = 1L,
         guildId = 100L,
+        coin = coin,
         thresholdPrice = 100.0,
         priceAtCreation = 120.0,
         side = side.name,
@@ -150,6 +155,38 @@ class PriceAlertReceiptBuilderTest {
         assertTrue(text.contains("Trigger #42"), "embed should mention trigger id 42: $text")
         assertTrue(text.contains("invalid") || text.contains("Invalid") || text.contains("failed"),
                 "embed should describe the failure: $text")
+    }
+
+    @Test
+    fun `receipt labels the trigger's coin, not a hardcoded TOBY`() {
+        // Regression: the embed used to hardcode "TOBY" everywhere, so a
+        // TISM (or any non-default coin) trigger fired a receipt that
+        // mislabelled the asset. The trade/balance lines must echo the
+        // trigger's own coin symbol.
+        val ok = TradeOutcome.Ok(
+            amount = 250L,
+            transactedCredits = 47811L,
+            newCoins = 0L,
+            newCredits = 70899L,
+            newPrice = 181.1803,
+            fee = 0L,
+        )
+        val dm = PriceAlertReceiptBuilder.buildDm(
+            trigger(UserPriceTriggerDto.Side.SELL, amount = 250, coin = "TISM"),
+            ok,
+        )
+        val text = renderedText(dm)
+        assertTrue(text.contains("250 TISM"), "Trade line must label TISM: $text")
+        assertTrue(text.contains("0 TISM"), "Balance line must label TISM: $text")
+        assertFalse(text.contains("TOBY"), "must not mislabel the coin as TOBY: $text")
+
+        // The push payload carries the same label.
+        val push = PriceAlertReceiptBuilder.buildPush(
+            trigger(UserPriceTriggerDto.Side.SELL, amount = 250, coin = "TISM"),
+            ok,
+        )
+        assertTrue(push.body.contains("250 TISM"), "push must label TISM: ${push.body}")
+        assertFalse(push.body.contains("TOBY"), "push must not mislabel as TOBY: ${push.body}")
     }
 
     @Test
