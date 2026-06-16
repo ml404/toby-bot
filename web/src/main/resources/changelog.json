@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix now-playing message recreated instead of edited between tracks",
+    "summary": "## Problem",
+    "emoji": "🎵",
+    "prNumber": 725
+  },
+  {
+    "date": "June 2026",
     "title": "Fix price-alert receipt mislabelling every trade as TOBY",
     "summary": "## Problem",
     "emoji": "✨",
