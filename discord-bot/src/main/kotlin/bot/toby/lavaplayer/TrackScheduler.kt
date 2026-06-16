@@ -164,7 +164,6 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         trackClipBounds.remove(track)
         trackRequesters.remove(track)
         val wasIntro = introTracks.remove(track)
-        event?.guild?.idLong.resetMessagesForGuildId()
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
         // An intro just finished and we have a preempted track waiting: restart
@@ -180,6 +179,8 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
                 && endReason != AudioTrackEndReason.REPLACED
                 && endReason != AudioTrackEndReason.CLEANUP
         if (shouldResumeAfterIntro) {
+            // Keep the now-playing message: the resumed track's onTrackStart will
+            // edit it back in place rather than spawning a fresh one.
             val resume = resumeAfterIntro!!
             resumeAfterIntro = null
             player.setVolumeToPrevious()
@@ -189,6 +190,11 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         }
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)
+        } else if (endReason != AudioTrackEndReason.REPLACED) {
+            // Playback has actually stopped and nothing is taking over (REPLACED
+            // means another track already started and its onTrackStart will
+            // refresh the embed in place). Tear down the now-playing message.
+            event?.guild?.idLong.resetMessagesForGuildId()
         }
     }
 
@@ -204,14 +210,22 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
 
     private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
         if (isLooping) {
+            // The clone's onTrackStart edits the existing now-playing message in
+            // place, so don't tear it down here.
             player.startTrack(track.makeClone(), false)
+            return
+        }
+        PlayerManager.instance.isCurrentlyStoppable = true
+        player.setVolumeToPrevious()
+        if (queue.peek() != null) {
+            // Advance to the next track; its onTrackStart re-uses (edits) the
+            // current now-playing message rather than posting a new one.
+            nextTrack()
+            event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
         } else {
-            PlayerManager.instance.isCurrentlyStoppable = true
-            player.setVolumeToPrevious()
-            queue.peek()?.let {
-                nextTrack()
-                event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
-            }
+            // Queue exhausted — nothing else will play, so clean up the
+            // now-playing message and its scheduled updates.
+            event?.guild?.idLong.resetMessagesForGuildId()
         }
     }
 

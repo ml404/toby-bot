@@ -1,11 +1,14 @@
 package bot.toby.lavaplayer
 
+import bot.toby.helpers.MusicPlayerHelper
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import io.mockk.*
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -35,6 +38,7 @@ class TrackSchedulerTest {
     fun tearDown() {
         clearAllMocks()
         unmockkObject(PlayerManager.Companion)
+        unmockkObject(MusicPlayerHelper)
     }
 
     @Test
@@ -517,6 +521,79 @@ class TrackSchedulerTest {
         verify(exactly = 1) { player.startTrack(clone, false) }
         // The intro must NOT be re-cloned-and-restarted by the loop branch.
         verify(exactly = 0) { player.startTrack(introClone, false) }
+    }
+
+    /**
+     * Wires up an event/guild on the scheduler and stubs the now-playing helper so
+     * we can assert exactly when the now-playing message is torn down vs. edited in
+     * place across track transitions.
+     */
+    private fun stubMusicPlayerHelperWithEvent(guildId: Long = 1L) {
+        mockkObject(MusicPlayerHelper)
+        every { MusicPlayerHelper.nowPlaying(any(), any(), any(), any(), any()) } just Runs
+        every { MusicPlayerHelper.resetMessages(any()) } just Runs
+        val guild = mockk<Guild>(relaxed = true)
+        every { guild.idLong } returns guildId
+        val event = mockk<SlashCommandInteractionEvent>(relaxed = true)
+        every { event.guild } returns guild
+        scheduler.event = event
+    }
+
+    @Test
+    fun `onTrackEnd does not reset now-playing message when advancing to next track`() {
+        stubMusicPlayerHelperWithEvent()
+        val current = mockTrack("Current")
+        val next = mockTrack("Next", volume = 55)
+        scheduler.queue.offer(next)
+
+        scheduler.onTrackEnd(player, current, AudioTrackEndReason.FINISHED)
+
+        // The next track's now-playing edits the existing message in place — the
+        // message must NOT be deleted/recreated between tracks.
+        verify(exactly = 0) { MusicPlayerHelper.resetMessages(any()) }
+    }
+
+    @Test
+    fun `onTrackEnd resets now-playing message when queue is exhausted`() {
+        stubMusicPlayerHelperWithEvent()
+        val current = mockTrack("Current")
+
+        scheduler.onTrackEnd(player, current, AudioTrackEndReason.FINISHED)
+
+        // Nothing left to play — the now-playing message should be cleaned up.
+        verify(exactly = 1) { MusicPlayerHelper.resetMessages(1L) }
+    }
+
+    @Test
+    fun `onTrackEnd does not reset now-playing message on REPLACED`() {
+        stubMusicPlayerHelperWithEvent()
+        val current = mockTrack("Current")
+
+        // Another track already took over the player and will refresh the embed.
+        scheduler.onTrackEnd(player, current, AudioTrackEndReason.REPLACED)
+
+        verify(exactly = 0) { MusicPlayerHelper.resetMessages(any()) }
+    }
+
+    @Test
+    fun `onTrackEnd resets now-playing message when stopped with nothing taking over`() {
+        stubMusicPlayerHelperWithEvent()
+        val current = mockTrack("Current")
+
+        scheduler.onTrackEnd(player, current, AudioTrackEndReason.STOPPED)
+
+        verify(exactly = 1) { MusicPlayerHelper.resetMessages(1L) }
+    }
+
+    @Test
+    fun `onTrackEnd does not reset now-playing message while looping`() {
+        stubMusicPlayerHelperWithEvent()
+        scheduler.isLooping = true
+        val current = mockTrack("Current")
+
+        scheduler.onTrackEnd(player, current, AudioTrackEndReason.FINISHED)
+
+        verify(exactly = 0) { MusicPlayerHelper.resetMessages(any()) }
     }
 
     @Test
