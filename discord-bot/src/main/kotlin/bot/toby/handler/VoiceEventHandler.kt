@@ -256,14 +256,31 @@ class VoiceEventHandler(
     }
 
     private fun AudioManager.checkAudioManagerToCloseConnectionOnEmptyChannel() {
-        val connectedChannel = this.connectedChannel
-        if (connectedChannel != null) {
-            if (connectedChannel.members.nonBots().isEmpty()) {
-                this.closeAudioConnection()
-                logger.info("Audio connection closed due to empty channel.")
-                lastConnectedChannelTracker.clear(this.guild.idLong)
-            }
+        val connectedChannel = this.connectedChannel ?: return
+        if (connectedChannel.members.nonBots().isEmpty()) {
+            // Nobody is left to listen — stop playback and tear down the
+            // now-playing message so it doesn't keep ticking to an empty room,
+            // then drop the voice connection. Mirrors onGuildLeave's teardown.
+            stopPlaybackAndClearNowPlaying(this.guild)
+            this.closeAudioConnection()
+            logger.info("Audio connection closed due to empty channel.")
+            lastConnectedChannelTracker.clear(this.guild.idLong)
         }
+    }
+
+    private fun stopPlaybackAndClearNowPlaying(guild: Guild) {
+        runCatching {
+            val musicManager = PlayerManager.instance.getMusicManager(guild)
+            musicManager.scheduler.apply {
+                stopTrack(true)
+                queue.clear()
+                isLooping = false
+            }
+            musicManager.audioPlayer.isPaused = false
+        }.onFailure {
+            logger.error("Failed to stop playback on empty channel for guild ${guild.idLong}: ${it.message}")
+        }
+        nowPlayingManager.resetNowPlayingMessage(guild.idLong)
     }
 
     private fun deleteTemporaryChannelIfEmpty(nonBotConnectedMembersEmpty: Boolean, channelLeft: AudioChannel) {

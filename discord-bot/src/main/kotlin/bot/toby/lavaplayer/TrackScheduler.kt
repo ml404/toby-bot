@@ -218,10 +218,11 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         PlayerManager.instance.isCurrentlyStoppable = true
         player.setVolumeToPrevious()
         if (queue.peek() != null) {
-            // Advance to the next track; its onTrackStart re-uses (edits) the
-            // current now-playing message rather than posting a new one.
+            // Advance to the next track. nextTrack() -> player.startTrack fires
+            // onTrackStart, which renders the (clip-aware) now-playing and edits
+            // the existing message in place — same path the loop branch relies
+            // on — so we don't render it a second time here.
             nextTrack()
-            event?.let { nowPlaying(it, PlayerManager.instance, deleteDelay) }
         } else {
             // Queue exhausted — nothing else will play, so clean up the
             // now-playing message and its scheduled updates.
