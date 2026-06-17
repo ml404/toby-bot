@@ -468,6 +468,13 @@ class VoiceEventHandlerTest {
         every { member.user.isBot } returns false
         every { newChannel.members } returns listOf(member)
 
+        // The relaxed audioManager reports an empty connected channel, so closing
+        // the connection now also stops playback — stub the player manager so that
+        // teardown doesn't reach into the real singleton.
+        val playerManager = mockk<PlayerManager>(relaxed = true)
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns playerManager
+
         // Mock configuration service
         every {
             configService.getConfigByName(
@@ -478,9 +485,48 @@ class VoiceEventHandlerTest {
 
         handler.onGuildVoiceUpdate(event)
 
-        // Verify that the bot checked to close connection and joined the new channel
+        // Verify that the bot stopped playback, cleared the now-playing message,
+        // closed the connection, and joined the new channel.
+        verify(exactly = 1) { nowPlayingManager.resetNowPlayingMessage(1L) }
         verify(exactly = 1) { audioManager.closeAudioConnection() }
         verify(exactly = 1) { audioManager.openAudioConnection(newChannel) }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `voice leave that empties the channel stops playback and clears now-playing`() {
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val emptyChannel = mockk<AudioChannelUnion>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { event.member } returns member
+        every { event.channelJoined } returns null
+        every { event.channelLeft } returns emptyChannel
+        every { guild.audioManager } returns audioManager
+        every { audioManager.guild } returns guild
+        every { guild.idLong } returns 99L
+        every { member.user.idLong } returns 54321L  // Not bot's ID
+        every { member.idLong } returns 54321L
+        // Bot is still connected but the channel has no humans left.
+        every { audioManager.connectedChannel } returns emptyChannel
+        every { emptyChannel.members } returns emptyList()
+
+        val playerManager = mockk<PlayerManager>(relaxed = true)
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns playerManager
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 1) { playerManager.getMusicManager(guild) }
+        verify(exactly = 1) { nowPlayingManager.resetNowPlayingMessage(99L) }
+        verify(exactly = 1) { audioManager.closeAudioConnection() }
+
+        unmockkObject(PlayerManager)
     }
 
     @Test
