@@ -1116,7 +1116,19 @@ function initIntroPage() {
     if (tbody) {
         let draggedRow = null;
         tbody.querySelectorAll('tr[data-intro-id]').forEach(row => {
-            row.setAttribute('draggable', 'true');
+            // Only allow reordering when the drag begins from the drag handle.
+            // Otherwise interactive controls inside the row (e.g. the volume
+            // slider) would start a row reorder when the user drags them.
+            const handle = row.querySelector('.drag-handle');
+            if (handle) {
+                handle.addEventListener('pointerdown', function () {
+                    row.setAttribute('draggable', 'true');
+                });
+                ['pointerup', 'pointercancel'].forEach(ev =>
+                    handle.addEventListener(ev, function () {
+                        row.removeAttribute('draggable');
+                    }));
+            }
             row.addEventListener('dragstart', function (e) {
                 draggedRow = row;
                 row.classList.add('dragging');
@@ -1124,6 +1136,7 @@ function initIntroPage() {
                 e.dataTransfer.setData('text/plain', row.dataset.introId);
             });
             row.addEventListener('dragend', function () {
+                row.removeAttribute('draggable');
                 row.classList.remove('dragging');
                 tbody.querySelectorAll('tr').forEach(r => r.classList.remove('drag-over'));
             });
