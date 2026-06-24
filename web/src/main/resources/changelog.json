@@ -1,6 +1,13 @@
 [
   {
     "date": "June 2026",
+    "title": "Fix intro volume slider triggering row reorder",
+    "summary": "## Problem",
+    "emoji": "🎵",
+    "prNumber": 727
+  },
+  {
+    "date": "June 2026",
     "title": "Stop double now-playing render and clean up player when channel empties",
     "summary": "Two follow-up quality fixes to the now-playing message lifecycle (builds on #725).",
     "emoji": "🎵",
