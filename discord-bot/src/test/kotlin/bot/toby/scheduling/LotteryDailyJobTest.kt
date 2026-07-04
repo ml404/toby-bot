@@ -428,6 +428,56 @@ class LotteryDailyJobTest {
     }
 
     @Test
+    fun `runDaily with rollover enabled threads the pot through cancel and announcer`() {
+        stubEnabled(true)
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED.configValue,
+                guildId.toString(),
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED.configValue,
+            value = "true",
+            guildId = guildId.toString(),
+        )
+        every { lotteryDailyService.alreadyRan(guildId, today) } returns false
+        every { jackpotLotteryService.getOpenMatch(guildId) } returns JackpotLotteryDto(
+            id = 5L, guildId = guildId,
+            status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+        )
+        every { jackpotLotteryService.drawMatchLottery(guildId, true) } returns
+            JackpotLotteryService.DrawMatchOutcome.NoTickets
+        every { jackpotLotteryService.cancelMatchLottery(guildId, true) } returns
+            JackpotLotteryService.CancelOutcome.Ok(
+                refundedUsers = 0, refundedTotal = 0L,
+                returnedToPool = 0L, rolledOver = 750L,
+            )
+        every { jackpotLotteryService.openMatchLottery(guildId, any(), any(), any()) } returns
+            JackpotLotteryService.OpenOutcome.Ok(
+                lottery = JackpotLotteryDto(id = 6L, guildId = guildId, poolAmount = 750L),
+                seeded = 0L,
+                rolledIn = 750L,
+            )
+        val priorSlot = slot<LotteryAnnouncer.PriorOutcome>()
+        val openSlot = slot<LotteryAnnouncer.OpenSummary>()
+        every {
+            lotteryAnnouncer.announceCycle(any(), any(), capture(priorSlot), capture(openSlot))
+        } just runs
+
+        job.runDaily()
+
+        verify(exactly = 1) { jackpotLotteryService.drawMatchLottery(guildId, true) }
+        verify(exactly = 1) { jackpotLotteryService.cancelMatchLottery(guildId, true) }
+        val prior = priorSlot.captured
+        assertTrue(prior is LotteryAnnouncer.PriorOutcome.NoTickets)
+        assertEquals(750L, (prior as LotteryAnnouncer.PriorOutcome.NoTickets).rolledOver)
+        val open = openSlot.captured
+        assertTrue(open is LotteryAnnouncer.OpenSummary.Ok)
+        assertEquals(750L, (open as LotteryAnnouncer.OpenSummary.Ok).rolledIn)
+    }
+
+    @Test
     fun `runDaily handles NUMBER_MATCH BelowMinBuyers same way`() {
         stubEnabled(true)
         // Default mode is NUMBER_MATCH.

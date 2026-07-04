@@ -147,6 +147,16 @@ class LotteryWebService(
             )
         } else LotteryIncentivesView.empty()
 
+        // Draw shape: the OPEN row's pick count / number range wins (a
+        // mid-draw config edit must not desync the picker from tickets
+        // already bought); fall back to live config so a paused / not-
+        // yet-opened guild still previews the shape the next open will
+        // use.
+        val pickCount = dailyOpen?.pickCount?.takeIf { it > 0 }
+            ?: LotteryHelper.dailyPickCount(configService, guildId)
+        val numberMax = dailyOpen?.numberMax?.takeIf { it > 0 }
+            ?: LotteryHelper.dailyNumberMax(configService, guildId)
+
         return LotteryPageSnapshot(
             dailyOpen = dailyOpen,
             dailyLatestDrawn = dailyLatest,
@@ -156,9 +166,9 @@ class LotteryWebService(
             weightedMyTicket = weightedMyTicket,
             weightedTopHolders = weightedTop,
             weightedTotalTickets = weightedTotal,
-            pickCount = LotteryHelper.MATCH_PICK_COUNT,
-            numberMax = LotteryHelper.MATCH_NUMBER_MAX,
-            tierPercents = LotteryHelper.TIER_PCTS_5_4_3_2.toList(),
+            pickCount = pickCount,
+            numberMax = numberMax,
+            tierPercents = LotteryHelper.matchTierPcts(pickCount).toList(),
             revenueJackpotPct = LotteryHelper.dailyRevenueJackpotPct(configService, guildId),
             dailyMode = LotteryHelper.dailyMode(configService, guildId),
             dailyEnabled = LotteryHelper.dailyEnabled(configService, guildId),

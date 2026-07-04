@@ -1174,6 +1174,40 @@ class ModerationWebService(
                 if (n !in 0..50) return "Value must be between 0 and 50."
                 n.toString()
             }
+            ConfigDto.Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED -> {
+                val v = rawValue.trim().lowercase()
+                if (v !in setOf("true", "false")) return "Value must be true or false."
+                v
+            }
+            // NUMBER_MATCH draw shape. Pick count is bounded by the tier
+            // schedules in LotteryHelper.matchTierPcts; number range is
+            // additionally coerced to >= 2× pick count at open time.
+            ConfigDto.Configurations.LOTTERY_DAILY_PICK_COUNT -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (2-6; default 5)."
+                if (n !in 2..6) return "Value must be between 2 and 6."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_DAILY_NUMBER_MAX -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number (10-99; default 49)."
+                if (n !in 10..99) return "Value must be between 10 and 99."
+                n.toString()
+            }
+            // Lottery participation streak. 0 on either key disables the
+            // payout (streaks are still tracked).
+            ConfigDto.Configurations.LOTTERY_STREAK_DAYS -> {
+                val n = rawValue.trim().toIntOrNull()
+                    ?: return "Value must be a whole number of days (0-365; 0 disables)."
+                if (n !in 0..365) return "Value must be between 0 and 365 days."
+                n.toString()
+            }
+            ConfigDto.Configurations.LOTTERY_STREAK_BONUS -> {
+                val n = rawValue.trim().toLongOrNull()
+                    ?: return "Value must be a whole number of credits (0-1000000; 0 disables)."
+                if (n !in 0L..1_000_000L) return "Value must be between 0 and 1,000,000 credits."
+                n.toString()
+            }
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID,
             ConfigDto.Configurations.ACHIEVEMENT_ANNOUNCE_CHANNEL -> {

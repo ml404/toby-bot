@@ -278,7 +278,7 @@ class LotteryAnnouncerTest {
         // still ships to drive ticket purchases.
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -294,7 +294,7 @@ class LotteryAnnouncerTest {
         val mentions = captureMentions()
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -431,7 +431,7 @@ class LotteryAnnouncerTest {
 
         announcer.announceCycle(
             guild, mode = "NUMBER_MATCH",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -454,7 +454,7 @@ class LotteryAnnouncerTest {
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -472,7 +472,7 @@ class LotteryAnnouncerTest {
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -491,7 +491,7 @@ class LotteryAnnouncerTest {
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -509,7 +509,7 @@ class LotteryAnnouncerTest {
 
         announcer.announceCycle(
             guild, mode = "WEIGHTED",
-            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+            priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
             openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                 seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
             ),
@@ -1276,7 +1276,7 @@ class LotteryAnnouncerTest {
         fun `NoTickets cycle publishes no in-page events`() {
             announcer.announceCycle(
                 guild, mode = "WEIGHTED",
-                priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets,
+                priorOutcome = LotteryAnnouncer.PriorOutcome.NoTickets(),
                 openOutcome = LotteryAnnouncer.OpenSummary.Ok(
                     seeded = 500L, ticketPrice = 50L, poolAmount = 500L,
                 ),

@@ -15,6 +15,7 @@ import bot.toby.modal.modals.setconfig.SetConfigGeneralModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotActivityModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryBasicsModal
+import bot.toby.modal.modals.setconfig.SetConfigLotteryEngagementModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryPoolsModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerStakesModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerTableModal
@@ -64,6 +65,7 @@ internal class SetConfigCommandTest : CommandTest {
     private lateinit var blackjackTable: SetConfigBlackjackTableModal
     private lateinit var lotteryBasics: SetConfigLotteryBasicsModal
     private lateinit var lotteryPools: SetConfigLotteryPoolsModal
+    private lateinit var lotteryEngagement: SetConfigLotteryEngagementModal
     private lateinit var stakes: SetConfigStakesModal
     private lateinit var command: SetConfigCommand
 
@@ -84,12 +86,13 @@ internal class SetConfigCommandTest : CommandTest {
         blackjackTable = mockk(relaxed = true)
         lotteryBasics = mockk(relaxed = true)
         lotteryPools = mockk(relaxed = true)
+        lotteryEngagement = mockk(relaxed = true)
         stakes = mockk(relaxed = true)
         command = SetConfigCommand(
             configService,
             general, activity, fees, jackpot, jackpotActivity,
             pokerStakes, pokerTable, blackjackRules, blackjackTable,
-            lotteryBasics, lotteryPools, stakes,
+            lotteryBasics, lotteryPools, lotteryEngagement, stakes,
         )
         // CommandTest's shared stub makes `event.reply(any<String>())`
         // suspend forever via `just awaits`. SetConfigCommand uses
@@ -230,6 +233,15 @@ internal class SetConfigCommandTest : CommandTest {
             SetConfigCommand.SUB_LOTTERY_POOLS,
             SetConfigLotteryPoolsModal.MODAL_NAME,
             { every { lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, any(), any()) } returns it },
+        )
+    }
+
+    @Test
+    fun `lottery_engagement subcommand opens the lottery_engagement modal`() {
+        assertOpensModal(
+            SetConfigCommand.SUB_LOTTERY_ENGAGEMENT,
+            SetConfigLotteryEngagementModal.MODAL_NAME,
+            { every { lotteryEngagement.buildModal(SetConfigLotteryEngagementModal.MODAL_NAME, any(), any()) } returns it },
         )
     }
 

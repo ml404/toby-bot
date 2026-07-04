@@ -122,31 +122,36 @@ class LotteryDailyJob @Autowired constructor(
     private fun closePriorMatch(guildId: Long): LotteryAnnouncer.PriorOutcome? {
         val openMatch = jackpotLotteryService.getOpenMatch(guildId)
         if (openMatch?.status != JackpotLotteryDto.STATUS_OPEN) return null
-        return when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
+        val rollover = LotteryHelper.dailyRolloverEnabled(configService, guildId)
+        return when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId, rollover)) {
             is JackpotLotteryService.DrawMatchOutcome.Ok -> {
                 logger.info {
                     "Daily NUMBER_MATCH drew for guild $guildId: drawn=${drawResult.drawnNumbers} " +
-                        "totalPaid=${drawResult.totalPaid} rolledBack=${drawResult.rolledBackToJackpot}"
+                        "totalPaid=${drawResult.totalPaid} rolledBack=${drawResult.rolledBackToJackpot} " +
+                        "rolledOver=${drawResult.rolledOver}"
                 }
                 LotteryAnnouncer.PriorOutcome.MatchDrawn(
                     drawnNumbers = drawResult.drawnNumbers,
                     tierPayouts = drawResult.tierPayouts,
                     totalPaid = drawResult.totalPaid,
                     rolledBack = drawResult.rolledBackToJackpot,
+                    rolledOver = drawResult.rolledOver,
                 )
             }
             JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
                 logger.info { "Daily NUMBER_MATCH for guild $guildId had no tickets; cancelling and refunding seed." }
-                jackpotLotteryService.cancelMatchLottery(guildId)
-                LotteryAnnouncer.PriorOutcome.NoTickets
+                val cancel = jackpotLotteryService.cancelMatchLottery(guildId, rollover)
+                LotteryAnnouncer.PriorOutcome.NoTickets(rolledOver = rolledOverFrom(cancel))
             }
             is JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers -> {
                 logger.info {
                     "Daily NUMBER_MATCH for guild $guildId below buyer threshold " +
                         "(${drawResult.have}/${drawResult.need}); cancelling and refunding."
                 }
-                jackpotLotteryService.cancelMatchLottery(guildId)
-                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(drawResult.have, drawResult.need)
+                val cancel = jackpotLotteryService.cancelMatchLottery(guildId, rollover)
+                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(
+                    drawResult.have, drawResult.need, rolledOver = rolledOverFrom(cancel),
+                )
             }
             JackpotLotteryService.DrawMatchOutcome.NoOpenLottery -> null
         }
@@ -158,17 +163,20 @@ class LotteryDailyJob @Autowired constructor(
         return when (val open = jackpotLotteryService.openMatchLottery(
             guildId = guildId, ticketPrice = ticketPrice,
             seedPct = seedPct, durationHours = DURATION_HOURS,
+            pickCount = LotteryHelper.dailyPickCount(configService, guildId),
+            numberMax = LotteryHelper.dailyNumberMax(configService, guildId),
         )) {
             is JackpotLotteryService.OpenOutcome.Ok -> {
                 logger.info {
                     "Daily NUMBER_MATCH opened for guild $guildId: ticketPrice=$ticketPrice " +
-                        "seeded=${open.seeded} seedPct=$seedPct"
+                        "seeded=${open.seeded} seedPct=$seedPct rolledIn=${open.rolledIn}"
                 }
                 LotteryAnnouncer.OpenSummary.Ok(
                     lotteryId = open.lottery.id,
                     seeded = open.seeded,
                     ticketPrice = ticketPrice,
                     poolAmount = open.lottery.poolAmount,
+                    rolledIn = open.rolledIn,
                 ) to true
             }
             JackpotLotteryService.OpenOutcome.AlreadyOpen -> {
@@ -199,6 +207,7 @@ class LotteryDailyJob @Autowired constructor(
     private fun closePriorWeighted(guildId: Long): LotteryAnnouncer.PriorOutcome? {
         val openWeighted = jackpotLotteryService.getOpenWeighted(guildId)
         if (openWeighted?.status != JackpotLotteryDto.STATUS_OPEN) return null
+        val rollover = LotteryHelper.dailyRolloverEnabled(configService, guildId)
         return when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
             is JackpotLotteryService.DrawOutcome.Ok -> {
                 logger.info {
@@ -215,20 +224,26 @@ class LotteryDailyJob @Autowired constructor(
             }
             JackpotLotteryService.DrawOutcome.NoTickets -> {
                 logger.info { "Daily WEIGHTED for guild $guildId had no tickets; cancelling and refunding seed." }
-                jackpotLotteryService.cancelLottery(guildId)
-                LotteryAnnouncer.PriorOutcome.NoTickets
+                val cancel = jackpotLotteryService.cancelLottery(guildId, rollover)
+                LotteryAnnouncer.PriorOutcome.NoTickets(rolledOver = rolledOverFrom(cancel))
             }
             is JackpotLotteryService.DrawOutcome.BelowMinBuyers -> {
                 logger.info {
                     "Daily WEIGHTED for guild $guildId below buyer threshold " +
                         "(${drawResult.have}/${drawResult.need}); cancelling and refunding."
                 }
-                jackpotLotteryService.cancelLottery(guildId)
-                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(drawResult.have, drawResult.need)
+                val cancel = jackpotLotteryService.cancelLottery(guildId, rollover)
+                LotteryAnnouncer.PriorOutcome.BelowMinBuyers(
+                    drawResult.have, drawResult.need, rolledOver = rolledOverFrom(cancel),
+                )
             }
             JackpotLotteryService.DrawOutcome.NoOpenLottery -> null
         }
     }
+
+    /** Rollover amount from a cancel outcome (0 when the cancel found nothing open). */
+    private fun rolledOverFrom(cancel: JackpotLotteryService.CancelOutcome): Long =
+        (cancel as? JackpotLotteryService.CancelOutcome.Ok)?.rolledOver ?: 0L
 
     private fun openWeighted(guildId: Long): Pair<LotteryAnnouncer.OpenSummary, Boolean> {
         val ticketPrice = LotteryHelper.dailyTicketPrice(configService, guildId)
@@ -244,13 +259,15 @@ class LotteryDailyJob @Autowired constructor(
             is JackpotLotteryService.OpenOutcome.Ok -> {
                 logger.info {
                     "Daily WEIGHTED opened for guild $guildId: ticketPrice=$ticketPrice " +
-                        "seeded=${open.seeded} seedPct=$seedPct winners=${LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT}"
+                        "seeded=${open.seeded} seedPct=$seedPct winners=${LotteryHelper.WEIGHTED_DAILY_WINNER_COUNT} " +
+                        "rolledIn=${open.rolledIn}"
                 }
                 LotteryAnnouncer.OpenSummary.Ok(
                     lotteryId = open.lottery.id,
                     seeded = open.seeded,
                     ticketPrice = ticketPrice,
                     poolAmount = open.lottery.poolAmount,
+                    rolledIn = open.rolledIn,
                 ) to true
             }
             JackpotLotteryService.OpenOutcome.AlreadyOpen -> {

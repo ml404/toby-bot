@@ -17,12 +17,22 @@ import database.service.guild.ConfigService
 object LotteryHelper {
 
     /**
-     * Pick 5 of 1-49 — Lotto-style. Hardcoded for now because the prize
-     * tier schedule was tuned to these odds; varying pick count would
-     * need a fresh schedule and is out of scope for the daily MVP.
+     * Pick 5 of 1-49 — Lotto-style defaults. Per-guild overrides via
+     * `LOTTERY_DAILY_PICK_COUNT` / `LOTTERY_DAILY_NUMBER_MAX` (see
+     * [dailyPickCount] / [dailyNumberMax]) let small guilds shrink the
+     * odds so match tiers actually fire with a handful of tickets; the
+     * prize-tier schedule adapts via [matchTierPcts].
      */
     const val MATCH_PICK_COUNT: Int = 5
     const val MATCH_NUMBER_MAX: Int = 49
+
+    /** Configurable pick-count bounds — each count has a tuned tier schedule in [matchTierPcts]. */
+    const val MIN_DAILY_PICK_COUNT: Int = 2
+    const val MAX_DAILY_PICK_COUNT: Int = 6
+
+    /** Configurable number-range bounds for NUMBER_MATCH. */
+    const val MIN_DAILY_NUMBER_MAX: Int = 10
+    const val MAX_DAILY_NUMBER_MAX: Int = 99
 
     /** Daily auto-draw is opt-in per guild. */
     const val DEFAULT_DAILY_ENABLED: Boolean = false
@@ -75,13 +85,41 @@ object LotteryHelper {
     const val MAX_DAILY_MIN_BUYERS: Int = 50
 
     /**
-     * Tier prize percentages for a match-numbers draw. Order: 5/5, 4/5,
-     * 3/5, 2/5. Sum = 100; un-won tier shares roll back into the
-     * per-guild jackpot pool via the remainder-handling in
-     * [JackpotLotteryService.drawMatchLottery]. 0 / 1 matches pay
-     * nothing — those tickets are the sink.
+     * Tier prize percentages for a 5-pick match-numbers draw. Order:
+     * 5/5, 4/5, 3/5, 2/5. Sum = 100; un-won tier shares roll back into
+     * the per-guild jackpot pool (or the rollover pot) via the
+     * remainder-handling in [JackpotLotteryService.drawMatchLottery].
+     * 0 / 1 matches pay nothing — those tickets are the sink.
      */
     val TIER_PCTS_5_4_3_2: IntArray = intArrayOf(60, 25, 10, 5)
+
+    /**
+     * Prize-tier schedule for a NUMBER_MATCH draw with [pickCount]
+     * picks. Tiers pay match counts `pickCount` down to 2 (0 / 1
+     * matches always pay nothing); each schedule sums to 100. Hand-
+     * tuned per pick count — top tier stays the headline prize, lower
+     * tiers keep small "almost!" returns so low-odds days still feel
+     * alive. Out-of-range counts clamp to the nearest supported
+     * schedule so a bad stored value can't crash a draw.
+     */
+    fun matchTierPcts(pickCount: Int): IntArray = when (
+        pickCount.coerceIn(MIN_DAILY_PICK_COUNT, MAX_DAILY_PICK_COUNT)
+    ) {
+        2 -> intArrayOf(100)
+        3 -> intArrayOf(70, 30)
+        4 -> intArrayOf(60, 25, 15)
+        5 -> TIER_PCTS_5_4_3_2
+        else -> intArrayOf(50, 25, 12, 8, 5)  // 6
+    }
+
+    /** Rollover pot for cancelled / un-won daily draws is opt-in per guild. */
+    const val DEFAULT_DAILY_ROLLOVER_ENABLED: Boolean = false
+
+    /** Streak payout defaults — 0 threshold means the bonus is disabled. */
+    const val DEFAULT_STREAK_DAYS: Int = 0
+    const val MAX_STREAK_DAYS: Int = 365
+    const val DEFAULT_STREAK_BONUS: Long = 0L
+    const val MAX_STREAK_BONUS: Long = 1_000_000L
 
     /** Live boolean toggle for the daily auto-draw. */
     fun dailyEnabled(configService: ConfigService, guildId: Long): Boolean {
@@ -156,6 +194,78 @@ object LotteryHelper {
         )
         val raw = cfg?.value?.toIntOrNull() ?: return DEFAULT_DAILY_MIN_BUYERS
         return raw.coerceIn(1, MAX_DAILY_MIN_BUYERS)
+    }
+
+    /**
+     * Live rollover-pot toggle. When true, a cancelled daily draw (or a
+     * NUMBER_MATCH draw whose tiers all go un-won) parks its
+     * undistributed pool for the next open to claim, instead of
+     * returning it to the jackpot.
+     */
+    fun dailyRolloverEnabled(configService: ConfigService, guildId: Long): Boolean {
+        val raw = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED.configValue,
+            guildId.toString()
+        )?.value?.trim()?.lowercase()
+        return when (raw) {
+            "true", "1", "yes", "on" -> true
+            null -> DEFAULT_DAILY_ROLLOVER_ENABLED
+            else -> false
+        }
+    }
+
+    /** Live NUMBER_MATCH pick count, clamped to a supported tier schedule. */
+    fun dailyPickCount(configService: ConfigService, guildId: Long): Int {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_DAILY_PICK_COUNT.configValue,
+            guildId.toString()
+        )
+        val raw = cfg?.value?.toIntOrNull() ?: return MATCH_PICK_COUNT
+        return raw.coerceIn(MIN_DAILY_PICK_COUNT, MAX_DAILY_PICK_COUNT)
+    }
+
+    /**
+     * Live NUMBER_MATCH number range top (players pick from 1..N).
+     * Clamped to [MIN_DAILY_NUMBER_MAX, MAX_DAILY_NUMBER_MAX] here;
+     * [JackpotLotteryService.openMatchLottery] additionally coerces it
+     * to at least 2× the pick count so a degenerate near-guaranteed-win
+     * config can't drain the pool.
+     */
+    fun dailyNumberMax(configService: ConfigService, guildId: Long): Int {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_DAILY_NUMBER_MAX.configValue,
+            guildId.toString()
+        )
+        val raw = cfg?.value?.toIntOrNull() ?: return MATCH_NUMBER_MAX
+        return raw.coerceIn(MIN_DAILY_NUMBER_MAX, MAX_DAILY_NUMBER_MAX)
+    }
+
+    /**
+     * Live participation-streak threshold in consecutive UTC days.
+     * 0 disables the streak payout (streaks are still tracked so
+     * enabling later picks up existing history).
+     */
+    fun streakThresholdDays(configService: ConfigService, guildId: Long): Int {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_STREAK_DAYS.configValue,
+            guildId.toString()
+        )
+        val raw = cfg?.value?.toIntOrNull() ?: return DEFAULT_STREAK_DAYS
+        return raw.coerceIn(0, MAX_STREAK_DAYS)
+    }
+
+    /**
+     * Live per-day streak bonus in credits, paid once per participation
+     * day while the streak is at/above [streakThresholdDays]. Drained
+     * from the jackpot pool at award time — never minted.
+     */
+    fun streakBonusCredits(configService: ConfigService, guildId: Long): Long {
+        val cfg = configService.getConfigByName(
+            ConfigDto.Configurations.LOTTERY_STREAK_BONUS.configValue,
+            guildId.toString()
+        )
+        val raw = cfg?.value?.toLongOrNull() ?: return DEFAULT_STREAK_BONUS
+        return raw.coerceIn(0L, MAX_STREAK_BONUS)
     }
 
     /**

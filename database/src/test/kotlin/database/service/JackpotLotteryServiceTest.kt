@@ -1181,4 +1181,452 @@ class JackpotLotteryServiceTest {
         assertEquals(11L, r.bonusTicketsAwarded, "8 + 3 across both buyers")
         assertEquals(50L, r.highestMilestoneFired)
     }
+
+    // ===================================================================
+    // Winner slots scale to distinct buyer count
+    // ===================================================================
+
+    @Test
+    fun `drawLottery with 2 buyers and 3 slots pays the full pool 60-40`() {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_000L,
+            winnerCount = 3, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 1L, ticketCount = 1, spent = 100L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 2L, ticketCount = 1, spent = 100L),
+        )
+        (1L..2L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        val r = service.drawLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawOutcome.Ok)
+        r as JackpotLotteryService.DrawOutcome.Ok
+        // Pre-change this paid 50/30 and leaked 20% back to the jackpot;
+        // scaled slots pay the 2-winner 60/40 schedule instead.
+        assertEquals(setOf(600L, 400L), r.payouts.map { it.amount }.toSet())
+        assertEquals(1_000L, r.totalPaid)
+        verify(exactly = 0) { jackpotService.addToPool(guildId, any()) }
+    }
+
+    // ===================================================================
+    // Rollover pot
+    // ===================================================================
+
+    @Test
+    fun `cancelLottery with rolloverPot parks the seed on the row instead of the jackpot`() {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_500L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns lottery
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 1L, ticketCount = 5, spent = 500L),
+            JackpotLotteryTicketDto(lotteryId = 1L, discordId = 2L, ticketCount = 3, spent = 300L),
+        )
+        (1L..2L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        val r = service.cancelLottery(guildId, rolloverPot = true)
+        assertTrue(r is JackpotLotteryService.CancelOutcome.Ok)
+        r as JackpotLotteryService.CancelOutcome.Ok
+        assertEquals(800L, r.refundedTotal, "buyers are always refunded")
+        assertEquals(0L, r.returnedToPool)
+        assertEquals(700L, r.rolledOver)
+        assertEquals(700L, lottery.rolloverOut)
+        verify(exactly = 0) { jackpotService.addToPool(guildId, any()) }
+        assertEquals(JackpotLotteryDto.STATUS_CANCELLED, lottery.status)
+    }
+
+    @Test
+    fun `openLottery claims a parked rollover pot into the new pool`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns null
+        val previous = JackpotLotteryDto(
+            id = 41L, guildId = guildId, status = JackpotLotteryDto.STATUS_CANCELLED,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED, rolloverOut = 700L,
+        )
+        every {
+            lotteryPersistence.getLatestByGuildAndMode(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns previous
+        every { jackpotService.getPool(guildId) } returns 10_000L
+        every { jackpotService.resetPool(guildId) } returns 10_000L
+        val saved = mutableListOf<JackpotLotteryDto>()
+        every { lotteryPersistence.upsert(capture(saved)) } answers { firstArg() }
+
+        val r = service.openLottery(guildId, ticketPrice = 100L, durationHours = 24, winnerCount = 3, drainPct = 0.5)
+        assertTrue(r is JackpotLotteryService.OpenOutcome.Ok)
+        r as JackpotLotteryService.OpenOutcome.Ok
+        assertEquals(5_000L, r.seeded)
+        assertEquals(700L, r.rolledIn)
+        assertEquals(5_700L, r.lottery.poolAmount)
+        assertEquals(0L, previous.rolloverOut, "claimed pot is zeroed on the old row")
+    }
+
+    @Test
+    fun `openLottery with an empty jackpot still opens when a rollover pot is parked`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns null
+        every {
+            lotteryPersistence.getLatestByGuildAndMode(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns JackpotLotteryDto(
+            id = 41L, guildId = guildId, status = JackpotLotteryDto.STATUS_CANCELLED,
+            mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED, rolloverOut = 500L,
+        )
+        every { jackpotService.getPool(guildId) } returns 0L
+        every { lotteryPersistence.upsert(any()) } answers { firstArg() }
+
+        val r = service.openLottery(guildId, ticketPrice = 100L, durationHours = 24, winnerCount = 3, drainPct = 0.5)
+        assertTrue(r is JackpotLotteryService.OpenOutcome.Ok, "rollover-funded open must not report EmptyPool")
+        r as JackpotLotteryService.OpenOutcome.Ok
+        assertEquals(0L, r.seeded)
+        assertEquals(500L, r.rolledIn)
+        assertEquals(500L, r.lottery.poolAmount)
+    }
+
+    @Test
+    fun `drawMatchLottery with rolloverRemainder parks an unwon pool on the row`() {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+            pickCount = 5, numberMax = 49,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns lottery
+        // Single ticket that never matches any drawn number.
+        val expectedDraw = service.drawNumbers(49, 5, Random(42))
+        val nonDrawn = (1..49).filter { it !in expectedDraw }.take(5)
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 7L, ticketCount = 1, spent = 50L,
+                pickedNumbers = nonDrawn.joinToString(","),
+            )
+        )
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns
+            UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 0L }
+
+        val r = service.drawMatchLottery(guildId, rolloverRemainder = true)
+        assertTrue(r is JackpotLotteryService.DrawMatchOutcome.Ok)
+        r as JackpotLotteryService.DrawMatchOutcome.Ok
+        assertEquals(0L, r.totalPaid)
+        assertEquals(0L, r.rolledBackToJackpot)
+        assertEquals(1_000L, r.rolledOver)
+        assertEquals(1_000L, lottery.rolloverOut)
+        verify(exactly = 0) { jackpotService.addToPool(guildId, any()) }
+    }
+
+    @Test
+    fun `openMatchLottery claims a parked rollover pot into the new prize pool`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns null
+        val previous = JackpotLotteryDto(
+            id = 41L, guildId = guildId, status = JackpotLotteryDto.STATUS_DRAWN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH, rolloverOut = 900L,
+        )
+        every {
+            lotteryPersistence.getLatestByGuildAndMode(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns previous
+        every { jackpotService.getPool(guildId) } returns 0L
+        val saved = slot<JackpotLotteryDto>()
+        every { lotteryPersistence.upsert(capture(saved)) } answers { firstArg() }
+
+        val r = service.openMatchLottery(guildId, ticketPrice = 50L, seedPct = 5L, durationHours = 24)
+        assertTrue(r is JackpotLotteryService.OpenOutcome.Ok)
+        r as JackpotLotteryService.OpenOutcome.Ok
+        assertEquals(900L, r.rolledIn)
+        assertEquals(900L, r.lottery.poolAmount)
+        assertEquals(0L, previous.rolloverOut)
+    }
+
+    // ===================================================================
+    // Configurable match odds (pick count / number max)
+    // ===================================================================
+
+    @Test
+    fun `openMatchLottery stores the configured pick count and number range`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns null
+        every { jackpotService.getPool(guildId) } returns 0L
+        val saved = slot<JackpotLotteryDto>()
+        every { lotteryPersistence.upsert(capture(saved)) } answers { firstArg() }
+
+        val r = service.openMatchLottery(
+            guildId, ticketPrice = 50L, seedPct = 5L, durationHours = 24,
+            pickCount = 3, numberMax = 15,
+        )
+        assertTrue(r is JackpotLotteryService.OpenOutcome.Ok)
+        assertEquals(3, saved.captured.pickCount)
+        assertEquals(15, saved.captured.numberMax)
+    }
+
+    @Test
+    fun `openMatchLottery coerces the number range to at least twice the pick count`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns null
+        every { jackpotService.getPool(guildId) } returns 0L
+        val saved = slot<JackpotLotteryDto>()
+        every { lotteryPersistence.upsert(capture(saved)) } answers { firstArg() }
+
+        service.openMatchLottery(
+            guildId, ticketPrice = 50L, seedPct = 5L, durationHours = 24,
+            pickCount = 6, numberMax = 10,
+        )
+        assertEquals(12, saved.captured.numberMax, "6 picks of 1-10 is degenerate; floor is 2x picks")
+    }
+
+    @Test
+    fun `openMatchLottery rejects an unsupported pick count`() {
+        val r = service.openMatchLottery(
+            guildId, ticketPrice = 50L, seedPct = 5L, durationHours = 24,
+            pickCount = 9, numberMax = 49,
+        )
+        assertTrue(r is JackpotLotteryService.OpenOutcome.InvalidParams)
+    }
+
+    @Test
+    fun `buyMatchTicket validates picks against the open row's shape`() {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH, pickCount = 3, numberMax = 15,
+        )
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 1_000L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+
+        // 5 picks against a pick-3 draw: rejected.
+        assertTrue(
+            service.buyMatchTicket(guildId, 7L, listOf(1, 2, 3, 4, 5))
+                is JackpotLotteryService.BuyMatchOutcome.InvalidPicks
+        )
+        // Out-of-range pick for numberMax 15: rejected.
+        assertTrue(
+            service.buyMatchTicket(guildId, 7L, listOf(1, 2, 16))
+                is JackpotLotteryService.BuyMatchOutcome.InvalidPicks
+        )
+        // Correct shape: accepted.
+        assertTrue(
+            service.buyMatchTicket(guildId, 7L, listOf(1, 7, 15))
+                is JackpotLotteryService.BuyMatchOutcome.Ok
+        )
+    }
+
+    @Test
+    fun `drawMatchLottery pays the pick-3 tier schedule 70-30`() {
+        val lottery = JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, poolAmount = 1_000L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_NUMBER_MATCH,
+            pickCount = 3, numberMax = 15,
+        )
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns lottery
+        val expectedDraw = service.drawNumbers(15, 3, Random(42))
+        val nonDrawn = (1..15).filter { it !in expectedDraw }
+        every { lotteryPersistence.ticketsByLottery(1L) } returns listOf(
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 1L, ticketCount = 1, spent = 50L,
+                pickedNumbers = expectedDraw.joinToString(","),        // 3/3
+            ),
+            JackpotLotteryTicketDto(
+                lotteryId = 1L, discordId = 2L, ticketCount = 1, spent = 50L,
+                pickedNumbers = (expectedDraw.take(2) + nonDrawn[0]).joinToString(","),  // 2/3
+            ),
+        )
+        (1L..2L).forEach { id ->
+            every { userService.getUserByIdForUpdate(id, guildId) } returns
+                UserDto(discordId = id, guildId = guildId).apply { socialCredit = 0L }
+        }
+
+        val r = service.drawMatchLottery(guildId)
+        assertTrue(r is JackpotLotteryService.DrawMatchOutcome.Ok)
+        r as JackpotLotteryService.DrawMatchOutcome.Ok
+        val byMatches = r.tierPayouts.associate { it.matches to it.share }
+        assertEquals(700L, byMatches[3], "top tier of a pick-3 draw is 70%")
+        assertEquals(300L, byMatches[2], "second tier of a pick-3 draw is 30%")
+        assertEquals(1_000L, r.totalPaid)
+    }
+
+    // ===================================================================
+    // Participation streak bonus
+    // ===================================================================
+
+    private fun streakService(
+        streakPersistence: database.persistence.lottery.LotteryStreakPersistence,
+        today: java.time.LocalDate,
+    ) = JackpotLotteryService(
+        lotteryPersistence, jackpotService, userService, configService,
+        random = Random(42),
+        streakPersistence = streakPersistence,
+        clock = java.time.Clock.fixed(
+            today.atStartOfDay(java.time.ZoneOffset.UTC).toInstant(),
+            java.time.ZoneOffset.UTC,
+        ),
+    )
+
+    private fun stubStreakConfig(days: Int, bonus: Long) {
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_STREAK_DAYS.configValue, guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_STREAK_DAYS.configValue,
+            value = days.toString(), guildId = guildId.toString(),
+        )
+        every {
+            configService.getConfigByName(
+                ConfigDto.Configurations.LOTTERY_STREAK_BONUS.configValue, guildId.toString()
+            )
+        } returns ConfigDto(
+            name = ConfigDto.Configurations.LOTTERY_STREAK_BONUS.configValue,
+            value = bonus.toString(), guildId = guildId.toString(),
+        )
+    }
+
+    private fun stubOpenWeightedForBuy(): UserDto {
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_TICKET_WEIGHTED)
+        } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 100L, poolAmount = 1_000L,
+            status = JackpotLotteryDto.STATUS_OPEN, mode = JackpotLotteryDto.MODE_TICKET_WEIGHTED,
+        )
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 1_000L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+        return user
+    }
+
+    @Test
+    fun `buyTickets extends a consecutive-day streak and pays the bonus from the jackpot`() {
+        val today = java.time.LocalDate.of(2026, 7, 4)
+        val streakPersistence =
+            mockk<database.persistence.lottery.LotteryStreakPersistence>(relaxed = true)
+        every { streakPersistence.getForUpdate(guildId, 7L) } returns
+            database.dto.lottery.LotteryStreakDto(
+                guildId = guildId, discordId = 7L, streakDays = 2,
+                lastParticipationDate = today.minusDays(1),
+            )
+        stubStreakConfig(days = 3, bonus = 100L)
+        every { jackpotService.resetPool(guildId) } returns 5_000L
+        val user = stubOpenWeightedForBuy()
+
+        val svc = streakService(streakPersistence, today)
+        val r = svc.buyTickets(guildId, discordId = 7L, ticketCount = 1)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(3, r.streakDays)
+        assertEquals(100L, r.streakBonusAwarded)
+        // 1000 - 100 (ticket) + 100 (streak bonus).
+        assertEquals(1_000L, user.socialCredit)
+        // Bonus drained from the jackpot: 5000 reset, 4900 put back.
+        verify { jackpotService.addToPool(guildId, 4_900L) }
+    }
+
+    @Test
+    fun `buyTickets same-day repeat buy neither extends the streak nor double-pays`() {
+        val today = java.time.LocalDate.of(2026, 7, 4)
+        val streakPersistence =
+            mockk<database.persistence.lottery.LotteryStreakPersistence>(relaxed = true)
+        every { streakPersistence.getForUpdate(guildId, 7L) } returns
+            database.dto.lottery.LotteryStreakDto(
+                guildId = guildId, discordId = 7L, streakDays = 4,
+                lastParticipationDate = today,
+            )
+        stubStreakConfig(days = 3, bonus = 100L)
+        stubOpenWeightedForBuy()
+
+        val svc = streakService(streakPersistence, today)
+        val r = svc.buyTickets(guildId, discordId = 7L, ticketCount = 1)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(4, r.streakDays)
+        assertEquals(0L, r.streakBonusAwarded)
+        verify(exactly = 0) { streakPersistence.upsert(any()) }
+    }
+
+    @Test
+    fun `buyTickets resets the streak to 1 after a gap`() {
+        val today = java.time.LocalDate.of(2026, 7, 4)
+        val streakPersistence =
+            mockk<database.persistence.lottery.LotteryStreakPersistence>(relaxed = true)
+        every { streakPersistence.getForUpdate(guildId, 7L) } returns
+            database.dto.lottery.LotteryStreakDto(
+                guildId = guildId, discordId = 7L, streakDays = 9,
+                lastParticipationDate = today.minusDays(3),
+            )
+        stubStreakConfig(days = 3, bonus = 100L)
+        stubOpenWeightedForBuy()
+
+        val svc = streakService(streakPersistence, today)
+        val r = svc.buyTickets(guildId, discordId = 7L, ticketCount = 1)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(1, r.streakDays)
+        assertEquals(0L, r.streakBonusAwarded, "below threshold after reset")
+    }
+
+    @Test
+    fun `streak below threshold is tracked but pays nothing`() {
+        val today = java.time.LocalDate.of(2026, 7, 4)
+        val streakPersistence =
+            mockk<database.persistence.lottery.LotteryStreakPersistence>(relaxed = true)
+        every { streakPersistence.getForUpdate(guildId, 7L) } returns null
+        stubStreakConfig(days = 3, bonus = 100L)
+        stubOpenWeightedForBuy()
+
+        val svc = streakService(streakPersistence, today)
+        val r = svc.buyTickets(guildId, discordId = 7L, ticketCount = 1)
+        assertTrue(r is JackpotLotteryService.BuyOutcome.Ok)
+        r as JackpotLotteryService.BuyOutcome.Ok
+        assertEquals(1, r.streakDays)
+        assertEquals(0L, r.streakBonusAwarded)
+        verify(exactly = 1) { streakPersistence.upsert(any()) }
+    }
+
+    @Test
+    fun `buyMatchTicket also advances the participation streak`() {
+        val today = java.time.LocalDate.of(2026, 7, 4)
+        val streakPersistence =
+            mockk<database.persistence.lottery.LotteryStreakPersistence>(relaxed = true)
+        every { streakPersistence.getForUpdate(guildId, 7L) } returns
+            database.dto.lottery.LotteryStreakDto(
+                guildId = guildId, discordId = 7L, streakDays = 2,
+                lastParticipationDate = today.minusDays(1),
+            )
+        stubStreakConfig(days = 3, bonus = 50L)
+        every { jackpotService.resetPool(guildId) } returns 5_000L
+        every {
+            lotteryPersistence.getOpenByGuildAndModeForUpdate(guildId, JackpotLotteryDto.MODE_NUMBER_MATCH)
+        } returns JackpotLotteryDto(
+            id = 1L, guildId = guildId, ticketPrice = 50L, status = JackpotLotteryDto.STATUS_OPEN,
+            mode = JackpotLotteryDto.MODE_NUMBER_MATCH, pickCount = 5, numberMax = 49,
+        )
+        every { lotteryPersistence.getTicketForUpdate(1L, 7L) } returns null
+        val user = UserDto(discordId = 7L, guildId = guildId).apply { socialCredit = 1_000L }
+        every { userService.getUserByIdForUpdate(7L, guildId) } returns user
+
+        val svc = streakService(streakPersistence, today)
+        val r = svc.buyMatchTicket(guildId, 7L, listOf(1, 2, 3, 4, 5))
+        assertTrue(r is JackpotLotteryService.BuyMatchOutcome.Ok)
+        r as JackpotLotteryService.BuyMatchOutcome.Ok
+        assertEquals(3, r.streakDays)
+        assertEquals(50L, r.streakBonusAwarded)
+    }
 }

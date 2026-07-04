@@ -44,6 +44,11 @@ class LotteryBuyModal(
                             "**+${m.creditsAdded}** credits drawn into the prize pool!"
                     )
                 }
+                if (r.streakBonusAwarded > 0) {
+                    append("\n🔥 **${r.streakDays}-day** lottery streak — bonus **+${r.streakBonusAwarded}** credits!")
+                } else if (r.streakDays > 1) {
+                    append("\n🔥 Lottery streak: **${r.streakDays}** days.")
+                }
             }).setEphemeral(true).queue()
 
             BuyOutcome.NoOpenLottery ->

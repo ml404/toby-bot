@@ -135,6 +135,12 @@
                         `Bought ticket • picked <strong>${selected.join(', ')}</strong>. ` +
                         `<span class="casino-loss-tribute">+${body.jackpotInflow} to jackpot</span>`;
                 }
+                if (typeof toast === 'function' && body.streakBonusAwarded && body.streakBonusAwarded > 0) {
+                    toast(
+                        `🔥 ${body.streakDays}-day lottery streak — bonus +${body.streakBonusAwarded} credits!`,
+                        'success'
+                    );
+                }
                 // Reload so the server-rendered "Your ticket" panel + live
                 // pool numbers appear without us having to maintain a JS
                 // shadow copy of the snapshot.
@@ -207,6 +213,12 @@
                                 'success'
                             );
                         });
+                    }
+                    if (body.streakBonusAwarded && body.streakBonusAwarded > 0) {
+                        toast(
+                            `🔥 ${body.streakDays}-day lottery streak — bonus +${body.streakBonusAwarded} credits!`,
+                            'success'
+                        );
                     }
                 }
             } catch (err) {
