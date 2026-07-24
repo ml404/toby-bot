@@ -1,5 +1,12 @@
 [
   {
+    "date": "July 2026",
+    "title": "Add low-engagement lottery levers: rollover pot, streaks, scaled winner slots, configurable match odds",
+    "summary": "## Why",
+    "emoji": "🎰",
+    "prNumber": 728
+  },
+  {
     "date": "June 2026",
     "title": "Fix intro volume slider triggering row reorder",
     "summary": "## Problem",
