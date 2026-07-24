@@ -129,6 +129,17 @@ class JackpotLotteryDto(
      */
     @Column(name = "milestones_fired", nullable = false)
     var milestonesFired: Long = 0,
+
+    /**
+     * Credits parked on this (closed) row for the next lottery of the
+     * same (guild, mode) to claim into its prize pool at open — the
+     * "rollover pot". Written at cancel/draw time when the guild has
+     * `LOTTERY_DAILY_ROLLOVER_ENABLED`; zeroed when a subsequent open
+     * claims it. 0 for rows that returned their pool to the jackpot
+     * (the pre-rollover behaviour, still the default).
+     */
+    @Column(name = "rollover_out", nullable = false)
+    var rolloverOut: Long = 0,
 ) : Serializable {
 
     companion object {

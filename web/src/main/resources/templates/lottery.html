@@ -454,14 +454,13 @@
             </thead>
             <tbody>
                 <tr th:each="i, iter : ${snapshot.tierPercents}"
-                    th:with="match=${5 - iter.index}">
+                    th:with="match=${snapshot.pickCount - iter.index}">
                     <td><strong th:text="${match} + ' / ' + ${snapshot.pickCount}">5 / 5</strong></td>
                     <td><strong th:text="${snapshot.tierPercents[iter.index]} + '%'">60%</strong></td>
                     <td class="muted">
-                        <span th:if="${match == 5}">Top tier — split equally if multiple jackpot winners.</span>
-                        <span th:if="${match == 4}">Second tier.</span>
-                        <span th:if="${match == 3}">Third tier — frequent at this odds level.</span>
-                        <span th:if="${match == 2}">Consolation tier — small return.</span>
+                        <span th:if="${match == snapshot.pickCount}">Top tier — split equally if multiple jackpot winners.</span>
+                        <span th:if="${match != snapshot.pickCount and match != 2}">Mid tier.</span>
+                        <span th:if="${match == 2 and snapshot.pickCount != 2}">Consolation tier — small return.</span>
                     </td>
                 </tr>
                 <tr>

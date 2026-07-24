@@ -76,7 +76,7 @@
                         <select th:disabled="${!isOwner}">
                             <option value="NUMBER_MATCH"
                                     th:selected="${overview.config['LOTTERY_DAILY_MODE'] == null or overview.config['LOTTERY_DAILY_MODE'] != 'WEIGHTED'}">
-                                Pick 5 of 49
+                                Number match (default: pick 5 of 49)
                             </option>
                             <option value="WEIGHTED"
                                     th:selected="${overview.config['LOTTERY_DAILY_MODE'] == 'WEIGHTED'}">
@@ -145,6 +145,100 @@
                         <input type="number" min="1" max="50"
                                th:value="${overview.config['LOTTERY_DAILY_MIN_BUYERS']}"
                                placeholder="2"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                </div>
+            </details>
+
+            <details class="config-section" open>
+                <summary>Low-engagement boosters</summary>
+                <p class="muted config-section-lead">
+                    Levers for servers where only a handful of players buy in each
+                    day: roll un-won pots forward instead of quietly returning them
+                    to the jackpot, reward showing up daily, and shrink the match
+                    odds so small ticket counts still produce winners.
+                </p>
+                <div class="config-grid">
+                    <div class="config-row" data-key="LOTTERY_DAILY_ROLLOVER_ENABLED">
+                        <label>
+                            Rollover pot
+                            <span class="config-hint">
+                                When a draw cancels (too few buyers / no tickets) or no
+                                match tier hits, carry the undistributed pool into the
+                                next day's prize pool instead of returning it to the
+                                jackpot — the pot visibly grows on quiet days.
+                            </span>
+                        </label>
+                        <select th:disabled="${!isOwner}">
+                            <option value="false"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ROLLOVER_ENABLED'] == null or overview.config['LOTTERY_DAILY_ROLLOVER_ENABLED'] != 'true'}">
+                                Disabled
+                            </option>
+                            <option value="true"
+                                    th:selected="${overview.config['LOTTERY_DAILY_ROLLOVER_ENABLED'] == 'true'}">
+                                Enabled
+                            </option>
+                        </select>
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_STREAK_DAYS">
+                        <label>
+                            Streak threshold (days)
+                            <span class="config-hint">
+                                Buy a ticket this many UTC days in a row to start earning
+                                the streak bonus. 0 disables the payout (streaks are
+                                still tracked). Default 0.
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="365"
+                               th:value="${overview.config['LOTTERY_STREAK_DAYS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_STREAK_BONUS">
+                        <label>
+                            Streak bonus (credits/day)
+                            <span class="config-hint">
+                                Paid once per participation day while the streak is at or
+                                above the threshold. Drained from the jackpot pool — an
+                                empty jackpot pays 0. Default 0 (off).
+                            </span>
+                        </label>
+                        <input type="number" min="0" max="1000000"
+                               th:value="${overview.config['LOTTERY_STREAK_BONUS']}"
+                               placeholder="0"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_PICK_COUNT">
+                        <label>
+                            Match draw: picks
+                            <span class="config-hint">
+                                Numbers each player picks in NUMBER_MATCH mode (2&ndash;6).
+                                Fewer picks + a smaller range = far more frequent wins with
+                                only a few tickets. Applies from the next daily open. Default 5.
+                            </span>
+                        </label>
+                        <input type="number" min="2" max="6"
+                               th:value="${overview.config['LOTTERY_DAILY_PICK_COUNT']}"
+                               placeholder="5"
+                               th:disabled="${!isOwner}">
+                        <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                    </div>
+                    <div class="config-row" data-key="LOTTERY_DAILY_NUMBER_MAX">
+                        <label>
+                            Match draw: number range
+                            <span class="config-hint">
+                                Players pick from 1 up to this number (10&ndash;99; always at
+                                least 2&times; the pick count). Try picks 3 of 15 for a 2-3
+                                player server. Applies from the next daily open. Default 49.
+                            </span>
+                        </label>
+                        <input type="number" min="10" max="99"
+                               th:value="${overview.config['LOTTERY_DAILY_NUMBER_MAX']}"
+                               placeholder="49"
                                th:disabled="${!isOwner}">
                         <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                     </div>

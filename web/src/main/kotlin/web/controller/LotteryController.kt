@@ -85,6 +85,8 @@ class LotteryController(
                     newBalance = outcome.newBalance,
                     newPool = outcome.newPool,
                     jackpotInflow = outcome.jackpotInflow,
+                    streakDays = outcome.streakDays.takeIf { it > 0 },
+                    streakBonusAwarded = outcome.streakBonusAwarded.takeIf { it > 0L },
                 )
             )
 
@@ -134,6 +136,8 @@ class LotteryController(
                     milestoneBonuses = outcome.milestoneBonuses
                         .map { MilestoneBonusView(threshold = it.threshold, creditsAdded = it.creditsAdded) }
                         .takeIf { it.isNotEmpty() },
+                    streakDays = outcome.streakDays.takeIf { it > 0 },
+                    streakBonusAwarded = outcome.streakBonusAwarded.takeIf { it > 0L },
                 )
             )
 
@@ -163,6 +167,10 @@ data class BuyMatchResponse(
     val newBalance: Long? = null,
     val newPool: Long? = null,
     val jackpotInflow: Long? = null,
+    /** Consecutive participation days after this buy. Null when untracked. */
+    val streakDays: Int? = null,
+    /** Streak bonus credits paid on this buy. Null when none. */
+    val streakBonusAwarded: Long? = null,
 ) : CasinoResponseLike
 
 data class BuyWeightedRequest(val count: Int = 0)
@@ -194,6 +202,10 @@ data class BuyWeightedResponse(
      * list to know there's nothing to render).
      */
     val milestoneBonuses: List<MilestoneBonusView>? = null,
+    /** Consecutive participation days after this buy. Null when untracked. */
+    val streakDays: Int? = null,
+    /** Streak bonus credits paid on this buy. Null when none. */
+    val streakBonusAwarded: Long? = null,
 ) : CasinoResponseLike
 
 /**

@@ -305,7 +305,7 @@ class LotteryAnnouncer @Autowired constructor(
             ticketPrice = lottery.ticketPrice,
             poolAmount = lottery.poolAmount,
         )
-        val freshTodayBody = renderOpenSummary(mode, freshSummary)
+        val freshTodayBody = renderOpenSummary(mode, freshSummary, guildId)
         val freshIncentives = if (mode == LotteryHelper.MODE_WEIGHTED) {
             renderActiveIncentives(guildId)
         } else null
@@ -349,6 +349,8 @@ class LotteryAnnouncer @Autowired constructor(
             val tierPayouts: List<JackpotLotteryService.MatchTierPayout>,
             val totalPaid: Long,
             val rolledBack: Long,
+            /** Unpaid pool parked as tomorrow's rollover pot (0 = feature off / all paid). */
+            val rolledOver: Long = 0L,
         ) : PriorOutcome
 
         data class WeightedDrawn(
@@ -362,9 +364,17 @@ class LotteryAnnouncer @Autowired constructor(
             val highestMilestoneFired: Long = 0L,
         ) : PriorOutcome
 
-        data class BelowMinBuyers(val have: Int, val need: Int) : PriorOutcome
+        data class BelowMinBuyers(
+            val have: Int,
+            val need: Int,
+            /** Seed parked as tomorrow's rollover pot instead of returning to the jackpot. */
+            val rolledOver: Long = 0L,
+        ) : PriorOutcome
 
-        data object NoTickets : PriorOutcome
+        data class NoTickets(
+            /** Seed parked as tomorrow's rollover pot instead of returning to the jackpot. */
+            val rolledOver: Long = 0L,
+        ) : PriorOutcome
     }
 
     /**
@@ -386,6 +396,8 @@ class LotteryAnnouncer @Autowired constructor(
             val seeded: Long,
             val ticketPrice: Long,
             val poolAmount: Long,
+            /** Rollover pot claimed into today's pool (already included in [poolAmount]). */
+            val rolledIn: Long = 0L,
         ) : OpenSummary
         data object Skipped : OpenSummary
     }
@@ -434,7 +446,7 @@ class LotteryAnnouncer @Autowired constructor(
                 false
             )
         }
-        builder.addField(TODAYS_DRAW_FIELD, renderOpenSummary(mode, openOutcome), false)
+        builder.addField(TODAYS_DRAW_FIELD, renderOpenSummary(mode, openOutcome, guild.idLong), false)
         // Incentives apply to TICKET_WEIGHTED draws only — the daily
         // NUMBER_MATCH already caps each user at one ticket per draw.
         if (mode == LotteryHelper.MODE_WEIGHTED) {
@@ -447,7 +459,12 @@ class LotteryAnnouncer @Autowired constructor(
         builder.setFooter(
             when (mode) {
                 LotteryHelper.MODE_WEIGHTED -> "Top-3 weighted draw • 50/30/20 share"
-                else -> "Pick 5 of 49 • tier payouts 60/25/10/5%"
+                else -> {
+                    val pickCount = LotteryHelper.dailyPickCount(configService, guild.idLong)
+                    val numberMax = LotteryHelper.dailyNumberMax(configService, guild.idLong)
+                    val tiers = LotteryHelper.matchTierPcts(pickCount).joinToString("/")
+                    "Pick $pickCount of $numberMax • tier payouts $tiers%"
+                }
             }
         )
         return builder.build()
@@ -504,13 +521,18 @@ class LotteryAnnouncer @Autowired constructor(
     private fun renderPriorOutcome(prior: PriorOutcome): String = when (prior) {
         is PriorOutcome.MatchDrawn -> {
             val numbers = prior.drawnNumbers.joinToString(" · ")
+            val pickCount = prior.drawnNumbers.size
             val winners = if (prior.tierPayouts.isEmpty()) {
-                "No tier matched — rolled back **${prior.rolledBack}** to jackpot."
+                if (prior.rolledOver > 0L) {
+                    "No tier matched — 🔄 **${prior.rolledOver}** credits roll over into today's pot!"
+                } else {
+                    "No tier matched — rolled back **${prior.rolledBack}** to jackpot."
+                }
             } else {
                 prior.tierPayouts
                     .sortedByDescending { it.matches }
                     .joinToString("\n") {
-                        "${it.matches}/5: <@${it.discordId}> — **${it.share}** credits"
+                        "${it.matches}/$pickCount: <@${it.discordId}> — **${it.share}** credits"
                     }
             }
             "Winning numbers: **$numbers**\n$winners"
@@ -529,17 +551,33 @@ class LotteryAnnouncer @Autowired constructor(
             val impact = renderBonusImpact(prior)
             if (impact.isEmpty()) body else "$body\n$impact"
         }
-        is PriorOutcome.BelowMinBuyers ->
-            "Only **${prior.have}** buyer(s) — need **${prior.need}**. Refunded; seed returned to jackpot."
-        PriorOutcome.NoTickets ->
-            "No tickets bought. Seed returned to jackpot."
+        is PriorOutcome.BelowMinBuyers -> {
+            val seedLine = if (prior.rolledOver > 0L) {
+                "Refunded; 🔄 **${prior.rolledOver}** credits roll over into today's pot!"
+            } else {
+                "Refunded; seed returned to jackpot."
+            }
+            "Only **${prior.have}** buyer(s) — need **${prior.need}**. $seedLine"
+        }
+        is PriorOutcome.NoTickets -> {
+            if (prior.rolledOver > 0L) {
+                "No tickets bought. 🔄 **${prior.rolledOver}** credits roll over into today's pot!"
+            } else {
+                "No tickets bought. Seed returned to jackpot."
+            }
+        }
     }
 
-    private fun renderOpenSummary(mode: String, open: OpenSummary): String = when (open) {
+    private fun renderOpenSummary(mode: String, open: OpenSummary, guildId: Long): String = when (open) {
         is OpenSummary.Ok -> {
-            val modeLabel = if (mode == LotteryHelper.MODE_WEIGHTED) "Top-3 weighted" else "Pick 5 of 49"
+            val modeLabel = if (mode == LotteryHelper.MODE_WEIGHTED) "Top-3 weighted"
+            else "Pick ${LotteryHelper.dailyPickCount(configService, guildId)} of " +
+                "${LotteryHelper.dailyNumberMax(configService, guildId)}"
+            val rolloverLine = if (open.rolledIn > 0L) {
+                " · 🔄 includes **${open.rolledIn}** rolled over from yesterday"
+            } else ""
             "**${open.poolAmount}** credits in the pool · Ticket: **${open.ticketPrice}** · " +
-                "Mode: **$modeLabel** · Closes 24h."
+                "Mode: **$modeLabel** · Closes 24h.$rolloverLine"
         }
         OpenSummary.Skipped ->
             "Today's draw was not opened — see logs / moderation tab."

@@ -389,6 +389,39 @@ class ConfigDto(
         LOTTERY_MILESTONE3_TICKETS("LOTTERY_MILESTONE3_TICKETS"),
         LOTTERY_MILESTONE3_PCT("LOTTERY_MILESTONE3_PCT"),
 
+        // Rollover pot for the daily lottery. Boolean ("true"/"false");
+        // defaults to "false". When enabled, a daily draw that cancels
+        // (below LOTTERY_DAILY_MIN_BUYERS / no tickets) or a
+        // NUMBER_MATCH draw whose tiers all go un-won parks the
+        // undistributed pool on the closed lottery row instead of
+        // returning it to the jackpot; the next daily open claims it
+        // into the fresh prize pool. Built for low-engagement guilds:
+        // a quiet day grows tomorrow's pot instead of reading as a dud.
+        LOTTERY_DAILY_ROLLOVER_ENABLED("LOTTERY_DAILY_ROLLOVER_ENABLED"),
+
+        // NUMBER_MATCH draw shape. PICK_COUNT is how many numbers each
+        // player picks (and the draw produces); NUMBER_MAX is the top of
+        // the 1..N range they pick from. Defaults 5 / 49 (Lotto-style).
+        // PICK_COUNT range [2, 6]; NUMBER_MAX range [10, 99] and always
+        // coerced to at least 2× the pick count at open. Small guilds
+        // should shrink both (e.g. pick 3 of 15) so match tiers actually
+        // fire with a handful of tickets — at 5-of-49 with 3 tickets,
+        // ~60% of draws pay nothing. Changes apply from the next open;
+        // the open draw keeps the shape it was opened with.
+        LOTTERY_DAILY_PICK_COUNT("LOTTERY_DAILY_PICK_COUNT"),
+        LOTTERY_DAILY_NUMBER_MAX("LOTTERY_DAILY_NUMBER_MAX"),
+
+        // Lottery participation streak. When a user buys a ticket
+        // (either mode) on N consecutive UTC days where N >=
+        // LOTTERY_STREAK_DAYS, each further participation day pays
+        // LOTTERY_STREAK_BONUS credits, drained from the jackpot pool
+        // (so the bonus never mints credits; an empty jackpot pays 0
+        // while still tracking the streak). DAYS=0 or BONUS=0 disables
+        // the payout (streaks are still tracked). Retention lever for
+        // small guilds where the same 2-3 players are the whole game.
+        LOTTERY_STREAK_DAYS("LOTTERY_STREAK_DAYS"),
+        LOTTERY_STREAK_BONUS("LOTTERY_STREAK_BONUS"),
+
         // Daily streak XP reward shape. Computed as
         // `min(base + per_day_bonus * (streak - 1), max)` inside
         // DefaultLoginStreakService. Streak rewards bypass DAILY_XP_CAP.

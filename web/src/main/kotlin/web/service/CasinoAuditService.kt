@@ -137,6 +137,7 @@ class CasinoAuditService(
         var priorBelowMinBuyers = false
         var priorBuyersHave = 0
         var priorBuyersNeed = 0
+        val rollover = LotteryHelper.dailyRolloverEnabled(configService, guildId)
         if (mode == LotteryHelper.MODE_WEIGHTED) {
             when (val drawResult = jackpotLotteryService.drawLottery(guildId)) {
                 is JackpotLotteryService.DrawOutcome.Ok -> {
@@ -145,11 +146,11 @@ class CasinoAuditService(
                     priorRolledBack = (drawResult.drained - drawResult.totalPaid).coerceAtLeast(0L)
                 }
                 JackpotLotteryService.DrawOutcome.NoTickets -> {
-                    jackpotLotteryService.cancelLottery(guildId)
+                    jackpotLotteryService.cancelLottery(guildId, rollover)
                     drewPrior = true
                 }
                 is JackpotLotteryService.DrawOutcome.BelowMinBuyers -> {
-                    jackpotLotteryService.cancelLottery(guildId)
+                    jackpotLotteryService.cancelLottery(guildId, rollover)
                     drewPrior = true
                     priorBelowMinBuyers = true
                     priorBuyersHave = drawResult.have
@@ -158,7 +159,7 @@ class CasinoAuditService(
                 JackpotLotteryService.DrawOutcome.NoOpenLottery -> Unit
             }
         } else {
-            when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId)) {
+            when (val drawResult = jackpotLotteryService.drawMatchLottery(guildId, rollover)) {
                 is JackpotLotteryService.DrawMatchOutcome.Ok -> {
                     drewPrior = true
                     priorTotalPaid = drawResult.totalPaid
@@ -166,11 +167,11 @@ class CasinoAuditService(
                     priorDrawn = drawResult.drawnNumbers
                 }
                 JackpotLotteryService.DrawMatchOutcome.NoTickets -> {
-                    jackpotLotteryService.cancelMatchLottery(guildId)
+                    jackpotLotteryService.cancelMatchLottery(guildId, rollover)
                     drewPrior = true
                 }
                 is JackpotLotteryService.DrawMatchOutcome.BelowMinBuyers -> {
-                    jackpotLotteryService.cancelMatchLottery(guildId)
+                    jackpotLotteryService.cancelMatchLottery(guildId, rollover)
                     drewPrior = true
                     priorBelowMinBuyers = true
                     priorBuyersHave = drawResult.have
@@ -196,6 +197,8 @@ class CasinoAuditService(
                 ticketPrice = ticketPrice,
                 seedPct = seedPct,
                 durationHours = 24L,
+                pickCount = LotteryHelper.dailyPickCount(configService, guildId),
+                numberMax = LotteryHelper.dailyNumberMax(configService, guildId),
             )
         }
         return when (open) {

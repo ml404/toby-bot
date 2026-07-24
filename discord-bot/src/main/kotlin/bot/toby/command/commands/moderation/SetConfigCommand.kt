@@ -8,6 +8,7 @@ import bot.toby.modal.modals.setconfig.SetConfigGeneralModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotActivityModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryBasicsModal
+import bot.toby.modal.modals.setconfig.SetConfigLotteryEngagementModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryPoolsModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerStakesModal
 import bot.toby.modal.modals.setconfig.SetConfigPokerTableModal
@@ -56,6 +57,7 @@ class SetConfigCommand @Autowired constructor(
     private val blackjackTable: SetConfigBlackjackTableModal,
     private val lotteryBasics: SetConfigLotteryBasicsModal,
     private val lotteryPools: SetConfigLotteryPoolsModal,
+    private val lotteryEngagement: SetConfigLotteryEngagementModal,
     private val stakes: SetConfigStakesModal,
 ) : ModerationCommand {
 
@@ -76,6 +78,7 @@ class SetConfigCommand @Autowired constructor(
         SubcommandData(SUB_BLACKJACK_TABLE, "Blackjack seats + natural payout ratio"),
         SubcommandData(SUB_LOTTERY_BASICS, "Daily lottery on/off, ticket price, mode, ping"),
         SubcommandData(SUB_LOTTERY_POOLS, "Lottery seed/revenue split + announce channel"),
+        SubcommandData(SUB_LOTTERY_ENGAGEMENT, "Lottery rollover pot, streak bonus, match odds"),
         SubcommandData(SUB_STAKES, "Per-game stake bounds (and bot-suspicion edge cap where applicable)")
             .addOptions(
                 OptionData(OptionType.STRING, OPT_GAME, "Which game's stake bounds to edit", true)
@@ -119,6 +122,8 @@ class SetConfigCommand @Autowired constructor(
             SUB_BLACKJACK_TABLE -> blackjackTable.buildModal(SetConfigBlackjackTableModal.MODAL_NAME, guild, reader)
             SUB_LOTTERY_BASICS -> lotteryBasics.buildModal(SetConfigLotteryBasicsModal.MODAL_NAME, guild, reader)
             SUB_LOTTERY_POOLS -> lotteryPools.buildModal(SetConfigLotteryPoolsModal.MODAL_NAME, guild, reader)
+            SUB_LOTTERY_ENGAGEMENT ->
+                lotteryEngagement.buildModal(SetConfigLotteryEngagementModal.MODAL_NAME, guild, reader)
             SUB_STAKES -> {
                 val token = event.getOption(OPT_GAME)?.asString
                 val game = token?.let { SetConfigStakesModal.Game.byToken(it) } ?: run {
@@ -148,6 +153,7 @@ class SetConfigCommand @Autowired constructor(
         const val SUB_BLACKJACK_TABLE = "blackjack_table"
         const val SUB_LOTTERY_BASICS = "lottery_basics"
         const val SUB_LOTTERY_POOLS = "lottery_pools"
+        const val SUB_LOTTERY_ENGAGEMENT = "lottery_engagement"
         const val SUB_STAKES = "stakes"
         const val OPT_GAME = "game"
     }

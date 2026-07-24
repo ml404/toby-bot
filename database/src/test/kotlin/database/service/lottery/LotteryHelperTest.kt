@@ -198,4 +198,63 @@ class LotteryHelperTest {
         // already fired up to 300 → nothing new
         assertTrue(LotteryHelper.milestonesBetween(150, 350, milestones, alreadyFiredHighest = 300).isEmpty())
     }
+
+    // --- low-engagement additions -----------------------------------------
+
+    @Test
+    fun `matchTierPcts returns a 100-sum schedule for every supported pick count`() {
+        for (picks in LotteryHelper.MIN_DAILY_PICK_COUNT..LotteryHelper.MAX_DAILY_PICK_COUNT) {
+            val pcts = LotteryHelper.matchTierPcts(picks)
+            assertEquals(picks - 1, pcts.size, "one tier per match count from $picks down to 2")
+            assertEquals(100, pcts.sum(), "schedule for $picks picks must be a partition")
+        }
+        // Out-of-range clamps to the nearest supported schedule.
+        assertEquals(LotteryHelper.matchTierPcts(2).toList(), LotteryHelper.matchTierPcts(0).toList())
+        assertEquals(LotteryHelper.matchTierPcts(6).toList(), LotteryHelper.matchTierPcts(9).toList())
+    }
+
+    @Test
+    fun `dailyRolloverEnabled defaults off and reads truthy aliases`() {
+        assertEquals(LotteryHelper.DEFAULT_DAILY_ROLLOVER_ENABLED, LotteryHelper.dailyRolloverEnabled(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED, "true")
+        assertTrue(LotteryHelper.dailyRolloverEnabled(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_ROLLOVER_ENABLED, "nope")
+        assertEquals(false, LotteryHelper.dailyRolloverEnabled(config, guildId))
+    }
+
+    @Test
+    fun `dailyPickCount defaults and clamps into the supported range`() {
+        assertEquals(LotteryHelper.MATCH_PICK_COUNT, LotteryHelper.dailyPickCount(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_PICK_COUNT, "3")
+        assertEquals(3, LotteryHelper.dailyPickCount(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_PICK_COUNT, "1")
+        assertEquals(LotteryHelper.MIN_DAILY_PICK_COUNT, LotteryHelper.dailyPickCount(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_PICK_COUNT, "42")
+        assertEquals(LotteryHelper.MAX_DAILY_PICK_COUNT, LotteryHelper.dailyPickCount(config, guildId))
+    }
+
+    @Test
+    fun `dailyNumberMax defaults and clamps into 10 to 99`() {
+        assertEquals(LotteryHelper.MATCH_NUMBER_MAX, LotteryHelper.dailyNumberMax(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_NUMBER_MAX, "15")
+        assertEquals(15, LotteryHelper.dailyNumberMax(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_NUMBER_MAX, "5")
+        assertEquals(LotteryHelper.MIN_DAILY_NUMBER_MAX, LotteryHelper.dailyNumberMax(config, guildId))
+        stub(Configurations.LOTTERY_DAILY_NUMBER_MAX, "500")
+        assertEquals(LotteryHelper.MAX_DAILY_NUMBER_MAX, LotteryHelper.dailyNumberMax(config, guildId))
+    }
+
+    @Test
+    fun `streak getters default to disabled and clamp`() {
+        assertEquals(0, LotteryHelper.streakThresholdDays(config, guildId))
+        assertEquals(0L, LotteryHelper.streakBonusCredits(config, guildId))
+        stub(Configurations.LOTTERY_STREAK_DAYS, "5")
+        assertEquals(5, LotteryHelper.streakThresholdDays(config, guildId))
+        stub(Configurations.LOTTERY_STREAK_DAYS, "-3")
+        assertEquals(0, LotteryHelper.streakThresholdDays(config, guildId))
+        stub(Configurations.LOTTERY_STREAK_BONUS, "250")
+        assertEquals(250L, LotteryHelper.streakBonusCredits(config, guildId))
+        stub(Configurations.LOTTERY_STREAK_BONUS, "9999999999")
+        assertEquals(LotteryHelper.MAX_STREAK_BONUS, LotteryHelper.streakBonusCredits(config, guildId))
+    }
 }

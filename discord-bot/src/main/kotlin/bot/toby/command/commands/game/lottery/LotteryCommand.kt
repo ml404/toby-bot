@@ -156,6 +156,11 @@ class LotteryCommand @Autowired constructor(
             }
             lines += "🚀 Milestone reached! Jackpot top-up: $parts."
         }
+        if (r.streakBonusAwarded > 0L) {
+            lines += "🔥 **${r.streakDays}-day** lottery streak — bonus **+${r.streakBonusAwarded}** credits!"
+        } else if (r.streakDays > 1) {
+            lines += "🔥 Lottery streak: **${r.streakDays}** days."
+        }
         return lines.joinToString("\n")
     }
 
