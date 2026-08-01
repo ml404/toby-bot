@@ -1,7 +1,7 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import kotlinx.kover.gradle.plugin.dsl.AggregationType
 import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     ext {
@@ -13,7 +13,7 @@ buildscript {
         ktor_version = '2.3.13'
         mockk_version = '1.13.13'
         lavaplayer_version = '2.2.6'
-        youtube_common_version = '1.18.0'
+        youtube_common_version = '1.18.2'
         lavasrc_version = '4.8.2'
     }
     repositories {
