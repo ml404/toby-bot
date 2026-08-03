@@ -2,14 +2,16 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MenuHelper.DELETE_INTRO
-import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component
 
+/**
+ * `/deleteintro` — pick an intro to remove. The confirmation carries an
+ * **Undo** button ([bot.toby.button.buttons.music.UndoDeleteIntroButton]) so a
+ * mis-click on the menu is recoverable, matching the web dashboard.
+ */
 @Component
 class DeleteIntroCommand : MusicCommand {
 
@@ -25,26 +27,13 @@ class DeleteIntroCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
-        val event = ctx.event
-
-        // Fetch the user's intros
-        val introList = requestingUserDto.musicDtos
-        if (introList.isEmpty()) {
-            event.hook.sendMessage("You have no intros to delete.").setEphemeral(true).queue()
-            return
-        }
-
-        // Create the string select menu with the user's intros
-        val builder = StringSelectMenu.create(DELETE_INTRO).setPlaceholder("Select an intro to delete")
-
-        introList.forEach { intro -> builder.addOption(intro.fileName ?: "Unknown", intro.id.toString()) }
-
-        val stringSelectMenu = builder.build()
-        val introMessage = produceMusicFileDataStringForPrinting(event.member!!, requestingUserDto)
-
-        // Send the select menu to the user
-        event.hook.sendMessage("$introMessage \nPlease select an intro to delete.").addComponents(ActionRow.of(stringSelectMenu))
-            .setEphemeral(true).queue()
+        sendIntroSelection(
+            event = ctx.event,
+            requestingUserDto = requestingUserDto,
+            menuId = DELETE_INTRO,
+            placeholder = "Select an intro to delete",
+            emptyMessage = "You have no intros to delete.",
+        )
     }
 
     override val name: String

@@ -277,6 +277,12 @@
 }
 .clip-badge:hover { border-color: var(--accent); color: var(--accent); }
 .clip-badge-label { font-size: 0.8rem; }
+/* The badge shows the real range ("0:03 – 0:12"), so keep it on one line
+   and line the digits up the way the trim readout above does. */
+.clip-badge-range {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
 
 /* Row-level clip editor popover */
 .clip-editor-popover {

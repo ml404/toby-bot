@@ -32,6 +32,14 @@
 - **URL Support**: Provide a YouTube URL or another music link.
 - **File Upload**: Upload a music file directly into the Discord chat.
 - **Volume Control**: Optionally set a volume between 0 and 100 when configuring your intro.
+- **Clips**: `start`/`end` bounds (`mm:ss` or raw seconds) pick a stretch out of a longer source, so a 15-second
+  limit doesn't mean a 15-second video. The same rules apply on Discord and on the web — see `common.intro.IntroClip`.
+- **Slots**: up to three intros per server; TobyBot picks one at random on join, never repeating the one
+  it played last. `/listintros` shows them all.
+- **Replay cooldown**: an intro won't retrigger within 60 seconds, so channel-hopping and reconnects don't
+  replay it (or pay out the intro-play credit and XP again).
+- **Editing**: `/editintro` opens a form for the name, volume and clip bounds of a chosen intro;
+  `/deleteintro` removes one and offers a 10-minute Undo.
 
 #### **EventWaiter Pattern**
 

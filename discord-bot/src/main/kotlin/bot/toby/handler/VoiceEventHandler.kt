@@ -5,6 +5,7 @@ import bot.toby.helpers.MusicPlayerHelper.playUserIntro
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.helpers.nonBots
+import bot.toby.intro.IntroPlaybackTracker
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
@@ -38,6 +39,7 @@ class VoiceEventHandler(
     private val awardService: SocialCreditAwardService,
     private val xpAwardService: XpAwardService,
     private val nowPlayingManager: NowPlayingManager,
+    private val introPlaybackTracker: IntroPlaybackTracker = IntroPlaybackTracker(),
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -219,13 +221,27 @@ class VoiceEventHandler(
     ) {
         val member = event.member
         if (requestingUserDto.musicDtos.isNotEmpty()) {
+            // Discord fires a join for every channel hop and every reconnect.
+            // Without this the intro replayed each time — and paid out the
+            // credit and XP below each time too.
+            if (introPlaybackTracker.onCooldown(guild.idLong, requestingUserDto.discordId)) {
+                logger.info {
+                    "Intro for ${requestingUserDto.discordId} played within the last " +
+                        "${IntroPlaybackTracker.COOLDOWN.seconds}s; skipping replay"
+                }
+                return
+            }
             logger.info { "User has musicDto associated with them, preparing to play intro" }
-            playUserIntro(
+            val played = playUserIntro(
                 requestingUserDto,
                 guild,
                 deleteDelay = deleteDelay,
-                member = member
+                member = member,
+                lastPlayedIntroId = introPlaybackTracker.lastPlayedIntroId(
+                    guild.idLong, requestingUserDto.discordId
+                ),
             )
+            introPlaybackTracker.record(guild.idLong, requestingUserDto.discordId, played?.id)
             awardService.award(
                 discordId = requestingUserDto.discordId,
                 guildId = requestingUserDto.guildId,

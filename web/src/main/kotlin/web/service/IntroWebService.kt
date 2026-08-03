@@ -2,6 +2,8 @@ package web.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
+import common.intro.IntroClip
+import common.intro.IntroSlots
 import common.logging.DiscordLogger
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
@@ -25,9 +27,12 @@ class IntroWebService(
 ) {
     companion object {
         const val MAX_FILE_SIZE = 550 * 1024
-        const val MAX_INTRO_COUNT = 3
-        const val MAX_INTRO_DURATION_SECONDS = 15
-        const val MAX_CLIP_DURATION_MS = MAX_INTRO_DURATION_SECONDS * 1000
+
+        // Canonical values live in common.intro so the web form, the Discord
+        // slash commands and intros.js can't drift on the caps.
+        const val MAX_INTRO_COUNT = IntroSlots.MAX_INTRO_COUNT
+        const val MAX_INTRO_DURATION_SECONDS = IntroClip.MAX_DURATION_SECONDS
+        const val MAX_CLIP_DURATION_MS = IntroClip.MAX_CLIP_DURATION_MS
         private val objectMapper = ObjectMapper()
         private val logger = DiscordLogger(IntroWebService::class.java)
         // Real ids are 11 chars of this alphabet; the upper bound leaves
@@ -319,40 +324,13 @@ class IntroWebService(
     }
 
     /**
-     * Validates a clip range against the source duration.
-     *
-     * - Both null: no clipping. Only reject when source is known and longer than the 15s cap.
-     * - start/end present: start must be < end; clip span (end - start) must be <= MAX_CLIP_DURATION_MS.
-     * - When [sourceDurationMs] is known, end must be <= sourceDurationMs.
-     *
-     * Returns an error message or null if the clip is valid.
+     * Validates a clip range against the source duration. Delegates to
+     * [IntroClip.validate] — the same rules the Discord `/setintro` and
+     * `/editintro` flows apply — and is kept here so existing callers and
+     * tests keep the service-level entry point.
      */
-    fun validateClip(startMs: Int?, endMs: Int?, sourceDurationMs: Int?): String? {
-        if (startMs == null && endMs == null) {
-            if (sourceDurationMs != null && sourceDurationMs > MAX_CLIP_DURATION_MS) {
-                val seconds = sourceDurationMs / 1000
-                return "Video is too long (${seconds}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s — set a start/end clip to use a longer source."
-            }
-            return null
-        }
-        val start = startMs ?: 0
-        if (start < 0) return "Start time cannot be negative."
-        if (endMs != null) {
-            if (endMs <= start) return "End time must be greater than start time."
-            if (sourceDurationMs != null && endMs > sourceDurationMs) {
-                return "End time exceeds the source duration."
-            }
-            if (endMs - start > MAX_CLIP_DURATION_MS) {
-                return "Clip is too long (${(endMs - start) / 1000}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s."
-            }
-        } else if (sourceDurationMs != null) {
-            // Only start was provided; the clip runs from start to end of source.
-            if (sourceDurationMs - start > MAX_CLIP_DURATION_MS) {
-                return "Clip is too long (${(sourceDurationMs - start) / 1000}s). Max allowed is ${MAX_INTRO_DURATION_SECONDS}s."
-            }
-        }
-        return null
-    }
+    fun validateClip(startMs: Int?, endMs: Int?, sourceDurationMs: Int?): String? =
+        IntroClip.validate(startMs, endMs, sourceDurationMs)
 
     // Picks the smallest unused slot in 1..MAX_INTRO_COUNT. Walking the range
     // (rather than `size + 1`) is what lets "Add" work after a delete left a
@@ -600,7 +578,14 @@ data class IntroViewModel(
     val videoId: String? = null,
     val startMs: Int? = null,
     val endMs: Int? = null
-)
+) {
+    /**
+     * What the row's clip badge shows — the actual range (`0:03 – 0:12`)
+     * rather than a generic "clip set", so the list is scannable without
+     * opening each editor.
+     */
+    val clipLabel: String get() = IntroClip.describe(startMs, endMs)
+}
 
 data class GuildInfo(
     val id: String,

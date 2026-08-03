@@ -4,6 +4,7 @@ import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.InputData
 import bot.toby.util.isUrl
+import com.github.benmanes.caffeine.cache.Caffeine
 import common.logging.DiscordLogger
 import common.notification.NotificationChannelKind
 import common.notification.Surface
@@ -23,6 +24,7 @@ import net.dv8tion.jda.api.entities.User
 import net.dv8tion.jda.api.entities.channel.concrete.PrivateChannel
 import net.dv8tion.jda.api.events.message.MessageReceivedEvent
 import org.springframework.stereotype.Service
+import java.util.concurrent.TimeUnit
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit
 
@@ -52,6 +54,12 @@ class IntroNotificationService(
     private val supervisorJob = SupervisorJob()
     private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
 
+    /** (guild, user) pairs nudged inside [PROMPT_COOLDOWN_HOURS]. */
+    private val recentlyPrompted = Caffeine.newBuilder()
+        .expireAfterWrite(PROMPT_COOLDOWN_HOURS, TimeUnit.HOURS)
+        .maximumSize(10_000)
+        .build<String, Boolean>()
+
     fun promptUserForMusicInfo(user: User, guild: Guild) {
         logger.setGuildAndUserContext(guild, user)
         // Honour the per-user INTRO_PROMPT opt-out. Default is opt-in so
@@ -66,6 +74,18 @@ class IntroNotificationService(
             logger.info { "User opted out of INTRO_PROMPT; skipping prompt for guild '${guild.name}'." }
             return
         }
+        // The caller fires on every voice join while the user has no intro, so
+        // without this a channel-hopper got a DM per hop — and, five minutes
+        // later, a "you didn't respond in time" DM per hop as well, since each
+        // prompt armed its own EventWaiter. One nudge a day is a nudge; ten in
+        // an evening is why people mute the bot.
+        val promptKey = "${guild.idLong}:${user.idLong}"
+        if (recentlyPrompted.getIfPresent(promptKey) != null) {
+            logger.info { "Already prompted this user for an intro recently; skipping." }
+            return
+        }
+        recentlyPrompted.put(promptKey, true)
+
         logger.info { "Prompting user to set an intro for the server that they don't have one on" }
         user.openPrivateChannel().queue { channel ->
             channel.sendMessage(
@@ -198,5 +218,14 @@ class IntroNotificationService(
     fun determineFileName(input: InputData): String = when (input) {
         is InputData.Url -> input.uri.takeIf { it.isNotBlank() } ?: ""
         is InputData.Attachment -> input.attachment.fileName
+    }
+
+    companion object {
+        /**
+         * How long to leave a user alone after nudging them for an intro.
+         * In-memory, so a redeploy may cost someone one extra nudge — much
+         * cheaper than persisting it.
+         */
+        const val PROMPT_COOLDOWN_HOURS = 24L
     }
 }

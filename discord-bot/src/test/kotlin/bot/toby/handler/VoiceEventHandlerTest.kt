@@ -1,6 +1,7 @@
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
+import bot.toby.intro.IntroPlaybackTracker
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
@@ -27,6 +28,8 @@ import net.dv8tion.jda.api.managers.AudioManager
 import net.dv8tion.jda.api.requests.restaction.CommandListUpdateAction
 import net.dv8tion.jda.api.utils.cache.SnowflakeCacheView
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -45,6 +48,10 @@ class VoiceEventHandlerTest {
     private val xpAwardService: XpAwardService = mockk(relaxed = true)
     private val nowPlayingManager: NowPlayingManager = mockk(relaxed = true)
 
+    // JUnit builds a fresh test instance per method, so this tracker (and the
+    // handler holding it) starts empty for every test.
+    private val introPlaybackTracker = IntroPlaybackTracker()
+
     private val handler = spyk(
         VoiceEventHandler(
             configService,
@@ -55,6 +62,7 @@ class VoiceEventHandlerTest {
             awardService,
             xpAwardService,
             nowPlayingManager,
+            introPlaybackTracker,
         )
     )
 
@@ -712,6 +720,99 @@ class VoiceEventHandlerTest {
         verify(exactly = 0) {
             awardService.award(any(), any(), VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
         }
+
+        unmockkObject(PlayerManager)
+    }
+
+    /**
+     * Builds a "member joins the channel the bot is already in" event for
+     * guild [gid] with [intros] configured, runs the handler, and returns the
+     * PlayerManager mock so callers can assert on playback.
+     */
+    private fun joinWithIntros(gid: Long, intros: MutableList<MusicDto>): PlayerManager {
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns gid
+        every { guild.id } returns gid.toString()
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns channel
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, gid.toString()) } returns
+            ConfigDto().apply { value = "30" }
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, gid.toString()) } returns null
+        every { userDtoHelper.calculateUserDto(1L, gid, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns gid
+            every { musicDtos } returns intros
+        }
+
+        handler.onGuildVoiceUpdate(event)
+        return audioPlayerManager
+    }
+
+    @Test
+    fun `rejoining inside the cooldown does not replay the intro or pay out again`() {
+        val musicDto = mockk<MusicDto>(relaxed = true) {
+            every { id } returns "11_1_1"
+            every { fileName } returns "https://example.com/intro.mp3"
+            every { musicBlob } returns null
+            every { introVolume } returns 75
+            every { startMs } returns null
+            every { endMs } returns null
+        }
+
+        // Channel hop: Discord delivers a join event each time.
+        joinWithIntros(11L, mutableListOf(musicDto))
+        val second = joinWithIntros(11L, mutableListOf(musicDto))
+
+        // Exactly one playback and one payout across both joins.
+        verify(exactly = 0) {
+            second.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any())
+        }
+        verify(exactly = 1) {
+            awardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
+        }
+        verify(exactly = 1) {
+            xpAwardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_XP, "intro-play", any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `the intro that played is remembered so the next pick can avoid it`() {
+        val musicDto = mockk<MusicDto>(relaxed = true) {
+            every { id } returns "12_1_1"
+            every { fileName } returns "https://example.com/intro.mp3"
+            every { musicBlob } returns null
+            every { introVolume } returns 75
+            every { startMs } returns null
+            every { endMs } returns null
+        }
+
+        joinWithIntros(12L, mutableListOf(musicDto))
+
+        assertEquals("12_1_1", introPlaybackTracker.lastPlayedIntroId(12L, 1L))
+        assertTrue(introPlaybackTracker.onCooldown(12L, 1L))
 
         unmockkObject(PlayerManager)
     }

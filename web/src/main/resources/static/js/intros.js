@@ -45,6 +45,15 @@ function formatMs(ms) {
     return m + ':' + secStr;
 }
 
+// Mirrors IntroClip.describe (Kotlin) so the badge a row shows after an
+// inline save matches what a full page render would produce.
+function describeClip(startMs, endMs) {
+    if (startMs == null && endMs == null) return 'full track';
+    if (startMs != null && endMs != null) return formatMs(startMs) + ' – ' + formatMs(endMs);
+    if (startMs != null) return 'from ' + formatMs(startMs);
+    return 'up to ' + formatMs(endMs);
+}
+
 // Mirrors IntroWebService.validateClip. Returns an error string, or '' if valid.
 function validateClipMs(startMs, endMs, sourceDurationMs, maxClipMs) {
     const cap = maxClipMs || DEFAULT_MAX_CLIP_SECONDS * 1000;
@@ -1013,9 +1022,7 @@ function initIntroPage() {
                     tr.dataset.startMs = startMs == null ? '' : String(startMs);
                     tr.dataset.endMs = endMs == null ? '' : String(endMs);
                     const rangeLabel = badgeBtn.querySelector('.clip-badge-range');
-                    if (rangeLabel) {
-                        rangeLabel.textContent = (startMs == null && endMs == null) ? 'full track' : 'clip set';
-                    }
+                    if (rangeLabel) rangeLabel.textContent = describeClip(startMs, endMs);
                     window.TobyToasts.show('Clip updated.', { type: 'success', duration: 2000 });
                     closeOpenRowEditor();
                 },
@@ -1243,6 +1250,7 @@ if (typeof module !== 'undefined') {
         closeClipPreviewRow,
         parseTimeInput,
         formatMs,
+        describeClip,
         validateClipMs,
         ensureYtApi,
         createTrimBar,

@@ -5,6 +5,7 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.commands.music.MusicCommandTest
 import core.command.CommandContext
 import database.dto.music.MusicDto
+import net.dv8tion.jda.api.entities.MessageEmbed
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -53,6 +54,10 @@ class DeleteIntroCommandTest : MusicCommandTest {
 
         deleteIntroCommand.handle(ctx, requestingUserDto, 5)
 
-        verify { event.hook.sendMessage(match<String> { it.contains("Please select an intro to delete") }) }
+        verify {
+            event.hook.sendMessageEmbeds(
+                match<MessageEmbed> { embed -> embed.fields.size == 2 }
+            )
+        }
     }
 }

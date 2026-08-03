@@ -4,6 +4,7 @@ import bot.toby.handler.EventWaiter
 import bot.toby.intro.IntroMediaLoader
 import bot.toby.intro.IntroNotificationService
 import bot.toby.intro.IntroValidationService
+import common.intro.IntroClip
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyAndDelete
@@ -55,7 +56,10 @@ class IntroHelper(
     // Per-user pending intro cache, written by /setintro and read by the
     // confirmation menu. Distinct from the DM prompt flow, which lives in
     // IntroNotificationService.
-    val pendingIntros = mutableMapOf<Long, Triple<Attachment?, String?, Int>?>()
+    //
+    // Was a Triple; became a named type once clip bounds joined the payload,
+    // since `pending.startMs` beats `pending.fourth` for readability.
+    val pendingIntros = mutableMapOf<Long, PendingIntro?>()
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
         val volumePropertyName = ConfigDto.Configurations.INTRO_VOLUME.configValue
@@ -72,7 +76,9 @@ class IntroHelper(
         input: InputData?,
         introVolume: Int,
         selectedMusicDto: MusicDto?,
-        userName: String = event.user.effectiveName
+        userName: String = event.user.effectiveName,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling media inside intro helper ..." }
@@ -86,7 +92,10 @@ class IntroHelper(
                     )
                     return
                 }
-                handleAttachment(event, requestingUserDto, userName, deleteDelay, input.attachment, introVolume, selectedMusicDto)
+                handleAttachment(
+                    event, requestingUserDto, userName, deleteDelay, input.attachment,
+                    introVolume, selectedMusicDto, startMs, endMs
+                )
             }
 
             is InputData.Url -> {
@@ -96,7 +105,10 @@ class IntroHelper(
                     return
                 }
                 val uri = URI.create(uriString)
-                handleUrl(event, requestingUserDto, userName, deleteDelay, uri, introVolume, selectedMusicDto)
+                handleUrl(
+                    event, requestingUserDto, userName, deleteDelay, uri,
+                    introVolume, selectedMusicDto, startMs, endMs
+                )
             }
 
             else -> {
@@ -112,7 +124,9 @@ class IntroHelper(
         deleteDelay: Int,
         attachment: Attachment,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = null
+        selectedMusicDto: MusicDto? = null,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling attachment inside intro helper..." }
@@ -133,7 +147,10 @@ class IntroHelper(
             else -> {
                 val inputStream = downloadAttachment(attachment)
                 inputStream?.let {
-                    persistMusicFile(event, requestingUserDto, userName, deleteDelay, attachment.fileName, introVolume, it, selectedMusicDto)
+                    persistMusicFile(
+                        event, requestingUserDto, userName, deleteDelay, attachment.fileName,
+                        introVolume, it, selectedMusicDto, startMs, endMs
+                    )
                 }
             }
         }
@@ -146,20 +163,32 @@ class IntroHelper(
         deleteDelay: Int,
         uri: URI?,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = null
+        selectedMusicDto: MusicDto? = null,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
         val urlString = validationService.convertShortsUrls(uri.toString())
         coroutineScope.launch {
             val title = runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
-            persistMusicUrl(event, requestingUserDto, deleteDelay, title ?: urlString, urlString, userName, introVolume, selectedMusicDto)
+            persistMusicUrl(
+                event, requestingUserDto, deleteDelay, title ?: urlString, urlString,
+                userName, introVolume, selectedMusicDto, startMs, endMs
+            )
         }
     }
 
-    fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(guildId, discordId)
+    // NB: (discordId, guildId), matching UserDtoHelper.calculateUserDto and
+    // every other call site. This used to forward the pair reversed, so the
+    // super-user path in `/setintro users:@someone` resolved — and lazily
+    // created — a row keyed (guildId, discordId), whose intros could never be
+    // found again by the normal lookup.
+    fun findUserById(discordId: Long, guildId: Long) = userDtoHelper.calculateUserDto(discordId, guildId)
 
     fun findIntroById(musicFileId: String) = musicFileService.getMusicFileById(musicFileId)
+
+    fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 
     fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
 
@@ -176,7 +205,9 @@ class IntroHelper(
         filename: String,
         introVolume: Int,
         inputStream: InputStream,
-        selectedMusicDto: MusicDto? = null
+        selectedMusicDto: MusicDto? = null,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music file" }
@@ -193,15 +224,21 @@ class IntroHelper(
             this.fileName = filename
             this.introVolume = introVolume
             this.userDto = targetDto
-        } ?: MusicDto(targetDto, index, filename, introVolume, fileContents)
+            this.startMs = startMs
+            this.endMs = endMs
+        } ?: MusicDto(targetDto, index, filename, introVolume, fileContents, startMs, endMs)
 
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
-                ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay) }
+                ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay, startMs, endMs) }
                 ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
         } else {
             musicFileService.updateMusicFile(musicDto)
-                ?.let { sendUpdateMessage(event, userName, filename, introVolume, musicDto.index!!, deleteDelay) }
+                ?.let {
+                    sendUpdateMessage(
+                        event, userName, filename, introVolume, musicDto.index!!, deleteDelay, startMs, endMs
+                    )
+                }
                 ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
         }
     }
@@ -214,7 +251,9 @@ class IntroHelper(
         url: String,
         memberName: String,
         introVolume: Int,
-        selectedMusicDto: MusicDto? = null
+        selectedMusicDto: MusicDto? = null,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
@@ -230,20 +269,33 @@ class IntroHelper(
             this.musicBlobHash = computeHash(urlBytes)
             this.fileName = filename
             this.introVolume = introVolume
-        } ?: MusicDto(targetDto, index, filename, introVolume, urlBytes)
+            this.startMs = startMs
+            this.endMs = endMs
+        } ?: MusicDto(targetDto, index, filename, introVolume, urlBytes, startMs, endMs)
 
         if (selectedMusicDto == null) {
             logger.info { "Creating new music file $musicDto" }
             musicFileService.createNewMusicFile(musicDto)
-                ?.let { sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay) }
+                ?.let { sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay, startMs, endMs) }
                 ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
         } else {
             logger.info { "Updating music file $musicDto" }
             musicFileService.updateMusicFile(musicDto)
-                ?.let { sendUpdateMessage(event, memberName, filename, introVolume, musicDto.index!!, deleteDelay) }
+                ?.let {
+                    sendUpdateMessage(
+                        event, memberName, filename, introVolume, musicDto.index!!, deleteDelay, startMs, endMs
+                    )
+                }
                 ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
         }
     }
+
+    /**
+     * Trailing " (clip 0:03 – 0:12)" for a clipped intro, empty otherwise, so
+     * the confirmation echoes exactly what will play back on join.
+     */
+    private fun clipSuffix(startMs: Int?, endMs: Int?): String =
+        if (startMs == null && endMs == null) "" else " (clip ${IntroClip.describe(startMs, endMs)})"
 
     private fun sendSuccessMessage(
         event: IReplyCallback,
@@ -251,14 +303,15 @@ class IntroHelper(
         filename: String,
         introVolume: Int,
         index: Int,
-        deleteDelay: Int
+        deleteDelay: Int,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
-        logger.info { "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'" }
-        event.hook.replyEphemeralAndDelete(
-            "Successfully set $memberName's intro song #${index} to '$filename' with volume '$introVolume'",
-            deleteDelay,
-        )
+        val message = "Successfully set $memberName's intro song #${index} to '$filename' " +
+            "with volume '$introVolume'${clipSuffix(startMs, endMs)}"
+        logger.info { message }
+        event.hook.replyEphemeralAndDelete(message, deleteDelay)
     }
 
     private fun sendUpdateMessage(
@@ -267,10 +320,13 @@ class IntroHelper(
         filename: String,
         introVolume: Int,
         index: Int,
-        deleteDelay: Int
+        deleteDelay: Int,
+        startMs: Int? = null,
+        endMs: Int? = null
     ) {
         event.hook.replyEphemeralAndDelete(
-            "Successfully updated $memberName's intro song #${index} to '$filename' with volume '$introVolume'",
+            "Successfully updated $memberName's intro song #${index} to '$filename' " +
+                "with volume '$introVolume'${clipSuffix(startMs, endMs)}",
             deleteDelay,
         )
     }
@@ -309,6 +365,14 @@ class IntroHelper(
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) =
         validationService.validateIntroLength(url, onResult)
 
+    /**
+     * Clip-aware length check. Replaces the plain [validateIntroLength] on the
+     * `/setintro` path so a source longer than the cap is accepted when the
+     * user supplies a start/end inside it — matching the web form.
+     */
+    fun validateClipAgainstSource(url: String?, startMs: Int?, endMs: Int?, onResult: (String?) -> Unit) =
+        validationService.validateClipAgainstSource(url, startMs, endMs, onResult)
+
     suspend fun checkForOverlyLongIntroDuration(url: String): Boolean =
         validationService.checkForOverlyLongIntroDuration(url)
 
@@ -330,3 +394,17 @@ sealed class InputData {
     data class Attachment(val attachment: Message.Attachment) : InputData()
     data class Url(val uri: String) : InputData()
 }
+
+/**
+ * An intro `/setintro` has accepted but can't save yet, because the user is at
+ * their slot limit and still has to choose which existing intro to replace.
+ * Held in [IntroHelper.pendingIntros] until [bot.toby.menu.menus.SetIntroMenu]
+ * resolves the choice.
+ */
+data class PendingIntro(
+    val attachment: Message.Attachment?,
+    val url: String?,
+    val volume: Int,
+    val startMs: Int? = null,
+    val endMs: Int? = null,
+)

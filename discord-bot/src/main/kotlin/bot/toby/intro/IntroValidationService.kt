@@ -2,6 +2,7 @@ package bot.toby.intro
 
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.URLHelper
+import common.intro.IntroClip
 import common.logging.DiscordLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -27,10 +28,22 @@ class IntroValidationService(
 
     fun isValidUrl(url: String): Boolean = URLHelper.isValidURL(url)
 
-    fun parseVolume(content: String): Int? {
-        val volumeRegex = """\b(\d{1,3})\b""".toRegex()
-        return volumeRegex.find(content)?.value?.toIntOrNull()?.takeIf { it in 0..100 }
-    }
+    /**
+     * Pulls the optional volume out of a DM reply like
+     * `https://www.youtube.com/watch?v=ID 90`.
+     *
+     * Only a whitespace-separated token that is *entirely* digits counts.
+     * The previous `\b(\d{1,3})\b` scan matched digits inside the URL itself,
+     * so `https://youtu.be/ID?t=42` silently set the intro to 42% and
+     * `...&list=PL9&index=7` set it to 7% — neither of which the user asked
+     * for. Either order works (`URL 90` or `90 URL`), since the token has to
+     * stand alone to match at all.
+     */
+    fun parseVolume(content: String): Int? = content
+        .split(WHITESPACE)
+        .firstOrNull { it.isNotEmpty() && it.length <= 3 && it.all(Char::isDigit) }
+        ?.toIntOrNull()
+        ?.takeIf { it in 0..100 }
 
     fun convertShortsUrls(url: String): String = url.replace("/shorts/", "/watch?v=")
 
@@ -41,6 +54,38 @@ class IntroValidationService(
             return duration > INTRO_LIMIT
         }
         return false
+    }
+
+    /**
+     * Source duration in milliseconds, or null when it can't be determined
+     * (non-YouTube URL, API key missing, lookup failure). Callers feed this
+     * into [IntroClip.validate]; a null simply relaxes the "end must be
+     * within the source" rule, exactly as the web form does for uploads.
+     *
+     * Note this fails *open* where [validateIntroLength] fails closed: a
+     * YouTube API blip lets an intro through rather than rejecting every
+     * intro until the API recovers. That matches the web form, which has
+     * always treated an unavailable preview as "duration unknown".
+     */
+    suspend fun sourceDurationMs(url: String): Int? = runCatching {
+        withContext(dispatcher) { httpHelper.getYouTubeVideoDuration(url) }?.inWholeMilliseconds?.toInt()
+    }.onFailure {
+        logger.warn { "Could not determine source duration for '$url': ${it::class.simpleName}: ${it.message}" }
+    }.getOrNull()
+
+    /**
+     * Clip-aware replacement for [validateIntroLength]. Looks the source
+     * duration up once, then defers to the shared [IntroClip] rules so a
+     * long video can be accepted when the user clips it — the behaviour the
+     * web form has always had and the slash command never did.
+     *
+     * @return an error message to show the user, or null when the intro is fine.
+     */
+    fun validateClipAgainstSource(url: String?, startMs: Int?, endMs: Int?, onResult: (String?) -> Unit) {
+        scope.launch {
+            val sourceDurationMs = url?.takeIf { it.isNotBlank() }?.let { sourceDurationMs(it) }
+            onResult(IntroClip.validate(startMs, endMs, sourceDurationMs))
+        }
     }
 
     /**
@@ -61,8 +106,13 @@ class IntroValidationService(
     }
 
     companion object {
+        private val WHITESPACE = Regex("\\s+")
+
         const val MAX_FILE_SIZE = 550 * 1024
         const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
-        val INTRO_LIMIT = 15.seconds
+
+        // Shared with the web form via IntroClip so the two surfaces can't
+        // disagree on how long an intro is allowed to play for.
+        val INTRO_LIMIT = IntroClip.MAX_DURATION_SECONDS.seconds
     }
 }

@@ -58,6 +58,7 @@ import bot.toby.button.buttons.misc.RandomButton
 import bot.toby.button.buttons.misc.RollButton
 import bot.toby.button.buttons.pvp.rps.RpsButton
 import bot.toby.button.buttons.music.StopButton
+import bot.toby.button.buttons.music.UndoDeleteIntroButton
 import bot.toby.button.buttons.team.TeamCancelButton
 import bot.toby.button.buttons.team.TeamConfirmButton
 import bot.toby.button.buttons.team.TeamRerollButton
@@ -119,6 +120,7 @@ class ButtonManagerTest {
             RollButton::class.java,
             RpsButton::class.java,
             StopButton::class.java,
+            UndoDeleteIntroButton::class.java,
             TeamCancelButton::class.java,
             TeamConfirmButton::class.java,
             TeamRerollButton::class.java,

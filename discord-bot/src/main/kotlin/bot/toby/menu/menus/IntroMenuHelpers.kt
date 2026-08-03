@@ -7,10 +7,13 @@ import core.menu.MenuContext
 import database.dto.music.MusicDto
 
 /**
- * Shared preamble for the select-menu handlers that operate on a single
- * intro (DeleteIntroMenu, EditIntroMenu). Defers the interaction, resolves
- * the selected intro via IntroHelper, and surfaces the standard
- * "Unable to find" ephemeral on miss so each menu can focus on its own flow.
+ * Deferring preamble for select-menu handlers that operate on a single intro
+ * and reply through the interaction hook. Defers the interaction, resolves the
+ * selected intro via IntroHelper, and surfaces the standard "Unable to find"
+ * ephemeral on miss so each menu can focus on its own flow.
+ *
+ * `EditIntroMenu` deliberately doesn't use this — opening a modal requires the
+ * interaction to be un-acked, so it resolves the intro itself.
  *
  * Returns `null` if either nothing was selected (swallowed silently, as in
  * the original per-menu code) or the intro couldn't be fetched (user is

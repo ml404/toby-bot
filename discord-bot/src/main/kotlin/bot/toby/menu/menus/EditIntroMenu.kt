@@ -1,67 +1,43 @@
 package bot.toby.menu.menus
 
-import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
-import core.command.Command.Companion.deleteAfter
+import bot.toby.modal.modals.EditIntroModal
 import core.menu.Menu
 import core.menu.MenuContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import kotlin.time.Duration.Companion.seconds
 
+/**
+ * Second half of `/editintro`: the user has picked an intro from the select
+ * menu, so open [EditIntroModal] pre-filled with its current values.
+ *
+ * Deliberately does *not* defer — a modal must be the first response to a
+ * component interaction. `DefaultMenuManager` leaves ephemeral menu messages
+ * un-acked (it only disables components on non-ephemeral ones) and
+ * `/editintro` always sends its menu ephemerally, so the interaction is still
+ * open when we get here.
+ */
 @Component
 class EditIntroMenu @Autowired constructor(
     private val introHelper: IntroHelper,
-    private val eventWaiter: EventWaiter
 ) : Menu {
 
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val event = ctx.event
-        val selectedIntro = resolveSelectedIntroOrElse(ctx, introHelper, deleteDelay) ?: return
+        logger.setGuildAndMemberContext(ctx.guild, event.member)
 
-        logger.info { "Valid musicDto selected." }
-        event.hook.sendMessage("You've selected ${selectedIntro.fileName}. Please reply with the new volume (0-100).")
-            .setEphemeral(true)
-            .queue { messageHook ->
-                // Wait for the user's next message
-                eventWaiter.waitForMessage(
-                    condition = { msgEvent ->
-                        msgEvent.author.idLong == event.user.idLong && msgEvent.channel.idLong == event.channel.idLong
-                    },
-                    action = { msgEvent ->
-                        logger.info { "Waiting for a response from the user for the new volume" }
+        val selectedIntroId = event.values.firstOrNull() ?: return
+        val selectedIntro = introHelper.findIntroById(selectedIntroId)
+        if (selectedIntro == null) {
+            logger.info { "No intro found for id '$selectedIntroId'" }
+            event.reply("Unable to find the selected intro.").setEphemeral(true).queue()
+            return
+        }
 
-                        val newVolume = msgEvent.message.contentRaw.toIntOrNull()
-
-                        if (newVolume != null && newVolume in 0..100) {
-                            selectedIntro.introVolume = newVolume
-                            introHelper.updateIntro(selectedIntro)
-
-                            messageHook.editMessage("Volume updated successfully to $newVolume!")
-                                .queue { it?.deleteAfter(deleteDelay) }
-
-                            logger.info { "Volume updated successfully to $newVolume!" }
-                            msgEvent.message.deleteAfter(0)
-                        } else {
-                            logger.warn { "Invalid volume was sent" }
-
-                            messageHook.editMessage("Invalid volume. Please enter a number between 0 and 100.")
-                                .queue { it?.deleteAfter(deleteDelay) }
-
-                            msgEvent.message.deleteAfter(0)
-                        }
-                    },
-                    timeout = 10.seconds,
-                    timeoutAction = {
-                        messageHook
-                            .editMessage("No response received. Volume update canceled.")
-                            .queue { it?.deleteAfter(deleteDelay) }
-                    }
-                )
-            }
+        logger.info { "Opening intro edit modal for '$selectedIntroId'" }
+        event.replyModal(EditIntroModal.buildFor(selectedIntro)).queue()
     }
-
 
     override val name: String get() = EDIT_INTRO
 }

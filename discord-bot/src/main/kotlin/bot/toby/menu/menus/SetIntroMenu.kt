@@ -40,19 +40,25 @@ class SetIntroMenu @Autowired constructor(
                 .queue()
             return
         }
-        val pendingIntroTriple = introHelper.pendingIntros[requestingUserDto.discordId]
-        if (pendingIntroTriple != null) {
-            val (pendingDtoAttachment, url, introVolume) = pendingIntroTriple
+        val pendingIntro = introHelper.pendingIntros[requestingUserDto.discordId]
+        if (pendingIntro != null) {
             runCatching {
-                val input = if (pendingDtoAttachment!= null) InputData.Attachment(pendingDtoAttachment) else InputData.Url(url!!)
+                val pendingDtoAttachment = pendingIntro.attachment
+                val input = if (pendingDtoAttachment != null) {
+                    InputData.Attachment(pendingDtoAttachment)
+                } else {
+                    InputData.Url(pendingIntro.url!!)
+                }
                 introHelper.handleMedia(
                     event,
                     requestingUserDto,
                     deleteDelay,
                     input,
-                    introVolume,
+                    pendingIntro.volume,
                     musicDtoToReplace,
-                    ctx.event.user.effectiveName
+                    ctx.event.user.effectiveName,
+                    pendingIntro.startMs,
+                    pendingIntro.endMs,
                 )
             }.onSuccess {
                 logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}'" }

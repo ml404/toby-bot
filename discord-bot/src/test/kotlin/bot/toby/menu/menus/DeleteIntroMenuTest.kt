@@ -2,6 +2,7 @@ package bot.toby.menu.menus
 
 import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper
+import bot.toby.intro.IntroUndoStore
 import bot.toby.menu.DefaultMenuContext
 import bot.toby.menu.MenuTest
 import bot.toby.menu.MenuTest.Companion.menuEvent
@@ -19,6 +20,7 @@ class DeleteIntroMenuTest : MenuTest {
 
     private lateinit var introHelper: IntroHelper
     private lateinit var eventWaiter: EventWaiter
+    private lateinit var undoStore: IntroUndoStore
     private lateinit var deleteIntroMenu: DeleteIntroMenu
     private lateinit var menuContext: DefaultMenuContext
     private val userDto: UserDto = mockk {
@@ -33,9 +35,10 @@ class DeleteIntroMenuTest : MenuTest {
         // Mock the dependencies
         introHelper = mockk(relaxed = true)
         eventWaiter = mockk(relaxed = true)
+        undoStore = mockk(relaxed = true)
 
         // Initialize the class under test
-        deleteIntroMenu = DeleteIntroMenu(introHelper)
+        deleteIntroMenu = DeleteIntroMenu(introHelper, undoStore)
 
         // Mock the context
         menuContext = mockk(relaxed = true)
@@ -57,7 +60,8 @@ class DeleteIntroMenuTest : MenuTest {
         // Call handle
         deleteIntroMenu.handle(menuContext, 0)
 
-        // Verify that intro is deleted
+        // Verify the intro is snapshotted for undo, then deleted
+        verify { undoStore.remember(intro) }
         verify { introHelper.deleteIntro(intro) }
     }
 
