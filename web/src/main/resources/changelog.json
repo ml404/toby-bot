@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Add a per-intro on/off switch and a \"Set as my intro\" message action",
+    "summary": "Two ways of managing intros that the command surface couldn't express. Follows on from #731.",
+    "emoji": "🎵",
+    "prNumber": 732
+  },
+  {
+    "date": "August 2026",
     "title": "Bring the Discord intro commands up to parity with the web dashboard",
     "summary": "The intro page on the web can rename, re-volume, clip, reorder and undo-delete an intro. Discord could set one and change its volume — via a flow that asked you to type a bare number into the channel and raced a 10-second `EventWaiter` against you. This closes most of that gap, and moves the rules the two surfaces are meant to share into one place.",
     "emoji": "🎵",
