@@ -219,9 +219,9 @@ internal class PlayCommandTest : MusicCommandTest {
         mockkObject(MusicPlayerHelper)
         every {
             MusicPlayerHelper.playUserIntro(
-                any(), any(), any(), any(), any(), any()
+                any(), any(), any(), any(), any(), any(), any()
             )
-        } just Runs
+        } returns null
 
         // Act
         playCommand.handleMusicCommand(
@@ -239,7 +239,8 @@ internal class PlayCommandTest : MusicCommandTest {
                 CommandTest.event,
                 5,
                 0L,
-                CommandTest.member
+                CommandTest.member,
+                null
             )
         }
         verify(exactly = 0) { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) }

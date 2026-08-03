@@ -2,6 +2,7 @@ package bot.toby.helpers
 
 import bot.toby.BOT_WEB_URL
 import bot.toby.command.commands.music.MusicCommand.Companion.sendDeniedStoppableMessage
+import bot.toby.intro.IntroSelection
 import bot.toby.lavaplayer.GuildMusicManager
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
@@ -28,37 +29,48 @@ object MusicPlayerHelper {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     val nowPlayingManager = NowPlayingManager()
 
+    /**
+     * @param lastPlayedIntroId the intro played for this user last time, so
+     *        [IntroSelection] can avoid repeating it back to back.
+     * @return the intro that was played, or null when the user has none (or
+     *         playback failed) — callers record it as the new "last played".
+     */
     fun playUserIntro(
         dbUser: UserDto,
         guild: Guild,
         event: SlashCommandInteractionEvent? = null,
         deleteDelay: Int,
         startPosition: Long = 0,
-        member: Member? = null
-    ) {
+        member: Member? = null,
+        lastPlayedIntroId: String? = null
+    ): MusicDto? {
         logger.setGuildAndMemberContext(guild, member)
         logger.info { "Finding intro to play ..." }
-        val musicDto = dbUser.musicDtos
         val instance = PlayerManager.instance
         val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
-        runCatching {
-            musicDto.random().let {
-                logger.info { "User has a musicDto. Preparing to play intro." }
-                val introVolume = it.introVolume
-                instance.setPreviousVolume(currentVolume)
-                val url = determineUrlFromMusicDto(it)
-                val clipStart = it.startMs?.toLong() ?: startPosition
-                val clipEnd = it.endMs?.toLong()
-                logger.info { "Url to play is: '$url' (clip ${clipStart}ms -> ${clipEnd ?: "end"})" }
-                instance.loadAndPlayIntro(
-                    guild, event, url, deleteDelay, clipStart,
-                    introVolume ?: currentVolume, clipEnd
-                )
-            }
-        }.onFailure {
+        val selected = IntroSelection.pick(dbUser.musicDtos, lastPlayedIntroId)
+        if (selected == null) {
             logger.warn { "User does not have a musicDto. Cannot play intro." }
+            return null
         }
+
+        return runCatching {
+            logger.info { "User has a musicDto. Preparing to play intro." }
+            val introVolume = selected.introVolume
+            instance.setPreviousVolume(currentVolume)
+            val url = determineUrlFromMusicDto(selected)
+            val clipStart = selected.startMs?.toLong() ?: startPosition
+            val clipEnd = selected.endMs?.toLong()
+            logger.info { "Url to play is: '$url' (clip ${clipStart}ms -> ${clipEnd ?: "end"})" }
+            instance.loadAndPlayIntro(
+                guild, event, url, deleteDelay, clipStart,
+                introVolume ?: currentVolume, clipEnd
+            )
+            selected
+        }.onFailure {
+            logger.warn { "Failed to play intro '${selected.id}': ${it.message}" }
+        }.getOrNull()
     }
 
     fun nowPlaying(

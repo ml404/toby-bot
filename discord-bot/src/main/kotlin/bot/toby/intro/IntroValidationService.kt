@@ -28,10 +28,22 @@ class IntroValidationService(
 
     fun isValidUrl(url: String): Boolean = URLHelper.isValidURL(url)
 
-    fun parseVolume(content: String): Int? {
-        val volumeRegex = """\b(\d{1,3})\b""".toRegex()
-        return volumeRegex.find(content)?.value?.toIntOrNull()?.takeIf { it in 0..100 }
-    }
+    /**
+     * Pulls the optional volume out of a DM reply like
+     * `https://www.youtube.com/watch?v=ID 90`.
+     *
+     * Only a whitespace-separated token that is *entirely* digits counts.
+     * The previous `\b(\d{1,3})\b` scan matched digits inside the URL itself,
+     * so `https://youtu.be/ID?t=42` silently set the intro to 42% and
+     * `...&list=PL9&index=7` set it to 7% — neither of which the user asked
+     * for. Either order works (`URL 90` or `90 URL`), since the token has to
+     * stand alone to match at all.
+     */
+    fun parseVolume(content: String): Int? = content
+        .split(WHITESPACE)
+        .firstOrNull { it.isNotEmpty() && it.length <= 3 && it.all(Char::isDigit) }
+        ?.toIntOrNull()
+        ?.takeIf { it in 0..100 }
 
     fun convertShortsUrls(url: String): String = url.replace("/shorts/", "/watch?v=")
 
@@ -94,6 +106,8 @@ class IntroValidationService(
     }
 
     companion object {
+        private val WHITESPACE = Regex("\\s+")
+
         const val MAX_FILE_SIZE = 550 * 1024
         const val MAX_FILE_SIZE_KB = "${MAX_FILE_SIZE / 1024}"
 

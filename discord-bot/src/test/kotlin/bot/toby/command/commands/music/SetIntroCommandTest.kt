@@ -25,6 +25,7 @@ import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -283,6 +284,150 @@ internal class SetIntroCommandTest : MusicCommandTest {
                 event.hook.sendMessageEmbeds(match<MessageEmbed> { it.fields.size == 3 })
             }
         }
+
+
+    // --- clip options (`start` / `end`) -------------------------------------
+
+    private fun mockClipOptions(start: String?, end: String?) {
+        every { event.getOption("start") } returns start?.let { v -> mockk { every { asString } returns v } }
+        every { event.getOption("end") } returns end?.let { v -> mockk { every { asString } returns v } }
+    }
+
+    private fun newCommand(dispatcher: kotlinx.coroutines.CoroutineDispatcher): SetIntroCommand {
+        val introHelper =
+            IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        return SetIntroCommand(introHelper)
+    }
+
+    @Test
+    fun `a clip inside a long source is accepted and persisted`() = runTest {
+        mockSub("link")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        // A minute-long video: rejected outright before clips existed.
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 60.seconds
+        mockClipOptions("0:10", "0:22")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(10_000, saved.captured.startMs)
+        assertEquals(22_000, saved.captured.endMs)
+        verify {
+            event.hook.sendMessage(
+                match<String> { it.contains("(clip 0:10 – 0:22)") }
+            )
+        }
+    }
+
+    @Test
+    fun `raw seconds are accepted for the clip bounds`() = runTest {
+        mockSub("link")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 60.seconds
+        mockClipOptions("3", "9")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(3_000, saved.captured.startMs)
+        assertEquals(9_000, saved.captured.endMs)
+    }
+
+    @Test
+    fun `a clip longer than the cap is rejected`() = runTest {
+        mockSub("link")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 300.seconds
+        mockClipOptions("0:10", "1:10")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("Clip is too long") }) }
+    }
+
+    @Test
+    fun `a clip that runs past the end of the source is rejected`() = runTest {
+        mockSub("link")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        coEvery { httpHelper.getYouTubeVideoDuration(any()) } returns 20.seconds
+        mockClipOptions("0:15", "0:25")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage("End time exceeds the source duration.") }
+    }
+
+    @Test
+    fun `an unparseable timestamp is reported without touching the source`() = runTest {
+        mockSub("link")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        every { event.getOption("attachment") } returns mockk(relaxed = true)
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        mockClipOptions("banana", null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        coVerify(exactly = 0) { httpHelper.getYouTubeVideoDuration(any()) }
+        verify { event.hook.sendMessage(match<String> { it.startsWith("Clip start") }) }
+    }
+
+    @Test
+    fun `an uploaded file can be clipped even though its duration is unknown`() = runTest {
+        mockSub("attachment")
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+
+        val attachmentOptionMapping = mockk<OptionMapping>()
+        every { event.getOption("attachment") } returns attachmentOptionMapping
+        setupAttachments(attachmentOptionMapping)
+        every { event.getOption("link") } returns mockk { every { asString } returns "" }
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        mockClipOptions("0:01", "0:05")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(1_000, saved.captured.startMs)
+        assertEquals(5_000, saved.captured.endMs)
+        // No YouTube lookup for an upload.
+        coVerify(exactly = 0) { httpHelper.getYouTubeVideoDuration(any()) }
+    }
 
     private fun setupMentions(userOptionMapping: OptionMapping) {
         val mentions = mockk<Mentions>()
