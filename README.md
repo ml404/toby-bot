@@ -137,7 +137,7 @@ No new env vars are needed (`DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` are re
 
 Two pieces of server behavior exist specifically to keep this working:
 
-- The bot re-registers the **Entry Point command** (`launch`) via the raw REST API on every boot (`ActivityEntryPointRegistrar`): the startup `updateCommands()` bulk overwrite would otherwise delete it (JDA can't express PRIMARY_ENTRY_POINT commands), silently making the activity unlaunchable after a redeploy.
+- The startup command overwrite runs through `GlobalCommandRegistrar` rather than JDA's `updateCommands()`. JDA 6.3.1 can't express PRIMARY_ENTRY_POINT commands, and Discord rejects any bulk update that would drop the app's **Entry Point command** (`launch`) with error `50240` — failing the whole request, so *no* commands get registered. The registrar reads the current global commands over the raw REST API, keeps the Entry Point command verbatim, and PUTs it back alongside everything else in one request.
 - Spring Security's default `X-Frame-Options: DENY` is replaced with a CSP `frame-ancestors` allowlist (self + Discord origins) in `WebSecurityConfig` — with the default header the embed fails with `ERR_BLOCKED_BY_RESPONSE`.
 
 Notes:
