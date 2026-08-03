@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Make the intro nudge a link instead of a conversation",
+    "summary": "The \"you don't have an intro yet\" DM asked the user to reply with a URL or an attachment, armed a five-minute waiter to catch the reply, and parsed whatever came back as free text. It was the last part of the intro system still doing that, and the weakest:",
+    "emoji": "✨",
+    "prNumber": 735
+  },
+  {
+    "date": "August 2026",
     "title": "Stop a new intro overwriting an existing one after a delete",
     "summary": "## The bug",
     "emoji": "🎵",
