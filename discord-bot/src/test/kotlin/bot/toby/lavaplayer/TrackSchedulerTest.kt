@@ -609,4 +609,73 @@ class TrackSchedulerTest {
         scheduler.onPlayerPause(player)
         scheduler.onPlayerResume(player)
     }
+
+    // --- intro row bookkeeping ---------------------------------------------
+    //
+    // The loudness meter is built when the audio pipeline opens and needs to
+    // know which stored intro it is measuring; the scheduler is the only place
+    // that knows a given track is an intro at all.
+
+    @Test
+    fun `queueing an intro records which row it came from`() {
+        val intro = mockTrack("Intro")
+
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        assertEquals("1_2_1", scheduler.introIdFor(intro))
+    }
+
+    @Test
+    fun `the row is recorded on the preempting path too`() {
+        // queueIntro takes one of two routes depending on whether something is
+        // already playing; a measurement that only worked on the idle path
+        // would silently never happen for anyone listening to music.
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val intro = mockTrack("Intro")
+
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_2")
+
+        assertEquals("1_2_2", scheduler.introIdFor(intro))
+    }
+
+    @Test
+    fun `a regular queued track has no intro row`() {
+        val track = mockTrack("Music")
+
+        scheduler.queue(track, 0L, null, 50)
+
+        assertNull(scheduler.introIdFor(track))
+    }
+
+    @Test
+    fun `an intro queued without a row id records nothing`() {
+        val intro = mockTrack("Intro")
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        assertNull(scheduler.introIdFor(intro))
+    }
+
+    @Test
+    fun `the row mapping is released when the intro ends`() {
+        // Tracks are map keys; holding them past the end of playback would
+        // pin every intro ever played for the lifetime of the guild player.
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.FINISHED)
+
+        assertNull(scheduler.introIdFor(intro))
+    }
+
+    @Test
+    fun `stopping the player releases the row mapping`() {
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.stopTrack(true)
+
+        assertNull(scheduler.introIdFor(intro))
+    }
 }

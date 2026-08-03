@@ -10,8 +10,12 @@ import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
 import bot.toby.voice.VoiceSessionLifecycle
+import common.intro.IntroGuildPolicy
 import common.logging.DiscordLogger
 import database.dto.guild.ConfigDto.Configurations.DELETE_DELAY
+import database.dto.guild.ConfigDto.Configurations.INTROS_ENABLED
+import database.dto.guild.ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS
+import database.dto.guild.ConfigDto.Configurations.INTRO_NORMALISE_VOLUME
 import database.dto.guild.ConfigDto.Configurations.VOLUME
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
@@ -183,15 +187,36 @@ class VoiceEventHandler(
             event.channelJoined?.let { voiceSessionLifecycle.openSession(event.member.idLong, guild.idLong, it, now) }
         }
 
+        // Server-wide switch and per-channel exemptions. Checked once here so
+        // both playback and the "you don't have an intro yet" nudge respect
+        // them — a server that has turned intros off shouldn't be recruiting
+        // people into setting one.
+        val introsAllowedHere = introsAllowedIn(guild, event.channelJoined?.idLong)
+
         val requestingUserDto = event.member.getRequestingUserDto(userDtoHelper)
-        if (audioManager.connectedChannel == event.channelJoined) {
+        if (audioManager.connectedChannel == event.channelJoined && introsAllowedHere) {
             logger.info { "AudioManager channel and event joined channel are the same" }
             setupAndPlayUserIntro(event, guild, deleteDelay, requestingUserDto)
         }
-        if (requestingUserDto.musicDtos.isEmpty() && event.member.user.idLong != event.jda.selfUser.idLong) {
+        if (introsAllowedHere &&
+            requestingUserDto.musicDtos.isEmpty() &&
+            event.member.user.idLong != event.jda.selfUser.idLong
+        ) {
             logger.info { "Prompting user to set an intro ..." }
             introHelper.promptUserForMusicInfo(event.member.user, guild)
         }
+    }
+
+    private fun introsAllowedIn(guild: Guild, channelId: Long?): Boolean {
+        val allowed = IntroGuildPolicy.playsIn(
+            enabledRaw = getConfigString(INTROS_ENABLED.configValue, guild.id),
+            excludedRaw = getConfigString(INTRO_EXCLUDED_CHANNELS.configValue, guild.id),
+            channelId = channelId,
+        )
+        if (!allowed) {
+            logger.info { "Intros are switched off for guild ${guild.idLong} or channel $channelId; skipping." }
+        }
+        return allowed
     }
 
     private fun checkStateAndConnectToVoiceChannel(
@@ -239,6 +264,9 @@ class VoiceEventHandler(
                 member = member,
                 lastPlayedIntroId = introPlaybackTracker.lastPlayedIntroId(
                     guild.idLong, requestingUserDto.discordId
+                ),
+                normaliseVolume = IntroGuildPolicy.normaliseVolume(
+                    getConfigString(INTRO_NORMALISE_VOLUME.configValue, guild.id)
                 ),
             )
             introPlaybackTracker.record(guild.idLong, requestingUserDto.discordId, played?.id)
@@ -310,6 +338,10 @@ class VoiceEventHandler(
         val config = configService.getConfigByName(configName, guildId)
         return config?.value?.toInt() ?: defaultValue
     }
+
+    /** Raw config value, or null when the guild has never set the key. */
+    private fun getConfigString(configName: String, guildId: String): String? =
+        configService.getConfigByName(configName, guildId)?.value
 
     companion object {
         // Small, daily-capped reward so joining a channel with an intro set

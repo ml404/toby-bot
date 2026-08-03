@@ -1,5 +1,6 @@
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.helpers.IntroHelper
+import common.intro.IntroLoudness
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.intro.IntroPlaybackTracker
 import bot.toby.lavaplayer.PlayerManager
@@ -71,6 +72,21 @@ class VoiceEventHandlerTest {
         every { jda.selfUser } returns selfUser
         every { selfUser.name } returns "TestBot"
         every { selfUser.idLong } returns 12345L
+        // The guild-level intro switches are opt-out, so "no row stored" is
+        // the default every existing test wants. Stubbed for any guild here
+        // rather than per-test; the tests that exercise the switches override.
+        introConfigDefaults()
+    }
+
+    /** No stored value for any of the intro guild-config keys. */
+    private fun introConfigDefaults() {
+        listOf(
+            ConfigDto.Configurations.INTROS_ENABLED,
+            ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS,
+            ConfigDto.Configurations.INTRO_NORMALISE_VOLUME,
+        ).forEach { key ->
+            every { configService.getConfigByName(key.configValue, any()) } returns null
+        }
     }
 
     @AfterEach
@@ -646,6 +662,7 @@ class VoiceEventHandlerTest {
         every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "9") } returns null
 
         val musicDto = mockk<MusicDto>(relaxed = true) {
+            every { id } returns "9_1_1"
             every { fileName } returns "https://example.com/intro.mp3"
             every { musicBlob } returns null
             every { introVolume } returns 75
@@ -654,6 +671,7 @@ class VoiceEventHandlerTest {
             // Relaxed Boolean mocks default to false, which would take the
             // intro out of the rotation entirely.
             every { enabled } returns true
+            every { measuredRms } returns null
         }
         every { userDtoHelper.calculateUserDto(1L, 9L, false) } returns mockk(relaxed = true) {
             every { discordId } returns 1L
@@ -665,7 +683,7 @@ class VoiceEventHandlerTest {
 
         verify(atLeast = 1) {
             audioPlayerManager.loadAndPlayIntro(
-                guild, null, "https://example.com/intro.mp3", 30, 0L, 75, null,
+                guild, null, "https://example.com/intro.mp3", 30, 0L, 75, null, "9_1_1",
             )
         }
         // Intros must never go through the regular loadAndPlay path now.
@@ -732,7 +750,14 @@ class VoiceEventHandlerTest {
      * guild [gid] with [intros] configured, runs the handler, and returns the
      * PlayerManager mock so callers can assert on playback.
      */
-    private fun joinWithIntros(gid: Long, intros: MutableList<MusicDto>): PlayerManager {
+    private fun joinWithIntros(
+        gid: Long,
+        intros: MutableList<MusicDto>,
+        introsEnabled: String? = null,
+        excludedChannels: String? = null,
+        normalise: String? = null,
+        channelId: Long = 500L,
+    ): PlayerManager {
         val guild = mockk<Guild>(relaxed = true)
         val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
         val audioManager = mockk<AudioManager>(relaxed = true)
@@ -757,11 +782,21 @@ class VoiceEventHandlerTest {
         every { audioManager.isConnected } returns false
         every { audioManager.connectedChannel } returns channel
 
+        every { channel.idLong } returns channelId
+
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns audioPlayerManager
         every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, gid.toString()) } returns
             ConfigDto().apply { value = "30" }
         every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, gid.toString()) } returns null
+        mapOf(
+            ConfigDto.Configurations.INTROS_ENABLED to introsEnabled,
+            ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS to excludedChannels,
+            ConfigDto.Configurations.INTRO_NORMALISE_VOLUME to normalise,
+        ).forEach { (key, value) ->
+            every { configService.getConfigByName(key.configValue, gid.toString()) } returns
+                value?.let { ConfigDto().apply { this.value = it } }
+        }
         every { userDtoHelper.calculateUserDto(1L, gid, false) } returns mockk(relaxed = true) {
             every { discordId } returns 1L
             every { guildId } returns gid
@@ -792,7 +827,7 @@ class VoiceEventHandlerTest {
 
         // Exactly one playback and one payout across both joins.
         verify(exactly = 0) {
-            second.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any())
+            second.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
         }
         verify(exactly = 1) {
             awardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
@@ -822,6 +857,132 @@ class VoiceEventHandlerTest {
 
         assertEquals("12_1_1", introPlaybackTracker.lastPlayedIntroId(12L, 1L))
         assertTrue(introPlaybackTracker.onCooldown(12L, 1L))
+
+        unmockkObject(PlayerManager)
+    }
+
+    // --- guild-level intro controls ----------------------------------------
+
+    /** An intro the handler will happily play, at volume 75. */
+    private fun playableIntro(id: String, measured: Double? = null) = mockk<MusicDto>(relaxed = true) {
+        every { this@mockk.id } returns id
+        every { fileName } returns "https://example.com/intro.mp3"
+        every { musicBlob } returns null
+        every { introVolume } returns 75
+        every { startMs } returns null
+        every { endMs } returns null
+        every { enabled } returns true
+        every { failureCount } returns 0
+        every { measuredRms } returns measured
+    }
+
+    @Test
+    fun `a server that has switched intros off plays nothing on join`() {
+        val manager = joinWithIntros(21L, mutableListOf(playableIntro("21_1_1")), introsEnabled = "false")
+
+        verify(exactly = 0) {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `switching intros off also stops the set-up nudge`() {
+        // A server that doesn't want the feature shouldn't be recruiting
+        // people into it.
+        joinWithIntros(22L, mutableListOf(), introsEnabled = "false")
+
+        verify(exactly = 0) { introHelper.promptUserForMusicInfo(any(), any()) }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `an exempt voice channel stays silent`() {
+        val manager = joinWithIntros(
+            23L,
+            mutableListOf(playableIntro("23_1_1")),
+            excludedChannels = "500",
+            channelId = 500L,
+        )
+
+        verify(exactly = 0) {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `exempting one channel does not silence the others`() {
+        val manager = joinWithIntros(
+            24L,
+            mutableListOf(playableIntro("24_1_1")),
+            excludedChannels = "999",
+            channelId = 500L,
+        )
+
+        verify(exactly = 1) {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `a guild with no intro config behaves exactly as before`() {
+        val manager = joinWithIntros(25L, mutableListOf(playableIntro("25_1_1")))
+
+        verify(exactly = 1) {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    // --- loudness normalisation --------------------------------------------
+
+    @Test
+    fun `a loud intro is turned down when loudness matching is on`() {
+        val manager = joinWithIntros(
+            26L,
+            mutableListOf(playableIntro("26_1_1", measured = IntroLoudness.TARGET_RMS * 2)),
+        )
+
+        val volume = slot<Int>()
+        verify {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), capture(volume), any(), any())
+        }
+        assertTrue(volume.captured < 75, "expected the loud intro to be cut, got ${volume.captured}")
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `the chosen volume is used verbatim when loudness matching is off`() {
+        val manager = joinWithIntros(
+            27L,
+            mutableListOf(playableIntro("27_1_1", measured = IntroLoudness.TARGET_RMS * 2)),
+            normalise = "false",
+        )
+
+        verify {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), 75, any(), any())
+        }
+
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `an intro that has never been measured plays at exactly its set volume`() {
+        // Every existing row starts unmeasured, so shipping normalisation must
+        // not change what anyone hears until their intro has played once.
+        val manager = joinWithIntros(28L, mutableListOf(playableIntro("28_1_1", measured = null)))
+
+        verify {
+            manager.loadAndPlayIntro(any(), any(), any(), any(), any(), 75, any(), any())
+        }
 
         unmockkObject(PlayerManager)
     }

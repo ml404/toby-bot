@@ -31,6 +31,16 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     private val trackClipBounds = ConcurrentHashMap<AudioTrack, Pair<Long, Long>>()
     private val trackRequesters = ConcurrentHashMap<AudioTrack, Long>()
     private val introTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
+
+    /**
+     * Which stored intro row each in-flight intro track came from.
+     *
+     * Kept alongside [introTracks] rather than folded into it because the id
+     * has to outlive the track by exactly one step: the loudness filter
+     * reports its measurement as the pipeline closes, and it needs to know
+     * which row to write the number to.
+     */
+    private val introTrackIds = ConcurrentHashMap<AudioTrack, String>()
     private var resumeAfterIntro: AudioTrack? = null
 
     fun getRequesterId(track: AudioTrack): Long? = trackRequesters[track]
@@ -38,6 +48,9 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     internal fun hasResumeAfterIntro(): Boolean = resumeAfterIntro != null
 
     internal fun isIntroTrack(track: AudioTrack): Boolean = introTracks.contains(track)
+
+    /** The intro row id behind [track], or null when it isn't an intro. */
+    internal fun introIdFor(track: AudioTrack): String? = introTrackIds[track]
 
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int, requesterId: Long? = null) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
@@ -68,9 +81,11 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         endPosition: Long?,
         volume: Int,
         requesterId: Long? = null,
+        introId: String? = null,
     ) {
         logger.info("Preparing intro ${introTrack.info.title} for guild $guildId")
         prepareTrack(introTrack, startPosition, endPosition, volume, requesterId)
+        introId?.let { introTrackIds[introTrack] = it }
         val currentlyPlaying = player.playingTrack
         if (currentlyPlaying == null || resumeAfterIntro != null) {
             // No track to preempt, or a resume slot is already occupied by an
@@ -163,6 +178,10 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
         trackClipBounds.remove(track)
         trackRequesters.remove(track)
+        // Safe to drop here even though the loudness filter reports later: the
+        // factory resolved the id when the chain was built and holds it in its
+        // callback closure.
+        introTrackIds.remove(track)
         val wasIntro = introTracks.remove(track)
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
@@ -295,6 +314,7 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         // the in-flight intro ends.
         resumeAfterIntro = null
         introTracks.clear()
+        introTrackIds.clear()
         player.stopTrack()
         player.setVolumeToPrevious()
         return true
