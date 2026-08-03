@@ -77,6 +77,15 @@ enum class NotificationChannelKind(
         // DM-only: the prompt is a direct message with a setup link,
         // which doesn't translate to a one-shot push notification.
         perSurfaceDefaults = mapOf(Surface.DM to true),
+    ),
+    INTRO_BROKEN(
+        displayName = "Broken intro",
+        description = "DM when one of your intros stops loading — a deleted, private, " +
+            "age-gated or region-blocked link plays as silence otherwise.",
+        // DM-only and on by default. This one reports a fault in something
+        // the user set up, which they cannot otherwise discover: the intro
+        // simply stops playing, and every surface keeps listing it as fine.
+        perSurfaceDefaults = mapOf(Surface.DM to true),
     );
 
     /** Surfaces this kind ships on. Derived from [perSurfaceDefaults]. */

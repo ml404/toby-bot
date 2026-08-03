@@ -5,6 +5,7 @@ import jakarta.persistence.*
 import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 import java.security.MessageDigest
+import java.time.Instant
 import database.dto.user.UserDto
 
 @NamedQueries(
@@ -58,7 +59,36 @@ class MusicDto(
      * user can mute an intro without losing the upload.
      */
     @Column(name = "enabled", nullable = false)
-    var enabled: Boolean = true
+    var enabled: Boolean = true,
+
+    /** Times this intro has been loaded for playback. */
+    @Column(name = "play_count", nullable = false)
+    var playCount: Int = 0,
+
+    @Column(name = "last_played_at")
+    var lastPlayedAt: Instant? = null,
+
+    /**
+     * *Consecutive* failed loads — reset to zero by the next success. See
+     * [common.intro.IntroHealth] for what the count means and when an intro
+     * crosses into "broken".
+     */
+    @Column(name = "failure_count", nullable = false)
+    var failureCount: Int = 0,
+
+    @Column(name = "last_failure_at")
+    var lastFailureAt: Instant? = null,
+
+    @Column(name = "last_failure_reason")
+    var lastFailureReason: String? = null,
+
+    /**
+     * The intro's own RMS level, sampled during playback, used to correct the
+     * volume so equal numbers on different tracks sound equally loud. Null
+     * until it has played once with normalisation enabled.
+     */
+    @Column(name = "measured_rms")
+    var measuredRms: Double? = null,
 ) : Serializable {
 
     constructor(

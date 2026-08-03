@@ -1,9 +1,11 @@
 package bot.toby.intro
 
+import common.intro.IntroHealth
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -112,5 +114,59 @@ class IntroSelectionTest {
         val off = intro(2).apply { enabled = false }
 
         assertEquals(on.id, IntroSelection.pick(listOf(on, off), on.id)?.id)
+    }
+
+    // --- broken intros ------------------------------------------------------
+
+    @Test
+    fun `a working intro is preferred over one whose source keeps failing`() {
+        // Someone with one dead link and one good one used to get silence
+        // half the time, with nothing anywhere saying why.
+        val working = intro(1)
+        val broken = intro(2).apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+
+        repeat(50) { seed ->
+            assertEquals(working.id, IntroSelection.pick(listOf(working, broken), null, Random(seed))?.id)
+        }
+    }
+
+    @Test
+    fun `a single failure does not take an intro out of rotation`() {
+        val flaky = intro(1).apply { failureCount = 1 }
+        val other = intro(2)
+
+        val picks = (0 until 100).mapNotNull { IntroSelection.pick(listOf(flaky, other), null, Random(it))?.id }
+
+        assertTrue(picks.contains(flaky.id), "one bad night should not sideline an intro")
+    }
+
+    @Test
+    fun `when every intro looks broken one is still tried`() {
+        // Guaranteeing silence is worse than trying: the source may have come
+        // back (a region block lifting, YouTube unthrottling the bot's IP).
+        val a = intro(1).apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+        val b = intro(2).apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES + 3 }
+
+        assertNotNull(IntroSelection.pick(listOf(a, b)))
+    }
+
+    @Test
+    fun `a broken intro that is also switched off stays off`() {
+        // Disabled is the owner's decision and outranks our guess about health.
+        val off = intro(1).apply { enabled = false }
+        val broken = intro(2).apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+
+        assertEquals(broken.id, IntroSelection.pick(listOf(off, broken))?.id)
+    }
+
+    @Test
+    fun `the no-repeat rule still applies among healthy intros`() {
+        val first = intro(1)
+        val second = intro(2)
+        val broken = intro(3).apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+        val intros = listOf(first, second, broken)
+
+        assertEquals(second.id, IntroSelection.pick(intros, first.id)?.id)
+        assertEquals(first.id, IntroSelection.pick(intros, second.id)?.id)
     }
 }
