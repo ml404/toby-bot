@@ -79,7 +79,8 @@
                 </thead>
                 <tbody id="introsTbody">
                     <tr th:each="intro : ${intros}"
-                        th:classappend="${intro.enabled} ? '' : ' intro-disabled'"
+                        th:classappend="(${intro.enabled} ? '' : ' intro-disabled')
+                                        + (${intro.broken} ? ' intro-broken' : '')"
                         th:attr="data-intro-id=${intro.id},
                                  data-start-ms=${intro.startMs != null ? intro.startMs : ''},
                                  data-end-ms=${intro.endMs != null ? intro.endMs : ''},
@@ -111,6 +112,24 @@
                                 <span class="clip-badge-label">⏱</span>
                                 <span class="clip-badge-range" th:text="${intro.clipLabel}">full track</span>
                             </button>
+                            <!--
+                                An intro that has stopped loading is silence on
+                                join with no other symptom, so the reason the
+                                source gave is shown inline rather than left in
+                                a server log.
+                            -->
+                            <p th:if="${intro.broken}" class="intro-broken-note">
+                                <span aria-hidden="true">⚠️</span>
+                                <strong>Not playing.</strong>
+                                <span th:text="${intro.brokenReason}">Video unavailable</span>
+                                Replace the link to fix it.
+                            </p>
+                            <p class="intro-meta"
+                               th:if="${intro.playLabel != null or intro.loudnessLabel != null}">
+                                <span th:if="${intro.playLabel != null}" th:text="${intro.playLabel}">Played 3×</span>
+                                <span th:if="${intro.playLabel != null and intro.loudnessLabel != null}"> · </span>
+                                <span th:if="${intro.loudnessLabel != null}" th:text="${intro.loudnessLabel}">level</span>
+                            </p>
                         </td>
                         <td data-label="Volume">
                             <div class="volume-inline">

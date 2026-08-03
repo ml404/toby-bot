@@ -304,6 +304,22 @@ tr.intro-disabled .slot-index,
 tr.intro-disabled .volume-inline { opacity: 0.45; }
 tr.intro-disabled .name-label { text-decoration: line-through; }
 
+/* A broken intro is the opposite case: the owner did not switch it off and
+   has no way to tell it stopped working, so it gets emphasis rather than
+   dimming. The left border makes it findable when scanning a full table. */
+tr.intro-broken { border-left: 3px solid var(--danger); }
+.intro-broken-note {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--danger);
+}
+.intro-meta {
+    margin: 4px 0 0;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .intro-toggle-track,
     .intro-toggle-track::after { transition: none; }

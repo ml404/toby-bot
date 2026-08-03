@@ -2,6 +2,7 @@ package database.service.music.impl
 
 import common.events.user.IntroSetEvent
 import database.dto.music.MusicDto
+import database.persistence.music.GuildIntroStats
 import database.persistence.music.MusicFilePersistence
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
@@ -58,4 +59,9 @@ class DefaultMusicFileService(
     override fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto? {
         return musicFileService.isFileAlreadyUploaded(musicDto)
     }
+
+    // Uncached: the report is an admin command run occasionally, and caching it
+    // would show stale counts right after someone fixed a broken intro.
+    override fun getGuildIntroStats(guildId: Long, unhealthyThreshold: Int): GuildIntroStats =
+        musicFileService.getGuildIntroStats(guildId, unhealthyThreshold)
 }
