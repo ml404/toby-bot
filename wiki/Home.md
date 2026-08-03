@@ -15,7 +15,6 @@
 - **Intro Songs**: Handle YouTube URLs, file uploads, and custom volume levels to play when you join a voice chat.
 - **DnD lookups**: Lookup spells, rules, conditions, and features using the DnD
 - **Server moderation**: Use a variety of moderation tools for your server, including setting server config for who can interact with music commands, who can use the bot to post memes and other similar things
-- **Event Handling**: Uses an EventWaiter pattern to efficiently manage user inputs and responses.
 - **Custom Logging**: Integrated logging with contextual information (Guild, User) for improved debugging.
 - **Commands**: Intuitive command interface to manage your settings, intro songs, and more.
 
@@ -43,12 +42,6 @@
   replay it (or pay out the intro-play credit and XP again).
 - **Editing**: `/editintro` opens a form for the name, volume and clip bounds of a chosen intro;
   `/deleteintro` removes one and offers a 10-minute Undo.
-
-#### **EventWaiter Pattern**
-
-The bot leverages an EventWaiter pattern to manage user inputs and responses seamlessly. This ensures that responses are timed correctly and users are properly prompted when necessary.
-
-For example, when setting an intro song, the bot will wait for the user's response (URL or file upload) and store the information accordingly.
 
 #### **Custom Logging**
 

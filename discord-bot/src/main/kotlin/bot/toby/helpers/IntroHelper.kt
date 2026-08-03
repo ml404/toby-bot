@@ -1,6 +1,5 @@
 package bot.toby.helpers
 
-import bot.toby.handler.EventWaiter
 import bot.toby.intro.IntroMediaLoader
 import bot.toby.intro.IntroNotificationService
 import bot.toby.intro.IntroOwnership
@@ -39,17 +38,14 @@ class IntroHelper(
     private val musicFileService: MusicFileService,
     private val configService: ConfigService,
     private val httpHelper: HttpHelper,
-    private val eventWaiter: EventWaiter,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
     // Nullable + default null so legacy positional test constructors keep
     // compiling. Spring autowires the real bean in production.
     private val notificationPrefService: UserNotificationPrefService? = null,
     private val validationService: IntroValidationService = IntroValidationService(httpHelper, dispatcher),
     private val mediaLoader: IntroMediaLoader = IntroMediaLoader(),
-    private val notificationService: IntroNotificationService = IntroNotificationService(
-        userDtoHelper, musicFileService, httpHelper, eventWaiter, validationService, mediaLoader,
-        notificationPrefService, dispatcher,
-    ),
+    private val notificationService: IntroNotificationService =
+        IntroNotificationService(notificationPrefService),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
@@ -393,22 +389,8 @@ class IntroHelper(
         )
     }
 
-    /**
-     * Public delegations preserved so existing callers/tests don't have to
-     * be rewired in the same change.
-     */
     fun promptUserForMusicInfo(user: User, guild: Guild) =
         notificationService.promptUserForMusicInfo(user, guild)
-
-    @VisibleForTesting
-    fun saveUserMusicDto(user: User, guild: Guild, inputData: InputData, volume: Int?, displayName: String? = null) =
-        notificationService.saveUserMusicDto(user, guild, inputData, volume, displayName)
-
-    @VisibleForTesting
-    fun determineMusicBlob(input: InputData): ByteArray? = notificationService.determineMusicBlob(input)
-
-    @VisibleForTesting
-    fun determineFileName(input: InputData): String = notificationService.determineFileName(input)
 
     fun validateIntroLength(url: String, onResult: (Boolean) -> Unit) =
         validationService.validateIntroLength(url, onResult)

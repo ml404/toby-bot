@@ -3,7 +3,6 @@ package bot.configuration
 import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.AutocompleteEventListener
 import bot.toby.handler.ButtonEventListener
-import bot.toby.handler.EventWaiter
 import bot.toby.handler.GuildLeaveCleanupHandler
 import bot.toby.handler.MenuEventListener
 import bot.toby.handler.MessageChatListener
@@ -34,7 +33,6 @@ class JdaListenerRegistrarTest {
         val messageContextEventListener = mockk<bot.toby.handler.MessageContextEventListener>()
         val autocompleteEventListener = mockk<AutocompleteEventListener>()
         val activityEventHandler = mockk<ActivityEventHandler>()
-        val eventWaiter = mockk<EventWaiter>()
         val guildLeaveCleanupHandler = mockk<GuildLeaveCleanupHandler>()
         val installWelcomeHandler = mockk<InstallWelcomeHandler>()
         val welcomeAndAutoRoleHandler = mockk<WelcomeAndAutoRoleHandler>()
@@ -52,7 +50,6 @@ class JdaListenerRegistrarTest {
             messageContextEventListener,
             autocompleteEventListener,
             activityEventHandler,
-            eventWaiter,
             guildLeaveCleanupHandler,
             installWelcomeHandler,
             welcomeAndAutoRoleHandler,
@@ -71,8 +68,7 @@ class JdaListenerRegistrarTest {
                 messageContextEventListener,
                 autocompleteEventListener,
                 activityEventHandler,
-                eventWaiter,
-                guildLeaveCleanupHandler,
+                    guildLeaveCleanupHandler,
                 installWelcomeHandler,
                 welcomeAndAutoRoleHandler,
             )

@@ -1,6 +1,5 @@
 package bot.configuration
 
-import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import io.ktor.client.HttpClient
 import io.mockk.mockk
@@ -21,11 +20,6 @@ open class TestAppConfig {
 
     @Bean
     open fun httpHelper(): HttpHelper {
-        return mockk(relaxed = true)
-    }
-
-    @Bean
-    open fun eventWaiter(): EventWaiter {
         return mockk(relaxed = true)
     }
 }

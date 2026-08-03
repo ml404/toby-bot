@@ -74,7 +74,7 @@ enum class NotificationChannelKind(
     INTRO_PROMPT(
         displayName = "Intro setup prompt",
         description = "First-time prompt to set your voice-channel intro song.",
-        // DM-only: the prompt opens an interactive EventWaiter flow,
+        // DM-only: the prompt is a direct message with a setup link,
         // which doesn't translate to a one-shot push notification.
         perSurfaceDefaults = mapOf(Surface.DM to true),
     );

@@ -125,7 +125,7 @@ class NotificationChannelKindTest {
 
     @Test
     fun `INTRO_PROMPT is DM-only with no CHANNEL or PUSH surface`() {
-        // The intro prompt opens an interactive EventWaiter flow.
+        // The intro prompt is a direct message with a setup link.
         // Doesn't make sense as a fire-and-forget push or a public
         // channel post.
         val k = NotificationChannelKind.INTRO_PROMPT
