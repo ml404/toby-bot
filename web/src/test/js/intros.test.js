@@ -20,6 +20,7 @@ const {
     closeClipPreviewRow,
     parseTimeInput,
     formatMs,
+    describeClip,
     validateClipMs,
     ensureYtApi,
     createTrimBar,
@@ -244,6 +245,28 @@ describe('formatMs', () => {
     test('returns empty string for invalid input', () => {
         expect(formatMs(null)).toBe('');
         expect(formatMs(-1)).toBe('');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// describeClip
+// ---------------------------------------------------------------------------
+
+// Mirrors IntroClipTest.`describe covers every combination of bounds` on the
+// Kotlin side — the row badge is rendered by Thymeleaf on load and by this
+// helper after an inline save, so the two must agree.
+describe('describeClip', () => {
+    test('an unclipped intro reads as the full track', () => {
+        expect(describeClip(null, null)).toBe('full track');
+    });
+
+    test('both bounds render as a range', () => {
+        expect(describeClip(3000, 12000)).toBe('0:03 – 0:12');
+    });
+
+    test('a single bound renders open-ended', () => {
+        expect(describeClip(3000, null)).toBe('from 0:03');
+        expect(describeClip(null, 12000)).toBe('up to 0:12');
     });
 });
 

@@ -2,14 +2,17 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
-import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.stereotype.Component
 
+/**
+ * `/editintro` — pick an intro, then edit it in a modal
+ * ([bot.toby.modal.modals.EditIntroModal]): name, volume and clip bounds in
+ * one form. This used to change volume only, and only by typing a bare number
+ * into the channel within ten seconds of selecting.
+ */
 @Component
 class EditIntroCommand : MusicCommand {
 
@@ -25,31 +28,18 @@ class EditIntroCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
-        val event = ctx.event
-
-        // Fetch the user's intros
-        val introList = requestingUserDto.musicDtos
-        if (introList.isEmpty()) {
-            event.hook.sendMessage("You have no intros to edit.").setEphemeral(true).queue()
-            return
-        }
-
-        // Create the string select menu with the user's intros
-        val builder = StringSelectMenu.create(EDIT_INTRO).setPlaceholder("Select an intro to edit")
-
-        introList.forEach { intro -> builder.addOption(intro.fileName ?: "Unknown", intro.id.toString()) }
-
-        val stringSelectMenu = builder.build()
-        val introMessage = produceMusicFileDataStringForPrinting(event.member!!, requestingUserDto)
-
-        // Send the select menu to the user
-        event.hook.sendMessage("$introMessage \nPlease select an intro to edit.").addComponents(ActionRow.of(stringSelectMenu))
-            .setEphemeral(true).queue()
+        sendIntroSelection(
+            event = ctx.event,
+            requestingUserDto = requestingUserDto,
+            menuId = EDIT_INTRO,
+            placeholder = "Select an intro to edit",
+            emptyMessage = "You have no intros to edit. Add one with `/setintro`.",
+        )
     }
 
     override val name: String
         get() = "editintro"
 
     override val description: String
-        get() = "Edit one of your intros."
+        get() = "Edit one of your intros — name, volume and clip start/end."
 }

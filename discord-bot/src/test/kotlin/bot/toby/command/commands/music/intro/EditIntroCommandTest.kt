@@ -5,6 +5,7 @@ import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.commands.music.MusicCommandTest
 import core.command.CommandContext
 import database.dto.music.MusicDto
+import net.dv8tion.jda.api.entities.MessageEmbed
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.unmockkAll
@@ -40,7 +41,7 @@ class EditIntroCommandTest : MusicCommandTest {
         editIntroCommand.handle(mockCtx, requestingUserDto, 5)
 
         // Verify the reply indicating no intros
-        verify { event.hook.sendMessage("You have no intros to edit.") }
+        verify { event.hook.sendMessage("You have no intros to edit. Add one with `/setintro`.") }
     }
 
     @Test
@@ -54,6 +55,13 @@ class EditIntroCommandTest : MusicCommandTest {
 
         editIntroCommand.handle(ctx, requestingUserDto, 5)
 
-        verify { event.hook.sendMessage(match<String> { it.contains("Your intro songs are currently set as:") }) }
+        verify {
+            event.hook.sendMessageEmbeds(
+                match<MessageEmbed> { embed ->
+                    embed.fields.map { it.name }.any { it!!.startsWith("#1 · Intro1") } &&
+                        embed.fields.map { it.name }.any { it!!.startsWith("#2 · Intro2") }
+                }
+            )
+        }
     }
 }

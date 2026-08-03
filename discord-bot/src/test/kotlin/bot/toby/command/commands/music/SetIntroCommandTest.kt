@@ -13,6 +13,7 @@ import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import database.dto.guild.ConfigDto
 import database.dto.music.MusicDto
+import net.dv8tion.jda.api.entities.MessageEmbed
 import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import io.mockk.*
@@ -105,7 +106,11 @@ internal class SetIntroCommandTest : MusicCommandTest {
         advanceUntilIdle()
 
         verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
-        verify { event.hook.sendMessage("Intro provided was over 15s long, out of courtesy please pick a shorter intro.") }
+        verify {
+            event.hook.sendMessage(
+                "Video is too long (21s). Max allowed is 15s — set a start/end clip to use a longer source."
+            )
+        }
     }
 
     @Test
@@ -275,9 +280,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
             verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
             verify {
-                event.hook.sendMessage(
-                    match<String> { it.contains("Select the intro you'd like to replace with your new upload as we only allow 3 intros") }
-                )
+                event.hook.sendMessageEmbeds(match<MessageEmbed> { it.fields.size == 3 })
             }
         }
 

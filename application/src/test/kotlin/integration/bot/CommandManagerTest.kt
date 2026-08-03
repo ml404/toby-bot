@@ -39,6 +39,7 @@ import bot.toby.command.commands.music.channel.JoinCommand
 import bot.toby.command.commands.music.channel.LeaveCommand
 import bot.toby.command.commands.music.intro.DeleteIntroCommand
 import bot.toby.command.commands.music.intro.EditIntroCommand
+import bot.toby.command.commands.music.intro.ListIntrosCommand
 import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.command.commands.music.player.*
 import bot.toby.helpers.*
@@ -139,6 +140,7 @@ class CommandManagerTest {
             SetIntroCommand::class.java,
             EditIntroCommand::class.java,
             DeleteIntroCommand::class.java,
+            ListIntrosCommand::class.java,
             UserInfoCommand::class.java,
             LevelCommand::class.java,
             RandomCommand::class.java,

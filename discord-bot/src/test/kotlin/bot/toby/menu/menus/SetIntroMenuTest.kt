@@ -2,6 +2,7 @@ package bot.toby.menu.menus
 
 import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.helpers.InputData
+import bot.toby.helpers.PendingIntro
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.menu.DefaultMenuContext
@@ -76,7 +77,7 @@ internal class SetIntroMenuTest : MenuTest {
 
         every { userDtoHelper.calculateUserDto(1234L, 1L, true) } returns userDto
         val musicDtoToReplace = userDto.musicDtos.first { it.id == "2" } // Match the selectedMusicDtoId
-        every { introHelper.pendingIntros[1234L] } returns Triple(mockk(), "url", 50)
+        every { introHelper.pendingIntros[1234L] } returns PendingIntro(mockk(), "url", 50)
 
         // Act
         setIntroMenu.handle(menuContext, 10)
@@ -92,7 +93,9 @@ internal class SetIntroMenuTest : MenuTest {
                 capture(inputData),
                 50,
                 musicDtoToReplace, // Ensure we are using the correct MusicDto
-                "Effective Name"
+                "Effective Name",
+                null,
+                null,
             )
         }
     }
@@ -153,7 +156,7 @@ internal class SetIntroMenuTest : MenuTest {
 
         // Assert
         verify(exactly = 0) {
-            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any())
+            introHelper.handleMedia(any(), any(), any(), any(), any(), any(), any(), any(), any())
         }
     }
 }

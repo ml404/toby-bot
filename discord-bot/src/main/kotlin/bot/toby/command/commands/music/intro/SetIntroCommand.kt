@@ -2,25 +2,36 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.IntroHelper.Companion.INTRO_LIMIT
 import bot.toby.helpers.MenuHelper.SET_INTRO
+import bot.toby.helpers.PendingIntro
 import bot.toby.helpers.URLHelper
-import bot.toby.helpers.UserDtoHelper.Companion.produceMusicFileDataStringForPrinting
+import bot.toby.intro.IntroPresenter
 import bot.toby.lavaplayer.PlayerManager
+import common.intro.IntroClip
+import common.intro.IntroSlots
 import core.command.CommandContext
 import database.dto.user.UserDto
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.selections.SelectOption
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
+/**
+ * `/setintro link|attachment` — add or replace an intro.
+ *
+ * Both subcommands take optional `start`/`end` clip bounds. Without them a
+ * source longer than [IntroClip.MAX_DURATION_SECONDS] is still rejected, as
+ * before; with them a long track is fair game as long as the *clip* fits.
+ * That's how the web form has always behaved, and how the player has always
+ * read `MusicDto.startMs`/`endMs` back at join time — the slash command was
+ * the only place that couldn't express it.
+ */
 @Component
 class SetIntroCommand @Autowired constructor(
     private val introHelper: IntroHelper
@@ -50,6 +61,9 @@ class SetIntroCommand @Autowired constructor(
             return
         }
 
+        // Returns null after replying with the specific parse error.
+        val clip = parseClipOptions(event) ?: return
+
         val mentionedMembers = event.getOptionMentionedMembers()
 
         if (mentionedMembers.isEmpty()) {
@@ -61,15 +75,34 @@ class SetIntroCommand @Autowired constructor(
                 event.user.effectiveName,
                 deleteDelay,
                 introVolume,
-                attachmentOption
+                attachmentOption,
+                clip
             )
         } else {
             // Mentions: map each member to their DTO inside the loop
             mentionedMembers.forEach { member ->
                 val memberDto = introHelper.findUserById(member.idLong, member.guild.idLong)
-                checkAndSetIntro(event, memberDto, linkOption, member.effectiveName, deleteDelay, introVolume, attachmentOption)
+                checkAndSetIntro(
+                    event, memberDto, linkOption, member.effectiveName, deleteDelay,
+                    introVolume, attachmentOption, clip
+                )
             }
         }
+    }
+
+    /** Reads the optional `start`/`end` options into milliseconds. */
+    private fun parseClipOptions(event: SlashCommandInteractionEvent): Clip? {
+        val start = IntroClip.parseTimestamp(event.getOption(START)?.asString, "Clip start")
+        if (start is IntroClip.Parsed.Invalid) {
+            event.hook.sendMessage(start.message).setEphemeral(true).queue()
+            return null
+        }
+        val end = IntroClip.parseTimestamp(event.getOption(END)?.asString, "Clip end")
+        if (end is IntroClip.Parsed.Invalid) {
+            event.hook.sendMessage(end.message).setEphemeral(true).queue()
+            return null
+        }
+        return Clip((start as IntroClip.Parsed.Ok).ms, (end as IntroClip.Parsed.Ok).ms)
     }
 
     private fun checkAndSetIntro(
@@ -79,17 +112,25 @@ class SetIntroCommand @Autowired constructor(
         userName: String,
         deleteDelay: Int,
         introVolume: Int,
-        attachmentOption: OptionMapping?
+        attachmentOption: OptionMapping?,
+        clip: Clip
     ) {
-        introHelper.validateIntroLength(linkOption) { isOverLimit ->
-            if (isOverLimit) {
-                logger.info { "Intro was rejected for being over the specified intro limit length of $INTRO_LIMIT" }
-                event.hook
-                    .sendMessage("Intro provided was over $INTRO_LIMIT long, out of courtesy please pick a shorter intro.")
+        // One duration lookup, then the shared clip rules decide. Replaces the
+        // old boolean "is this over 15 seconds" gate, which had no way to
+        // account for a user-supplied clip and so rejected every long source.
+        introHelper.validateClipAgainstSource(
+            linkOption.takeIf { it.isNotEmpty() }, clip.startMs, clip.endMs
+        ) { error ->
+            if (error != null) {
+                logger.info { "Intro was rejected: $error" }
+                event.hook.sendMessage(error)
+                    .setEphemeral(true)
                     .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
-                return@validateIntroLength
             } else {
-                validateAndSetIntro(event, requestingUserDto, linkOption, attachmentOption, introVolume, userName, deleteDelay)
+                validateAndSetIntro(
+                    event, requestingUserDto, linkOption, attachmentOption,
+                    introVolume, userName, deleteDelay, clip
+                )
             }
         }
     }
@@ -101,12 +142,21 @@ class SetIntroCommand @Autowired constructor(
         attachmentOption: OptionMapping?,
         introVolume: Int,
         userName: String,
-        deleteDelay: Int
+        deleteDelay: Int,
+        clip: Clip
     ) {
         when {
-            checkForOverIntroLimit(event.hook, event.member!!, requestingUserDto, linkOption, attachmentOption, introVolume) -> return
-            linkOption.isNotEmpty() -> introHelper.handleUrl(event, requestingUserDto, userName, deleteDelay, URLHelper.fromUrlString(linkOption), introVolume)
-            attachmentOption != null -> introHelper.handleAttachment(event, requestingUserDto, userName, deleteDelay, attachmentOption.asAttachment, introVolume)
+            checkForOverIntroLimit(
+                event.hook, event.member!!, requestingUserDto, linkOption, attachmentOption, introVolume, clip
+            ) -> return
+            linkOption.isNotEmpty() -> introHelper.handleUrl(
+                event, requestingUserDto, userName, deleteDelay, URLHelper.fromUrlString(linkOption),
+                introVolume, null, clip.startMs, clip.endMs
+            )
+            attachmentOption != null -> introHelper.handleAttachment(
+                event, requestingUserDto, userName, deleteDelay, attachmentOption.asAttachment,
+                introVolume, null, clip.startMs, clip.endMs
+            )
             else -> event.hook.sendMessage("Please provide a valid link or attachment")
                 .queue(core.command.Command.invokeDeleteOnMessageResponse(deleteDelay))
         }
@@ -118,17 +168,27 @@ class SetIntroCommand @Autowired constructor(
         requestingUserDto: UserDto,
         linkOption: String? = null,
         attachmentOption: OptionMapping? = null,
-        introVolume: Int
+        introVolume: Int,
+        clip: Clip
     ): Boolean {
         val introList = requestingUserDto.musicDtos
         if (introList.size >= LIMIT) {
-            introHelper.pendingIntros[requestingUserDto.discordId] =
-                Triple(attachmentOption?.asAttachment, linkOption, introVolume)
-            val builder = StringSelectMenu.create(SET_INTRO).setPlaceholder(null)
-            introList.sortedBy { it.index }.forEach { builder.addOptions(SelectOption.of(it.fileName!!, it.id.toString())) }
-            val stringSelectMenu = builder.build()
-            val musicFileDataStringForPrinting = produceMusicFileDataStringForPrinting(member, requestingUserDto)
-            hook.sendMessage("$musicFileDataStringForPrinting\n Select the intro you'd like to replace with your new upload as we only allow $LIMIT intros")
+            introHelper.pendingIntros[requestingUserDto.discordId] = PendingIntro(
+                attachment = attachmentOption?.asAttachment,
+                url = linkOption,
+                volume = introVolume,
+                startMs = clip.startMs,
+                endMs = clip.endMs,
+            )
+            val stringSelectMenu = StringSelectMenu.create(SET_INTRO)
+                .setPlaceholder("Select the intro to replace")
+                .addOptions(IntroPresenter.selectOptions(introList))
+                .build()
+            hook.sendMessageEmbeds(IntroPresenter.listEmbed(member, introList, LIMIT))
+                .addContent(
+                    "Select the intro you'd like to replace with your new upload — " +
+                        "we only allow $LIMIT intros."
+                )
                 .setComponents(ActionRow.of(stringSelectMenu))
                 .setEphemeral(true)
                 .queue()
@@ -140,6 +200,9 @@ class SetIntroCommand @Autowired constructor(
     private fun SlashCommandInteractionEvent.getOptionMentionedMembers(): List<Member> =
         this.getOption(USERS)?.mentions?.members.orEmpty()
 
+    /** Parsed `start`/`end` options, in milliseconds; null means "no bound". */
+    private data class Clip(val startMs: Int?, val endMs: Int?)
+
     override val name: String get() = "setintro"
     override val description: String get() = "Upload an **MP3** file or link to play when you join a voice channel."
 
@@ -148,10 +211,20 @@ class SetIntroCommand @Autowired constructor(
             SubcommandData(LINK, "Set intro via YouTube link")
                 .addOption(OptionType.STRING, LINK, "Link to set as your discord intro", true)
                 .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOption(OptionType.STRING, START, "Clip start, e.g. 0:12 — lets you use a longer video")
+                .addOption(
+                    OptionType.STRING, END,
+                    "Clip end, e.g. 0:24 (max ${IntroClip.MAX_DURATION_SECONDS}s of clip)"
+                )
                 .addOption(OptionType.MENTIONABLE, USERS, "User whose intro to change"),
             SubcommandData(ATTACHMENT, "Set intro via file upload")
                 .addOption(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro", true)
                 .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOption(OptionType.STRING, START, "Clip start, e.g. 0:12")
+                .addOption(
+                    OptionType.STRING, END,
+                    "Clip end, e.g. 0:24 (max ${IntroClip.MAX_DURATION_SECONDS}s of clip)"
+                )
                 .addOption(OptionType.MENTIONABLE, USERS, "User whose intro to change")
         )
 
@@ -160,6 +233,8 @@ class SetIntroCommand @Autowired constructor(
         private const val USERS = "users"
         private const val LINK = "link"
         private const val ATTACHMENT = "attachment"
-        private const val LIMIT = 3
+        private const val START = "start"
+        private const val END = "end"
+        private val LIMIT = IntroSlots.MAX_INTRO_COUNT
     }
 }

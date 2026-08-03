@@ -97,8 +97,7 @@
                                     th:aria-label="'Edit clip for ' + ${intro.fileName}"
                                     title="Edit clip timestamps">
                                 <span class="clip-badge-label">⏱</span>
-                                <span class="clip-badge-range"
-                                      th:text="${intro.startMs != null or intro.endMs != null} ? 'clip set' : 'full track'">clip</span>
+                                <span class="clip-badge-range" th:text="${intro.clipLabel}">full track</span>
                             </button>
                         </td>
                         <td data-label="Volume">

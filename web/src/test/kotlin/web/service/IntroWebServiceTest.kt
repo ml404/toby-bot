@@ -228,6 +228,25 @@ class IntroWebServiceTest {
         assertEquals("myclip.mp3", view.fileName)
     }
 
+    @Test
+    fun `clipLabel shows the actual range rather than a generic marker`() {
+        val dto = intro(1, blob = byteArrayOf(1, 2, 3), fileName = "myclip.mp3").apply {
+            startMs = 3_000
+            endMs = 12_000
+        }
+        every { userService.getUserById(discordId, guildId) } returns user(dto)
+
+        assertEquals("0:03 – 0:12", service.getUserIntros(discordId, guildId).first().clipLabel)
+    }
+
+    @Test
+    fun `clipLabel falls back to full track when unclipped`() {
+        val dto = intro(1, blob = byteArrayOf(1, 2, 3), fileName = "myclip.mp3")
+        every { userService.getUserById(discordId, guildId) } returns user(dto)
+
+        assertEquals("full track", service.getUserIntros(discordId, guildId).first().clipLabel)
+    }
+
     // --- setIntroByUrl ---------------------------------------------------
 
     @Test
