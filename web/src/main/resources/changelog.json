@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fix command registration failing entirely on Discord error 50240",
+    "summary": "No commands have been registering at boot. From production:",
+    "emoji": "✨",
+    "prNumber": 733
+  },
+  {
+    "date": "August 2026",
     "title": "Add a per-intro on/off switch and a \"Set as my intro\" message action",
     "summary": "Two ways of managing intros that the command surface couldn't express. Follows on from #731.",
     "emoji": "🎵",
