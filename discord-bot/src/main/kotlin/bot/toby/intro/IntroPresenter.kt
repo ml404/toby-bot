@@ -43,8 +43,11 @@ object IntroPresenter {
     /**
      * `Slot #2 · Volume 90% · 0:03 – 0:12` — the at-a-glance summary shown
      * under each select-menu option and inside the `/listintros` embed.
+     * A disabled intro says so first, since that's the thing you'd want to
+     * notice when wondering why it never plays.
      */
     fun summary(intro: MusicDto): String = buildString {
+        if (!intro.enabled) append("OFF · ")
         append("Slot #${intro.index ?: '?'}")
         append(" · Volume ${intro.introVolume ?: 100}%")
         append(" · ${IntroClip.describe(intro.startMs, intro.endMs)}")
@@ -64,10 +67,14 @@ object IntroPresenter {
         return embed(
             title = "Intro songs — ${member.effectiveName}",
             color = INTRO_COLOR,
-            description = if (ordered.isEmpty()) {
-                "No intros set yet. Use `/setintro link` or `/setintro attachment` to add one."
-            } else {
-                "TobyBot plays one of these at random when you join a voice channel."
+            description = when {
+                ordered.isEmpty() ->
+                    "No intros set yet. Use `/setintro link` or `/setintro attachment` to add one."
+                ordered.none { it.enabled } ->
+                    "Every intro is switched off, so nothing plays on join. " +
+                        "Turn one back on with `/editintro`."
+                else ->
+                    "TobyBot plays one of these at random when you join a voice channel."
             },
         ) {
             // EmbedBuilder rejects anything that isn't a real http(s) URL, and
@@ -76,12 +83,14 @@ object IntroPresenter {
                 .takeIf { it.startsWith("http://") || it.startsWith("https://") }
                 ?.let { setThumbnail(it) }
             ordered.forEach { intro ->
+                val marker = if (intro.enabled) "" else " (off)"
                 field(
-                    name = "#${intro.index ?: '?'} · ${truncate(displayName(intro), FIELD_NAME_LIMIT)}",
+                    name = "#${intro.index ?: '?'} · ${truncate(displayName(intro), FIELD_NAME_LIMIT)}$marker",
                     value = buildString {
                         append("Volume **${intro.introVolume ?: 100}%**")
                         append(" · Clip **${IntroClip.describe(intro.startMs, intro.endMs)}**")
                         append(" · ${if (isUrlIntro(intro)) "Link" else "Uploaded file"}")
+                        if (!intro.enabled) append(" · **skipped on join**")
                     },
                 )
             }

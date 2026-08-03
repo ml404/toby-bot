@@ -4,6 +4,7 @@ import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
+import core.managers.MessageContextManager
 import core.managers.ModalManager
 import io.mockk.mockk
 import org.springframework.boot.test.context.TestConfiguration
@@ -26,6 +27,11 @@ open class TestManagerConfig {
 
     @Bean
     open fun buttonManager(): ButtonManager {
+        return mockk(relaxed = true)
+    }
+
+    @Bean
+    open fun messageContextManager(): MessageContextManager {
         return mockk(relaxed = true)
     }
 

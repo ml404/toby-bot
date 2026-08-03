@@ -75,4 +75,42 @@ class IntroSelectionTest {
         val intros = listOf(dup, dup)
         assertTrue(IntroSelection.pick(intros, dup.id) != null)
     }
+
+    // --- enabled / disabled -------------------------------------------------
+
+    @Test
+    fun `a switched-off intro is skipped`() {
+        val on = intro(1)
+        val off = intro(2).apply { enabled = false }
+
+        repeat(50) { seed ->
+            assertEquals(on.id, IntroSelection.pick(listOf(on, off), null, Random(seed))?.id)
+        }
+    }
+
+    @Test
+    fun `switching every intro off silences the user rather than playing one anyway`() {
+        val intros = listOf(intro(1), intro(2)).onEach { it.enabled = false }
+        assertNull(IntroSelection.pick(intros))
+    }
+
+    @Test
+    fun `the no-repeat rule only considers switched-on intros`() {
+        val first = intro(1)
+        val second = intro(2)
+        val off = intro(3).apply { enabled = false }
+        val intros = listOf(first, second, off)
+
+        // With one of three off, the other two must still alternate.
+        assertEquals(second.id, IntroSelection.pick(intros, first.id)?.id)
+        assertEquals(first.id, IntroSelection.pick(intros, second.id)?.id)
+    }
+
+    @Test
+    fun `a single switched-on intro still plays even though it just played`() {
+        val on = intro(1)
+        val off = intro(2).apply { enabled = false }
+
+        assertEquals(on.id, IntroSelection.pick(listOf(on, off), on.id)?.id)
+    }
 }

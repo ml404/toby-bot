@@ -11,6 +11,8 @@ import kotlin.random.Random
  * chance of three in a row — often enough that "TobyBot picks one at random"
  * didn't feel random. Excluding the previous pick keeps every join a change
  * while staying uniform across the rest.
+ *
+ * Disabled intros ([MusicDto.enabled]) are skipped entirely.
  */
 object IntroSelection {
 
@@ -24,7 +26,9 @@ object IntroSelection {
         lastPlayedId: String? = null,
         random: Random = Random.Default,
     ): MusicDto? {
-        val candidates = intros.toList()
+        // A disabled intro keeps its slot but sits out the rotation; with all
+        // of them off the user has effectively muted themselves, so play none.
+        val candidates = intros.filter { it.enabled }
         if (candidates.size <= 1) return candidates.firstOrNull()
 
         // With only one intro left after excluding the previous pick there is

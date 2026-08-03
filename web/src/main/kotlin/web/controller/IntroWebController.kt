@@ -266,6 +266,22 @@ class IntroWebController(
         else ResponseEntity.ok(ApiResult(true, null))
     }
 
+    @PostMapping("/{guildId}/update-enabled", consumes = ["application/json"])
+    @ResponseBody
+    fun updateEnabled(
+        @PathVariable guildId: Long,
+        @RequestBody body: UpdateEnabledRequest,
+        @AuthenticationPrincipal user: OAuth2User,
+        @RequestParam(required = false) targetDiscordId: Long?
+    ): ResponseEntity<ApiResult> = WebGuildAccess.requireSignedInForJson(
+        user, notSignedInApi
+    ) { authDiscordId ->
+        val effective = resolveEffectiveDiscordId(authDiscordId, guildId, targetDiscordId)
+        val error = introWebService.updateIntroEnabled(effective, guildId, body.introId, body.enabled)
+        if (error != null) ResponseEntity.badRequest().body(ApiResult(false, error))
+        else ResponseEntity.ok(ApiResult(true, null))
+    }
+
     @PostMapping("/{guildId}/update-name", consumes = ["application/json"])
     @ResponseBody
     fun updateName(
@@ -340,6 +356,7 @@ class IntroWebController(
 
 data class UpdateVolumeRequest(val introId: String = "", val volume: Int = 0)
 data class UpdateNameRequest(val introId: String = "", val name: String = "")
+data class UpdateEnabledRequest(val introId: String = "", val enabled: Boolean = true)
 data class UpdateTimestampsRequest(val introId: String = "", val startMs: Int? = null, val endMs: Int? = null)
 data class ReorderRequest(val orderedIds: List<String> = emptyList())
 

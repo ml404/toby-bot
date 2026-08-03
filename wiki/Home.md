@@ -36,6 +36,9 @@
   limit doesn't mean a 15-second video. The same rules apply on Discord and on the web — see `common.intro.IntroClip`.
 - **Slots**: up to three intros per server; TobyBot picks one at random on join, never repeating the one
   it played last. `/listintros` shows them all.
+- **On/off per intro**: switch one out of the rotation without deleting it — the slot, name, volume and
+  clip all survive. Toggle on the web page, or the "Play on join?" field in `/editintro`.
+- **Straight from chat**: right-click any message with an MP3 or a link → **Apps → Set as my intro**.
 - **Replay cooldown**: an intro won't retrigger within 60 seconds, so channel-hopping and reconnects don't
   replay it (or pay out the intro-play credit and XP again).
 - **Editing**: `/editintro` opens a form for the name, volume and clip bounds of a chosen intro;

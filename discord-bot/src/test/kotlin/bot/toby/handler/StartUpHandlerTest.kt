@@ -25,9 +25,15 @@ class StartUpHandlerTest {
     private val awardService: SocialCreditAwardService = mockk(relaxed = true)
     private val commandManager: DefaultCommandManager = DefaultCommandManager(configService, userDtoHelper, awardService, emptyList())
     private val entryPointRegistrar: ActivityEntryPointRegistrar = mockk(relaxed = true)
+    private val contextCommandData: List<net.dv8tion.jda.api.interactions.commands.build.CommandData> =
+        listOf(net.dv8tion.jda.api.interactions.commands.build.Commands.message("Set as my intro"))
+    private val messageContextManager: core.managers.MessageContextManager = mockk(relaxed = true) {
+        every { this@mockk.contextCommandData } returns this@StartUpHandlerTest.contextCommandData
+    }
     private val handler = spyk(
         StartUpHandler(
             commandManager,
+            messageContextManager,
             entryPointRegistrar
         )
     )
@@ -47,6 +53,7 @@ class StartUpHandlerTest {
         every { jda.guildCache } returns guildCache
         every { jda.updateCommands() } returns commandListUpdateAction
         every { commandListUpdateAction.addCommands(commandManager.allSlashCommands) } returns commandListUpdateAction
+        every { commandListUpdateAction.addCommands(contextCommandData) } returns commandListUpdateAction
         every { commandListUpdateAction.queue(any()) } just Runs
 
 
@@ -56,6 +63,9 @@ class StartUpHandlerTest {
         // Assert individual steps
         verify(exactly = 1) { jda.updateCommands() }
         verify(exactly = 1) { commandListUpdateAction.addCommands(commandManager.allSlashCommands) }
+        // Right-click entries share the global command set, so they must go
+        // into the same bulk overwrite or it would delete them.
+        verify(exactly = 1) { commandListUpdateAction.addCommands(contextCommandData) }
         verify(exactly = 1) { commandListUpdateAction.queue(any()) }
     }
 
@@ -74,6 +84,7 @@ class StartUpHandlerTest {
         every { selfUser.name } returns "TobyBot"
         every { jda.updateCommands() } returns commandListUpdateAction
         every { commandListUpdateAction.addCommands(commandManager.allSlashCommands) } returns commandListUpdateAction
+        every { commandListUpdateAction.addCommands(contextCommandData) } returns commandListUpdateAction
         every { commandListUpdateAction.queue(capture(successCallback)) } just Runs
 
         handler.onReady(readyEvent)

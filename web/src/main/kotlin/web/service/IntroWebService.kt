@@ -202,7 +202,8 @@ class IntroWebService(
                 thumbnailUrl = thumbnailUrl,
                 videoId = videoId,
                 startMs = dto.startMs,
-                endMs = dto.endMs
+                endMs = dto.endMs,
+                enabled = dto.enabled
             )
         }
     }
@@ -382,6 +383,19 @@ class IntroWebService(
 
         dto.startMs = startMs
         dto.endMs = endMs
+        musicFileService.updateMusicFile(dto)
+        return null
+    }
+
+    /**
+     * Switch an intro in or out of the join rotation without deleting it.
+     * The row keeps its slot, name, volume, clip and audio.
+     */
+    fun updateIntroEnabled(discordId: Long, guildId: Long, introId: String, enabled: Boolean): String? {
+        requireOwnedIntro(discordId, guildId, introId)?.let { return it }
+
+        val dto = musicFileService.getMusicFileById(introId) ?: return "Intro not found."
+        dto.enabled = enabled
         musicFileService.updateMusicFile(dto)
         return null
     }
@@ -577,7 +591,8 @@ data class IntroViewModel(
     val thumbnailUrl: String? = null,
     val videoId: String? = null,
     val startMs: Int? = null,
-    val endMs: Int? = null
+    val endMs: Int? = null,
+    val enabled: Boolean = true
 ) {
     /**
      * What the row's clip badge shows — the actual range (`0:03 – 0:12`)

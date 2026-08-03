@@ -50,7 +50,15 @@ class MusicDto(
     var startMs: Int? = null,
 
     @Column(name = "clip_end_ms")
-    var endMs: Int? = null
+    var endMs: Int? = null,
+
+    /**
+     * Whether this intro is in the rotation. A disabled intro keeps its slot,
+     * name, volume and audio but is skipped when picking one to play, so a
+     * user can mute an intro without losing the upload.
+     */
+    @Column(name = "enabled", nullable = false)
+    var enabled: Boolean = true
 ) : Serializable {
 
     constructor(
@@ -60,7 +68,8 @@ class MusicDto(
         introVolume: Int = 20,
         musicBlob: ByteArray? = null,
         startMs: Int? = null,
-        endMs: Int? = null
+        endMs: Int? = null,
+        enabled: Boolean = true
     ) : this(
         id = "${userDto.guildId}_${userDto.discordId}_${index}",
         index = index,
@@ -70,7 +79,8 @@ class MusicDto(
         musicBlob = musicBlob,
         musicBlobHash = musicBlob?.let { computeHash(it) },
         startMs = startMs,
-        endMs = endMs
+        endMs = endMs,
+        enabled = enabled
     )
 
     enum class Adjustment {

@@ -1,6 +1,15 @@
 **Q**: How do I change the intro song?  
 **A**: Use `/setintro link` with a YouTube URL, or `/setintro attachment` with an MP3. Both take an optional `volume`.
 
+**Q**: Someone just posted a great track in chat — can I grab it without re-uploading?  
+**A**: Right-click (or long-press) the message → **Apps → Set as my intro**. It takes the MP3 attachment if
+there is one, otherwise the first link in the message. It always sets *your* intro, never the poster's.
+
+**Q**: Can I keep an intro but stop it playing?  
+**A**: Yes — switch it off. On the web there's a toggle on each row; on Discord, `/editintro` has a
+**Play on join?** field. A switched-off intro keeps its slot, name, volume and clip, and is skipped when
+TobyBot picks one. Switch every intro off and nothing plays at all.
+
 **Q**: What if I forget to set a volume?  
 **A**: The bot will default to 90% volume if none is specified.
 

@@ -2,17 +2,13 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
 import bot.toby.helpers.IntroHelper
-import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.helpers.PendingIntro
 import bot.toby.helpers.URLHelper
-import bot.toby.intro.IntroPresenter
 import bot.toby.lavaplayer.PlayerManager
 import common.intro.IntroClip
 import common.intro.IntroSlots
 import core.command.CommandContext
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import net.dv8tion.jda.api.interactions.InteractionHook
@@ -180,18 +176,7 @@ class SetIntroCommand @Autowired constructor(
                 startMs = clip.startMs,
                 endMs = clip.endMs,
             )
-            val stringSelectMenu = StringSelectMenu.create(SET_INTRO)
-                .setPlaceholder("Select the intro to replace")
-                .addOptions(IntroPresenter.selectOptions(introList))
-                .build()
-            hook.sendMessageEmbeds(IntroPresenter.listEmbed(member, introList, LIMIT))
-                .addContent(
-                    "Select the intro you'd like to replace with your new upload — " +
-                        "we only allow $LIMIT intros."
-                )
-                .setComponents(ActionRow.of(stringSelectMenu))
-                .setEphemeral(true)
-                .queue()
+            sendReplacePrompt(hook, member, introList)
             return true
         }
         return false

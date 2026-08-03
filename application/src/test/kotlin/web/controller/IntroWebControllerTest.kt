@@ -434,6 +434,48 @@ class IntroWebControllerTest {
         verify { mockSession.removeAttribute("undoDelete:$guildId:$discordId") }
     }
 
+    // updateEnabled
+
+    @Test
+    fun `updateEnabled switches an intro out of the rotation`() {
+        every { introWebService.updateIntroEnabled(any(), any(), any(), any()) } returns null
+
+        val response = controller.updateEnabled(
+            guildId, UpdateEnabledRequest("${guildId}_${discordId}_1", false), mockUser, null
+        )
+
+        assertEquals(200, response.statusCode.value())
+        assertEquals(true, response.body?.ok)
+        verify {
+            introWebService.updateIntroEnabled(discordId.toLong(), guildId, "${guildId}_${discordId}_1", false)
+        }
+    }
+
+    @Test
+    fun `updateEnabled switches one back on`() {
+        every { introWebService.updateIntroEnabled(any(), any(), any(), any()) } returns null
+
+        controller.updateEnabled(
+            guildId, UpdateEnabledRequest("${guildId}_${discordId}_1", true), mockUser, null
+        )
+
+        verify {
+            introWebService.updateIntroEnabled(discordId.toLong(), guildId, "${guildId}_${discordId}_1", true)
+        }
+    }
+
+    @Test
+    fun `updateEnabled surfaces the service error`() {
+        every { introWebService.updateIntroEnabled(any(), any(), any(), any()) } returns "Intro not found."
+
+        val response = controller.updateEnabled(
+            guildId, UpdateEnabledRequest("${guildId}_${discordId}_9", false), mockUser, null
+        )
+
+        assertEquals(400, response.statusCode.value())
+        assertEquals("Intro not found.", response.body?.error)
+    }
+
     private fun snapshot(index: Int, timestampMs: Long = System.currentTimeMillis()) = DeletedIntroSnapshot(
         id = "${guildId}_${discordId}_$index",
         index = index,
