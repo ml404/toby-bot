@@ -12,29 +12,24 @@ import org.springframework.stereotype.Service
 class StartUpHandler(
     private val commandManager: CommandManager,
     private val messageContextManager: MessageContextManager,
-    private val entryPointRegistrar: ActivityEntryPointRegistrar,
+    private val globalCommandRegistrar: GlobalCommandRegistrar,
     private val logger: DiscordLogger = DiscordLogger.createLogger(StartUpHandler::class.java)
 ) : ListenerAdapter() {
 
     override fun onReady(event: ReadyEvent) {
         logger.info("${event.jda.selfUser.name} is ready")
-        // The bulk overwrite REPLACES the full global command set, which
-        // deletes the activity Entry Point command (JDA can't express it,
-        // so it can't be in the list). Re-create it only after the
-        // overwrite has landed — firing earlier would just get wiped.
-        //
-        // Right-click → Apps entries live in the same global set, so they have
-        // to go into this one call too or the overwrite would remove them.
+        // Slash commands and right-click Apps entries share one global command
+        // set, so they go up in a single overwrite. That overwrite runs through
+        // GlobalCommandRegistrar rather than jda.updateCommands() because
+        // Discord rejects any bulk update that would drop the Activity Entry
+        // Point command, which JDA can't express — see that class for detail.
+        val slashCommands = commandManager.slashCommands.filterNotNull()
         val contextCommands = messageContextManager.contextCommandData
-        event.jda.updateCommands()
-            .addCommands(commandManager.slashCommands)
-            .addCommands(contextCommands)
-            .queue {
-                entryPointRegistrar.register(event.jda)
-            }
+        globalCommandRegistrar.register(event.jda, slashCommands + contextCommands)
+
         logger.info {
-            "Registered ${commandManager.slashCommands.size} commands and " +
-                "${contextCommands.size} context menu entries to ${event.jda.selfUser.name}"
+            "Submitted ${slashCommands.size} commands and ${contextCommands.size} context menu entries " +
+                "for ${event.jda.selfUser.name}"
         }
     }
 
