@@ -15,6 +15,9 @@ import org.junit.jupiter.api.Test
 
 internal class SetConfigFieldValidatorTest {
 
+    /** Guild for the channel-resolving specs; individual tests stub lookups. */
+    private val guild = mockk<Guild>()
+
     // ----- per-type validate() coverage -----
 
     @Test
@@ -230,5 +233,73 @@ internal class SetConfigFieldValidatorTest {
         assertEquals(2, errors.messages.size)
         assertTrue(errors.messages[0].startsWith("Volume:"))
         assertTrue(errors.messages[1].startsWith("Intro volume:"))
+    }
+
+    // --- VoiceChannelIdList (INTRO_EXCLUDED_CHANNELS) -----------------------
+
+    @Test
+    fun `a list of voice channel ids is stored as a normalised csv`() {
+        every { guild.getVoiceChannelById(100L) } returns mockk(relaxed = true)
+        every { guild.getVoiceChannelById(200L) } returns mockk(relaxed = true)
+
+        val result = SetConfigFieldValidator.validate(
+            "100, <#200>", FieldSpec.VoiceChannelIdList("Silent channels"), guild,
+        )
+
+        assertEquals(FieldResult.Write("100,200"), result)
+    }
+
+    @Test
+    fun `duplicate ids collapse rather than being stored twice`() {
+        every { guild.getVoiceChannelById(100L) } returns mockk(relaxed = true)
+
+        val result = SetConfigFieldValidator.validate(
+            "100,100", FieldSpec.VoiceChannelIdList("Silent channels"), guild,
+        )
+
+        assertEquals(FieldResult.Write("100"), result)
+    }
+
+    @Test
+    fun `an id that is not a voice channel in this server is rejected`() {
+        // An exemption that silently does nothing is worse than no exemption:
+        // the admin walks away believing that channel is quiet.
+        every { guild.getVoiceChannelById(any<Long>()) } returns null
+
+        val result = SetConfigFieldValidator.validate(
+            "100", FieldSpec.VoiceChannelIdList("Silent channels"), guild,
+        )
+
+        assertInstanceOf(FieldResult.Error::class.java, result)
+    }
+
+    @Test
+    fun `junk in the list fails the whole submission`() {
+        every { guild.getVoiceChannelById(100L) } returns mockk(relaxed = true)
+
+        val result = SetConfigFieldValidator.validate(
+            "100,notanid", FieldSpec.VoiceChannelIdList("Silent channels"), guild,
+        )
+
+        assertInstanceOf(FieldResult.Error::class.java, result)
+    }
+
+    @Test
+    fun `zero clears the exemption list`() {
+        val result = SetConfigFieldValidator.validate(
+            "0", FieldSpec.VoiceChannelIdList("Silent channels"), guild,
+        )
+
+        assertEquals(FieldResult.Write(""), result)
+    }
+
+    @Test
+    fun `a blank field leaves the existing list alone`() {
+        // Shared rule across every setconfig field: blank means "don't
+        // overwrite", which is how the pre-filled modal stays safe to submit.
+        assertEquals(
+            FieldResult.Skip,
+            SetConfigFieldValidator.validate("  ", FieldSpec.VoiceChannelIdList("Silent channels"), guild),
+        )
     }
 }

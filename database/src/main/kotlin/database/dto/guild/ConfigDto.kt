@@ -30,6 +30,27 @@ class ConfigDto(
 
     enum class Configurations(val configValue: String) {
         INTRO_VOLUME("DEFAULT_INTRO_VOLUME"),
+
+        // Server-wide intro switch. Boolean ("true"/"false"); opt-out, so a
+        // guild with no row keeps playing intros exactly as before. "false"
+        // suppresses both playback on join and the "you don't have an intro
+        // yet" nudge — a server that doesn't want the feature shouldn't be
+        // recruiting people into it.
+        INTROS_ENABLED("INTROS_ENABLED"),
+
+        // Voice channels exempt from intros, as a CSV of channel ids. For the
+        // "study" / "meeting" / on-call channel where an intro is an
+        // interruption rather than a greeting. Unparseable entries are
+        // ignored rather than failing the whole list.
+        INTRO_EXCLUDED_CHANNELS("INTRO_EXCLUDED_CHANNELS"),
+
+        // Loudness normalisation. Boolean ("true"/"false"); opt-out. When on,
+        // each intro's measured level (music_files.measured_rms, sampled on
+        // first play) corrects its volume so two intros set to the same
+        // number sound equally loud. Correction is clamped to 0.5x-2x, so
+        // turning this off changes at most a factor of two either way.
+        INTRO_NORMALISE_VOLUME("INTRO_NORMALISE_VOLUME"),
+
         VOLUME("DEFAULT_VOLUME"),
         MOVE("DEFAULT_MOVE_CHANNEL"),
         DELETE_DELAY("DELETE_MESSAGE_DELAY"),

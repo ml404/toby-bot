@@ -50,13 +50,14 @@ class SetConfigCategoryModalRenderingTest {
     }
 
     @Test
-    fun `General modal renders 5 TextInputs and zero EntitySelectMenus`() {
+    fun `General modal renders 4 TextInputs and zero EntitySelectMenus`() {
         val modal = SetConfigGeneralModal(configService)
         val built = modal.buildModal(SetConfigGeneralModal.MODAL_NAME, guild) { null }
 
         val textInputs = built.allComponents().filterIsInstance<TextInput>()
         val selectMenus = built.allComponents().filterIsInstance<EntitySelectMenu>()
-        assertEquals(5, textInputs.size, "General modal has 5 TextInputs")
+        // Four since the default intro volume moved to /setconfig intro.
+        assertEquals(4, textInputs.size, "General modal has 4 TextInputs")
         assertTrue(
             selectMenus.isEmpty(),
             "General modal must not embed EntitySelectMenu — Discord rejects mixed modals (got ${selectMenus.size})",
@@ -150,6 +151,7 @@ class SetConfigCategoryModalRenderingTest {
         // embed an EntitySelectMenu.
         val concretes = listOf<SetConfigCategoryModal>(
             SetConfigGeneralModal(configService),
+            SetConfigIntroModal(configService),
             SetConfigActivityModal(configService, mockk(relaxed = true)),
             SetConfigFeesModal(configService),
             SetConfigJackpotModal(configService),

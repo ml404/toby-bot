@@ -59,6 +59,18 @@ object SetConfigFieldValidator {
          * `"0"` clears the override to empty string when [allowClear].
          */
         data class ChannelByIdStoreId(override val label: String, val allowClear: Boolean = true) : FieldSpec
+
+        /**
+         * Comma-separated voice channel references (ids or `<#id>` mentions),
+         * every one resolved against the guild; stored as a CSV of ids. Used
+         * for INTRO_EXCLUDED_CHANNELS. `"0"` or `"none"` clears the list.
+         *
+         * Unlike the join-time reader, which drops junk so one bad id can't
+         * disable every other exemption, this rejects the whole submission:
+         * an admin typing a channel id deserves to be told it didn't take,
+         * rather than discovering months later that intros still play there.
+         */
+        data class VoiceChannelIdList(override val label: String) : FieldSpec
     }
 
     sealed interface FieldResult {
@@ -80,6 +92,7 @@ object SetConfigFieldValidator {
             is FieldSpec.EnumChoice -> parseEnum(raw, spec)
             is FieldSpec.ChannelByIdStoreName -> resolveChannelName(raw, spec, guild)
             is FieldSpec.ChannelByIdStoreId -> resolveChannelId(raw, spec, guild)
+            is FieldSpec.VoiceChannelIdList -> resolveVoiceChannelIds(raw, spec, guild)
         }
     }
 
@@ -176,6 +189,20 @@ object SetConfigFieldValidator {
         guild.getTextChannelById(id)
             ?: return FieldResult.Error("${spec.label}: no text channel with id $id in this server")
         return FieldResult.Write(id.toString())
+    }
+
+    private fun resolveVoiceChannelIds(raw: String, spec: FieldSpec.VoiceChannelIdList, guild: Guild?): FieldResult {
+        if (raw == "0" || raw.equals("none", ignoreCase = true)) return FieldResult.Write("")
+        if (guild == null) return FieldResult.Error("${spec.label}: no guild context to resolve channels")
+        val ids = LinkedHashSet<Long>()
+        for (token in raw.split(',', ' ', '\n').map { it.trim() }.filter { it.isNotEmpty() }) {
+            val id = extractChannelId(token)
+                ?: return FieldResult.Error("${spec.label}: '$token' is not a channel id or #mention")
+            guild.getVoiceChannelById(id)
+                ?: return FieldResult.Error("${spec.label}: no voice channel with id $id in this server")
+            ids += id
+        }
+        return FieldResult.Write(ids.joinToString(","))
     }
 
     private fun extractChannelId(raw: String): Long? =

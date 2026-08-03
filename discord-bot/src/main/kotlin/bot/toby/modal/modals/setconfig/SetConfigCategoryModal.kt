@@ -162,6 +162,7 @@ abstract class SetConfigCategoryModal(
         is FieldSpec.EnumChoice -> spec.allowed.joinToString(" / ")
         is FieldSpec.ChannelByIdStoreName -> "channel id"
         is FieldSpec.ChannelByIdStoreId -> if (spec.allowClear) "channel id (0 to clear)" else "channel id"
+        is FieldSpec.VoiceChannelIdList -> "voice channel ids, comma-separated (0 to clear)"
     }
 
     private fun truncateLabel(label: String): String =
