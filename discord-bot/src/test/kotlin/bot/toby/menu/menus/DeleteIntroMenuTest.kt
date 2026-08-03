@@ -36,6 +36,7 @@ class DeleteIntroMenuTest : MenuTest {
         introHelper = mockk(relaxed = true)
         eventWaiter = mockk(relaxed = true)
         undoStore = mockk(relaxed = true)
+        every { introHelper.canManageIntro(any(), any(), any()) } returns true
 
         // Initialize the class under test
         deleteIntroMenu = DeleteIntroMenu(introHelper, undoStore)
@@ -61,7 +62,7 @@ class DeleteIntroMenuTest : MenuTest {
         deleteIntroMenu.handle(menuContext, 0)
 
         // Verify the intro is snapshotted for undo, then deleted
-        verify { undoStore.remember(intro) }
+        verify { undoStore.remember(intro, any()) }
         verify { introHelper.deleteIntro(intro) }
     }
 
@@ -76,5 +77,20 @@ class DeleteIntroMenuTest : MenuTest {
 
         // Verify that the user is informed the intro wasn't found
         verify { menuContext.event.hook.sendMessage("Unable to find the selected intro.") }
+    }
+
+    @Test
+    fun `an intro the caller cannot manage is not deleted`() {
+        // The selected id comes back from the client, so a forged value must
+        // not be able to delete someone else's intro.
+        val intro = MusicDto(userDto, 1, "Someone else's")
+        every { introHelper.findIntroById("1") } returns intro
+        every { menuContext.event.values.firstOrNull() } returns "1"
+        every { introHelper.canManageIntro(any(), any(), any()) } returns false
+
+        deleteIntroMenu.handle(menuContext, 0)
+
+        verify(exactly = 0) { introHelper.deleteIntro(any()) }
+        verify(exactly = 0) { undoStore.remember(any(), any()) }
     }
 }

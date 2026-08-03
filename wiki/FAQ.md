@@ -20,6 +20,9 @@ TobyBot picks one. Switch every intro off and nothing plays at all.
 **A**: Yes. Pass `start` and `end` to `/setintro` (e.g. `start:1:04 end:1:16`) and the bot plays just that stretch.
 Both accept `mm:ss` or a raw number of seconds. The clip itself still has to fit inside the 15-second limit.
 
+**Q**: I'm an admin — can I fix someone else's intro?  
+**A**: Yes. `/setintro`, `/listintros`, `/editintro` and `/deleteintro` all take a user option for super-users.
+
 **Q**: Can I rename an intro or trim it after the fact?  
 **A**: `/editintro`, then pick the intro — a form opens with its name, volume and clip bounds pre-filled.
 Clearing a clip field removes that bound, so blanking both restores the full track.

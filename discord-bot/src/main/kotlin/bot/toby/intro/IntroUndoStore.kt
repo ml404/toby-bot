@@ -43,12 +43,17 @@ class IntroUndoStore {
         .maximumSize(1_000)
         .build<String, Snapshot>()
 
-    fun remember(intro: MusicDto) {
+    /**
+     * @param actorDiscordId who pressed delete — the undo button is theirs to
+     *        press, which for a super-user managing someone else's intros is
+     *        not the same person as [MusicDto.userDto].
+     */
+    fun remember(intro: MusicDto, actorDiscordId: Long? = null) {
         val user = intro.userDto ?: return
         val guildId = user.guildId
         val discordId = user.discordId
         snapshots.put(
-            key(guildId, discordId),
+            key(guildId, actorDiscordId ?: discordId),
             Snapshot(
                 guildId = guildId,
                 discordId = discordId,

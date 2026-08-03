@@ -68,6 +68,9 @@ class EditIntroModalTest {
         every { send.setEphemeral(true) } returns send
         every { send.queue() } just Runs
 
+        // Callers manage their own intros unless a test says otherwise.
+        every { introHelper.canManageIntro(any(), any(), any()) } returns true
+
         // By default the clip passes validation; individual tests override.
         every { introHelper.validateClipAgainstSource(any(), any(), any(), any()) } answers {
             lastArg<(String?) -> Unit>().invoke(null)
@@ -217,11 +220,25 @@ class EditIntroModalTest {
     @Test
     fun `an intro belonging to another user is refused`() {
         every { event.modalId } returns EditIntroModal.customId("100_999_1")
+        every { introHelper.canManageIntro("100_999_1", 100L, 42L) } returns false
 
         modal.handle(ctx, 0)
 
         verify(exactly = 0) { introHelper.updateIntro(any()) }
         assertEquals("That intro isn't yours to edit.", replies.single())
+    }
+
+    @Test
+    fun `a super-user may edit someone else's intro`() {
+        val theirs = MusicDto(UserDto(discordId = 999L, guildId = 100L), 1, "Theirs", 90, byteArrayOf(1))
+        every { event.modalId } returns EditIntroModal.customId("100_999_1")
+        every { introHelper.canManageIntro("100_999_1", 100L, 42L) } returns true
+        every { introHelper.findIntroById("100_999_1") } returns theirs
+        fields(volume = "10")
+
+        modal.handle(ctx, 0)
+
+        verify { introHelper.updateIntro(match<MusicDto> { it.introVolume == 10 }) }
     }
 
     @Test

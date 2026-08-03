@@ -8,7 +8,6 @@ import common.intro.IntroSlots
 import core.command.CommandContext
 import database.dto.user.UserDto
 import net.dv8tion.jda.api.components.actionrow.ActionRow
-import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.beans.factory.annotation.Autowired
@@ -47,27 +46,11 @@ class ListIntrosCommand @Autowired constructor(
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
-        val requestedMember: Member? = event.getOption(USER)?.asMember
-        if (requestedMember != null && requestedMember.idLong != event.user.idLong && !requestingUserDto.superUser) {
-            sendErrorMessage(event, deleteDelay)
-            return
-        }
+        val target = resolveIntroTarget(event, requestingUserDto, introHelper, deleteDelay) ?: return
 
-        val targetMember = requestedMember ?: event.member ?: run {
-            event.hook.sendMessage("Intros are per-server — run this inside the server you want to see.")
-                .setEphemeral(true).queue()
-            return
-        }
-
-        val targetDto = if (targetMember.idLong == event.user.idLong) {
-            requestingUserDto
-        } else {
-            introHelper.findUserById(targetMember.idLong, targetMember.guild.idLong)
-        }
-
-        val embed = IntroPresenter.listEmbed(targetMember, targetDto.musicDtos, IntroSlots.MAX_INTRO_COUNT)
+        val embed = IntroPresenter.listEmbed(target.member, target.userDto.musicDtos, IntroSlots.MAX_INTRO_COUNT)
         event.hook.sendMessageEmbeds(embed)
-            .addComponents(ActionRow.of(IntroPresenter.webDashboardButton(targetMember.guild.idLong)))
+            .addComponents(ActionRow.of(IntroPresenter.webDashboardButton(target.member.guild.idLong)))
             .setEphemeral(true)
             .queue()
     }
@@ -78,10 +61,6 @@ class ListIntrosCommand @Autowired constructor(
 
     override val optionData: List<OptionData>
         get() = listOf(
-            OptionData(OptionType.USER, USER, "Whose intros to show (super-users only)", false)
+            OptionData(OptionType.USER, INTRO_USER_OPTION, "Whose intros to show (super-users only)", false)
         )
-
-    companion object {
-        private const val USER = "user"
-    }
 }
