@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Stop a new intro overwriting an existing one after a delete",
+    "summary": "## The bug",
+    "emoji": "🎵",
+    "prNumber": 734
+  },
+  {
+    "date": "August 2026",
     "title": "Fix command registration failing entirely on Discord error 50240",
     "summary": "No commands have been registering at boot. From production:",
     "emoji": "✨",
