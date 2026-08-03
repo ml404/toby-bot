@@ -4,7 +4,6 @@ import bot.toby.handler.ActivityEventHandler
 import bot.toby.handler.AutocompleteEventListener
 import bot.toby.handler.ButtonEventListener
 import bot.toby.handler.CardMentionListener
-import bot.toby.handler.EventWaiter
 import bot.toby.handler.GuildLeaveCleanupHandler
 import bot.toby.handler.MenuEventListener
 import bot.toby.handler.MessageChatListener
@@ -33,7 +32,6 @@ class JdaListenerRegistrar @Autowired constructor(
     messageContextEventListener: MessageContextEventListener,
     autocompleteEventListener: AutocompleteEventListener,
     activityEventHandler: ActivityEventHandler,
-    eventWaiter: EventWaiter,
     guildLeaveCleanupHandler: GuildLeaveCleanupHandler,
     installWelcomeHandler: InstallWelcomeHandler,
     welcomeAndAutoRoleHandler: WelcomeAndAutoRoleHandler,
@@ -51,7 +49,6 @@ class JdaListenerRegistrar @Autowired constructor(
             messageContextEventListener,
             autocompleteEventListener,
             activityEventHandler,
-            eventWaiter,
             guildLeaveCleanupHandler,
             installWelcomeHandler,
             welcomeAndAutoRoleHandler,

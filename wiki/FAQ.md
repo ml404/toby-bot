@@ -38,7 +38,8 @@ retrigger it. Wait a minute, or play it on demand with `/play intro`.
 **A**: You shouldn't any more — the pick now skips whichever intro played last, so consecutive joins always differ.
 
 **Q**: TobyBot keeps DMing me to set an intro.  
-**A**: It'll only nudge you once a day per server now. To silence it entirely, run `/notify set INTRO_PROMPT off`.
+**A**: It'll only nudge you once a day per server, and the DM is just a link to the setup page — there's
+nothing to reply to. To silence it entirely, run `/notify set INTRO_PROMPT off`.
 
 **Q**: Where's the web version?  
 **A**: <https://www.toby-bot.co.uk/intro/guilds> — same intros, with drag-to-reorder and a draggable trim bar for picking clips.

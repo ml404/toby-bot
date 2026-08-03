@@ -99,8 +99,8 @@ object IntroPresenter {
     }
 
     /** Deep link to the guild's intro page on the web dashboard. */
-    fun webDashboardButton(guildId: Long): Button =
-        Button.link("$BOT_WEB_URL/intro/$guildId", "Manage on the web")
+    fun webDashboardButton(guildId: Long, label: String = "Manage on the web"): Button =
+        Button.link("$BOT_WEB_URL/intro/$guildId", label)
 
     private const val FIELD_NAME_LIMIT = 200
 

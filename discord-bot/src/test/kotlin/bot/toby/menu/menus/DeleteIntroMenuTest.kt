@@ -1,6 +1,5 @@
 package bot.toby.menu.menus
 
-import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper
 import bot.toby.intro.IntroUndoStore
 import bot.toby.menu.DefaultMenuContext
@@ -19,7 +18,6 @@ import org.junit.jupiter.api.Test
 class DeleteIntroMenuTest : MenuTest {
 
     private lateinit var introHelper: IntroHelper
-    private lateinit var eventWaiter: EventWaiter
     private lateinit var undoStore: IntroUndoStore
     private lateinit var deleteIntroMenu: DeleteIntroMenu
     private lateinit var menuContext: DefaultMenuContext
@@ -34,7 +32,6 @@ class DeleteIntroMenuTest : MenuTest {
 
         // Mock the dependencies
         introHelper = mockk(relaxed = true)
-        eventWaiter = mockk(relaxed = true)
         undoStore = mockk(relaxed = true)
         every { introHelper.canManageIntro(any(), any(), any()) } returns true
 

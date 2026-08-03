@@ -16,10 +16,10 @@ import org.springframework.stereotype.Component
  * Submission handler for the intro editor opened by `/editintro`.
  *
  * The previous flow asked the user to type a bare number into the channel and
- * raced a 10-second [bot.toby.handler.EventWaiter] against them: miss the
- * window and the edit was silently cancelled, hit it and the bot deleted your
- * message afterwards. It also only ever exposed volume, so renaming an intro
- * or trimming it to a clip was web-only.
+ * raced a 10-second waiter against them: miss the window and the edit was
+ * silently cancelled, hit it and the bot deleted your message afterwards. It
+ * also only ever exposed volume, so renaming an intro or trimming it to a clip
+ * was web-only.
  *
  * A modal replaces all of that — name, volume and clip bounds in one form,
  * pre-filled with the current values, with no timer and nothing posted to the

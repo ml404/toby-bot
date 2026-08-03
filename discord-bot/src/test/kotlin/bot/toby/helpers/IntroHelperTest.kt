@@ -1,7 +1,6 @@
 package bot.toby.helpers
 
 import bot.coroutines.MainCoroutineExtension
-import bot.toby.handler.EventWaiter
 import bot.toby.helpers.IntroHelper.Companion.MAX_FILE_SIZE_KB
 import database.dto.music.MusicDto
 import database.service.guild.ConfigService
@@ -43,7 +42,6 @@ class IntroHelperTest {
     private lateinit var musicFileService: database.service.music.MusicFileService
     private lateinit var configService: ConfigService
     private lateinit var httpHelper: HttpHelper
-    private lateinit var eventWaiter: EventWaiter
     private lateinit var event: SlashCommandInteractionEvent
     private lateinit var userDto: database.dto.user.UserDto
     private lateinit var musicDto: MusicDto
@@ -56,9 +54,8 @@ class IntroHelperTest {
         musicFileService = mockk(relaxed = true)
         configService = mockk(relaxed = true)
         httpHelper = mockk(relaxed = true)
-        eventWaiter = mockk(relaxed = true)
 
-        introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter)
+        introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper)
 
         event = mockk(relaxed = true)
         userDto = mockk(relaxed = true)
@@ -431,51 +428,6 @@ class IntroHelperTest {
         assert(result == 1)
     }
 
-    @Test
-    fun `promptUserForMusicInfo should send DM with prompt message`() {
-        val user = mockk<User>(relaxed = true)
-        val guild = mockk<Guild>(relaxed = true)
-        val privateChannel = mockk<PrivateChannel>(relaxed = true)
-
-        // Use a slot to capture the Consumer passed to queue
-        val consumerSlot = slot<Consumer<PrivateChannel>>()
-
-        // Mock opening the user's private channel and invoking the queue lambda
-        every { user.openPrivateChannel() } returns mockk {
-            every { queue(capture(consumerSlot)) } answers {
-                consumerSlot.captured.accept(privateChannel) // invoke the consumer
-            }
-        }
-
-        every { guild.name } returns "TestGuild"
-
-        // Call the method
-        introHelper.promptUserForMusicInfo(user, guild)
-
-        // Verify the correct message was sent in the user's DM
-        verify {
-            privateChannel.sendMessage("You don't have an intro song yet on server 'TestGuild'! Please reply with a YouTube URL or upload a music file, and optionally provide a volume level (1-100). E.g. 'https://www.youtube.com/watch?v=VIDEO_ID_HERE 90'")
-                .queue(any())
-        }
-
-        // Capture the arguments for waitForMessage to assert them
-        val messageWaiterSlot1 = slot<(MessageReceivedEvent) -> Boolean>()
-        val messageWaiterSlot2 = slot<(MessageReceivedEvent) -> Unit>()
-        val timeoutSlot = slot<Duration>()
-
-        // Adjust the verification for waitForMessage
-        verify {
-            eventWaiter.waitForMessage(
-                capture(messageWaiterSlot1),
-                capture(messageWaiterSlot2),
-                capture(timeoutSlot),
-                any()
-            )
-        }
-
-        // Assert the timeout value if necessary
-        assert(timeoutSlot.captured == 5.minutes) // Check the timeout value
-    }
 
     @Test
     fun `parseVolume should extract valid volume from message`() {
@@ -495,55 +447,9 @@ class IntroHelperTest {
         assert(result == null)
     }
 
-    @Test
-    fun `saveUserMusicDto should persist musicDto`() {
-        val user = mockk<User>(relaxed = true)
-        val guild = mockk<Guild>(relaxed = true)
-        val inputData = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
 
-        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
-            every { guildId } returns guild.idLong
-            every { discordId } returns 1234L
-        }
-        every { musicFileService.createNewMusicFile(any()) } returns mockk()
 
-        introHelper.saveUserMusicDto(user, guild, inputData, 70)
 
-        verify {
-            musicFileService.createNewMusicFile(any())
-        }
-    }
-
-    @Test
-    fun `determineMusicBlob should process URL into byte array`() {
-        val input = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-
-        val result = introHelper.determineMusicBlob(input)
-
-        assert(result != null)
-        assert(result!!.isNotEmpty())
-    }
-
-    @Test
-    fun `determineFileName should return URL as file name for URL input`() {
-        val input = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-
-        val result = introHelper.determineFileName(input)
-
-        assert(result == "https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-    }
-
-    @Test
-    fun `determineFileName should return attachment file name`() {
-        val attachment = mockk<Attachment>(relaxed = true)
-        every { attachment.fileName } returns "test.mp3"
-
-        val input = InputData.Attachment(attachment)
-
-        val result = introHelper.determineFileName(input)
-
-        assert(result == "test.mp3")
-    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @Test
@@ -631,7 +537,7 @@ class IntroHelperTest {
     @Test
     fun `handleUrl fetches video title and passes it as filename to persistMusicUrl`() = runTest {
         val testDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, testDispatcher))
+        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, testDispatcher))
         val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
         coEvery { httpHelper.getYouTubeVideoTitle(url) } returns "Never Gonna Give You Up"
@@ -650,7 +556,7 @@ class IntroHelperTest {
     @Test
     fun `handleUrl falls back to URL as filename when title fetch fails`() = runTest {
         val testDispatcher = UnconfinedTestDispatcher(testScheduler)
-        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, testDispatcher))
+        val testIntroHelper = spyk(IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, testDispatcher))
         val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
         coEvery { httpHelper.getYouTubeVideoTitle(url) } throws RuntimeException("API error")
@@ -667,41 +573,5 @@ class IntroHelperTest {
 
     // saveUserMusicDto — displayName sets fileName
 
-    @Test
-    fun `saveUserMusicDto uses displayName as fileName when provided`() {
-        val user = mockk<User>(relaxed = true)
-        val guild = mockk<Guild>(relaxed = true)
-        val inputData = InputData.Url("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
-        val slot = slot<MusicDto>()
 
-        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
-            every { guildId } returns guild.idLong
-            every { discordId } returns 1234L
-        }
-        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
-
-        introHelper.saveUserMusicDto(user, guild, inputData, 70, "Never Gonna Give You Up")
-
-        assertEquals("Never Gonna Give You Up", slot.captured.fileName)
-    }
-
-    @Test
-    fun `saveUserMusicDto uses URL as fileName when displayName not provided`() {
-        val user = mockk<User>(relaxed = true)
-        val guild = mockk<Guild>(relaxed = true)
-        val url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        val inputData = InputData.Url(url)
-        val slot = slot<MusicDto>()
-
-        every { userDtoHelper.calculateUserDto(any(), any()) } returns mockk {
-            every { guildId } returns guild.idLong
-            every { discordId } returns 1234L
-        }
-        every { musicFileService.createNewMusicFile(capture(slot)) } returns mockk()
-
-        introHelper.saveUserMusicDto(user, guild, inputData, 70)
-
-        assertEquals(url, slot.captured.fileName)
-        assertNull(slot.captured.musicBlob?.let { String(it) }?.takeIf { it != url })
-    }
 }

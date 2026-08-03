@@ -7,7 +7,6 @@ import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.DefaultCommandContext
 import bot.toby.command.commands.music.intro.SetIntroCommand
-import bot.toby.handler.EventWaiter
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
@@ -39,7 +38,6 @@ internal class SetIntroCommandTest : MusicCommandTest {
     private var userDtoHelper: UserDtoHelper = mockk(relaxed = true)
     private var musicFileService: database.service.music.MusicFileService = mockk(relaxed = true)
     private var configService: ConfigService = mockk(relaxed = true)
-    private var eventWaiter: EventWaiter = mockk(relaxed = true)
     private var httpHelper: HttpHelper = mockk(relaxed = true)
     private lateinit var mentionedUserDto: UserDto
 
@@ -73,7 +71,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("link")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -94,7 +92,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("link")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -119,7 +117,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("link")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -146,7 +144,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("link")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -171,7 +169,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("link")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -202,7 +200,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("attachment")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -228,7 +226,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
         mockSub("attachment")
 
         val dispatcher = StandardTestDispatcher(testScheduler)
-        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+        val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         setIntroCommand = SetIntroCommand(introHelper)
 
         val commandContext = DefaultCommandContext(event)
@@ -260,7 +258,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
             mockSub("link")
 
             val dispatcher = StandardTestDispatcher(testScheduler)
-            val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+            val introHelper = IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
             setIntroCommand = SetIntroCommand(introHelper)
 
             val commandContext = DefaultCommandContext(event)
@@ -295,7 +293,7 @@ internal class SetIntroCommandTest : MusicCommandTest {
 
     private fun newCommand(dispatcher: kotlinx.coroutines.CoroutineDispatcher): SetIntroCommand {
         val introHelper =
-            IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, eventWaiter, dispatcher)
+            IntroHelper(userDtoHelper, musicFileService, configService, httpHelper, dispatcher)
         return SetIntroCommand(introHelper)
     }
 
