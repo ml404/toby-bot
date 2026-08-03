@@ -14,6 +14,7 @@ import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEve
 import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -195,7 +196,10 @@ class SetIntroCommand @Autowired constructor(
         get() = listOf(
             SubcommandData(LINK, "Set intro via YouTube link")
                 .addOption(OptionType.STRING, LINK, "Link to set as your discord intro", true)
-                .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOptions(
+                    OptionData(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                        .setRequiredRange(MIN_VOLUME.toLong(), MAX_VOLUME.toLong())
+                )
                 .addOption(OptionType.STRING, START, "Clip start, e.g. 0:12 — lets you use a longer video")
                 .addOption(
                     OptionType.STRING, END,
@@ -204,7 +208,10 @@ class SetIntroCommand @Autowired constructor(
                 .addOption(OptionType.MENTIONABLE, USERS, "User whose intro to change"),
             SubcommandData(ATTACHMENT, "Set intro via file upload")
                 .addOption(OptionType.ATTACHMENT, ATTACHMENT, "Attachment (file) to set as your discord intro", true)
-                .addOption(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                .addOptions(
+                    OptionData(OptionType.INTEGER, VOLUME, "Volume to set your intro to")
+                        .setRequiredRange(MIN_VOLUME.toLong(), MAX_VOLUME.toLong())
+                )
                 .addOption(OptionType.STRING, START, "Clip start, e.g. 0:12")
                 .addOption(
                     OptionType.STRING, END,
@@ -219,6 +226,11 @@ class SetIntroCommand @Autowired constructor(
         private const val LINK = "link"
         private const val ATTACHMENT = "attachment"
         private const val START = "start"
+
+        // Declared on the option so Discord rejects an out-of-range value in
+        // the client, rather than the bot silently coercing it after the fact.
+        private const val MIN_VOLUME = 1
+        private const val MAX_VOLUME = 100
         private const val END = "end"
         private val LIMIT = IntroSlots.MAX_INTRO_COUNT
     }

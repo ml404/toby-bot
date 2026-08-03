@@ -333,14 +333,10 @@ class IntroWebService(
     fun validateClip(startMs: Int?, endMs: Int?, sourceDurationMs: Int?): String? =
         IntroClip.validate(startMs, endMs, sourceDurationMs)
 
-    // Picks the smallest unused slot in 1..MAX_INTRO_COUNT. Walking the range
-    // (rather than `size + 1`) is what lets "Add" work after a delete left a
-    // gap like [1, 3] — otherwise the new id collides with an existing row's
-    // id and the JPA layer silently turns the insert into an update.
-    private fun nextFreeIndex(existingIntros: List<MusicDto>): Int? {
-        val used = existingIntros.mapNotNull { it.index }.toSet()
-        return (1..MAX_INTRO_COUNT).firstOrNull { it !in used }
-    }
+    // Shared with the slash-command path via IntroSlots — see there for why
+    // walking the range beats `size + 1`.
+    private fun nextFreeIndex(existingIntros: List<MusicDto>): Int? =
+        IntroSlots.nextFreeIndex(existingIntros.map { it.index })
 
     private fun requireOwnedIntro(discordId: Long, guildId: Long, introId: String): String? =
         if (introId.startsWith("${guildId}_${discordId}_")) null

@@ -1,5 +1,7 @@
 package bot.toby.command.commands.music.intro
 
+import bot.toby.command.commands.music.MusicCommand
+import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.SET_INTRO
 import bot.toby.intro.IntroPresenter
 import common.intro.IntroSlots
@@ -21,18 +23,58 @@ import net.dv8tion.jda.api.interactions.InteractionHook
  */
 internal fun sendIntroSelection(
     event: SlashCommandInteractionEvent,
-    requestingUserDto: UserDto,
+    target: IntroTarget,
     menuId: String,
     placeholder: String,
     emptyMessage: String,
 ) {
-    val intros = requestingUserDto.musicDtos
+    val intros = target.userDto.musicDtos
     if (intros.isEmpty()) {
         event.hook.sendMessage(emptyMessage).setEphemeral(true).queue()
         return
     }
 
-    sendIntroMenu(event.hook, event.member, intros, menuId, placeholder, null)
+    sendIntroMenu(event.hook, target.member, intros, menuId, placeholder, null)
+}
+
+/** Whose intros a command is acting on. */
+internal data class IntroTarget(val member: Member, val userDto: UserDto)
+
+/** Option name shared by the intro commands that can act on someone else. */
+internal const val INTRO_USER_OPTION = "user"
+
+/**
+ * Resolves whose intros to act on. Defaults to the caller; a `user:` option
+ * targets someone else, which only super-users may do — the same rule
+ * `/setintro` applies to setting them.
+ *
+ * @return the target, or null when the caller was rejected (the refusal has
+ *         already been sent) or the command ran outside a guild.
+ */
+internal fun MusicCommand.resolveIntroTarget(
+    event: SlashCommandInteractionEvent,
+    requestingUserDto: UserDto,
+    introHelper: IntroHelper,
+    deleteDelay: Int,
+): IntroTarget? {
+    val requested = event.getOption(INTRO_USER_OPTION)?.asMember
+    if (requested != null && requested.idLong != event.user.idLong && !requestingUserDto.superUser) {
+        sendErrorMessage(event, deleteDelay)
+        return null
+    }
+
+    val member = requested ?: event.member ?: run {
+        event.hook.sendMessage("Intros are per-server — run this inside the server you want to manage.")
+            .setEphemeral(true).queue()
+        return null
+    }
+
+    val userDto = if (member.idLong == event.user.idLong) {
+        requestingUserDto
+    } else {
+        introHelper.findUserById(member.idLong, member.guild.idLong)
+    }
+    return IntroTarget(member, userDto)
 }
 
 /**

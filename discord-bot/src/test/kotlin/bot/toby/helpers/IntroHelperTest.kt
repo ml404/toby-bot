@@ -281,6 +281,90 @@ class IntroHelperTest {
         }
     }
 
+    // --- slot allocation ---------------------------------------------------
+
+    /** A user whose intros sit in [indexes]. */
+    private fun userWithSlots(vararg indexes: Int): database.dto.user.UserDto {
+        val owner = database.dto.user.UserDto(discordId = 1234L, guildId = 1L)
+        owner.musicDtos = indexes.map { MusicDto(owner, it, "intro$it", 90, byteArrayOf(it.toByte())) }
+            .toMutableList()
+        return owner
+    }
+
+    @Test
+    fun `a new intro fills the gap a delete left rather than overwriting a slot`() {
+        // Regression: slots [1, 3] with the old `size + 1` allocator produced
+        // index 3, whose id already existed — and createNewMusicFile turns an
+        // id collision into an update, silently replacing the slot-3 intro.
+        val owner = userWithSlots(1, 3)
+        every { userDtoHelper.calculateUserDto(1234L, 1L) } returns owner
+
+        introHelper.persistMusicUrl(
+            event, owner, 10, "new", "http://valid.url", "TestUser", 70, null
+        )
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(2, saved.captured.index)
+        assertEquals("1_1234_2", saved.captured.id)
+    }
+
+    @Test
+    fun `a file intro also takes the lowest free slot`() {
+        val owner = userWithSlots(2)
+        every { userDtoHelper.calculateUserDto(1234L, 1L) } returns owner
+        val inputStream = mockk<InputStream>()
+        every { FileUtils.readInputStreamToByteArray(inputStream) } returns ByteArray(10)
+
+        introHelper.persistMusicFile(
+            event, owner, "TestUser", 10, "filename.mp3", 70, inputStream, null
+        )
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(1, saved.captured.index)
+    }
+
+    @Test
+    fun `slots fill in order when there is no gap`() {
+        val owner = userWithSlots(1, 2)
+        every { userDtoHelper.calculateUserDto(1234L, 1L) } returns owner
+
+        introHelper.persistMusicUrl(
+            event, owner, 10, "new", "http://valid.url", "TestUser", 70, null
+        )
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(3, saved.captured.index)
+    }
+
+    @Test
+    fun `a full set saves nothing and says so`() {
+        val owner = userWithSlots(1, 2, 3)
+        every { userDtoHelper.calculateUserDto(1234L, 1L) } returns owner
+
+        introHelper.persistMusicUrl(
+            event, owner, 10, "new", "http://valid.url", "TestUser", 70, null
+        )
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { hook.sendMessage(match<String> { it.contains("already have 3 intros") }) }
+    }
+
+    @Test
+    fun `replacing a chosen intro keeps its slot`() {
+        val owner = userWithSlots(1, 2, 3)
+        every { userDtoHelper.calculateUserDto(1234L, 1L) } returns owner
+        val chosen = owner.musicDtos[1]
+
+        introHelper.persistMusicUrl(
+            event, owner, 10, "new", "http://valid.url", "TestUser", 70, chosen
+        )
+
+        verify { musicFileService.updateMusicFile(match<MusicDto> { it.index == 2 }) }
+    }
+
     @Test
     fun `persistMusicUrl should persist a valid URL`() {
         introHelper.persistMusicUrl(

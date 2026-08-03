@@ -45,11 +45,10 @@ class EditIntroModal(
             ?: return reply(ctx, "That edit form lost track of which intro it was for — run `/editintro` again.")
 
         // The modal is only ever shown to the user who opened it, but the id
-        // travels through the client so re-derive ownership from it rather
-        // than trusting it. Mirrors IntroWebService.requireOwnedIntro.
-        val expectedPrefix = "${ctx.guild.idLong}_${event.user.idLong}_"
-        if (!introId.startsWith(expectedPrefix)) {
-            logger.warn { "Rejecting intro edit for '$introId' — not owned by user ${event.user.idLong}" }
+        // travels through the client so re-check rather than trusting it.
+        // Super-users may edit anyone's, matching `/editintro user:`.
+        if (!introHelper.canManageIntro(introId, ctx.guild.idLong, event.user.idLong)) {
+            logger.warn { "Rejecting intro edit for '$introId' — not manageable by ${event.user.idLong}" }
             return reply(ctx, "That intro isn't yours to edit.")
         }
 

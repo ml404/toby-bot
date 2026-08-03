@@ -1,10 +1,14 @@
 package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
+import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.EDIT_INTRO
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
 import database.dto.user.UserDto
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
@@ -14,7 +18,9 @@ import org.springframework.stereotype.Component
  * into the channel within ten seconds of selecting.
  */
 @Component
-class EditIntroCommand : MusicCommand {
+class EditIntroCommand @Autowired constructor(
+    private val introHelper: IntroHelper,
+) : MusicCommand {
 
     override val ephemeral: Boolean = true
 
@@ -28,9 +34,10 @@ class EditIntroCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
+        val target = resolveIntroTarget(ctx.event, requestingUserDto, introHelper, deleteDelay) ?: return
         sendIntroSelection(
             event = ctx.event,
-            requestingUserDto = requestingUserDto,
+            target = target,
             menuId = EDIT_INTRO,
             placeholder = "Select an intro to edit",
             emptyMessage = "You have no intros to edit. Add one with `/setintro`.",

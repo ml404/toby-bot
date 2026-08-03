@@ -1,10 +1,14 @@
 package bot.toby.command.commands.music.intro
 
 import bot.toby.command.commands.music.MusicCommand
+import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MenuHelper.DELETE_INTRO
 import bot.toby.lavaplayer.PlayerManager
 import core.command.CommandContext
 import database.dto.user.UserDto
+import net.dv8tion.jda.api.interactions.commands.OptionType
+import net.dv8tion.jda.api.interactions.commands.build.OptionData
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
@@ -13,7 +17,9 @@ import org.springframework.stereotype.Component
  * mis-click on the menu is recoverable, matching the web dashboard.
  */
 @Component
-class DeleteIntroCommand : MusicCommand {
+class DeleteIntroCommand @Autowired constructor(
+    private val introHelper: IntroHelper,
+) : MusicCommand {
 
     override val ephemeral: Boolean = true
 
@@ -27,9 +33,10 @@ class DeleteIntroCommand : MusicCommand {
         requestingUserDto: UserDto,
         deleteDelay: Int
     ) {
+        val target = resolveIntroTarget(ctx.event, requestingUserDto, introHelper, deleteDelay) ?: return
         sendIntroSelection(
             event = ctx.event,
-            requestingUserDto = requestingUserDto,
+            target = target,
             menuId = DELETE_INTRO,
             placeholder = "Select an intro to delete",
             emptyMessage = "You have no intros to delete.",
@@ -41,4 +48,9 @@ class DeleteIntroCommand : MusicCommand {
 
     override val description: String
         get() = "Delete one of your intros."
+
+    override val optionData: List<OptionData>
+        get() = listOf(
+            OptionData(OptionType.USER, INTRO_USER_OPTION, "Whose intro to manage (super-users only)", false)
+        )
 }

@@ -3,8 +3,10 @@ package bot.toby.helpers
 import bot.toby.handler.EventWaiter
 import bot.toby.intro.IntroMediaLoader
 import bot.toby.intro.IntroNotificationService
+import bot.toby.intro.IntroOwnership
 import bot.toby.intro.IntroValidationService
 import common.intro.IntroClip
+import common.intro.IntroSlots
 import common.logging.DiscordLogger
 import core.command.Command.Companion.invokeDeleteOnMessageResponse
 import core.command.Command.Companion.replyAndDelete
@@ -195,6 +197,17 @@ class IntroHelper(
 
     fun findIntroById(musicFileId: String) = musicFileService.getMusicFileById(musicFileId)
 
+    /**
+     * Whether [actorDiscordId] may edit or delete the intro [introId] in this
+     * guild: their own always, anyone's if they're a super-user.
+     *
+     * The super-user lookup only runs when the intro isn't theirs, so the
+     * ordinary path stays a string comparison.
+     */
+    fun canManageIntro(introId: String?, guildId: Long, actorDiscordId: Long): Boolean =
+        IntroOwnership.ownedBy(introId, guildId, actorDiscordId) ||
+            findUserById(actorDiscordId, guildId).superUser
+
     fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 
     fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
@@ -221,10 +234,8 @@ class IntroHelper(
         val fileContents = mediaLoader.readContents(inputStream)
             ?: return event.hook.replyEphemeralAndDelete("Unable to read file '$filename'", deleteDelay)
 
-        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
-            targetDto.discordId,
-            targetDto.guildId
-        ).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: allocateSlot(targetDto)
+            ?: return rejectIntroForFullSlots(event, deleteDelay)
         val musicDto = selectedMusicDto?.apply {
             this.musicBlob = fileContents
             this.musicBlobHash = computeHash(fileContents)
@@ -238,7 +249,7 @@ class IntroHelper(
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
                 ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay, startMs, endMs) }
-                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
+                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay, musicDto)
         } else {
             musicFileService.updateMusicFile(musicDto)
                 ?.let {
@@ -265,10 +276,8 @@ class IntroHelper(
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = selectedMusicDto?.index ?: userDtoHelper.calculateUserDto(
-            targetDto.discordId,
-            targetDto.guildId
-        ).musicDtos.size.plus(1)
+        val index = selectedMusicDto?.index ?: allocateSlot(targetDto)
+            ?: return rejectIntroForFullSlots(event, deleteDelay)
         val musicDto = selectedMusicDto?.apply {
             this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
             this.userDto = targetDto
@@ -284,7 +293,7 @@ class IntroHelper(
             logger.info { "Creating new music file $musicDto" }
             musicFileService.createNewMusicFile(musicDto)
                 ?.let { sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay, startMs, endMs) }
-                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
+                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay, musicDto)
         } else {
             logger.info { "Updating music file $musicDto" }
             musicFileService.updateMusicFile(musicDto)
@@ -295,6 +304,32 @@ class IntroHelper(
                 }
                 ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
         }
+    }
+
+    /**
+     * The slot a brand-new intro should take, re-reading the user so the count
+     * reflects anything saved since the command started.
+     *
+     * This used to be `musicDtos.size + 1`, which is wrong whenever a delete
+     * has left a gap: with intros in slots [1, 3] it picks 3, and since
+     * `createNewMusicFile` turns an id collision into an update, the intro
+     * already in slot 3 was silently overwritten. `IntroSlots.nextFreeIndex`
+     * walks the range instead — the same allocator the web form uses.
+     *
+     * @return the free slot, or null when all [IntroSlots.MAX_INTRO_COUNT] are taken.
+     */
+    private fun allocateSlot(targetDto: database.dto.user.UserDto): Int? {
+        val existing = userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos
+        return IntroSlots.nextFreeIndex(existing.map { it.index })
+    }
+
+    private fun rejectIntroForFullSlots(event: IReplyCallback, deleteDelay: Int) {
+        logger.info { "All ${IntroSlots.MAX_INTRO_COUNT} intro slots are taken; nothing saved" }
+        event.hook.replyEphemeralAndDelete(
+            "You already have ${IntroSlots.MAX_INTRO_COUNT} intros — " +
+                "delete one with `/deleteintro`, or use `/setintro` to pick which to replace.",
+            deleteDelay,
+        )
     }
 
     /**
@@ -342,12 +377,18 @@ class IntroHelper(
         event: IReplyCallback,
         memberName: String,
         filename: String,
-        deleteDelay: Int
+        deleteDelay: Int,
+        attempted: MusicDto? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
+        // Naming the slot turns "that's already there" into something the user
+        // can act on — it's the slot they'd pass to /setintro to replace.
+        val existingSlot = attempted?.let { musicFileService.isFileAlreadyUploaded(it)?.index }
+        val where = existingSlot?.let { " in slot #$it" }.orEmpty()
         event.hook.replyEphemeralAndDelete(
-            "$memberName's intro song '$filename' was rejected as it already exists as one of their intros for this server",
+            "$memberName's intro song '$filename' was rejected as it already exists$where " +
+                "as one of their intros for this server",
             deleteDelay,
         )
     }

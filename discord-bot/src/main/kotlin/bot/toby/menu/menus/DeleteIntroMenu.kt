@@ -21,10 +21,19 @@ class DeleteIntroMenu @Autowired constructor(
     override fun handle(ctx: MenuContext, deleteDelay: Int) {
         val selectedIntro = resolveSelectedIntroOrElse(ctx, introHelper, deleteDelay) ?: return
 
+        // The selected id comes back from the client, so re-check it rather
+        // than trusting that the menu only offered manageable intros.
+        val actorId = ctx.event.user.idLong
+        if (!introHelper.canManageIntro(selectedIntro.id, ctx.guild.idLong, actorId)) {
+            logger.warn { "Rejecting delete of '${selectedIntro.id}' — not manageable by $actorId" }
+            ctx.event.hook.sendMessage("That intro isn't yours to delete.").setEphemeral(true).queue()
+            return
+        }
+
         // Snapshot before deleting so the Undo button has something to put
-        // back. The confirmation isn't auto-deleted any more — it has to
-        // outlive the delete delay for the undo to be reachable.
-        undoStore.remember(selectedIntro)
+        // back. Keyed on whoever pressed delete — they're the one looking at
+        // the button — while the snapshot itself carries the owner's ids.
+        undoStore.remember(selectedIntro, actorId)
         introHelper.deleteIntro(selectedIntro)
 
         val confirmation = MessageCreateBuilder()
