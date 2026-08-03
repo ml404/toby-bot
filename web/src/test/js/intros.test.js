@@ -9,6 +9,7 @@ function applyIntroPageDatasetAndMocks() {
     document.body.dataset.maxFileKb = '550';
     document.body.dataset.maxDurationSeconds = '15';
     window.TobyToast = { show: jest.fn() };
+    window.TobyToasts = { show: jest.fn() };
     window.TobyModal = { confirm: jest.fn().mockResolvedValue(false) };
     window.TobyApi = { postJson: jest.fn().mockResolvedValue({ ok: true }) };
 }
@@ -583,6 +584,7 @@ describe('initIntroPage smoke test', () => {
             <table><tbody id="introsTbody">
                 <tr data-intro-id="1_2_1" data-start-ms="" data-end-ms="">
                     <td><span class="slot-index">1</span></td>
+                    <td><label class="intro-toggle"><input type="checkbox" checked data-toggle-enabled="true" data-intro-id="1_2_1"><span class="intro-toggle-track"></span></label></td>
                     <td data-editable-name="true" data-intro-id="1_2_1">
                         <span class="name-label">intro.mp3</span>
                         <button type="button" class="clip-badge" data-edit-clip="true" data-intro-id="1_2_1">edit</button>
@@ -643,6 +645,39 @@ describe('initIntroPage smoke test', () => {
         const href = '/dnd';
         expect(href).toBe('/dnd');
     });
+
+    // --- per-intro on/off toggle ---
+
+    test('unchecking the toggle posts the new state and dims the row', () => {
+        mountIntroPage();
+        const box = document.querySelector('[data-toggle-enabled]');
+        const row = box.closest('tr');
+
+        box.checked = false;
+        box.dispatchEvent(new Event('change'));
+
+        expect(row.classList.contains('intro-disabled')).toBe(true);
+        expect(window.TobyApi.postJson).toHaveBeenCalledWith(
+            '/intro/222/update-enabled',
+            { introId: '1_2_1', enabled: false }
+        );
+    });
+
+    test('a failed save reverts the switch so it never lies about the bot', async () => {
+        mountIntroPage();
+        window.TobyApi.postJson.mockResolvedValueOnce({ ok: false, error: 'nope' });
+        const box = document.querySelector('[data-toggle-enabled]');
+        const row = box.closest('tr');
+
+        box.checked = false;
+        box.dispatchEvent(new Event('change'));
+        await new Promise(r => setTimeout(r, 0));
+
+        expect(box.checked).toBe(true);
+        expect(row.classList.contains('intro-disabled')).toBe(false);
+        expect(window.TobyToasts.show).toHaveBeenCalled();
+    });
+
 });
 
 // ---------------------------------------------------------------------------

@@ -61,12 +61,19 @@ class IntroHelper(
     // since `pending.startMs` beats `pending.fourth` for readability.
     val pendingIntros = mutableMapOf<Long, PendingIntro?>()
 
-    fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int {
+    fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int =
+        resolveIntroVolume(event.guild?.id, event.getOption(VOLUME)?.asInt)
+
+    /**
+     * The guild's default intro volume, for entry points that have no volume
+     * option to offer — currently the message context menu.
+     */
+    fun defaultIntroVolume(guildId: String?): Int = resolveIntroVolume(guildId, null)
+
+    private fun resolveIntroVolume(guildId: String?, requested: Int?): Int {
         val volumePropertyName = ConfigDto.Configurations.INTRO_VOLUME.configValue
-        val defaultIntroVolume =
-            configService.getConfigByName(volumePropertyName, event.guild?.id)?.value?.toIntOrNull()
-        val volumeOption = event.getOption(VOLUME)?.asInt
-        return (volumeOption ?: defaultIntroVolume ?: 100).coerceIn(1, 100)
+        val defaultIntroVolume = configService.getConfigByName(volumePropertyName, guildId)?.value?.toIntOrNull()
+        return (requested ?: defaultIntroVolume ?: 100).coerceIn(1, 100)
     }
 
     fun handleMedia(

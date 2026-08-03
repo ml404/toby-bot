@@ -651,6 +651,9 @@ class VoiceEventHandlerTest {
             every { introVolume } returns 75
             every { startMs } returns null
             every { endMs } returns null
+            // Relaxed Boolean mocks default to false, which would take the
+            // intro out of the rotation entirely.
+            every { enabled } returns true
         }
         every { userDtoHelper.calculateUserDto(1L, 9L, false) } returns mockk(relaxed = true) {
             every { discordId } returns 1L
@@ -778,6 +781,9 @@ class VoiceEventHandlerTest {
             every { introVolume } returns 75
             every { startMs } returns null
             every { endMs } returns null
+            // Relaxed Boolean mocks default to false, which would take the
+            // intro out of the rotation entirely.
+            every { enabled } returns true
         }
 
         // Channel hop: Discord delivers a join event each time.
@@ -807,6 +813,9 @@ class VoiceEventHandlerTest {
             every { introVolume } returns 75
             every { startMs } returns null
             every { endMs } returns null
+            // Relaxed Boolean mocks default to false, which would take the
+            // intro out of the rotation entirely.
+            every { enabled } returns true
         }
 
         joinWithIntros(12L, mutableListOf(musicDto))

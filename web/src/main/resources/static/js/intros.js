@@ -975,6 +975,38 @@ function initIntroPage() {
         });
     });
 
+    // --- Per-intro on/off toggle ---
+    // A switched-off intro keeps its slot but is skipped when TobyBot picks
+    // one on join. Optimistic: the row dims immediately and reverts if the
+    // save fails, so the switch never lies about what the bot will do.
+    document.querySelectorAll('[data-toggle-enabled]').forEach(box => {
+        const introId = box.dataset.introId;
+        const row = box.closest('tr[data-intro-id]');
+        box.addEventListener('change', function () {
+            const enabled = box.checked;
+            if (row) row.classList.toggle('intro-disabled', !enabled);
+            box.disabled = true;
+            apiCall(buildUrl('/update-enabled'), { introId: introId, enabled: enabled }, {
+                onSuccess: () => {
+                    box.disabled = false;
+                    window.TobyToasts.show(
+                        enabled ? 'Intro switched on.' : 'Intro switched off — it stays in the slot.',
+                        { type: 'success', duration: 2000 }
+                    );
+                },
+                onError: (r) => {
+                    box.checked = !enabled;
+                    if (row) row.classList.toggle('intro-disabled', enabled);
+                    box.disabled = false;
+                    window.TobyToasts.show(
+                        r ? (r.error || 'Failed to update.') : 'Network error.',
+                        { type: 'error' }
+                    );
+                }
+            });
+        });
+    });
+
     // --- Row-level clip editor (⏱ badge) ---
     document.querySelectorAll('[data-edit-clip]').forEach(btn => {
         btn.addEventListener('click', function (ev) {

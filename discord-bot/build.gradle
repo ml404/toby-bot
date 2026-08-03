@@ -118,6 +118,13 @@ tasks.withType(KotlinCompile).configureEach {
 
 test {
     useJUnitPlatform()
+    // Gradle's 512m default is no longer enough for this module: ~2100 tests
+    // run in one JVM alongside mockk's inline agent, the Kover agent and
+    // lavaplayer's daemon pools, and the executor was dying with
+    // "OutOfMemoryError: Java heap space" *after* every test had passed —
+    // surfacing as an opaque "Could not complete execution for Gradle Test
+    // Executor N" with a green report.
+    maxHeapSize = '1g'
     // Belt-and-braces watchdog so a hung test fails with a clear timeout
     // exception instead of stalling the build until the 6h job timeout.
     // 5m is loose enough that no honest test should trip it.

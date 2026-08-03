@@ -76,6 +76,12 @@ class EditIntroModal(
         val startMs = (start as IntroClip.Parsed.Ok).ms
         val endMs = (end as IntroClip.Parsed.Ok).ms
 
+        val rawEnabled = event.getValue(FIELD_ENABLED)?.asString?.trim().orEmpty()
+        val enabled = if (rawEnabled.isEmpty()) intro.enabled else parseEnabled(rawEnabled)
+        if (enabled == null) {
+            return reply(ctx, "Play on join must be `yes` or `no`.")
+        }
+
         // Source duration is only knowable for URL intros; for uploads the
         // callback validates span/ordering alone, exactly as the web form does.
         val sourceUrl = intro.takeIf { IntroPresenter.isUrlIntro(it) }?.musicBlob?.let { String(it) }
@@ -84,7 +90,7 @@ class EditIntroModal(
                 reply(ctx, error)
                 return@validateClipAgainstSource
             }
-            applyEdit(ctx, intro, name, volume, startMs, endMs)
+            applyEdit(ctx, intro, name, volume, startMs, endMs, enabled)
         }
     }
 
@@ -95,11 +101,13 @@ class EditIntroModal(
         volume: Int,
         startMs: Int?,
         endMs: Int?,
+        enabled: Boolean,
     ) {
         name?.let { intro.fileName = it }
         intro.introVolume = volume
         intro.startMs = startMs
         intro.endMs = endMs
+        intro.enabled = enabled
         introHelper.updateIntro(intro)
 
         logger.info { "Updated intro '${intro.id}' — ${IntroPresenter.summary(intro)}" }
@@ -119,6 +127,21 @@ class EditIntroModal(
         const val FIELD_VOLUME = "intro_volume"
         const val FIELD_START = "intro_start"
         const val FIELD_END = "intro_end"
+        const val FIELD_ENABLED = "intro_enabled"
+
+        private val TRUTHY = setOf("yes", "y", "true", "on", "1", "enabled")
+        private val FALSEY = setOf("no", "n", "false", "off", "0", "disabled")
+
+        /**
+         * Discord modals can't mix text inputs with select menus, so the
+         * on/off switch is a text field. Accept the spellings people actually
+         * type rather than insisting on one.
+         */
+        fun parseEnabled(raw: String): Boolean? = when (raw.lowercase()) {
+            in TRUTHY -> true
+            in FALSEY -> false
+            else -> null
+        }
 
         /** Matches IntroWebService.updateIntroName so both surfaces agree. */
         const val MAX_NAME_LENGTH = 200
@@ -157,12 +180,21 @@ class EditIntroModal(
                 .apply { IntroClip.format(intro.endMs).takeIf { it.isNotEmpty() }?.let { setValue(it) } }
                 .build()
 
+            val enabledField = TextInput.create(FIELD_ENABLED, TextInputStyle.SHORT)
+                .setRequired(false)
+                .setRequiredRange(0, 8)
+                .setPlaceholder("yes / no")
+                .setValue(if (intro.enabled) "yes" else "no")
+                .build()
+
+            // Five components is Discord's modal cap — this form is now full.
             return JdaModal.create(customId(intro.id.orEmpty()), "Edit intro")
                 .addComponents(
                     Label.of("Name", nameField),
                     Label.of("Volume (0-100)", volumeField),
                     Label.of("Clip start — blank for none", startField),
                     Label.of("Clip end — blank for none", endField),
+                    Label.of("Play on join?", enabledField),
                 )
                 .build()
         }

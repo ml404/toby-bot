@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.User
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -237,6 +238,58 @@ class IntroWebServiceTest {
         every { userService.getUserById(discordId, guildId) } returns user(dto)
 
         assertEquals("0:03 – 0:12", service.getUserIntros(discordId, guildId).first().clipLabel)
+    }
+
+    @Test
+    fun `intros are exposed with their enabled flag`() {
+        val on = intro(1, blob = byteArrayOf(1), fileName = "on.mp3")
+        val off = intro(2, blob = byteArrayOf(2), fileName = "off.mp3").apply { enabled = false }
+        every { userService.getUserById(discordId, guildId) } returns user(on, off)
+
+        val views = service.getUserIntros(discordId, guildId)
+        assertTrue(views[0].enabled)
+        assertFalse(views[1].enabled)
+    }
+
+    // --- updateIntroEnabled ----------------------------------------------
+
+    @Test
+    fun `updateIntroEnabled switches an intro out of the rotation`() {
+        val dto = intro(1, blob = byteArrayOf(1), fileName = "a.mp3")
+        every { musicFileService.getMusicFileById(dto.id!!) } returns dto
+
+        assertNull(service.updateIntroEnabled(discordId, guildId, dto.id!!, false))
+
+        assertFalse(dto.enabled)
+        verify { musicFileService.updateMusicFile(dto) }
+    }
+
+    @Test
+    fun `updateIntroEnabled switches one back on`() {
+        val dto = intro(1, blob = byteArrayOf(1), fileName = "a.mp3").apply { enabled = false }
+        every { musicFileService.getMusicFileById(dto.id!!) } returns dto
+
+        assertNull(service.updateIntroEnabled(discordId, guildId, dto.id!!, true))
+
+        assertTrue(dto.enabled)
+    }
+
+    @Test
+    fun `updateIntroEnabled refuses an intro that is not yours`() {
+        val error = service.updateIntroEnabled(discordId, guildId, "999_999_1", false)
+
+        assertEquals("Intro does not belong to you.", error)
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
+    }
+
+    @Test
+    fun `updateIntroEnabled reports a missing intro`() {
+        every { musicFileService.getMusicFileById(any()) } returns null
+
+        assertEquals(
+            "Intro not found.",
+            service.updateIntroEnabled(discordId, guildId, "${guildId}_${discordId}_1", false)
+        )
     }
 
     @Test

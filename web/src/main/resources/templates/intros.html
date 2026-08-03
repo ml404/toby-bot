@@ -34,7 +34,8 @@
     </div>
 
     <p class="random-note">
-        When you join a voice channel, TobyBot randomly picks one of your intros.
+        When you join a voice channel, TobyBot randomly picks one of your switched-on intros, never repeating
+        the one it played last. Switch one off to keep the slot without hearing it.
         Keep duration short (≤ <span th:text="${maxDurationSeconds}">15</span>s) for a clean join sound.
     </p>
 
@@ -70,6 +71,7 @@
                 <thead>
                     <tr>
                         <th scope="col"><span class="sr-only">Slot</span>#</th>
+                        <th scope="col"><span class="sr-only">Play on join</span>On</th>
                         <th scope="col">Name</th>
                         <th scope="col">Volume</th>
                         <th scope="col"><span class="sr-only">Actions</span></th>
@@ -77,6 +79,7 @@
                 </thead>
                 <tbody id="introsTbody">
                     <tr th:each="intro : ${intros}"
+                        th:classappend="${intro.enabled} ? '' : ' intro-disabled'"
                         th:attr="data-intro-id=${intro.id},
                                  data-start-ms=${intro.startMs != null ? intro.startMs : ''},
                                  data-end-ms=${intro.endMs != null ? intro.endMs : ''},
@@ -84,6 +87,15 @@
                         <td data-label="Slot">
                             <span class="drag-handle" title="Drag to reorder" aria-hidden="true">⋮⋮</span>
                             <span class="slot-index" th:text="${intro.index}">1</span>
+                        </td>
+                        <td data-label="On">
+                            <label class="intro-toggle">
+                                <input type="checkbox"
+                                       th:checked="${intro.enabled}"
+                                       th:attr="data-toggle-enabled=true,data-intro-id=${intro.id}"
+                                       th:aria-label="'Play ' + ${intro.fileName} + ' on join'">
+                                <span class="intro-toggle-track" aria-hidden="true"></span>
+                            </label>
                         </td>
                         <td data-label="Name" class="name-cell" th:attr="data-editable-name=true,data-intro-id=${intro.id}">
                             <span th:if="${intro.thumbnailUrl != null}"

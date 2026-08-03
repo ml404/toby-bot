@@ -260,6 +260,55 @@
 }
 .clip-length.too-long { color: var(--danger); font-weight: 600; }
 
+/* Per-intro on/off switch */
+.intro-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+}
+.intro-toggle input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.intro-toggle-track {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--border-strong);
+    transition: background 0.15s ease;
+}
+.intro-toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-elevated);
+    transition: transform 0.15s ease;
+}
+.intro-toggle input:checked + .intro-toggle-track { background: var(--accent); }
+.intro-toggle input:checked + .intro-toggle-track::after { transform: translateX(16px); }
+.intro-toggle input:focus-visible + .intro-toggle-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.intro-toggle input:disabled + .intro-toggle-track { opacity: 0.6; cursor: progress; }
+
+/* A switched-off intro is still listed and editable, just visibly out of the
+   rotation — dimmed rather than hidden so its slot stays obvious. */
+tr.intro-disabled .name-cell,
+tr.intro-disabled .slot-index,
+tr.intro-disabled .volume-inline { opacity: 0.45; }
+tr.intro-disabled .name-label { text-decoration: line-through; }
+
+@media (prefers-reduced-motion: reduce) {
+    .intro-toggle-track,
+    .intro-toggle-track::after { transition: none; }
+}
+
 /* Clip badge in the intros table */
 .clip-badge {
     display: inline-flex;

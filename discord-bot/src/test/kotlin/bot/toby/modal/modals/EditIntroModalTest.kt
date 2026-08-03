@@ -18,6 +18,7 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.interactions.modals.ModalMapping
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -77,11 +78,18 @@ class EditIntroModalTest {
         every { event.getValue(id) } returns value?.let { v -> mockk<ModalMapping> { every { asString } returns v } }
     }
 
-    private fun fields(name: String? = null, volume: String? = null, start: String? = null, end: String? = null) {
+    private fun fields(
+        name: String? = null,
+        volume: String? = null,
+        start: String? = null,
+        end: String? = null,
+        enabled: String? = null,
+    ) {
         field(EditIntroModal.FIELD_NAME, name)
         field(EditIntroModal.FIELD_VOLUME, volume)
         field(EditIntroModal.FIELD_START, start)
         field(EditIntroModal.FIELD_END, end)
+        field(EditIntroModal.FIELD_ENABLED, enabled)
     }
 
     // --- buildFor -----------------------------------------------------------
@@ -91,7 +99,7 @@ class EditIntroModalTest {
         val built = EditIntroModal.buildFor(intro(name = "My intro", volume = 55, start = 3_000, end = 9_000))
 
         assertEquals(EditIntroModal.customId("100_42_1"), built.id)
-        assertEquals(4, built.components.size)
+        assertEquals(5, built.components.size)
     }
 
     @Test
@@ -99,7 +107,7 @@ class EditIntroModalTest {
         // Nothing to assert beyond "it builds" — JDA rejects a null setValue,
         // which is exactly the regression this guards.
         val built = EditIntroModal.buildFor(intro())
-        assertEquals(4, built.components.size)
+        assertEquals(5, built.components.size)
     }
 
     // --- handle -------------------------------------------------------------
@@ -255,5 +263,71 @@ class EditIntroModalTest {
         modal.handle(ctx, 0)
 
         verify { introHelper.validateClipAgainstSource("https://www.youtube.com/watch?v=abc", 1_000, 5_000, any()) }
+    }
+
+    // --- play-on-join switch ------------------------------------------------
+
+    @Test
+    fun `switching an intro off keeps it but takes it out of the rotation`() {
+        val existing = intro()
+        every { introHelper.findIntroById("100_42_1") } returns existing
+        fields(enabled = "no")
+
+        modal.handle(ctx, 0)
+
+        val saved = slot<MusicDto>()
+        verify { introHelper.updateIntro(capture(saved)) }
+        assertFalse(saved.captured.enabled)
+        // Everything else survives — this is a switch, not a delete.
+        assertEquals("Original", saved.captured.fileName)
+        assertEquals(90, saved.captured.introVolume)
+    }
+
+    @Test
+    fun `switching an intro back on works`() {
+        val existing = intro().apply { enabled = false }
+        every { introHelper.findIntroById("100_42_1") } returns existing
+        fields(enabled = "yes")
+
+        modal.handle(ctx, 0)
+
+        val saved = slot<MusicDto>()
+        verify { introHelper.updateIntro(capture(saved)) }
+        assertTrue(saved.captured.enabled)
+    }
+
+    @Test
+    fun `the usual spellings of yes and no are accepted`() {
+        listOf("yes", "y", "true", "on", "1", "ENABLED").forEach {
+            assertEquals(true, EditIntroModal.parseEnabled(it), it)
+        }
+        listOf("no", "n", "false", "off", "0", "Disabled").forEach {
+            assertEquals(false, EditIntroModal.parseEnabled(it), it)
+        }
+        assertNull(EditIntroModal.parseEnabled("maybe"))
+    }
+
+    @Test
+    fun `an unrecognised value is rejected without saving`() {
+        every { introHelper.findIntroById("100_42_1") } returns intro()
+        fields(enabled = "maybe")
+
+        modal.handle(ctx, 0)
+
+        verify(exactly = 0) { introHelper.updateIntro(any()) }
+        assertEquals("Play on join must be `yes` or `no`.", replies.single())
+    }
+
+    @Test
+    fun `leaving the switch blank keeps the current setting`() {
+        val existing = intro().apply { enabled = false }
+        every { introHelper.findIntroById("100_42_1") } returns existing
+        fields(enabled = "")
+
+        modal.handle(ctx, 0)
+
+        val saved = slot<MusicDto>()
+        verify { introHelper.updateIntro(capture(saved)) }
+        assertFalse(saved.captured.enabled)
     }
 }
