@@ -36,6 +36,7 @@ class DefaultMessageContextManagerTest {
         command = mockk(relaxed = true) {
             every { name } returns "Set as my intro"
             every { ephemeral } returns true
+            every { defersReply } returns true
         }
         manager = DefaultMessageContextManager(configService, userDtoHelper, listOf(command))
 
@@ -71,6 +72,19 @@ class DefaultMessageContextManagerTest {
         manager.handle(event)
 
         verify { event.deferReply(true) }
+        verify { command.handle(event, userDto, 12) }
+    }
+
+    @Test
+    fun `a command that opens a modal is dispatched without being acked first`() {
+        // A modal has to be an interaction's first response, so deferring on
+        // its behalf would make replyModal impossible — which is what stopped
+        // "Set as my intro" from being able to ask for clip bounds.
+        every { command.defersReply } returns false
+
+        manager.handle(event)
+
+        verify(exactly = 0) { event.deferReply(any()) }
         verify { command.handle(event, userDto, 12) }
     }
 

@@ -21,6 +21,17 @@ interface MessageContextCommand : Loggable, Named {
     /** Whether the manager should defer with an ephemeral ack before dispatch. */
     val ephemeral: Boolean get() = true
 
+    /**
+     * Whether the manager should acknowledge the interaction before dispatch.
+     *
+     * Deferring is right for anything that replies with a message, and wrong
+     * for anything that opens a modal: a modal has to be the *first* response
+     * to an interaction, so a deferred command can never show one. Commands
+     * that call `replyModal` set this false and take on the 3-second ack
+     * budget themselves.
+     */
+    val defersReply: Boolean get() = true
+
     val commandData: CommandData get() = Commands.message(name)
 
     fun handle(event: MessageContextInteractionEvent, requestingUserDto: UserDto, deleteDelay: Int)

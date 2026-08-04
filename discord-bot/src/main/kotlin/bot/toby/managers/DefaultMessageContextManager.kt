@@ -30,7 +30,9 @@ class DefaultMessageContextManager @Autowired constructor(
 
         // Defer before the DB lookups below so a slow query can't eat the
         // 3-second ack window — same reasoning as DefaultCommandManager.
-        event.deferReply(command.ephemeral).queue()
+        // Commands that open a modal opt out: a modal must be the first
+        // response, so deferring would make `replyModal` impossible.
+        if (command.defersReply) event.deferReply(command.ephemeral).queue()
 
         val deleteDelay = configService.getConfigByName(
             ConfigDto.Configurations.DELETE_DELAY.configValue,

@@ -47,8 +47,20 @@ class DefaultMusicFilePersistence : MusicFilePersistence {
             logger.info { "Duplicate detected, not persisting file" }
             return null
         }
-        val databaseMusicFile = entityManager.find(MusicDto::class.java, musicDto.id)
-        return if (databaseMusicFile == null) persistMusicDto(musicDto) else updateMusicFile(musicDto)
+        // A row already at this id means the caller allocated an occupied slot.
+        // This used to fall through to updateMusicFile, which merged the new
+        // track over the existing one — the user was told their intro saved
+        // while the one it landed on was destroyed, with no trace anywhere.
+        // Refusing is the only safe answer: callers surface the null, and the
+        // worst case becomes "couldn't save" rather than silent data loss.
+        entityManager.find(MusicDto::class.java, musicDto.id)?.let {
+            logger.error(
+                "Refusing to create music file '${musicDto.id}': that slot is already taken. " +
+                    "Something allocated an occupied slot — this would have overwritten an existing intro."
+            )
+            return null
+        }
+        return persistMusicDto(musicDto)
     }
 
     override fun getMusicFileById(id: String): MusicDto? {
