@@ -678,4 +678,117 @@ class TrackSchedulerTest {
 
         assertNull(scheduler.introIdFor(intro))
     }
+
+    // --- stuck tracks and the intro resume slot -----------------------------
+    //
+    // queueIntro parks the preempted track in resumeAfterIntro and treats a
+    // non-null slot as "an intro is already in flight". Anything that ended an
+    // intro without going through the resume branch therefore stranded the
+    // slot, which lost the music *and* silently downgraded every later intro
+    // on that guild from preempting to queueing.
+
+    @Test
+    fun `a stuck intro hands the player back to the music it interrupted`() {
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+        // player.stopTrack() is what drives onTrackEnd in production.
+        every { player.stopTrack() } answers { scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED) }
+
+        scheduler.onTrackStuck(player, intro, 10_000L)
+
+        // mockTrack stubs makeClone() to return the same mock, so the resume
+        // slot holds `playing` itself.
+        verify { player.startTrack(playing, false) }
+        assertFalse(scheduler.hasResumeAfterIntro())
+    }
+
+    @Test
+    fun `a stuck intro does not leave later intros unable to preempt`() {
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val first = mockTrack("Intro one")
+        scheduler.queueIntro(first, 0L, null, 60, requesterId = null, introId = "1_2_1")
+        every { player.stopTrack() } answers { scheduler.onTrackEnd(player, first, AudioTrackEndReason.STOPPED) }
+
+        scheduler.onTrackStuck(player, first, 10_000L)
+
+        // The slot is free again, so the next intro preempts rather than
+        // queueing behind the music for the rest of the player's life.
+        assertFalse(scheduler.hasResumeAfterIntro())
+        val second = mockTrack("Intro two")
+        scheduler.queueIntro(second, 0L, null, 60, requesterId = null, introId = "1_2_2")
+        assertTrue(scheduler.hasResumeAfterIntro())
+    }
+
+    @Test
+    fun `a stuck regular track advances the queue`() {
+        val stuck = mockTrack("Stuck")
+        val next = mockTrack("Next")
+        scheduler.queue(next, 0L, null, 50)
+        every { player.stopTrack() } answers { scheduler.onTrackEnd(player, stuck, AudioTrackEndReason.STOPPED) }
+
+        scheduler.onTrackStuck(player, stuck, 10_000L)
+
+        verify { player.startTrack(next, false) }
+    }
+
+    @Test
+    fun `a track that stalls after it started playing is still recovered`() {
+        // The old guard only fired at position 0, so a mid-track stall hung
+        // the queue with nothing able to unstick it.
+        val stuck = mockTrack("Stuck")
+        every { stuck.position } returns 42_000L
+        val next = mockTrack("Next")
+        scheduler.queue(next, 0L, null, 50)
+        every { player.stopTrack() } answers { scheduler.onTrackEnd(player, stuck, AudioTrackEndReason.STOPPED) }
+
+        scheduler.onTrackStuck(player, stuck, 10_000L)
+
+        verify { player.stopTrack() }
+        verify { player.startTrack(next, false) }
+    }
+
+    @Test
+    fun `a skip landing mid-intro puts the preempted music back at the front`() {
+        // The listener skipped the intro, not the track they were listening to.
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val queued = mockTrack("Queued")
+        scheduler.queue(queued, 0L, null, 50)
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.REPLACED)
+
+        assertFalse(scheduler.hasResumeAfterIntro())
+        assertEquals(listOf("Playing", "Queued"), scheduler.queue.map { it.info.title })
+    }
+
+    @Test
+    fun `the resume slot is released when the player is torn down`() {
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.CLEANUP)
+
+        assertFalse(scheduler.hasResumeAfterIntro())
+        // Nothing to play it on, so it is not requeued either.
+        assertTrue(scheduler.queue.isEmpty())
+    }
+
+    @Test
+    fun `a regular track ending normally never touches the resume slot`() {
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+        val intro = mockTrack("Intro")
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.onTrackEnd(player, mockTrack("Unrelated"), AudioTrackEndReason.REPLACED)
+
+        assertTrue(scheduler.hasResumeAfterIntro())
+    }
 }
