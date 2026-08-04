@@ -1,6 +1,7 @@
 package database.service.music
 
 import database.dto.music.MusicDto
+import database.persistence.music.GuildIntroStats
 
 interface MusicFileService {
     fun createNewMusicFile(musicDto: MusicDto): MusicDto?
@@ -10,4 +11,7 @@ interface MusicFileService {
     fun deleteMusicFileById(id: String?)
     fun clearCache()
     fun isFileAlreadyUploaded(musicDto: MusicDto): MusicDto?
+
+    /** Aggregate intro report for one guild — see the persistence contract. */
+    fun getGuildIntroStats(guildId: Long, unhealthyThreshold: Int): GuildIntroStats
 }

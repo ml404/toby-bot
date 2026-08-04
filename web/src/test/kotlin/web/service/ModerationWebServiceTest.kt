@@ -255,6 +255,81 @@ class ModerationWebServiceTest {
     }
 
     @Test
+    fun `updateConfig accepts only true or false for the intro switches`() {
+        mockMember(ownerId, isOwner = true)
+
+        listOf(
+            ConfigDto.Configurations.INTROS_ENABLED,
+            ConfigDto.Configurations.INTRO_NORMALISE_VOLUME,
+        ).forEach { key ->
+            assertNull(service.updateConfig(ownerId, guildId, key, "true"))
+            assertNull(service.updateConfig(ownerId, guildId, key, "FALSE"))
+            verify { configService.upsertConfig(key.configValue, "false", guildId.toString()) }
+            assertNotNull(service.updateConfig(ownerId, guildId, key, "sometimes"))
+        }
+    }
+
+    @Test
+    fun `updateConfig stores excluded intro channels as a normalised csv`() {
+        mockMember(ownerId, isOwner = true)
+        every { guild.getVoiceChannelById(100L) } returns mockk(relaxed = true)
+        every { guild.getVoiceChannelById(200L) } returns mockk(relaxed = true)
+        val key = ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "100, <#200>"))
+
+        verify { configService.upsertConfig(key.configValue, "100,200", guildId.toString()) }
+    }
+
+    @Test
+    fun `updateConfig rejects an intro exclusion that is not a voice channel here`() {
+        // An exemption that silently does nothing is worse than none at all —
+        // the admin walks away believing that channel is quiet.
+        mockMember(ownerId, isOwner = true)
+        every { guild.getVoiceChannelById(any<Long>()) } returns null
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS, "100",
+        )
+
+        assertNotNull(err)
+        verify(exactly = 0) {
+            configService.upsertConfig(
+                ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS.configValue, any(), any(),
+            )
+        }
+    }
+
+    @Test
+    fun `updateConfig rejects an intro exclusion list that parses to nothing`() {
+        // "abc" isn't blank, so it isn't a clear — but it names no channel
+        // either. Storing it would read back as "no exemptions" and quietly
+        // lose whatever the admin meant.
+        mockMember(ownerId, isOwner = true)
+
+        val err = service.updateConfig(
+            ownerId, guildId, ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS, "abc",
+        )
+
+        assertNotNull(err)
+        verify(exactly = 0) {
+            configService.upsertConfig(
+                ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS.configValue, any(), any(),
+            )
+        }
+    }
+
+    @Test
+    fun `updateConfig clears the intro exclusion list when blank`() {
+        mockMember(ownerId, isOwner = true)
+        val key = ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS
+
+        assertNull(service.updateConfig(ownerId, guildId, key, "   "))
+
+        verify { configService.upsertConfig(key.configValue, "", guildId.toString()) }
+    }
+
+    @Test
     fun `updateConfig rejects MOVE when channel name does not exist`() {
         mockMember(ownerId, isOwner = true)
         every { guild.getVoiceChannelsByName("nope", true) } returns emptyList()

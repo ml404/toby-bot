@@ -818,10 +818,27 @@ class ModerationWebService(
                 id
             }
             ConfigDto.Configurations.ACTIVITY_TRACKING,
-            ConfigDto.Configurations.CARD_MENTIONS -> {
+            ConfigDto.Configurations.CARD_MENTIONS,
+            ConfigDto.Configurations.INTROS_ENABLED,
+            ConfigDto.Configurations.INTRO_NORMALISE_VOLUME -> {
                 val v = rawValue.trim().lowercase()
                 if (v != "true" && v != "false") return "Value must be true or false."
                 v
+            }
+            ConfigDto.Configurations.INTRO_EXCLUDED_CHANNELS -> {
+                // Stored as CSV. Blank clears the exemption list.
+                val ids = common.intro.IntroGuildPolicy.excludedChannelIds(rawValue)
+                if (rawValue.isNotBlank() && ids.isEmpty()) {
+                    return "Enter one or more voice channel ids, separated by commas."
+                }
+                // Reject ids that aren't voice channels here rather than
+                // silently ignoring them at join time — an exemption that
+                // quietly does nothing is worse than no exemption.
+                val unknown = ids.filter { guild.getVoiceChannelById(it) == null }
+                if (unknown.isNotEmpty()) {
+                    return "No voice channel in this server with id ${unknown.joinToString(", ")}."
+                }
+                common.intro.IntroGuildPolicy.formatExcludedChannelIds(ids)
             }
             ConfigDto.Configurations.CUBE_CURRENCY -> {
                 // The /mtgcube preview's "cube value" currency. Normalise to the

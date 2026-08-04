@@ -1,5 +1,7 @@
 package bot.toby.lavaplayer
 
+import bot.toby.intro.IntroLoadFailedEvent
+import bot.toby.intro.IntroPlayedEvent
 import com.github.topi314.lavasrc.applemusic.AppleMusicSourceManager
 import com.github.topi314.lavasrc.deezer.DeezerAudioSourceManager
 import com.github.topi314.lavasrc.mirror.DefaultMirroringAudioTrackResolver
@@ -19,6 +21,7 @@ import com.sedmelluq.discord.lavaplayer.source.vimeo.VimeoAudioSourceManager
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
+import common.intro.IntroHealth
 import common.logging.DiscordLogger
 import core.command.Command.Companion.replyAndDelete
 import dev.lavalink.youtube.YoutubeAudioSourceManager
@@ -220,6 +223,12 @@ class PlayerManager(
      * Load an intro track and preempt whatever is currently playing. The
      * preempted track is restored automatically once the intro ends.
      */
+    /**
+     * @param introId the stored intro row this playback is for. Threaded down
+     *        so the outcome — played, or failed and why — can be recorded
+     *        against it. Without it a broken intro is silent in both senses:
+     *        nothing plays, and nothing anywhere records that nothing played.
+     */
     @Synchronized
     fun loadAndPlayIntro(
         guild: Guild,
@@ -229,13 +238,17 @@ class PlayerManager(
         startPosition: Long,
         volume: Int,
         endPosition: Long?,
+        introId: String? = null,
     ) {
         val musicManager = this.getMusicManager(guild)
         this.isCurrentlyStoppable = true
         audioPlayerManager.loadItemOrdered(
             musicManager,
             trackUrl,
-            getResultHandler(event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay, isIntro = true)
+            getResultHandler(
+                event, musicManager, trackUrl, startPosition, endPosition, volume, deleteDelay,
+                isIntro = true, introId = introId,
+            )
         )
     }
 
@@ -249,6 +262,7 @@ class PlayerManager(
         deleteDelay: Int,
         isIntro: Boolean = false,
         attempt: Int = 1,
+        introId: String? = null,
     ): AudioLoadResultHandler {
         return object : AudioLoadResultHandler {
             private val scheduler: TrackScheduler = musicManager.scheduler
@@ -258,7 +272,8 @@ class PlayerManager(
                 scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
                 if (isIntro) {
-                    scheduler.queueIntro(track, startPosition, endPosition, volume, requesterId)
+                    scheduler.queueIntro(track, startPosition, endPosition, volume, requesterId, introId)
+                    introId?.let { SchedulerEvents.publish(IntroPlayedEvent(it)) }
                 } else {
                     scheduler.queue(track, startPosition, endPosition, volume, requesterId)
                 }
@@ -273,6 +288,13 @@ class PlayerManager(
 
             override fun noMatches() {
                 event?.hook?.replyAndDelete("Nothing found for the link '$trackUrl'", deleteDelay)
+                // On the intro path `event` is always null, so before this the
+                // branch was a no-op and a deleted or private video simply
+                // produced silence forever.
+                introId?.let {
+                    logger.warn { "Intro $it resolved nothing for url=$trackUrl" }
+                    SchedulerEvents.publish(IntroLoadFailedEvent(it, "Nothing found at this link"))
+                }
             }
 
             override fun loadFailed(exception: FriendlyException) {
@@ -295,7 +317,7 @@ class PlayerManager(
                                 trackUrl,
                                 getResultHandler(
                                     event, musicManager, trackUrl, startPosition, endPosition,
-                                    volume, deleteDelay, isIntro, attempt + 1,
+                                    volume, deleteDelay, isIntro, attempt + 1, introId,
                                 ),
                             )
                         },
@@ -309,6 +331,11 @@ class PlayerManager(
                             exception.stackTraceToString()
                 }
                 event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
+                // Retries are exhausted by this point, so this is a real
+                // failure of the source rather than a blip worth hiding.
+                introId?.let {
+                    SchedulerEvents.publish(IntroLoadFailedEvent(it, IntroHealth.normaliseReason(exception.message)))
+                }
             }
         }
     }

@@ -1,5 +1,6 @@
 package bot.toby.intro
 
+import common.intro.IntroHealth
 import database.dto.music.MusicDto
 import kotlin.random.Random
 
@@ -12,7 +13,9 @@ import kotlin.random.Random
  * didn't feel random. Excluding the previous pick keeps every join a change
  * while staying uniform across the rest.
  *
- * Disabled intros ([MusicDto.enabled]) are skipped entirely.
+ * Disabled intros ([MusicDto.enabled]) are skipped entirely, and intros whose
+ * source has repeatedly failed to load are skipped in favour of one that
+ * works — see [common.intro.IntroHealth].
  */
 object IntroSelection {
 
@@ -28,7 +31,16 @@ object IntroSelection {
     ): MusicDto? {
         // A disabled intro keeps its slot but sits out the rotation; with all
         // of them off the user has effectively muted themselves, so play none.
-        val candidates = intros.filter { it.enabled }
+        val enabled = intros.filter { it.enabled }
+
+        // Prefer intros that actually load. Someone with a working intro and a
+        // dead one shouldn't get silence half the time while they wait to
+        // notice. This is a preference, not a filter: if every intro looks
+        // broken we still try one, because the alternative is guaranteeing the
+        // silence we're trying to avoid — and the source may well have come
+        // back (a region block lifting, YouTube unthrottling the bot's IP).
+        val healthy = enabled.filterNot { IntroHealth.isUnhealthy(it.failureCount) }
+        val candidates = healthy.ifEmpty { enabled }
         if (candidates.size <= 1) return candidates.firstOrNull()
 
         // With only one intro left after excluding the previous pick there is

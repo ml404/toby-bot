@@ -22,6 +22,8 @@ class GuildMusicManagerTest {
         // Stub AudioPlayerManager's createPlayer() to return mock AudioPlayer
         every { mockAudioPlayerManager.createPlayer() } returns mockAudioPlayer
         every { mockAudioPlayer.addListener(any()) } just Runs
+        // GuildMusicManager now installs the intro loudness meter.
+        every { mockAudioPlayer.setFilterFactory(any()) } just Runs
 
 
         // Create GuildMusicManager instance using mocked AudioPlayerManager

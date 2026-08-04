@@ -10,6 +10,7 @@ import bot.toby.util.isUrl as utilIsUrl
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.discord.embed
+import common.intro.IntroLoudness
 import common.logging.DiscordLogger
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
@@ -32,6 +33,10 @@ object MusicPlayerHelper {
     /**
      * @param lastPlayedIntroId the intro played for this user last time, so
      *        [IntroSelection] can avoid repeating it back to back.
+     * @param normaliseVolume apply the intro's measured-loudness correction so
+     *        it lands at the same perceived level as everyone else's. Inert
+     *        until the intro has played once and been measured, so an existing
+     *        install hears no change on the first play of anything.
      * @return the intro that was played, or null when the user has none (or
      *         playback failed) — callers record it as the new "last played".
      */
@@ -42,7 +47,8 @@ object MusicPlayerHelper {
         deleteDelay: Int,
         startPosition: Long = 0,
         member: Member? = null,
-        lastPlayedIntroId: String? = null
+        lastPlayedIntroId: String? = null,
+        normaliseVolume: Boolean = true,
     ): MusicDto? {
         logger.setGuildAndMemberContext(guild, member)
         logger.info { "Finding intro to play ..." }
@@ -57,7 +63,18 @@ object MusicPlayerHelper {
 
         return runCatching {
             logger.info { "User has a musicDto. Preparing to play intro." }
-            val introVolume = selected.introVolume
+            val nominalVolume = selected.introVolume ?: currentVolume
+            val playbackVolume = if (normaliseVolume) {
+                IntroLoudness.normalisedVolume(nominalVolume, selected.measuredRms)
+            } else {
+                nominalVolume
+            }
+            if (playbackVolume != nominalVolume) {
+                logger.info {
+                    "Normalising intro '${selected.id}' from $nominalVolume to $playbackVolume " +
+                        "(measured rms ${selected.measuredRms})"
+                }
+            }
             instance.setPreviousVolume(currentVolume)
             val url = determineUrlFromMusicDto(selected)
             val clipStart = selected.startMs?.toLong() ?: startPosition
@@ -65,7 +82,7 @@ object MusicPlayerHelper {
             logger.info { "Url to play is: '$url' (clip ${clipStart}ms -> ${clipEnd ?: "end"})" }
             instance.loadAndPlayIntro(
                 guild, event, url, deleteDelay, clipStart,
-                introVolume ?: currentVolume, clipEnd
+                playbackVolume, clipEnd, selected.id,
             )
             selected
         }.onFailure {

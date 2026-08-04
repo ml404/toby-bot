@@ -1,5 +1,6 @@
 package bot.toby.intro
 
+import common.intro.IntroHealth
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import io.mockk.every
@@ -7,8 +8,10 @@ import io.mockk.mockk
 import net.dv8tion.jda.api.entities.Member
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 class IntroPresenterTest {
 
@@ -104,5 +107,126 @@ class IntroPresenterTest {
     fun `dashboard button deep links to the guild intro page`() {
         val button = IntroPresenter.webDashboardButton(4567L)
         assertEquals("https://www.toby-bot.co.uk/intro/4567", button.url)
+    }
+
+    // --- broken intros ------------------------------------------------------
+
+    @Test
+    fun `a broken intro says so first in its summary`() {
+        // Whatever else is true of the intro, "it isn't playing" is the thing
+        // the reader is trying to find out.
+        val broken = urlIntro(1, "Dead link").apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+
+        assertTrue(IntroPresenter.summary(broken).startsWith("BROKEN · "), IntroPresenter.summary(broken))
+    }
+
+    @Test
+    fun `an intro with one failure is not called broken`() {
+        val flaky = urlIntro(1, "Occasionally slow").apply { failureCount = 1 }
+
+        assertFalse(IntroPresenter.isBroken(flaky))
+        assertFalse(IntroPresenter.summary(flaky).contains("BROKEN"))
+    }
+
+    @Test
+    fun `the list embed shows why a broken intro stopped working`() {
+        val broken = urlIntro(1, "Dead link").apply {
+            failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES
+            lastFailureReason = "This video is not available in your country"
+        }
+
+        val field = IntroPresenter.listEmbed(member(), listOf(broken), 3).fields.single()
+
+        assertTrue(field.name!!.contains("⚠️"), field.name!!)
+        assertTrue(field.value!!.contains("Not playing"), field.value!!)
+        assertTrue(field.value!!.contains("not available in your country"), field.value!!)
+    }
+
+    @Test
+    fun `a broken intro with no recorded reason still explains itself`() {
+        val broken = urlIntro(1, "Dead link").apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+
+        val field = IntroPresenter.listEmbed(member(), listOf(broken), 3).fields.single()
+
+        assertTrue(field.value!!.contains("source could not be loaded"), field.value!!)
+    }
+
+    @Test
+    fun `an overlong failure reason cannot burst the embed field`() {
+        val broken = urlIntro(1, "Dead link").apply {
+            failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES
+            lastFailureReason = "x".repeat(2000)
+        }
+
+        val field = IntroPresenter.listEmbed(member(), listOf(broken), 3).fields.single()
+
+        // Discord's field-value cap is 1024; the reason is bounded well below it.
+        assertTrue(field.value!!.length < 1024, "field value was ${field.value!!.length} chars")
+    }
+
+    @Test
+    fun `every intro being broken is called out at the top of the embed`() {
+        val broken = urlIntro(1, "a").apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+        val alsoBroken = urlIntro(2, "b").apply { failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES }
+
+        val embed = IntroPresenter.listEmbed(member(), listOf(broken, alsoBroken), 3)
+
+        assertTrue(embed.description!!.contains("stopped loading"), embed.description!!)
+    }
+
+    @Test
+    fun `switched-off intros are not reported as broken`() {
+        // "Every intro is switched off" is the owner's own doing and already
+        // has its own message; don't blame the sources for it.
+        val off = urlIntro(1, "a").apply { enabled = false }
+
+        val embed = IntroPresenter.listEmbed(member(), listOf(off), 3)
+
+        assertTrue(embed.description!!.contains("switched off"), embed.description!!)
+    }
+
+    // --- play stats ---------------------------------------------------------
+
+    @Test
+    fun `an intro that has never played reports nothing rather than zero`() {
+        assertNull(IntroPresenter.playSummary(urlIntro(1, "track")))
+    }
+
+    @Test
+    fun `play counts appear once there is something to count`() {
+        val played = urlIntro(1, "track").apply {
+            playCount = 12
+            lastPlayedAt = Instant.parse("2026-01-01T00:00:00Z")
+        }
+
+        val summary = IntroPresenter.playSummary(played, now = Instant.parse("2026-01-04T00:00:00Z"))!!
+
+        assertTrue(summary.contains("Played 12×"), summary)
+        assertTrue(summary.contains("3d ago"), summary)
+    }
+
+    @Test
+    fun `a play count with no timestamp still reports the count`() {
+        val played = urlIntro(1, "track").apply { playCount = 3 }
+
+        assertEquals("Played 3×", IntroPresenter.playSummary(played))
+    }
+
+    @Test
+    fun `relative times read the way a person would say them`() {
+        val now = Instant.parse("2026-06-01T12:00:00Z")
+
+        assertEquals("just now", IntroPresenter.relativeTime(now.minusSeconds(5), now))
+        assertEquals("30m ago", IntroPresenter.relativeTime(now.minusSeconds(1800), now))
+        assertEquals("5h ago", IntroPresenter.relativeTime(now.minusSeconds(5 * 3600), now))
+        assertEquals("2d ago", IntroPresenter.relativeTime(now.minusSeconds(2 * 86400), now))
+        assertEquals("3mo ago", IntroPresenter.relativeTime(now.minusSeconds(95L * 86400), now))
+    }
+
+    @Test
+    fun `a clock skew into the future does not produce a negative age`() {
+        val now = Instant.parse("2026-06-01T12:00:00Z")
+
+        assertEquals("just now", IntroPresenter.relativeTime(now.plusSeconds(60), now))
     }
 }

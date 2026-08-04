@@ -5,6 +5,7 @@ import bot.toby.modal.modals.setconfig.SetConfigBlackjackRulesModal
 import bot.toby.modal.modals.setconfig.SetConfigBlackjackTableModal
 import bot.toby.modal.modals.setconfig.SetConfigFeesModal
 import bot.toby.modal.modals.setconfig.SetConfigGeneralModal
+import bot.toby.modal.modals.setconfig.SetConfigIntroModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotActivityModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryBasicsModal
@@ -47,6 +48,7 @@ import common.casino.blackjack.Blackjack
 class SetConfigCommand @Autowired constructor(
     private val configService: ConfigService,
     private val general: SetConfigGeneralModal,
+    private val intro: SetConfigIntroModal,
     private val activity: SetConfigActivityModal,
     private val fees: SetConfigFeesModal,
     private val jackpot: SetConfigJackpotModal,
@@ -68,6 +70,7 @@ class SetConfigCommand @Autowired constructor(
 
     override val subCommands: List<SubcommandData> = listOf(
         SubcommandData(SUB_GENERAL, "Audio + auto-delete + move/leaderboard channels"),
+        SubcommandData(SUB_INTRO, "Intros on/off, default volume, loudness matching, silent channels"),
         SubcommandData(SUB_ACTIVITY, "Game-activity tracking + UBI + daily credit cap"),
         SubcommandData(SUB_FEES, "Loss tribute, jackpot win %, Toby Coin trade fees"),
         SubcommandData(SUB_JACKPOT, "Jackpot stake anchor, cooldown, RTP gate, modlog channel"),
@@ -112,6 +115,7 @@ class SetConfigCommand @Autowired constructor(
 
         val modal = when (sub) {
             SUB_GENERAL -> general.buildModal(SetConfigGeneralModal.MODAL_NAME, guild, reader)
+            SUB_INTRO -> intro.buildModal(SetConfigIntroModal.MODAL_NAME, guild, reader)
             SUB_ACTIVITY -> activity.buildModal(SetConfigActivityModal.MODAL_NAME, guild, reader)
             SUB_FEES -> fees.buildModal(SetConfigFeesModal.MODAL_NAME, guild, reader)
             SUB_JACKPOT -> jackpot.buildModal(SetConfigJackpotModal.MODAL_NAME, guild, reader)
@@ -143,6 +147,7 @@ class SetConfigCommand @Autowired constructor(
 
     companion object {
         const val SUB_GENERAL = "general"
+        const val SUB_INTRO = "intro"
         const val SUB_ACTIVITY = "activity"
         const val SUB_FEES = "fees"
         const val SUB_JACKPOT = "jackpot"

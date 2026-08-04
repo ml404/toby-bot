@@ -13,6 +13,7 @@ import bot.toby.modal.modals.setconfig.SetConfigBlackjackTableModal
 import bot.toby.modal.modals.setconfig.SetConfigFeesModal
 import bot.toby.modal.modals.setconfig.SetConfigGeneralModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotActivityModal
+import bot.toby.modal.modals.setconfig.SetConfigIntroModal
 import bot.toby.modal.modals.setconfig.SetConfigJackpotModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryBasicsModal
 import bot.toby.modal.modals.setconfig.SetConfigLotteryEngagementModal
@@ -57,6 +58,7 @@ internal class SetConfigCommandTest : CommandTest {
     private lateinit var general: SetConfigGeneralModal
     private lateinit var activity: SetConfigActivityModal
     private lateinit var fees: SetConfigFeesModal
+    private lateinit var intro: SetConfigIntroModal
     private lateinit var jackpot: SetConfigJackpotModal
     private lateinit var jackpotActivity: SetConfigJackpotActivityModal
     private lateinit var pokerStakes: SetConfigPokerStakesModal
@@ -78,6 +80,7 @@ internal class SetConfigCommandTest : CommandTest {
         general = mockk(relaxed = true)
         activity = mockk(relaxed = true)
         fees = mockk(relaxed = true)
+        intro = mockk(relaxed = true)
         jackpot = mockk(relaxed = true)
         jackpotActivity = mockk(relaxed = true)
         pokerStakes = mockk(relaxed = true)
@@ -90,7 +93,7 @@ internal class SetConfigCommandTest : CommandTest {
         stakes = mockk(relaxed = true)
         command = SetConfigCommand(
             configService,
-            general, activity, fees, jackpot, jackpotActivity,
+            general, intro, activity, fees, jackpot, jackpotActivity,
             pokerStakes, pokerTable, blackjackRules, blackjackTable,
             lotteryBasics, lotteryPools, lotteryEngagement, stakes,
         )

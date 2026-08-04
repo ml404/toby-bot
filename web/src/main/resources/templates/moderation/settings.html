@@ -36,6 +36,7 @@
                 <div class="settings-nav-group">
                     <p class="settings-nav-heading">Server</p>
                     <a href="#settings-section-server-features" class="settings-nav-link">Server features</a>
+                    <a href="#settings-section-intros" class="settings-nav-link">Intros</a>
                     <a href="#settings-section-messages" class="settings-nav-link">Messages &amp; leaderboards</a>
                     <a href="#settings-section-magic" class="settings-nav-link">Magic: The Gathering</a>
                 </div>
@@ -77,13 +78,6 @@
                                    th:disabled="${!isOwner}">
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
-                        <div class="config-row" data-key="INTRO_VOLUME">
-                            <label>Default intro volume</label>
-                            <input type="number" min="0" max="200"
-                                   th:value="${overview.config['INTRO_VOLUME']}"
-                                   th:disabled="${!isOwner}">
-                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
-                        </div>
                         <div class="config-row" data-key="MOVE">
                             <label>Default move channel</label>
                             <div th:replace="~{fragments/channelPicker :: channelPicker(
@@ -118,6 +112,87 @@
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
                     </div>
+                </details>
+
+                <details id="settings-section-intros" class="config-section">
+                    <summary>Intros</summary>
+                    <div class="config-grid">
+                        <!--
+                            Until these existed the default volume was the only
+                            intro setting a server had, so a server could make
+                            intros quieter but never turn them off and never
+                            exempt a channel. Both new switches are opt-out:
+                            no row stored means intros behave as they always have.
+                        -->
+                        <div class="config-row" data-key="INTROS_ENABLED">
+                            <label>
+                                Intros on join
+                                <span class="config-hint">
+                                    Off suppresses both the intro and the
+                                    &quot;you don&rsquo;t have an intro yet&quot; DM.
+                                </span>
+                            </label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="true"
+                                        th:selected="${overview.config['INTROS_ENABLED'] == null or overview.config['INTROS_ENABLED'] != 'false'}">
+                                    Enabled
+                                </option>
+                                <option value="false"
+                                        th:selected="${overview.config['INTROS_ENABLED'] == 'false'}">
+                                    Disabled
+                                </option>
+                            </select>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="INTRO_VOLUME">
+                            <label>Default intro volume</label>
+                            <input type="number" min="0" max="200"
+                                   th:value="${overview.config['INTRO_VOLUME']}"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="INTRO_NORMALISE_VOLUME">
+                            <label>
+                                Match intro loudness
+                                <span class="config-hint">
+                                    Corrects each intro towards the same perceived
+                                    level, so a loud track and a quiet one set to
+                                    the same volume sound alike. Correction is
+                                    capped at half to double.
+                                </span>
+                            </label>
+                            <select th:disabled="${!isOwner}">
+                                <option value="true"
+                                        th:selected="${overview.config['INTRO_NORMALISE_VOLUME'] == null or overview.config['INTRO_NORMALISE_VOLUME'] != 'false'}">
+                                    Enabled
+                                </option>
+                                <option value="false"
+                                        th:selected="${overview.config['INTRO_NORMALISE_VOLUME'] == 'false'}">
+                                    Disabled
+                                </option>
+                            </select>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                        <div class="config-row" data-key="INTRO_EXCLUDED_CHANNELS">
+                            <label>
+                                Silent voice channels
+                                <span class="config-hint">
+                                    Comma-separated voice channel ids where intros
+                                    never play &mdash; for a study, meeting or
+                                    on-call channel. Blank means every channel.
+                                </span>
+                            </label>
+                            <input type="text"
+                                   th:value="${overview.config['INTRO_EXCLUDED_CHANNELS']}"
+                                   placeholder="e.g. 123456789012345678, 987654321098765432"
+                                   th:disabled="${!isOwner}">
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
+                    </div>
+                    <p class="muted" style="margin: 8px 0 0;">
+                        Voice channel ids: enable Developer Mode in Discord, then
+                        right-click a channel &rarr; Copy Channel ID.
+                    </p>
                 </details>
 
                 <details id="settings-section-messages" class="config-section">

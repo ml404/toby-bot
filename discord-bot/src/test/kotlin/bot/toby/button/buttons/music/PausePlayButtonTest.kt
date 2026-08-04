@@ -48,6 +48,8 @@ class PausePlayButtonTest : ButtonTest {
         val mockAudioPlayerManager = mockk<AudioPlayerManager>()
         val mockAudioPlayer = mockk<AudioPlayer>()
         every { mockAudioPlayer.addListener(any()) } just Runs
+        // GuildMusicManager now installs the intro loudness meter.
+        every { mockAudioPlayer.setFilterFactory(any()) } just Runs
 
         every { mockAudioPlayerManager.createPlayer() } returns mockAudioPlayer
 

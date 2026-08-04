@@ -3,6 +3,8 @@ package web.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.benmanes.caffeine.cache.Caffeine
 import common.intro.IntroClip
+import common.intro.IntroHealth
+import common.intro.IntroLoudness
 import common.intro.IntroSlots
 import common.logging.DiscordLogger
 import database.dto.music.MusicDto
@@ -17,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 
 @Service
@@ -203,7 +206,12 @@ class IntroWebService(
                 videoId = videoId,
                 startMs = dto.startMs,
                 endMs = dto.endMs,
-                enabled = dto.enabled
+                enabled = dto.enabled,
+                playCount = dto.playCount,
+                lastPlayedAt = dto.lastPlayedAt,
+                failureCount = dto.failureCount,
+                lastFailureReason = dto.lastFailureReason,
+                measuredRms = dto.measuredRms
             )
         }
     }
@@ -588,7 +596,12 @@ data class IntroViewModel(
     val videoId: String? = null,
     val startMs: Int? = null,
     val endMs: Int? = null,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val playCount: Int = 0,
+    val lastPlayedAt: Instant? = null,
+    val failureCount: Int = 0,
+    val lastFailureReason: String? = null,
+    val measuredRms: Double? = null
 ) {
     /**
      * What the row's clip badge shows — the actual range (`0:03 – 0:12`)
@@ -596,6 +609,22 @@ data class IntroViewModel(
      * opening each editor.
      */
     val clipLabel: String get() = IntroClip.describe(startMs, endMs)
+
+    /**
+     * Whether this intro's source has failed enough times running to be
+     * called dead. Until this existed the page happily listed a link that
+     * had been deleted months ago as though it still worked.
+     */
+    val broken: Boolean get() = IntroHealth.isUnhealthy(failureCount)
+
+    /** Why it stopped loading, in the words of whatever refused to serve it. */
+    val brokenReason: String get() = lastFailureReason ?: "Source could not be loaded"
+
+    /** `Played 12×`, or null when it has never played and the zero is noise. */
+    val playLabel: String? get() = if (playCount > 0) "Played $playCount×" else null
+
+    /** "quiet source" / "loud source" — context for the volume slider. */
+    val loudnessLabel: String? get() = IntroLoudness.describe(measuredRms)
 }
 
 data class GuildInfo(
