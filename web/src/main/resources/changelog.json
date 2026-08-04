@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Play the intro you picked, not one of theirs at random",
+    "summary": "The **View intros** menu lists a member's intros by name, then offered a single **▶ Play theirs** button which went through the ordinary rotation. With three slots that's a one-in-three chance of hearing the one you were looking at — and it was inconsistent with the copy menu directly below it, which has always made you choose.",
+    "emoji": "🎵",
+    "prNumber": 743
+  },
+  {
+    "date": "August 2026",
     "title": "Fix the filter factory throwing on every track it was handed",
     "summary": "**This is a live playback outage and it is mine.** Found in a production log:",
     "emoji": "🎵",
