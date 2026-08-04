@@ -791,4 +791,139 @@ class TrackSchedulerTest {
 
         assertTrue(scheduler.hasResumeAfterIntro())
     }
+
+    // --- what the audio pipeline reads back ---------------------------------
+    //
+    // TrackScheduler is the production IntroTrackContext, so these are the
+    // answers IntroFilterFactory builds the fade from.
+
+    /** Like [mockTrack], but with its own identity when cloned. */
+    private fun sourceTrack(title: String, durationMs: Long, cloneInto: AudioTrack): AudioTrack {
+        val track = mockk<AudioTrack>(relaxed = true)
+        every { track.info } returns AudioTrackInfo(title, "Author", durationMs, "id", false, "http://example.com")
+        every { track.duration } returns durationMs
+        every { track.userData } returns 50
+        every { track.position } returns 1_000L
+        every { track.makeClone() } returns cloneInto
+        return track
+    }
+
+    @Test
+    fun `a clipped intro reports its clip length as the playback length`() {
+        val intro = mockTrack("Intro")
+        every { intro.duration } returns 300_000L
+
+        scheduler.queueIntro(intro, 10_000L, 22_000L, 60)
+
+        assertEquals(12_000L, scheduler.introPlaybackMsFor(intro))
+    }
+
+    @Test
+    fun `an unclipped intro reports what is left of the track`() {
+        val intro = mockTrack("Intro")
+        every { intro.duration } returns 14_000L
+
+        scheduler.queueIntro(intro, 2_000L, null, 60)
+
+        assertEquals(12_000L, scheduler.introPlaybackMsFor(intro))
+    }
+
+    @Test
+    fun `a stream reports no playback length, so its fade has no end to aim at`() {
+        val intro = mockTrack("Endless")
+        every { intro.duration } returns Long.MAX_VALUE
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        assertNull(scheduler.introPlaybackMsFor(intro))
+    }
+
+    @Test
+    fun `a non-intro track has no playback length recorded against it`() {
+        val track = mockTrack("Just music")
+
+        scheduler.queue(track, 0L, null, 50)
+
+        assertNull(scheduler.introPlaybackMsFor(track))
+    }
+
+    @Test
+    fun `the preempted track is marked so it fades back in, and the intro is not`() {
+        val clone = mockTrack("Clone")
+        val current = sourceTrack("Current", 200_000L, clone)
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        assertTrue(scheduler.isResumingTrack(clone), "the resumed track should fade in")
+        assertFalse(scheduler.isResumingTrack(intro), "the intro is not a resume")
+        assertFalse(scheduler.isResumingTrack(current), "the original track object is finished with")
+    }
+
+    @Test
+    fun `the resume mark is dropped once the resumed track ends`() {
+        val clone = mockTrack("Clone")
+        val current = sourceTrack("Current", 200_000L, clone)
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        scheduler.onTrackEnd(player, clone, AudioTrackEndReason.FINISHED)
+
+        assertFalse(scheduler.isResumingTrack(clone))
+    }
+
+    @Test
+    fun `a stop clears the intro bookkeeping the pipeline reads`() {
+        val clone = mockTrack("Clone")
+        val current = sourceTrack("Current", 200_000L, clone)
+        val intro = mockTrack("Intro")
+        every { intro.duration } returns 12_000L
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+
+        scheduler.stopTrack(true)
+
+        assertNull(scheduler.introIdFor(intro))
+        assertNull(scheduler.introPlaybackMsFor(intro))
+        assertFalse(scheduler.isResumingTrack(clone))
+    }
+
+    @Test
+    fun `a preempted track requeued after a skipped intro still fades in when it gets there`() {
+        // It was interrupted either way; reaching the player via the queue
+        // rather than directly doesn't change that.
+        val clone = mockTrack("Clone")
+        val current = sourceTrack("Current", 200_000L, clone)
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.REPLACED)
+
+        assertTrue(scheduler.queue.contains(clone))
+        assertTrue(scheduler.isResumingTrack(clone))
+    }
+
+    @Test
+    fun `a preempted track dropped on teardown loses its mark with it`() {
+        val clone = mockTrack("Clone")
+        val current = sourceTrack("Current", 200_000L, clone)
+        val intro = mockTrack("Intro")
+        every { player.playingTrack } returns current
+        scheduler.queueIntro(intro, 0L, null, 60)
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.CLEANUP)
+
+        assertFalse(scheduler.isResumingTrack(clone))
+    }
+
+    @Test
+    fun `currentTrack reports whatever the player is on`() {
+        val playing = mockTrack("Playing")
+        every { player.playingTrack } returns playing
+
+        assertSame(playing, scheduler.currentTrack())
+    }
 }

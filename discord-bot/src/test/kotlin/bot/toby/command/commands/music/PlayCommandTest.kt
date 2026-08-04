@@ -8,11 +8,16 @@ import bot.toby.command.commands.music.MusicCommandTest.Companion.track
 import bot.toby.command.commands.music.MusicCommandTest.Companion.trackScheduler
 import bot.toby.command.commands.music.player.PlayCommand
 import bot.toby.helpers.MusicPlayerHelper
+import bot.toby.helpers.UserDtoHelper
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
+import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import io.mockk.*
+import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.concurrent.ArrayBlockingQueue
@@ -20,11 +25,13 @@ import java.util.concurrent.ArrayBlockingQueue
 internal class PlayCommandTest : MusicCommandTest {
 
     private lateinit var playCommand: PlayCommand
+    private lateinit var userDtoHelper: UserDtoHelper
 
     @BeforeEach
     fun setUp() {
         setupCommonMusicMocks()
-        playCommand = PlayCommand()
+        userDtoHelper = mockk(relaxed = true)
+        playCommand = PlayCommand(userDtoHelper)
     }
 
     @AfterEach
@@ -204,34 +211,39 @@ internal class PlayCommandTest : MusicCommandTest {
         }
     }
 
-    @Test
-    fun test_playCommand_introSubcommand_playsUserIntro() {
-        // Arrange
+    /** Shared arrangement for the `intro` subcommand. */
+    private fun arrangeIntro(userOption: Member? = null) {
         setUpAudioChannelsWithBotAndMemberInSameChannel()
-        val commandContext = DefaultCommandContext(CommandTest.event)
         every { mockAudioPlayer.isPaused } returns false
         every { playerManager.isCurrentlyStoppable } returns false
 
         every { CommandTest.event.subcommandName } returns "intro"
         every { CommandTest.event.getOption("start") } returns null
         every { CommandTest.event.getOption("volume") } returns null
+        every { CommandTest.event.getOption("user") } returns userOption?.let {
+            mockk(relaxed = true) { every { asMember } returns it }
+        }
+        every { CommandTest.event.user } returns CommandTest.user
+        every { CommandTest.user.idLong } returns 1L
 
         mockkObject(MusicPlayerHelper)
-        every {
-            MusicPlayerHelper.playUserIntro(
-                any(), any(), any(), any(), any(), any(), any()
-            )
-        } returns null
+        every { MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any()) } returns null
+    }
 
-        // Act
-        playCommand.handleMusicCommand(
-            commandContext,
-            playerManager,
-            CommandTest.requestingUserDto,
-            5
-        )
+    private fun withIntros(vararg names: String): UserDto = mockk(relaxed = true) {
+        every { musicDtos } returns names.mapIndexed { i, name ->
+            MusicDto(this@mockk, i + 1, name, 90, byteArrayOf(1))
+        }.toMutableList()
+    }
 
-        // Assert
+    @Test
+    fun test_playCommand_introSubcommand_playsUserIntro() {
+        arrangeIntro()
+        every { CommandTest.requestingUserDto.musicDtos } returns
+            mutableListOf(MusicDto(CommandTest.requestingUserDto, 1, "mine", 90, byteArrayOf(1)))
+
+        playCommand.handleMusicCommand(DefaultCommandContext(CommandTest.event), playerManager, CommandTest.requestingUserDto, 5)
+
         verify(exactly = 1) {
             MusicPlayerHelper.playUserIntro(
                 CommandTest.requestingUserDto,
@@ -244,6 +256,51 @@ internal class PlayCommandTest : MusicCommandTest {
             )
         }
         verify(exactly = 0) { playerManager.loadAndPlay(any(), any(), any(), any(), any(), any(), any()) }
+
+        unmockkObject(MusicPlayerHelper)
+    }
+
+    @Test
+    fun `play intro with a user option previews that member's intro instead`() {
+        // Previewing someone else's needs no permission: it is the sound they
+        // have already chosen to play to the whole channel on every join.
+        val other: Member = mockk(relaxed = true) {
+            every { idLong } returns 99L
+            every { effectiveName } returns "Someone Else"
+            every { guild } returns CommandTest.guild
+        }
+        arrangeIntro(userOption = other)
+        val theirDto = withIntros("theirs")
+        every { userDtoHelper.calculateUserDto(99L, 1L) } returns theirDto
+
+        playCommand.handleMusicCommand(DefaultCommandContext(CommandTest.event), playerManager, CommandTest.requestingUserDto, 5)
+
+        verify(exactly = 1) {
+            MusicPlayerHelper.playUserIntro(theirDto, CommandTest.guild, CommandTest.event, 5, 0L, other, null)
+        }
+
+        unmockkObject(MusicPlayerHelper)
+    }
+
+    @Test
+    fun `play intro says so when the target has no intro rather than hanging`() {
+        // playUserIntro only logs when there's nothing to play, which left the
+        // caller staring at a deferred reply that never resolved.
+        val other: Member = mockk(relaxed = true) {
+            every { idLong } returns 99L
+            every { effectiveName } returns "Someone Else"
+            every { guild } returns CommandTest.guild
+        }
+        arrangeIntro(userOption = other)
+        every { userDtoHelper.calculateUserDto(99L, 1L) } returns withIntros()
+
+        val replies = mutableListOf<String>()
+        every { CommandTest.event.hook.sendMessage(capture(replies)) } returns CommandTest.webhookMessageCreateAction
+
+        playCommand.handleMusicCommand(DefaultCommandContext(CommandTest.event), playerManager, CommandTest.requestingUserDto, 5)
+
+        verify(exactly = 0) { MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any()) }
+        assertTrue(replies.single().contains("Someone Else hasn't set an intro"), replies.single())
 
         unmockkObject(MusicPlayerHelper)
     }

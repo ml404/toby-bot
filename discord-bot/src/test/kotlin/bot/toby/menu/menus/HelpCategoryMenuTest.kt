@@ -18,7 +18,7 @@ import java.util.function.Consumer
 
 internal class HelpCategoryMenuTest {
 
-    private val menu = HelpCategoryMenu(listOf(PlayCommand()))
+    private val menu = HelpCategoryMenu(listOf(PlayCommand(mockk(relaxed = true))))
 
     @Test
     fun `name is the help category menu id`() {

@@ -22,7 +22,7 @@ internal class HelpCommandTest : CommandTest {
     @BeforeEach
     fun setup() {
         setUpCommonMocks()
-        commands = listOf(PlayCommand())
+        commands = listOf(PlayCommand(mockk(relaxed = true)))
         helpCommand = HelpCommand(commands)
     }
 

@@ -6,15 +6,18 @@ import bot.toby.managers.DefaultButtonManager
 import bot.toby.managers.DefaultCommandManager
 import bot.toby.managers.DefaultMenuManager
 import bot.toby.managers.DefaultMessageContextManager
+import bot.toby.managers.DefaultUserContextManager
 import bot.toby.managers.DefaultModalManager
 import core.autocomplete.AutocompleteHandler
 import core.button.Button
 import core.command.MessageContextCommand
+import core.command.UserContextCommand
 import core.managers.AutocompleteManager
 import core.managers.ButtonManager
 import core.managers.CommandManager
 import core.managers.MenuManager
 import core.managers.MessageContextManager
+import core.managers.UserContextManager
 import core.managers.ModalManager
 import core.menu.Menu
 import core.modal.Modal
@@ -67,6 +70,15 @@ class ManagerConfig {
         messageContextCommands: List<MessageContextCommand>
     ): MessageContextManager {
         return DefaultMessageContextManager(configService, userDtoHelper, messageContextCommands)
+    }
+
+    @Bean
+    fun userContextManager(
+        configService: ConfigService,
+        userDtoHelper: UserDtoHelper,
+        userContextCommands: List<UserContextCommand>
+    ): UserContextManager {
+        return DefaultUserContextManager(configService, userDtoHelper, userContextCommands)
     }
 
     @Bean

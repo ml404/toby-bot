@@ -2,7 +2,9 @@ package bot.toby.helpers
 
 import bot.coroutines.MainCoroutineExtension
 import bot.toby.helpers.IntroHelper.Companion.MAX_FILE_SIZE_KB
+import common.intro.IntroSlots
 import database.dto.music.MusicDto
+import database.dto.user.UserDto
 import database.service.guild.ConfigService
 import io.mockk.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -21,6 +23,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -765,5 +768,123 @@ class IntroHelperTest {
         // Past 15 minutes the menu or form can't be answered anyway, so
         // holding the payload longer only pins an attachment.
         assertEquals(15L, IntroHelper.PENDING_INTRO_TTL_MINUTES)
+    }
+
+    // --- copying an intro between members ------------------------------------
+
+    private fun sourceIntro() = MusicDto(
+        UserDto(discordId = 99L, guildId = 7L), 2, "banger", 70, "https://youtu.be/x".toByteArray(), 2_000, 9_000
+    ).apply {
+        playCount = 42
+        lastPlayedAt = java.time.Instant.EPOCH
+        failureCount = 5
+        lastFailureAt = java.time.Instant.EPOCH
+        lastFailureReason = "region blocked"
+        measuredRms = 0.12
+        enabled = false
+    }
+
+    @Test
+    fun `a copy carries the audio and settings into the target's slot`() {
+        val me = UserDto(discordId = 1L, guildId = 7L)
+        val saved = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(saved)) } returns mockk()
+
+        introHelper.copyIntroInto(sourceIntro(), me, 3)
+
+        assertEquals("7_1_3", saved.captured.id)
+        assertEquals("banger", saved.captured.fileName)
+        assertEquals(70, saved.captured.introVolume)
+        assertEquals(2_000, saved.captured.startMs)
+        assertEquals(9_000, saved.captured.endMs)
+    }
+
+    @Test
+    fun `a copy starts with a clean history but keeps the measured loudness`() {
+        // Play counts and failures describe that row's life. Inheriting a
+        // BROKEN marker onto a brand-new intro would be a mystery with no fix.
+        // Loudness is a property of the audio, so it travels.
+        val me = UserDto(discordId = 1L, guildId = 7L)
+        val saved = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(saved)) } returns mockk()
+
+        introHelper.copyIntroInto(sourceIntro(), me, 1)
+
+        assertEquals(0, saved.captured.playCount)
+        assertEquals(0, saved.captured.failureCount)
+        assertNull(saved.captured.lastFailureReason)
+        assertEquals(0.12, saved.captured.measuredRms)
+    }
+
+    @Test
+    fun `copying over an occupied slot resets that slot's history too`() {
+        // The slot holds different audio afterwards, so the numbers it built
+        // up for the old track are about a track that is no longer there.
+        val me = UserDto(discordId = 1L, guildId = 7L)
+        val occupant = MusicDto(me, 2, "old", 20, byteArrayOf(9)).apply {
+            playCount = 7
+            failureCount = 3
+            lastFailureReason = "video unavailable"
+        }
+        val saved = slot<MusicDto>()
+        every { musicFileService.updateMusicFile(capture(saved)) } returns mockk()
+
+        introHelper.copyIntroInto(sourceIntro(), me, 2, replacing = occupant)
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        assertEquals("7_1_2", saved.captured.id, "the row keeps its own identity")
+        assertEquals("banger", saved.captured.fileName)
+        assertEquals(0, saved.captured.playCount)
+        assertEquals(0, saved.captured.failureCount)
+        assertNull(saved.captured.lastFailureReason)
+    }
+
+    @Test
+    fun `a copy arrives switched on even when the original was muted`() {
+        val me = UserDto(discordId = 1L, guildId = 7L)
+        val saved = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(saved)) } returns mockk()
+
+        introHelper.copyIntroInto(sourceIntro(), me, 1)
+
+        assertTrue(saved.captured.enabled)
+    }
+
+    @Test
+    fun `the two rows do not share one audio buffer`() {
+        val me = UserDto(discordId = 1L, guildId = 7L)
+        val source = sourceIntro()
+        val saved = slot<MusicDto>()
+        every { musicFileService.createNewMusicFile(capture(saved)) } returns mockk()
+
+        introHelper.copyIntroInto(source, me, 1)
+
+        assertNotSame(source.musicBlob, saved.captured.musicBlob)
+        assertTrue(source.musicBlob!!.contentEquals(saved.captured.musicBlob))
+    }
+
+    @Test
+    fun `the free slot is allocated against ids rather than the index column`() {
+        // The two can disagree on older rows, and it is the id that decides
+        // which row a write lands on.
+        val me = UserDto(discordId = 1L, guildId = 7L).apply {
+            musicDtos = mutableListOf(
+                MusicDto(this, 1, "a", 90, byteArrayOf(1)),
+                MusicDto(this, 3, "c", 90, byteArrayOf(1)),
+            )
+        }
+
+        assertEquals(2, introHelper.freeSlotFor(me))
+    }
+
+    @Test
+    fun `a full set of slots reports none free`() {
+        val me = UserDto(discordId = 1L, guildId = 7L).apply {
+            musicDtos = (1..IntroSlots.MAX_INTRO_COUNT).map {
+                MusicDto(this, it, "x$it", 90, byteArrayOf(1))
+            }.toMutableList()
+        }
+
+        assertNull(introHelper.freeSlotFor(me))
     }
 }

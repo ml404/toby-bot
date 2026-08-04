@@ -3,6 +3,7 @@ package bot.toby.handler
 import common.logging.DiscordLogger
 import core.managers.CommandManager
 import core.managers.MessageContextManager
+import core.managers.UserContextManager
 import net.dv8tion.jda.api.events.guild.GuildReadyEvent
 import net.dv8tion.jda.api.events.session.ReadyEvent
 import net.dv8tion.jda.api.hooks.ListenerAdapter
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service
 class StartUpHandler(
     private val commandManager: CommandManager,
     private val messageContextManager: MessageContextManager,
+    private val userContextManager: UserContextManager,
     private val globalCommandRegistrar: GlobalCommandRegistrar,
     private val logger: DiscordLogger = DiscordLogger.createLogger(StartUpHandler::class.java)
 ) : ListenerAdapter() {
@@ -24,7 +26,7 @@ class StartUpHandler(
         // Discord rejects any bulk update that would drop the Activity Entry
         // Point command, which JDA can't express — see that class for detail.
         val slashCommands = commandManager.slashCommands.filterNotNull()
-        val contextCommands = messageContextManager.contextCommandData
+        val contextCommands = messageContextManager.contextCommandData + userContextManager.contextCommandData
         globalCommandRegistrar.register(event.jda, slashCommands + contextCommands)
 
         logger.info {

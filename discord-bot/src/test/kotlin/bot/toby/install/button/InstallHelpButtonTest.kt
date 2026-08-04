@@ -20,7 +20,7 @@ internal class InstallHelpButtonTest {
 
     @BeforeEach
     fun setUp() {
-        button = InstallHelpButton(listOf(PlayCommand()))
+        button = InstallHelpButton(listOf(PlayCommand(mockk(relaxed = true))))
         fx = InstallButtonFixture()
     }
 
