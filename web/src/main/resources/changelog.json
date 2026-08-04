@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fix the filter factory throwing on every track it was handed",
+    "summary": "**This is a live playback outage and it is mine.** Found in a production log:",
+    "emoji": "🎵",
+    "prNumber": 742
+  },
+  {
+    "date": "August 2026",
     "title": "Stop a blocked source being reported as everyone's broken link",
     "summary": "When the host refuses us — rate limit, IP block, the \"confirm you're not a bot\" wall — **every** load fails at once. Both failure paths were built on the assumption that a failed load is a fact about the *track*, and during an outage that assumption is wrong in two expensive ways.",
     "emoji": "🎵",
