@@ -40,7 +40,7 @@ class SetIntroMenu @Autowired constructor(
                 .queue()
             return
         }
-        val pendingIntro = introHelper.pendingIntros[requestingUserDto.discordId]
+        val pendingIntro = introHelper.pendingIntro(requestingUserDto.guildId, requestingUserDto.discordId)
         if (pendingIntro != null) {
             runCatching {
                 val pendingDtoAttachment = pendingIntro.attachment
@@ -62,7 +62,7 @@ class SetIntroMenu @Autowired constructor(
                 )
             }.onSuccess {
                 logger.info { "Successfully set pending intro, removing from the cache for user '${requestingUserDto.discordId}'" }
-                introHelper.pendingIntros.remove(requestingUserDto.discordId)
+                introHelper.clearPendingIntro(requestingUserDto.guildId, requestingUserDto.discordId)
             }.onFailure {
                 logger.error { "Error handling intro replacement" }
                 event.hook

@@ -38,7 +38,7 @@ class SetIntroFromMessageCommandTest {
     private lateinit var hook: InteractionHook
     private lateinit var target: Message
     private val replies = mutableListOf<String>()
-    private val pending = mutableMapOf<Long, PendingIntro?>()
+    private val pending = mutableMapOf<Pair<Long, Long>, PendingIntro>()
 
     private val userDto = UserDto(discordId = 1L, guildId = 7L)
 
@@ -69,7 +69,14 @@ class SetIntroFromMessageCommandTest {
         every { send.setEphemeral(true) } returns send
 
         every { introHelper.defaultIntroVolume(any()) } returns 80
-        every { introHelper.pendingIntros } returns pending
+        // Back the helper's pending-intro API with a local map so the tests
+        // can assert on what was parked without reaching into its cache.
+        every { introHelper.parkPendingIntro(any(), any(), any()) } answers {
+            pending[firstArg<Long>() to secondArg<Long>()] = thirdArg()
+        }
+        every { introHelper.pendingIntro(any(), any()) } answers {
+            pending[firstArg<Long>() to secondArg<Long>()]
+        }
     }
 
     @AfterEach
@@ -102,9 +109,9 @@ class SetIntroFromMessageCommandTest {
         // the duration check that lives with them.
         verify(exactly = 0) { introHelper.handleAttachment(any(), any(), any(), any(), any(), any()) }
         verify { event.replyModal(any()) }
-        assertEquals(file, pending[1L]?.attachment)
-        assertNull(pending[1L]?.url)
-        assertEquals(80, pending[1L]?.volume)
+        assertEquals(file, pending[7L to 1L]?.attachment)
+        assertNull(pending[7L to 1L]?.url)
+        assertEquals(80, pending[7L to 1L]?.volume)
     }
 
     @Test
@@ -114,8 +121,8 @@ class SetIntroFromMessageCommandTest {
         command.handle(event, userDto, 5)
 
         verify { event.replyModal(any()) }
-        assertEquals("https://www.youtube.com/watch?v=abc", pending[1L]?.url)
-        assertNull(pending[1L]?.attachment)
+        assertEquals("https://www.youtube.com/watch?v=abc", pending[7L to 1L]?.url)
+        assertNull(pending[7L to 1L]?.attachment)
     }
 
     @Test
@@ -125,8 +132,8 @@ class SetIntroFromMessageCommandTest {
 
         command.handle(event, userDto, 5)
 
-        assertEquals(file, pending[1L]?.attachment)
-        assertNull(pending[1L]?.url)
+        assertEquals(file, pending[7L to 1L]?.attachment)
+        assertNull(pending[7L to 1L]?.url)
     }
 
     @Test
@@ -135,8 +142,8 @@ class SetIntroFromMessageCommandTest {
 
         command.handle(event, userDto, 5)
 
-        assertEquals("https://youtu.be/abc", pending[1L]?.url)
-        assertNull(pending[1L]?.attachment)
+        assertEquals("https://youtu.be/abc", pending[7L to 1L]?.url)
+        assertNull(pending[7L to 1L]?.attachment)
     }
 
     @Test
@@ -149,7 +156,7 @@ class SetIntroFromMessageCommandTest {
         // that mockk can't intercept on these mocks, so the assertion is on the
         // observable contract: no form, and nothing parked to save later.
         verify(exactly = 0) { event.replyModal(any()) }
-        assertNull(pending[1L])
+        assertNull(pending[7L to 1L])
     }
 
     @Test

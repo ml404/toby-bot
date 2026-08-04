@@ -3,6 +3,7 @@ package bot.toby.command.commands.fetch
 import bot.toby.helpers.HttpHelper
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
@@ -112,6 +113,10 @@ object TestHttpHelperHelper {
             }
         }
         val client = HttpClient(mockEngine) {
+            // Mirrors AppConfig: the real client installs HttpTimeout so
+            // individual calls can opt into a timeout. Leaving it out here
+            // makes any such call throw before it reaches the engine.
+            install(HttpTimeout)
             install(ContentNegotiation) {
                 json(Json { ignoreUnknownKeys = true })
             }

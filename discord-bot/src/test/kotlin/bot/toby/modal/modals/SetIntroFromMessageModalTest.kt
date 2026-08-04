@@ -46,7 +46,7 @@ class SetIntroFromMessageModalTest {
     private lateinit var ctx: ModalContext
     private lateinit var hook: InteractionHook
     private val replies = mutableListOf<String>()
-    private val pending = mutableMapOf<Long, PendingIntro?>()
+    private val pending = mutableMapOf<Pair<Long, Long>, PendingIntro>()
     private lateinit var userDto: UserDto
 
     @BeforeEach
@@ -80,7 +80,15 @@ class SetIntroFromMessageModalTest {
         every { hook.sendMessage(capture(replies)) } returns send
         every { send.setEphemeral(true) } returns send
 
-        every { introHelper.pendingIntros } returns pending
+        every { introHelper.parkPendingIntro(any(), any(), any()) } answers {
+            pending[firstArg<Long>() to secondArg<Long>()] = thirdArg()
+        }
+        every { introHelper.pendingIntro(any(), any()) } answers {
+            pending[firstArg<Long>() to secondArg<Long>()]
+        }
+        every { introHelper.clearPendingIntro(any(), any()) } answers {
+            pending.remove(firstArg<Long>() to secondArg<Long>())
+        }
         every { introHelper.findUserById(discordId, guildId) } returns userDto
         // Pass the clip gate unless a test says otherwise.
         every { introHelper.validateClipAgainstSource(any(), any(), any(), any()) } answers {
@@ -102,12 +110,12 @@ class SetIntroFromMessageModalTest {
     }
 
     private fun parkUrl(url: String = "https://www.youtube.com/watch?v=abc", volume: Int = 80) {
-        pending[discordId] = PendingIntro(attachment = null, url = url, volume = volume)
+        pending[guildId to discordId] = PendingIntro(attachment = null, url = url, volume = volume)
     }
 
     private fun parkFile(volume: Int = 80): Message.Attachment {
         val attachment = mockk<Message.Attachment>(relaxed = true)
-        pending[discordId] = PendingIntro(attachment = attachment, url = null, volume = volume)
+        pending[guildId to discordId] = PendingIntro(attachment = attachment, url = null, volume = volume)
         return attachment
     }
 
@@ -233,9 +241,9 @@ class SetIntroFromMessageModalTest {
         // Nothing saved yet — but the choice carries the clip forward, so the
         // replace menu finishes what the form started.
         verify(exactly = 0) { introHelper.handleUrl(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-        assertEquals(33, pending[discordId]?.volume)
-        assertEquals(2_000, pending[discordId]?.startMs)
-        assertEquals(9_000, pending[discordId]?.endMs)
+        assertEquals(33, pending[guildId to discordId]?.volume)
+        assertEquals(2_000, pending[guildId to discordId]?.startMs)
+        assertEquals(9_000, pending[guildId to discordId]?.endMs)
     }
 
     // --- form shape ---------------------------------------------------------

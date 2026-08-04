@@ -4,6 +4,8 @@ import bot.toby.intro.IntroMediaLoader
 import bot.toby.intro.IntroNotificationService
 import bot.toby.intro.IntroOwnership
 import bot.toby.intro.IntroValidationService
+import com.github.benmanes.caffeine.cache.Caffeine
+import com.github.benmanes.caffeine.cache.Ticker
 import common.intro.IntroClip
 import common.intro.IntroSlots
 import common.logging.DiscordLogger
@@ -30,6 +32,7 @@ import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback
 import org.jetbrains.annotations.VisibleForTesting
 import org.springframework.stereotype.Service
 import java.io.InputStream
+import java.util.concurrent.TimeUnit
 import java.net.URI
 
 @Service
@@ -46,18 +49,56 @@ class IntroHelper(
     private val mediaLoader: IntroMediaLoader = IntroMediaLoader(),
     private val notificationService: IntroNotificationService =
         IntroNotificationService(notificationPrefService),
+    // Injectable so the pending-intro expiry is testable without waiting a
+    // quarter of an hour. Production uses the system clock.
+    pendingTicker: Ticker = Ticker.systemTicker(),
 ) {
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val supervisorJob = SupervisorJob()
     private val coroutineScope = CoroutineScope(supervisorJob + dispatcher)
 
-    // Per-user pending intro cache, written by /setintro and read by the
-    // confirmation menu. Distinct from the DM prompt flow, which lives in
-    // IntroNotificationService.
-    //
-    // Was a Triple; became a named type once clip bounds joined the payload,
-    // since `pending.startMs` beats `pending.fourth` for readability.
-    val pendingIntros = mutableMapOf<Long, PendingIntro?>()
+    /**
+     * Intros accepted from a user but not yet saved, because something still
+     * has to come back from them — which slot to replace, or the volume and
+     * clip form the message context menu opens.
+     *
+     * This was a bare `mutableMapOf`, which was wrong twice over. It's written
+     * from JDA's dispatch threads and from the coroutine the modal listener
+     * launches, and a `LinkedHashMap` under concurrent writes can corrupt into
+     * a lookup that never returns. And only the replace menu's success path
+     * ever removed an entry, so every abandoned flow leaked one — each pinning
+     * a [Message.Attachment] — with nothing to ever clear it. Closing a modal
+     * without submitting is an entirely ordinary thing to do, so the context
+     * menu made that leak easy to hit.
+     *
+     * Caffeine gives both: thread safety, and entries that expire on their own.
+     * The rest of this package already stores short-lived state this way
+     * ([bot.toby.intro.IntroUndoStore], [bot.toby.intro.IntroPlaybackTracker]).
+     *
+     * Keyed by guild *and* user, so a form opened in one server can't be
+     * answered with a pick made in another.
+     */
+    private val pendingIntros = Caffeine.newBuilder()
+        .expireAfterWrite(PENDING_INTRO_TTL_MINUTES, TimeUnit.MINUTES)
+        .maximumSize(1_000)
+        .ticker(pendingTicker)
+        .build<String, PendingIntro>()
+
+    private fun pendingKey(guildId: Long, discordId: Long) = "$guildId:$discordId"
+
+    /** Hold [pending] until the user tells us where it goes. */
+    fun parkPendingIntro(guildId: Long, discordId: Long, pending: PendingIntro) {
+        pendingIntros.put(pendingKey(guildId, discordId), pending)
+    }
+
+    /** The intro this user is part-way through setting, if it hasn't expired. */
+    fun pendingIntro(guildId: Long, discordId: Long): PendingIntro? =
+        pendingIntros.getIfPresent(pendingKey(guildId, discordId))
+
+    /** Drop a pending intro once it has been saved, or abandoned deliberately. */
+    fun clearPendingIntro(guildId: Long, discordId: Long) {
+        pendingIntros.invalidate(pendingKey(guildId, discordId))
+    }
 
     fun calculateIntroVolume(event: SlashCommandInteractionEvent): Int =
         resolveIntroVolume(event.guild?.id, event.getOption(VOLUME)?.asInt)
@@ -246,7 +287,7 @@ class IntroHelper(
         if (selectedMusicDto == null) {
             musicFileService.createNewMusicFile(musicDto)
                 ?.let { sendSuccessMessage(event, userName, filename, introVolume, index, deleteDelay, startMs, endMs) }
-                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay, musicDto)
+                ?: rejectIntroSave(event, userName, filename, deleteDelay, musicDto)
         } else {
             musicFileService.updateMusicFile(musicDto)
                 ?.let {
@@ -254,7 +295,7 @@ class IntroHelper(
                         event, userName, filename, introVolume, musicDto.index!!, deleteDelay, startMs, endMs
                     )
                 }
-                ?: rejectIntroForDuplication(event, userName, filename, deleteDelay)
+                ?: rejectIntroSave(event, userName, filename, deleteDelay)
         }
     }
 
@@ -294,7 +335,7 @@ class IntroHelper(
             logger.info { "Creating new music file $musicDto" }
             musicFileService.createNewMusicFile(musicDto)
                 ?.let { sendSuccessMessage(event, memberName, filename, introVolume, index, deleteDelay, startMs, endMs) }
-                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay, musicDto)
+                ?: rejectIntroSave(event, memberName, filename, deleteDelay, musicDto)
         } else {
             logger.info { "Updating music file $musicDto" }
             musicFileService.updateMusicFile(musicDto)
@@ -303,7 +344,7 @@ class IntroHelper(
                         event, memberName, filename, introVolume, musicDto.index!!, deleteDelay, startMs, endMs
                     )
                 }
-                ?: rejectIntroForDuplication(event, memberName, filename, deleteDelay)
+                ?: rejectIntroSave(event, memberName, filename, deleteDelay)
         }
     }
 
@@ -380,7 +421,17 @@ class IntroHelper(
         )
     }
 
-    private fun rejectIntroForDuplication(
+    /**
+     * Explain a save that didn't happen.
+     *
+     * `createNewMusicFile` returns null for two different reasons, and this
+     * used to report both as a duplicate. Since the persistence layer started
+     * refusing an already-occupied slot rather than merging over it, "rejected
+     * as it already exists as one of their intros" could be shown to someone
+     * whose audio was nowhere in their list — leaving them to work out what
+     * happened from a message that wasn't true.
+     */
+    private fun rejectIntroSave(
         event: IReplyCallback,
         memberName: String,
         filename: String,
@@ -388,11 +439,28 @@ class IntroHelper(
         attempted: MusicDto? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
+        val duplicate = attempted?.let { musicFileService.isFileAlreadyUploaded(it) }
+        if (duplicate == null) {
+            // Not already uploaded, so the row was refused for the only other
+            // reason the persistence layer refuses one: something is already
+            // in that slot. The allocator is supposed to make this
+            // unreachable, so it's worth a loud log as well as an honest
+            // message.
+            logger.error(
+                "Could not save $memberName's intro '$filename': the target slot " +
+                    "(${attempted?.id ?: "unknown"}) was already taken."
+            )
+            event.hook.replyEphemeralAndDelete(
+                "Couldn't save '$filename' — the slot it was going into is already in use. " +
+                    "Check `/listintros`, then use `/setintro` to pick which intro to replace.",
+                deleteDelay,
+            )
+            return
+        }
         logger.info { "$memberName's intro song '$filename' was rejected for duplication" }
         // Naming the slot turns "that's already there" into something the user
         // can act on — it's the slot they'd pass to /setintro to replace.
-        val existingSlot = attempted?.let { musicFileService.isFileAlreadyUploaded(it)?.index }
-        val where = existingSlot?.let { " in slot #$it" }.orEmpty()
+        val where = duplicate.index?.let { " in slot #$it" }.orEmpty()
         event.hook.replyEphemeralAndDelete(
             "$memberName's intro song '$filename' was rejected as it already exists$where " +
                 "as one of their intros for this server",
@@ -422,6 +490,16 @@ class IntroHelper(
     companion object {
         private const val VOLUME = "volume"
 
+        /**
+         * How long a half-finished intro is held for.
+         *
+         * Matches Discord's 15-minute interaction lifetime: past that the
+         * replace menu or clip form can't be answered anyway, so holding the
+         * payload longer only keeps an attachment reference alive. Both
+         * readers already explain themselves when there's nothing waiting.
+         */
+        const val PENDING_INTRO_TTL_MINUTES = 15L
+
         // Backwards-compat aliases — canonical values live on
         // [IntroValidationService.Companion]. Existing callers (SetIntroCommand,
         // tests) still see the same constants here.
@@ -439,7 +517,7 @@ sealed class InputData {
 /**
  * An intro `/setintro` has accepted but can't save yet, because the user is at
  * their slot limit and still has to choose which existing intro to replace.
- * Held in [IntroHelper.pendingIntros] until [bot.toby.menu.menus.SetIntroMenu]
+ * Held by [IntroHelper.parkPendingIntro] until [bot.toby.menu.menus.SetIntroMenu]
  * resolves the choice.
  */
 data class PendingIntro(
