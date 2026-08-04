@@ -56,8 +56,12 @@ class ViewIntrosContextCommand @Autowired constructor(
 
         val rows = buildList {
             val buttons = buildList {
-                // Nothing enabled means nothing would play, so don't offer to.
-                if (intros.any { it.enabled }) add(PlayIntroButton.button(target.idLong, isSelf))
+                // One button per intro rather than a single "play theirs": the
+                // embed right above names them, and picking from a list only
+                // to hear a different one is a strange thing to do to someone.
+                // The slot cap keeps this to three, so they fit beside the
+                // link in one row without ever needing a second menu.
+                IntroPresenter.sorted(intros).forEach { add(PlayIntroButton.button(it)) }
                 add(IntroPresenter.webDashboardButton(guild.idLong))
             }
             add(ActionRow.of(buttons))

@@ -61,9 +61,34 @@ object MusicPlayerHelper {
             logger.warn { "User does not have a musicDto. Cannot play intro." }
             return null
         }
+        return playIntro(selected, guild, event, deleteDelay, startPosition, member, normaliseVolume)
+    }
+
+    /**
+     * Play one *named* intro, skipping the rotation entirely.
+     *
+     * Everything below the pick in [playUserIntro], so the two can't drift on
+     * volume normalisation or clip handling. The rotation is right when the
+     * caller means "their intro" — a voice join, or `/play intro` — and wrong
+     * when they have pointed at one: the **View intros** menu shows a member's
+     * intros by name, and picking one out of a list only to hear a different
+     * one is a strange thing to do to somebody.
+     */
+    fun playIntro(
+        selected: MusicDto,
+        guild: Guild,
+        event: SlashCommandInteractionEvent? = null,
+        deleteDelay: Int,
+        startPosition: Long = 0,
+        member: Member? = null,
+        normaliseVolume: Boolean = true,
+    ): MusicDto? {
+        logger.setGuildAndMemberContext(guild, member)
+        val instance = PlayerManager.instance
+        val currentVolume = instance.getMusicManager(guild).audioPlayer.volume
 
         return runCatching {
-            logger.info { "User has a musicDto. Preparing to play intro." }
+            logger.info { "Preparing to play intro '${selected.id}'." }
             val nominalVolume = selected.introVolume ?: currentVolume
             val playbackVolume = if (normaliseVolume) {
                 IntroLoudness.normalisedVolume(nominalVolume, selected.measuredRms)

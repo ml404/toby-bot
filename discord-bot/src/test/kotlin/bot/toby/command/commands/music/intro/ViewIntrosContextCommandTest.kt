@@ -12,6 +12,7 @@ import io.mockk.unmockkAll
 import io.mockk.verify
 import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.components.buttons.Button
+import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.components.selections.StringSelectMenu
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -124,15 +125,45 @@ class ViewIntrosContextCommandTest {
     }
 
     @Test
-    fun `the play button carries the target's id, since the message is ephemeral`() {
-        // Nothing else survives to say whose intro the button was for.
+    fun `there is one play button per intro, each naming its own`() {
+        // A single "play theirs" that then picked at random was a small
+        // betrayal of the list right above it — with three slots you had a
+        // one-in-three chance of hearing the one you were looking at.
+        every { introHelper.findUserById(targetId, guildId) } returns theirIntros(3)
+
+        command.handle(event, caller, 5)
+
+        val play = components().filterIsInstance<Button>()
+            .filter { it.customId?.startsWith("playintro") == true }
+        assertEquals(3, play.size)
+        assertEquals(
+            listOf("playintro:7_99_1", "playintro:7_99_2", "playintro:7_99_3"),
+            play.map { it.customId },
+        )
+        assertTrue(play.all { it.label.contains("track") }, play.map { it.label }.toString())
+    }
+
+    @Test
+    fun `the buttons carry intro ids, since the message is ephemeral`() {
+        // The id is guildId_discordId_slot, so it says everything the handler
+        // needs — nothing else survives the interaction.
         every { introHelper.findUserById(targetId, guildId) } returns theirIntros(1)
 
         command.handle(event, caller, 5)
 
         val play = components().filterIsInstance<Button>()
             .single { it.customId?.startsWith("playintro") == true }
-        assertEquals("playintro:$targetId", play.customId)
+        assertEquals("playintro:7_99_1", play.customId)
+    }
+
+    @Test
+    fun `the play buttons and the web link still fit one action row`() {
+        // Three slots plus the link is four, inside Discord's five.
+        every { introHelper.findUserById(targetId, guildId) } returns theirIntros(3)
+
+        command.handle(event, caller, 5)
+
+        assertTrue(rows.flatten().first().components.size <= 5)
     }
 
     @Test
@@ -181,13 +212,18 @@ class ViewIntrosContextCommandTest {
     }
 
     @Test
-    fun `a member whose intros are all switched off is not offered a play button`() {
-        // Nothing would come out, so offering to play it is a lie.
+    fun `an intro that sits out the rotation can still be played on purpose`() {
+        // Switched off means "skip me on join", not "never playable" — and
+        // hearing one is exactly how you answer "why doesn't this play?".
+        // The embed above already marks it, so the button is offered quietly
+        // rather than withheld.
         every { introHelper.findUserById(targetId, guildId) } returns theirIntros(2, enabled = false)
 
         command.handle(event, caller, 5)
 
-        assertTrue(components().filterIsInstance<Button>().none { it.customId?.startsWith("playintro") == true })
+        val play = components().filterIsInstance<Button>().filter { it.customId?.startsWith("playintro") == true }
+        assertEquals(2, play.size)
+        assertTrue(play.all { it.style == ButtonStyle.SECONDARY }, play.map { it.style }.toString())
         // Copying a switched-off intro is still fine — it comes across enabled.
         assertTrue(components().filterIsInstance<StringSelectMenu>().isNotEmpty())
     }

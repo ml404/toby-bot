@@ -15,4 +15,16 @@ object IntroOwnership {
 
     fun ownedBy(introId: String?, guildId: Long, discordId: Long): Boolean =
         introId != null && introId.startsWith("${guildId}_${discordId}_")
+
+    /**
+     * Whether [introId] belongs to this server at all — the weaker check, for
+     * actions anyone may take on anyone's intro.
+     *
+     * The **View intros** menu lets any member play any member's intro, so
+     * there is no owner to compare against. What still has to hold is that a
+     * component id sent from a client can't reach across into another guild's
+     * rows.
+     */
+    fun inGuild(introId: String?, guildId: Long): Boolean =
+        introId != null && introId.startsWith("${guildId}_")
 }
