@@ -20,10 +20,12 @@ import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.InputStream
 import java.net.URI
@@ -276,6 +278,67 @@ class IntroHelperTest {
         verify {
             musicFileService.updateMusicFile(musicDto)
         }
+    }
+
+    // --- explaining a save that didn't happen -------------------------------
+    //
+    // createNewMusicFile returns null for two different reasons, and both used
+    // to be reported as a duplicate. Since the persistence layer started
+    // refusing an already-occupied slot rather than merging over it, someone
+    // whose audio was nowhere in their list could be told it "already exists
+    // as one of their intros".
+
+    private fun captureRejection(): MutableList<String> {
+        val messages = mutableListOf<String>()
+        every { hook.sendMessage(capture(messages)) } returns mockk(relaxed = true)
+        return messages
+    }
+
+    @Test
+    fun `audio the user already uploaded is reported as a duplicate, with its slot`() {
+        val inputStream = mockk<InputStream>()
+        every { FileUtils.readInputStreamToByteArray(inputStream) } returns ByteArray(10)
+        every { musicFileService.createNewMusicFile(any()) } returns null
+        every { musicFileService.isFileAlreadyUploaded(any()) } returns
+            MusicDto(database.dto.user.UserDto(1234L, 1L), 2, "already-here", 90, ByteArray(10))
+        val messages = captureRejection()
+
+        introHelper.persistMusicFile(event, userDto, "TestUser", 10, "filename.mp3", 70, inputStream, null)
+
+        val message = messages.single()
+        assertTrue(message.contains("already exists"), message)
+        assertTrue(message.contains("slot #2"), message)
+    }
+
+    @Test
+    fun `a refused slot is not reported as a duplicate that does not exist`() {
+        val inputStream = mockk<InputStream>()
+        every { FileUtils.readInputStreamToByteArray(inputStream) } returns ByteArray(10)
+        every { musicFileService.createNewMusicFile(any()) } returns null
+        // Nothing matching was ever uploaded — the save was refused because
+        // the target slot was occupied.
+        every { musicFileService.isFileAlreadyUploaded(any()) } returns null
+        val messages = captureRejection()
+
+        introHelper.persistMusicFile(event, userDto, "TestUser", 10, "filename.mp3", 70, inputStream, null)
+
+        val message = messages.single()
+        assertFalse(message.contains("already exists"), "must not claim a duplicate that isn't there: $message")
+        assertTrue(message.contains("slot it was going into is already in use"), message)
+        assertTrue(message.contains("/setintro"), "tell them how to fix it: $message")
+    }
+
+    @Test
+    fun `the same distinction applies when the source was a link`() {
+        every { musicFileService.createNewMusicFile(any()) } returns null
+        every { musicFileService.isFileAlreadyUploaded(any()) } returns null
+        val messages = captureRejection()
+
+        introHelper.persistMusicUrl(
+            event, userDto, 10, "a title", "https://youtu.be/abc", "TestUser", 70, null,
+        )
+
+        assertTrue(messages.single().contains("already in use"), messages.single())
     }
 
     // --- slot allocation ---------------------------------------------------
@@ -573,5 +636,134 @@ class IntroHelperTest {
 
     // saveUserMusicDto — displayName sets fileName
 
+    // --- pending intros -----------------------------------------------------
+    //
+    // Half-finished intros used to live in a bare mutableMapOf: written from
+    // JDA's dispatch threads and from the modal listener's coroutine, and only
+    // ever removed by the replace menu's success path, so every abandoned flow
+    // leaked an entry holding a Message.Attachment.
 
+    @Test
+    fun `a parked intro comes back to the same user in the same guild`() {
+        val pending = PendingIntro(attachment = null, url = "https://youtu.be/a", volume = 60)
+
+        introHelper.parkPendingIntro(7L, 1L, pending)
+
+        assertEquals(pending, introHelper.pendingIntro(7L, 1L))
+    }
+
+    @Test
+    fun `nothing is waiting for a user who has not started one`() {
+        assertNull(introHelper.pendingIntro(7L, 1L))
+    }
+
+    @Test
+    fun `a form opened in one server cannot be answered in another`() {
+        // Keyed on guild as well as user: the payload decides what gets saved,
+        // so picking it up in the wrong server would write the wrong intro.
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(null, "https://youtu.be/a", 60))
+
+        assertNull(introHelper.pendingIntro(8L, 1L))
+    }
+
+    @Test
+    fun `two users in the same guild do not share a pending intro`() {
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(null, "https://youtu.be/mine", 60))
+        introHelper.parkPendingIntro(7L, 2L, PendingIntro(null, "https://youtu.be/theirs", 60))
+
+        assertEquals("https://youtu.be/mine", introHelper.pendingIntro(7L, 1L)?.url)
+        assertEquals("https://youtu.be/theirs", introHelper.pendingIntro(7L, 2L)?.url)
+    }
+
+    @Test
+    fun `starting a second intro replaces the first rather than stacking`() {
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(null, "https://youtu.be/first", 60))
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(null, "https://youtu.be/second", 60))
+
+        assertEquals("https://youtu.be/second", introHelper.pendingIntro(7L, 1L)?.url)
+    }
+
+    @Test
+    fun `clearing releases the payload so an attachment is not held on to`() {
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(mockk(relaxed = true), null, 60))
+
+        introHelper.clearPendingIntro(7L, 1L)
+
+        assertNull(introHelper.pendingIntro(7L, 1L))
+    }
+
+    @Test
+    fun `clearing one user's pending intro leaves everyone else's alone`() {
+        introHelper.parkPendingIntro(7L, 1L, PendingIntro(null, "https://youtu.be/a", 60))
+        introHelper.parkPendingIntro(7L, 2L, PendingIntro(null, "https://youtu.be/b", 60))
+
+        introHelper.clearPendingIntro(7L, 1L)
+
+        assertNull(introHelper.pendingIntro(7L, 1L))
+        assertNotNull(introHelper.pendingIntro(7L, 2L))
+    }
+
+    @Test
+    fun `clearing something that was never parked is not an error`() {
+        introHelper.clearPendingIntro(7L, 1L)
+    }
+
+    @Test
+    fun `concurrent parks from different threads neither lose entries nor corrupt the store`() {
+        // The old LinkedHashMap could be left in a state where a lookup never
+        // returns; JDA dispatches interactions on a pool and the modal
+        // listener adds a coroutine on top. Kept comfortably under the cache's
+        // 1,000-entry bound so eviction can't be mistaken for a lost write.
+        val threads = 8
+        val perThread = 100
+        val barrier = java.util.concurrent.CyclicBarrier(threads)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(threads)
+        try {
+            (0 until threads).map { t ->
+                pool.submit {
+                    barrier.await()
+                    repeat(perThread) { i ->
+                        val user = (t * perThread + i).toLong()
+                        introHelper.parkPendingIntro(7L, user, PendingIntro(null, "https://youtu.be/$user", 50))
+                    }
+                }
+            }.forEach { it.get(30, java.util.concurrent.TimeUnit.SECONDS) }
+        } finally {
+            pool.shutdownNow()
+        }
+
+        val readBack = (0 until threads * perThread).map { introHelper.pendingIntro(7L, it.toLong())?.url }
+        assertEquals(
+            (0 until threads * perThread).map { "https://youtu.be/$it" },
+            readBack,
+            "every concurrent write should be readable afterwards",
+        )
+    }
+
+    @Test
+    fun `an abandoned intro is released on its own rather than held forever`() {
+        // The leak this replaced: only the replace menu's success path ever
+        // removed an entry, so closing a form without submitting left a
+        // PendingIntro — and its Message.Attachment — alive for the life of
+        // the process.
+        val clock = java.util.concurrent.atomic.AtomicLong(0)
+        val helper = IntroHelper(
+            userDtoHelper, musicFileService, configService, httpHelper,
+            pendingTicker = com.github.benmanes.caffeine.cache.Ticker { clock.get() },
+        )
+        helper.parkPendingIntro(7L, 1L, PendingIntro(mockk(relaxed = true), null, 60))
+
+        clock.addAndGet(TimeUnit.MINUTES.toNanos(IntroHelper.PENDING_INTRO_TTL_MINUTES - 1))
+        assertNotNull(helper.pendingIntro(7L, 1L), "should still be waiting inside the window")
+
+        clock.addAndGet(TimeUnit.MINUTES.toNanos(2))
+        assertNull(helper.pendingIntro(7L, 1L), "should have been released once the window passed")
+    }
+
+    @Test
+    fun `the hold is bounded by Discord's interaction lifetime`() {
+        // Past 15 minutes the menu or form can't be answered anyway, so
+        // holding the payload longer only pins an attachment.
+        assertEquals(15L, IntroHelper.PENDING_INTRO_TTL_MINUTES)
+    }
 }
