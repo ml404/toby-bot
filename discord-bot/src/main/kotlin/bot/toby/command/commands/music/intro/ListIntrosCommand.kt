@@ -23,8 +23,10 @@ import org.springframework.stereotype.Component
  * across to the web dashboard for the richer editor (drag-reorder, waveform
  * trim bar, previews).
  *
- * Super-users can pass `user:` to inspect someone else's, the same permission
- * rule `/setintro` applies to setting them.
+ * Anyone can pass `user:` to see someone else's. Intros are played out loud to
+ * the whole channel, so there was never anything to protect — and "what was
+ * that thing you had?" had no answer short of asking. `/setintro copy` is the
+ * follow-on once you've found it.
  */
 @Component
 class ListIntrosCommand @Autowired constructor(
@@ -46,7 +48,7 @@ class ListIntrosCommand @Autowired constructor(
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
-        val target = resolveIntroTarget(event, requestingUserDto, introHelper, deleteDelay) ?: return
+        val target = resolveIntroTarget(event, requestingUserDto, introHelper, deleteDelay, readOnly = true) ?: return
 
         val embed = IntroPresenter.listEmbed(target.member, target.userDto.musicDtos, IntroSlots.MAX_INTRO_COUNT)
         event.hook.sendMessageEmbeds(embed)
@@ -57,10 +59,10 @@ class ListIntrosCommand @Autowired constructor(
 
     override val name: String get() = "listintros"
 
-    override val description: String get() = "Show the intro songs you have set on this server."
+    override val description: String get() = "Show the intro songs set on this server."
 
     override val optionData: List<OptionData>
         get() = listOf(
-            OptionData(OptionType.USER, INTRO_USER_OPTION, "Whose intros to show (super-users only)", false)
+            OptionData(OptionType.USER, INTRO_USER_OPTION, "Whose intros to show — defaults to yours", false)
         )
 }

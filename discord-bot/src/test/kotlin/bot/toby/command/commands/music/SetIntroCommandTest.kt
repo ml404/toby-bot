@@ -10,6 +10,7 @@ import bot.toby.command.commands.music.intro.SetIntroCommand
 import bot.toby.helpers.HttpHelper
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.UserDtoHelper
+import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import database.dto.guild.ConfigDto
 import database.dto.music.MusicDto
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -25,6 +26,7 @@ import net.dv8tion.jda.api.entities.Mentions
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -425,6 +427,365 @@ internal class SetIntroCommandTest : MusicCommandTest {
         assertEquals(5_000, saved.captured.endMs)
         // No YouTube lookup for an upload.
         coVerify(exactly = 0) { httpHelper.getYouTubeVideoDuration(any()) }
+    }
+
+    // --- `current`: take what is playing right now ---------------------------
+
+    /** A loaded track for the guild player to be sitting on. */
+    private fun playingTrack(
+        title: String = "Great Song",
+        uri: String? = "https://www.youtube.com/watch?v=abc",
+        durationMs: Long = 240_000,
+        positionMs: Long = 100_000,
+        isStream: Boolean = false,
+    ) = mockk<com.sedmelluq.discord.lavaplayer.track.AudioTrack>(relaxed = true).also {
+        every { it.info } returns AudioTrackInfo(title, "Author", durationMs, "id", isStream, uri)
+        every { it.duration } returns durationMs
+        every { it.position } returns positionMs
+    }
+
+    private fun arrangeCurrent(track: com.sedmelluq.discord.lavaplayer.track.AudioTrack?, isIntro: Boolean = false) {
+        mockSub("current")
+        every { event.getOption("link") } returns null
+        every { event.getOption("attachment") } returns null
+        every { configService.getConfigByName("DEFAULT_VOLUME", "1") } returns ConfigDto("DEFAULT_VOLUME", "20", "1")
+        every { MusicCommandTest.trackScheduler.currentTrack() } returns track
+        every { MusicCommandTest.trackScheduler.isIntroTrack(any()) } returns isIntro
+    }
+
+    @Test
+    fun `current captures the fifteen seconds behind the playhead`() = runTest {
+        // You reach for the command *after* hearing the bit you liked, so the
+        // window looks backwards. Forwards would save the wrong fifteen seconds.
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack())
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(85_000, saved.captured.startMs)
+        assertEquals(100_000, saved.captured.endMs)
+        assertEquals("https://www.youtube.com/watch?v=abc", String(saved.captured.musicBlob!!))
+    }
+
+    @Test
+    fun `current names the intro from the loaded track instead of looking it up`() = runTest {
+        // The title is already in hand, and the lookup only ever worked for
+        // YouTube anyway.
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack(title = "Great Song"))
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals("Great Song", saved.captured.fileName)
+        coVerify(exactly = 0) { httpHelper.getYouTubeVideoTitle(any()) }
+    }
+
+    @Test
+    fun `current checks the length against the track it already has loaded`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack())
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify { musicFileService.createNewMusicFile(any()) }
+        coVerify(exactly = 0) { httpHelper.getYouTubeVideoDuration(any()) }
+    }
+
+    @Test
+    fun `explicit clip bounds override the captured window`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack())
+        mockClipOptions("0:30", "0:40")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(30_000, saved.captured.startMs)
+        assertEquals(40_000, saved.captured.endMs)
+    }
+
+    @Test
+    fun `an overridden clip still has to obey the length cap`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack())
+        mockClipOptions("0:30", "1:30")
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("Clip is too long") }) }
+    }
+
+    @Test
+    fun `current says so when nothing is playing`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(null)
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("Nothing is playing") }) }
+    }
+
+    @Test
+    fun `current refuses to capture an intro that is mid-playback`() = runTest {
+        // Someone joined a second ago; capturing their intro as your own is
+        // almost certainly not what the command was aimed at.
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack(), isIntro = true)
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("That's an intro playing") }) }
+    }
+
+    @Test
+    fun `current refuses a live stream, which has no fixed clip to save`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack(durationMs = Long.MAX_VALUE, isStream = true))
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("live stream") }) }
+    }
+
+    @Test
+    fun `current refuses a track with no re-playable link`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCurrent(playingTrack(uri = null))
+        mockClipOptions(null, null)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("no link to save") }) }
+    }
+
+    // --- `copy`: take someone else's -----------------------------------------
+
+    private fun theirIntros(vararg specs: Pair<Int, String>): UserDto =
+        UserDto(discordId = 99L, guildId = 1L).apply {
+            musicDtos = specs.map { (slot, name) ->
+                MusicDto(this, slot, name, 70, "https://youtu.be/$name".toByteArray(), 2_000, 9_000)
+            }.toMutableList()
+        }
+
+    private fun arrangeCopy(source: UserDto, slot: Int? = null, into: Int? = null) {
+        mockSub("copy")
+        val sourceMember = mockk<Member>(relaxed = true) {
+            every { idLong } returns 99L
+            every { effectiveName } returns "Them"
+        }
+        every { event.getOption("from") } returns mockk { every { asMember } returns sourceMember }
+        every { event.getOption("slot") } returns slot?.let { v -> mockk { every { asInt } returns v } }
+        every { event.getOption("into") } returns into?.let { v -> mockk { every { asInt } returns v } }
+        every { userDtoHelper.calculateUserDto(99L, 1L) } returns source
+    }
+
+    @Test
+    fun `copy puts someone else's only intro into your first free slot`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "banger"))
+        every { requestingUserDto.musicDtos } returns mutableListOf(
+            MusicDto(UserDto(1, 1), 1, "mine", 20, byteArrayOf(1))
+        )
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(2, saved.captured.index)
+        assertEquals("banger", saved.captured.fileName)
+        assertEquals(70, saved.captured.introVolume)
+        assertEquals(2_000, saved.captured.startMs)
+        assertEquals(9_000, saved.captured.endMs)
+    }
+
+    @Test
+    fun `a copy starts with a clean history rather than inheriting theirs`() = runTest {
+        // Play counts and failures belong to their row. Inheriting a BROKEN
+        // marker onto a brand-new intro would be a mystery with no fix.
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        val theirs = theirIntros(1 to "banger").apply {
+            musicDtos.single().apply {
+                playCount = 42
+                failureCount = 5
+                lastFailureReason = "region blocked"
+                measuredRms = 0.12
+                enabled = false
+            }
+        }
+        arrangeCopy(theirs)
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals(0, saved.captured.playCount)
+        assertEquals(0, saved.captured.failureCount)
+        assertEquals(null, saved.captured.lastFailureReason)
+        assertTrue(saved.captured.enabled, "a copy you just made should play")
+        // The loudness measurement is a property of the audio, so it travels.
+        assertEquals(0.12, saved.captured.measuredRms)
+    }
+
+    @Test
+    fun `copy takes the slot you name from a member with several`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "first", 2 to "second", 3 to "third"), slot = 2)
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        val saved = slot<MusicDto>()
+        verify { musicFileService.createNewMusicFile(capture(saved)) }
+        assertEquals("second", saved.captured.fileName)
+    }
+
+    @Test
+    fun `copy asks which one when the member has several and you did not say`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "first", 3 to "third"))
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("#1, #3") && it.contains("slot:") }) }
+    }
+
+    @Test
+    fun `copy into an occupied slot replaces what is there`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "banger"), into = 2)
+        val mine = MusicDto(UserDto(1, 1), 2, "old", 20, byteArrayOf(1))
+        every { requestingUserDto.musicDtos } returns mutableListOf(mine)
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        val saved = slot<MusicDto>()
+        verify { musicFileService.updateMusicFile(capture(saved)) }
+        assertEquals("1_1_2", saved.captured.id)
+        assertEquals("banger", saved.captured.fileName)
+    }
+
+    @Test
+    fun `copy at the slot limit explains how to make room`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "banger"))
+        every { requestingUserDto.musicDtos } returns (1..3).map {
+            MusicDto(UserDto(1, 1), it, "mine$it", 20, byteArrayOf(1))
+        }.toMutableList()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("into:") && it.contains("/deleteintro") }) }
+    }
+
+    @Test
+    fun `copying from someone with no intro says so`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros())
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("Them hasn't set an intro") }) }
+    }
+
+    @Test
+    fun `copying a slot they do not have lists the ones they do`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "first"), slot = 3)
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify(exactly = 0) { musicFileService.createNewMusicFile(any()) }
+        verify { event.hook.sendMessage(match<String> { it.contains("nothing in slot #3") && it.contains("#1") }) }
+    }
+
+    @Test
+    fun `a refused copy is reported rather than passing silently`() = runTest {
+        setIntroCommand = newCommand(StandardTestDispatcher(testScheduler))
+        arrangeCopy(theirIntros(1 to "banger"))
+        every { requestingUserDto.musicDtos } returns mutableListOf()
+        every { musicFileService.createNewMusicFile(any()) } returns null
+
+        setIntroCommand.handleMusicCommand(
+            DefaultCommandContext(event), MusicCommandTest.playerManager, requestingUserDto, 0
+        )
+        advanceUntilIdle()
+
+        verify { event.hook.sendMessage(match<String> { it.contains("Couldn't copy") }) }
     }
 
     private fun setupMentions(userOptionMapping: OptionMapping) {

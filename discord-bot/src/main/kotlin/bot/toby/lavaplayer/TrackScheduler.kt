@@ -22,7 +22,8 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
-class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay: Int = 5) : AudioEventAdapter() {
+class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay: Int = 5) :
+    AudioEventAdapter(), IntroTrackContext {
     var queue: BlockingQueue<AudioTrack> = LinkedBlockingQueue(100)
     var isLooping: Boolean = false
     var event: SlashCommandInteractionEvent? = null
@@ -41,6 +42,17 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
      * which row to write the number to.
      */
     private val introTrackIds = ConcurrentHashMap<AudioTrack, String>()
+
+    /**
+     * How long each in-flight intro will actually play for, worked out when it
+     * was queued rather than when its filter chain is built — by then the clip
+     * start has already been applied to `position` and the two are
+     * indistinguishable.
+     */
+    private val introPlaybackMs = ConcurrentHashMap<AudioTrack, Long>()
+
+    /** Tracks that an intro interrupted and that are being put back. */
+    private val resumingTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
     private var resumeAfterIntro: AudioTrack? = null
 
     fun getRequesterId(track: AudioTrack): Long? = trackRequesters[track]
@@ -49,8 +61,15 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
 
     internal fun isIntroTrack(track: AudioTrack): Boolean = introTracks.contains(track)
 
+    /** The track this guild is playing right now, or null when it is idle. */
+    internal fun currentTrack(): AudioTrack? = player.playingTrack
+
     /** The intro row id behind [track], or null when it isn't an intro. */
-    internal fun introIdFor(track: AudioTrack): String? = introTrackIds[track]
+    override fun introIdFor(track: AudioTrack): String? = introTrackIds[track]
+
+    override fun introPlaybackMsFor(track: AudioTrack): Long? = introPlaybackMs[track]
+
+    override fun isResumingTrack(track: AudioTrack): Boolean = resumingTracks.contains(track)
 
     fun queue(track: AudioTrack, startPosition: Long, endPosition: Long?, volume: Int, requesterId: Long? = null) {
         logger.info("Adding ${track.info.title} by ${track.info.author} to the queue for guild $guildId")
@@ -86,6 +105,7 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         logger.info("Preparing intro ${introTrack.info.title} for guild $guildId")
         prepareTrack(introTrack, startPosition, endPosition, volume, requesterId)
         introId?.let { introTrackIds[introTrack] = it }
+        playbackLengthOf(introTrack, startPosition, endPosition)?.let { introPlaybackMs[introTrack] = it }
         val currentlyPlaying = player.playingTrack
         if (currentlyPlaying == null || resumeAfterIntro != null) {
             // No track to preempt, or a resume slot is already occupied by an
@@ -108,9 +128,23 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         trackClipBounds[currentlyPlaying]?.let { trackClipBounds[clone] = it }
         trackRequesters[currentlyPlaying]?.let { trackRequesters[clone] = it }
         resumeAfterIntro = clone
+        resumingTracks.add(clone)
         introTracks.add(introTrack)
         player.startTrack(introTrack, false)
         publishQueueChanged()
+    }
+
+    /**
+     * How long an intro will play for: its clip length, or whatever is left of
+     * the track from its start offset.
+     *
+     * Null when the source can't say — a live stream reports
+     * [Long.MAX_VALUE] — in which case the fade has no end to aim at and only
+     * ramps in.
+     */
+    private fun playbackLengthOf(track: AudioTrack, startPosition: Long, endPosition: Long?): Long? {
+        val end = endPosition ?: track.duration.takeIf { it > 0 && it != Long.MAX_VALUE } ?: return null
+        return (end - startPosition).takeIf { it > 0 }
     }
 
     private fun prepareTrack(
@@ -182,6 +216,8 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         // factory resolved the id when the chain was built and holds it in its
         // callback closure.
         introTrackIds.remove(track)
+        introPlaybackMs.remove(track)
+        resumingTracks.remove(track)
         val wasIntro = introTracks.remove(track)
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
@@ -270,8 +306,12 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         resumeAfterIntro = null
         if (endReason != AudioTrackEndReason.REPLACED) {
             logger.info("Dropping preempted track ${stranded.info.title}: player is going away ($endReason)")
+            resumingTracks.remove(stranded)
             return
         }
+        // Keeps its resume mark: going back through the queue rather than
+        // straight onto the player doesn't change that it was interrupted, so
+        // it should still fade in when it gets there.
         logger.info("Intro was taken over; requeueing preempted track ${stranded.info.title} at the front")
         synchronized(queue) {
             val rest = queue.toMutableList()
@@ -348,6 +388,7 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
             val item = snapshot.removeAt(index)
             trackRequesters.remove(item)
             trackClipBounds.remove(item)
+            resumingTracks.remove(item)
             queue.clear()
             snapshot.forEach { queue.offer(it) }
             item
@@ -371,6 +412,8 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         resumeAfterIntro = null
         introTracks.clear()
         introTrackIds.clear()
+        introPlaybackMs.clear()
+        resumingTracks.clear()
         player.stopTrack()
         player.setVolumeToPrevious()
         return true

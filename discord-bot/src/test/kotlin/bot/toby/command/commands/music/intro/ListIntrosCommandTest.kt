@@ -2,7 +2,6 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.command.CommandTest.Companion.event
 import bot.toby.command.CommandTest.Companion.guild
-import bot.toby.command.CommandTest.Companion.interactionHook
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.targetMember
@@ -95,18 +94,28 @@ class ListIntrosCommandTest : MusicCommandTest {
     }
 
     @Test
-    fun `a non super-user cannot inspect another member`() {
+    fun `an ordinary member can inspect another member`() {
+        // Viewing used to be super-user only, which protected nothing: an
+        // intro announces itself out loud to the whole channel on every join.
+        // All the restriction achieved was leaving "what was that thing you
+        // had?" with no answer short of asking.
+        val other = UserDto(discordId = 99L, guildId = 1L).apply {
+            musicDtos = mutableListOf(MusicDto(this, 1, "theirs", 90, byteArrayOf(1)))
+        }
         every { requestingUserDto.superUser } returns false
         every { targetMember.idLong } returns 99L
+        every { targetMember.effectiveAvatarUrl } returns "https://cdn.example/other.png"
         every { event.getOption("user") } returns mockk<OptionMapping> { every { asMember } returns targetMember }
+        every { introHelper.findUserById(99L, 1L) } returns other
 
         command.handle(ctx, requestingUserDto, 5)
 
-        verify(exactly = 0) { interactionHook.sendMessageEmbeds(any<MessageEmbed>()) }
-        verify(exactly = 0) { introHelper.findUserById(any(), any()) }
-        // `sendErrorMessage` names the server owner in its reply — reaching for
-        // it is the observable sign the permission branch ran.
-        verify { guild.owner }
+        val embeds = mutableListOf<MessageEmbed>()
+        verify { event.hook.sendMessageEmbeds(capture(embeds)) }
+        assertTrue(embeds.single().fields.single().name!!.contains("theirs"))
+        // `sendErrorMessage` names the server owner in its refusal, so never
+        // reaching for it is the observable sign nothing was refused.
+        verify(exactly = 0) { guild.owner }
     }
 
     @Test

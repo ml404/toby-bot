@@ -45,9 +45,13 @@ internal const val INTRO_USER_OPTION = "user"
 
 /**
  * Resolves whose intros to act on. Defaults to the caller; a `user:` option
- * targets someone else, which only super-users may do — the same rule
- * `/setintro` applies to setting them.
+ * targets someone else.
  *
+ * @param readOnly true for commands that only *look* at intros. Changing
+ *        someone else's is still super-user only, but reading one never needed
+ *        to be: an intro announces itself out loud to everyone in the channel
+ *        on every join, so treating the list of them as privileged information
+ *        only ever stopped people finding out what that thing they liked was.
  * @return the target, or null when the caller was rejected (the refusal has
  *         already been sent) or the command ran outside a guild.
  */
@@ -56,9 +60,10 @@ internal fun MusicCommand.resolveIntroTarget(
     requestingUserDto: UserDto,
     introHelper: IntroHelper,
     deleteDelay: Int,
+    readOnly: Boolean = false,
 ): IntroTarget? {
     val requested = event.getOption(INTRO_USER_OPTION)?.asMember
-    if (requested != null && requested.idLong != event.user.idLong && !requestingUserDto.superUser) {
+    if (requested != null && requested.idLong != event.user.idLong && !readOnly && !requestingUserDto.superUser) {
         sendErrorMessage(event, deleteDelay)
         return null
     }

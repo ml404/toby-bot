@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 
 internal class HelpOverviewTest {
 
-    private val commands = listOf(PlayCommand())
+    private val commands = listOf(PlayCommand(mockk(relaxed = true)))
 
     @Test
     fun `selectMenu offers a full-overview option plus each non-empty category`() {

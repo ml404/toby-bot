@@ -202,6 +202,13 @@ class IntroHelper(
         }
     }
 
+    /**
+     * @param knownTitle the track's title when the caller already has it —
+     *        `/setintro current` reads it off the loaded track. Skips the
+     *        YouTube lookup, which is both a network round trip and, for a
+     *        SoundCloud or Bandcamp source, one that was never going to
+     *        answer.
+     */
     fun handleUrl(
         event: IReplyCallback,
         requestingUserDto: database.dto.user.UserDto,
@@ -211,13 +218,15 @@ class IntroHelper(
         introVolume: Int,
         selectedMusicDto: MusicDto? = null,
         startMs: Int? = null,
-        endMs: Int? = null
+        endMs: Int? = null,
+        knownTitle: String? = null
     ) {
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Handling URL inside intro helper..." }
         val urlString = validationService.convertShortsUrls(uri.toString())
+        val supplied = knownTitle?.trim()?.takeIf { it.isNotEmpty() }
         coroutineScope.launch {
-            val title = runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
+            val title = supplied ?: runCatching { httpHelper.getYouTubeVideoTitle(urlString) }.getOrNull()
             persistMusicUrl(
                 event, requestingUserDto, deleteDelay, title ?: urlString, urlString,
                 userName, introVolume, selectedMusicDto, startMs, endMs
