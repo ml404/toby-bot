@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Stop a blocked source being reported as everyone's broken link",
+    "summary": "When the host refuses us — rate limit, IP block, the \"confirm you're not a bot\" wall — **every** load fails at once. Both failure paths were built on the assumption that a failed load is a fact about the *track*, and during an outage that assumption is wrong in two expensive ways.",
+    "emoji": "🎵",
+    "prNumber": 741
+  },
+  {
+    "date": "August 2026",
     "title": "Fade intros, capture what's playing, and share intros (slash + right-click)",
     "summary": "Four things, all in the same corner of the intro flow.",
     "emoji": "🎵",
