@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Intro health, guild controls, loudness matching and play stats",
+    "summary": "Four intro improvements, one commit each. The first is a live defect; the rest are features that were missing rather than broken.",
+    "emoji": "🛡️",
+    "prNumber": 736
+  },
+  {
+    "date": "August 2026",
     "title": "Make the intro nudge a link instead of a conversation",
     "summary": "The \"you don't have an intro yet\" DM asked the user to reply with a URL or an attachment, armed a five-minute waiter to catch the reply, and parsed whatever came back as free text. It was the last part of the intro system still doing that, and the weakest:",
     "emoji": "✨",
