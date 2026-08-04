@@ -62,7 +62,7 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
     internal fun isIntroTrack(track: AudioTrack): Boolean = introTracks.contains(track)
 
     /** The track this guild is playing right now, or null when it is idle. */
-    internal fun currentTrack(): AudioTrack? = player.playingTrack
+    override fun currentTrack(): AudioTrack? = player.playingTrack
 
     /** The intro row id behind [track], or null when it isn't an intro. */
     override fun introIdFor(track: AudioTrack): String? = introTrackIds[track]

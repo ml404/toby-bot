@@ -17,6 +17,12 @@ import common.logging.DiscordLogger
  */
 interface IntroTrackContext {
 
+    /**
+     * The track the player is on, for when the pipeline doesn't say which one
+     * it is building for — which, in lavaplayer 2.2.6, is always.
+     */
+    fun currentTrack(): AudioTrack?
+
     /** The stored intro row [track] is playing, or null when it isn't an intro. */
     fun introIdFor(track: AudioTrack): String?
 
@@ -51,16 +57,43 @@ class IntroFilterFactory(
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
 
+    /**
+     * @param track which track the chain is for — **always null** in
+     *        lavaplayer 2.2.6. `AudioProcessingContext` carries no track at
+     *        all, and `UserProvidedAudioFilters` (its only call site) passes a
+     *        literal null. Declaring this non-null, as the first version of
+     *        this class did, put a Kotlin intrinsic null-check in the method
+     *        prologue that threw on every single track — and because the
+     *        pipeline is built whenever a filter factory is set, that was
+     *        every track the bot played, surfacing as "Something went wrong
+     *        when decoding the track".
+     */
     override fun buildChain(
-        track: AudioTrack,
+        track: AudioTrack?,
+        format: AudioDataFormat,
+        output: UniversalPcmAudioFilter,
+    ): List<AudioFilter> = runCatching {
+        // Nothing this class does is worth interrupting playback for. It sits
+        // on the decode path, so anything it throws surfaces as a track that
+        // won't play — which is exactly how it failed the first time.
+        chainFor(track, format, output)
+    }.getOrElse {
+        logger.error("Failed to build the intro filter chain; continuing without it: ${it.message}")
+        emptyList()
+    }
+
+    private fun chainFor(
+        track: AudioTrack?,
         format: AudioDataFormat,
         output: UniversalPcmAudioFilter,
     ): List<AudioFilter> {
-        val introId = runCatching { context.introIdFor(track) }.getOrNull()
-        if (introId != null) return introChain(track, format, output, introId)
-        if (runCatching { context.isResumingTrack(track) }.getOrDefault(false)) {
-            return resumeChain(format, output)
-        }
+        // The pipeline is constructed for whatever the executor is running, so
+        // the player's current track is the one being built for.
+        val subject = track ?: context.currentTrack() ?: return emptyList()
+
+        val introId = context.introIdFor(subject)
+        if (introId != null) return introChain(subject, format, output, introId)
+        if (context.isResumingTrack(subject)) return resumeChain(format, output)
         return emptyList()
     }
 
@@ -71,6 +104,10 @@ class IntroFilterFactory(
         output: UniversalPcmAudioFilter,
         introId: String,
     ): List<AudioFilter> {
+        // Guarded separately from the outer catch: without a length there is
+        // no end to fade *out* towards, but the fade in and the measurement
+        // are both still worth having, so this degrades rather than dropping
+        // the whole chain.
         val playbackMs = runCatching { context.introPlaybackMsFor(track) }.getOrNull()
         val fade = IntroFadeFilter(
             downstream = output,

@@ -14,14 +14,19 @@ class IntroFilterFactoryTest {
     private val format = Pcm16AudioDataFormat(2, 48_000, 960, true)
     private val output: UniversalPcmAudioFilter = mockk(relaxed = true)
 
+    private val playing: AudioTrack = mockk(relaxed = true)
+
     /** Stand-in for [TrackScheduler]'s view of what a track is. */
-    private class FakeContext(
+    private inner class FakeContext(
         val introId: String? = null,
         val playbackMs: Long? = null,
         val resuming: Boolean = false,
         val introIdThrows: Boolean = false,
         val playbackThrows: Boolean = false,
+        val current: AudioTrack? = playing,
     ) : IntroTrackContext {
+        override fun currentTrack(): AudioTrack? = current
+
         override fun introIdFor(track: AudioTrack): String? =
             if (introIdThrows) throw IllegalStateException("scheduler state gone") else introId
 
@@ -31,8 +36,16 @@ class IntroFilterFactoryTest {
         override fun isResumingTrack(track: AudioTrack): Boolean = resuming
     }
 
+    /**
+     * Built the way lavaplayer actually builds it: with a **null** track.
+     *
+     * `AudioProcessingContext` carries no track, and `UserProvidedAudioFilters`
+     * — the only call site in 2.2.6 — passes a literal null. Every test here
+     * used to hand over a real track, which is why a non-null Kotlin parameter
+     * that threw on every single track in production passed the whole suite.
+     */
     private fun chainFor(context: IntroTrackContext, onMeasured: (String, Double) -> Unit = { _, _ -> }) =
-        IntroFilterFactory(context, onMeasured).buildChain(mockk<AudioTrack>(relaxed = true), format, output)
+        IntroFilterFactory(context, onMeasured).buildChain(null, format, output)
 
     @Test
     fun `regular music playback gets no filter at all`() {
@@ -100,8 +113,48 @@ class IntroFilterFactoryTest {
     }
 
     @Test
+    fun `a null track is resolved from the player rather than thrown on`() {
+        // The regression that broke every track the bot played: lavaplayer
+        // always passes null here, and a non-null Kotlin parameter turns that
+        // into a NullPointerException in the method prologue — before any of
+        // this class's own code, so none of its defensiveness applied. It
+        // surfaced as "Something went wrong when decoding the track".
+        val chain = IntroFilterFactory(FakeContext(introId = "1_2_1", playbackMs = 9_000)) { _, _ -> }
+            .buildChain(null, format, output)
+
+        assertEquals(2, chain.size)
+    }
+
+    @Test
+    fun `an idle player with a null track yields no filters instead of failing`() {
+        assertTrue(chainFor(FakeContext(current = null)).isEmpty())
+    }
+
+    @Test
+    fun `an explicit track is still honoured if lavaplayer ever supplies one`() {
+        val chain = IntroFilterFactory(FakeContext(introId = "1_2_1", playbackMs = 9_000)) { _, _ -> }
+            .buildChain(mockk<AudioTrack>(relaxed = true), format, output)
+
+        assertEquals(2, chain.size)
+    }
+
+    @Test
     fun `a failure resolving the intro id degrades to no filter`() {
         assertTrue(chainFor(FakeContext(introIdThrows = true)).isEmpty())
+    }
+
+    @Test
+    fun `nothing this class does can take playback down with it`() {
+        // It runs on the decode path, so a throw here is a track that won't
+        // play. Whatever goes wrong, the answer is no filters and a log line.
+        val exploding = object : IntroTrackContext {
+            override fun currentTrack(): AudioTrack = error("boom")
+            override fun introIdFor(track: AudioTrack) = error("boom")
+            override fun introPlaybackMsFor(track: AudioTrack) = error("boom")
+            override fun isResumingTrack(track: AudioTrack) = error("boom")
+        }
+
+        assertTrue(IntroFilterFactory(exploding) { _, _ -> }.buildChain(null, format, output).isEmpty())
     }
 
     @Test
