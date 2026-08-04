@@ -2,21 +2,33 @@ package bot.toby.button.buttons.music
 
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.MusicPlayerHelper
+import bot.toby.intro.IntroOwnership
 import bot.toby.intro.IntroPresenter
+import common.intro.IntroClip
 import core.button.Button
 import core.button.ButtonContext
+import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import net.dv8tion.jda.api.components.buttons.Button as JdaButton
+import net.dv8tion.jda.api.components.buttons.ButtonStyle
 import net.dv8tion.jda.api.entities.Guild
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
 
 /**
- * Plays a member's intro on demand, from the **View intros** context menu.
+ * Plays one named intro, from the **View intros** context menu.
  *
- * The target's id rides in the component id (`playintro:1234`) because the
- * button outlives the interaction that built it, and the message it sits on is
- * ephemeral — there is nothing else left to read the target off.
+ * There is a button per intro rather than a single "play theirs". The menu
+ * lists somebody's intros by name; offering one button that then played a
+ * *random* one of them was a small betrayal of the list right above it — with
+ * three slots you had a one-in-three chance of hearing the one you were
+ * looking at. The rotation is the right behaviour when the caller means "their
+ * intro" (a voice join, `/play intro`) and the wrong behaviour when they have
+ * pointed at one.
+ *
+ * The intro's id rides in the component id, since the id is
+ * `guildId_discordId_slot` and so already says everything needed — and the
+ * message it sits on is ephemeral, so there is nothing else left to read.
  *
  * Same permission story as `/play intro user:`: previewing is strictly less
  * intrusive than the surprise version everyone already gets on join. It does
@@ -41,23 +53,28 @@ class PlayIntroButton @Autowired constructor(
         }
 
         val guild = ctx.guild
-        val targetId = event.componentId.substringAfter(':').toLongOrNull()
-            ?: return reply(ctx, "That button has lost track of whose intro it was for — try the menu again.")
+        val introId = event.componentId.substringAfter(':').takeIf { it.isNotBlank() }
+        // The id arrives from the client, so being offered it earlier proves
+        // nothing about the one that came back.
+        if (!IntroOwnership.inGuild(introId, guild.idLong)) {
+            return reply(ctx, "That button has lost track of which intro it was for — open the menu again.")
+        }
+
+        val intro = introId?.let { introHelper.findIntroById(it) }
+            ?: return reply(ctx, "That intro has gone — it may have been deleted since you opened this.")
 
         invalidVoiceState(ctx, guild)?.let { return reply(ctx, it) }
 
-        val targetDto = introHelper.findUserById(targetId, guild.idLong)
-        val targetName = guild.getMemberById(targetId)?.effectiveName ?: "They"
-        if (targetDto.musicDtos.none { it.enabled }) {
-            return reply(ctx, "$targetName has nothing playable set right now.")
-        }
+        val name = IntroPresenter.displayName(intro)
 
-        val played = MusicPlayerHelper.playUserIntro(
-            targetDto, guild, deleteDelay = deleteDelay, member = guild.getMemberById(targetId),
-        ) ?: return reply(ctx, "Couldn't load $targetName's intro just now — it may have stopped working.")
+        MusicPlayerHelper.playIntro(intro, guild, deleteDelay = deleteDelay, member = ctx.member)
+            ?: return reply(ctx, "Couldn't load **$name** just now — it may have stopped working.")
 
-        logger.info { "Played $targetId's intro '${played.id}' on request from ${event.user.idLong}" }
-        reply(ctx, "Playing **${IntroPresenter.displayName(played)}** — $targetName's intro.")
+        logger.info { "Played intro '${intro.id}' on request from ${event.user.idLong}" }
+        // No owner name: resolving one means a member-cache lookup that
+        // returns null for anyone not cached, and the reply is ephemeral and
+        // attached to the menu they just opened, so whose it is isn't in doubt.
+        reply(ctx, "Playing **${describe(intro)}** — intro #${intro.index ?: '?'}.")
     }
 
     /**
@@ -83,9 +100,30 @@ class PlayIntroButton @Autowired constructor(
     companion object {
         const val BUTTON_NAME = "playintro"
 
-        fun button(targetDiscordId: Long, isSelf: Boolean): JdaButton = JdaButton.primary(
-            "$BUTTON_NAME:$targetDiscordId",
-            if (isSelf) "▶ Play mine" else "▶ Play theirs",
+        /** Keeps three buttons and a link from crowding one action row. */
+        private const val LABEL_LIMIT = 24
+
+        /**
+         * A play button for one intro.
+         *
+         * Intros that sit out the rotation — switched off, or repeatedly
+         * failing to load — are styled quietly rather than hidden. Hearing one
+         * on purpose is exactly how you'd answer "why doesn't this play?", and
+         * the embed above already says which is which.
+         */
+        fun button(intro: MusicDto): JdaButton = JdaButton.of(
+            if (intro.enabled && !IntroPresenter.isBroken(intro)) ButtonStyle.PRIMARY else ButtonStyle.SECONDARY,
+            "$BUTTON_NAME:${intro.id.orEmpty()}",
+            "▶ ${label(intro)}",
         )
+
+        private fun label(intro: MusicDto): String {
+            val name = IntroPresenter.displayName(intro)
+            return if (name.length <= LABEL_LIMIT) name else name.take(LABEL_LIMIT - 1).trimEnd() + "…"
+        }
+
+        /** Describes what a button will play, for the confirmation message. */
+        internal fun describe(intro: MusicDto): String =
+            "${IntroPresenter.displayName(intro)} (${IntroClip.describe(intro.startMs, intro.endMs)})"
     }
 }
