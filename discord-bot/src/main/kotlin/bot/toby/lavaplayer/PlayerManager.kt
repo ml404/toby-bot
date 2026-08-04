@@ -22,6 +22,8 @@ import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.intro.IntroHealth
+import common.media.SourceOutage
+import common.media.SourceOutageTracker
 import common.logging.DiscordLogger
 import core.command.Command.Companion.replyAndDelete
 import dev.lavalink.youtube.YoutubeAudioSourceManager
@@ -65,6 +67,8 @@ class PlayerManager(
     private val retryExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor { r ->
         Thread(r, "track-load-retry").apply { isDaemon = true }
     },
+    // Injectable so tests can drive its windows without waiting them out.
+    private val outageTracker: SourceOutageTracker = SourceOutageTracker(),
 ) {
     private val musicManagers: MutableMap<Long, GuildMusicManager> = HashMap()
     var isCurrentlyStoppable: Boolean = true
@@ -269,6 +273,10 @@ class PlayerManager(
             private val requesterId: Long? = event?.member?.idLong
 
             override fun trackLoaded(track: AudioTrack) {
+                // Proof we aren't blocked, and the only thing that ends an
+                // outage — elapsed time would keep reporting one long after
+                // playback started working again.
+                outageTracker.recordSuccess()
                 scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
                 if (isIntro) {
@@ -287,13 +295,22 @@ class PlayerManager(
             }
 
             override fun noMatches() {
-                event?.hook?.replyAndDelete("Nothing found for the link '$trackUrl'", deleteDelay)
+                // A blocked lookup usually comes back as "no matches" rather
+                // than an error, which is why a rate-limited bot spent the
+                // outage telling people their perfectly good links didn't
+                // exist.
+                val outage = noteFailure(trackUrl, definite = false)
+                if (outage) {
+                    event?.hook?.replyAndDelete(OUTAGE_MESSAGE, deleteDelay)
+                } else {
+                    event?.hook?.replyAndDelete("Nothing found for the link '$trackUrl'", deleteDelay)
+                }
                 // On the intro path `event` is always null, so before this the
                 // branch was a no-op and a deleted or private video simply
                 // produced silence forever.
                 introId?.let {
                     logger.warn { "Intro $it resolved nothing for url=$trackUrl" }
-                    SchedulerEvents.publish(IntroLoadFailedEvent(it, "Nothing found at this link"))
+                    reportIntroFailure(it, "Nothing found at this link", outage)
                 }
             }
 
@@ -330,14 +347,60 @@ class PlayerManager(
                     "Track load failed for url=$trackUrl severity=${exception.severity} after $attempt attempt(s)\n" +
                             exception.stackTraceToString()
                 }
-                event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
+                // A message that names a block is enough on its own; anything
+                // else only counts towards the correlation.
+                val outage = noteFailure(trackUrl, definite = SourceOutage.looksLikeBlock(exception.message))
+                if (outage) {
+                    event?.hook?.replyAndDelete(OUTAGE_MESSAGE, deleteDelay)
+                } else {
+                    event?.hook?.replyAndDelete("Could not play: ${exception.message}", deleteDelay)
+                }
                 // Retries are exhausted by this point, so this is a real
                 // failure of the source rather than a blip worth hiding.
                 introId?.let {
-                    SchedulerEvents.publish(IntroLoadFailedEvent(it, IntroHealth.normaliseReason(exception.message)))
+                    reportIntroFailure(it, IntroHealth.normaliseReason(exception.message), outage)
                 }
             }
         }
+    }
+
+    /**
+     * Records a failed load and answers whether the host — rather than the
+     * track — now looks like the problem. Logs the onset once, with the bit an
+     * operator can act on.
+     */
+    private fun noteFailure(trackUrl: String, definite: Boolean): Boolean {
+        val justDeclared = outageTracker.recordFailure(trackUrl, definite)
+        if (justDeclared) {
+            logger.error {
+                "Audio source appears to be refusing us: ${SourceOutage.OUTAGE_AFTER_DISTINCT_FAILURES}+ distinct " +
+                    "sources failed inside ${SourceOutage.WINDOW_MS / 1000}s (latest: $trackUrl). " +
+                    "Intro health is paused until a load succeeds so nobody is told their working intro is broken. " +
+                    "If this persists, check $GOOGLE_REFRESH_TOKEN — anonymous YouTube requests are far more likely " +
+                    "to be IP-blocked."
+            }
+        }
+        return outageTracker.isOutage()
+    }
+
+    /**
+     * An intro failed to load. During an outage this deliberately publishes
+     * nothing.
+     *
+     * The failure counter exists to find intros whose *source* has died, and
+     * it drives a DM telling the owner to go and replace the link. Letting a
+     * rate-limit episode feed it would mark every intro on every server broken
+     * within two joins, DM everybody advice that doesn't apply, and have
+     * [common.intro.IntroSelection] start skipping tracks that were never
+     * anything but fine. Losing a couple of genuine failures to a false
+     * negative is the cheaper mistake by a wide margin.
+     */
+    private fun reportIntroFailure(introId: String, reason: String, outage: Boolean) {
+        if (outage) {
+            logger.warn { "Not counting intro $introId's failure against its health: the source is refusing us." }
+            return
+        }
+        SchedulerEvents.publish(IntroLoadFailedEvent(introId, reason))
     }
 
     /**
@@ -365,6 +428,15 @@ class PlayerManager(
     }
 
     companion object {
+        /**
+         * Shown instead of "nothing found" / "could not play" while the source
+         * is refusing us, because both of those blame the listener's link for
+         * something that has nothing to do with it. No mention of tokens or
+         * IPs: that's the operator's problem and it's in the log.
+         */
+        const val OUTAGE_MESSAGE = "Can't reach the music source right now — it's refusing requests from TobyBot, " +
+            "which isn't a problem with your link. This usually clears on its own; try again in a few minutes."
+
         /** Total load attempts before giving up (1 initial + retries). */
         const val MAX_LOAD_ATTEMPTS = 3
 
