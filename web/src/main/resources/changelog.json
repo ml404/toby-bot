@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Tidy up the intro save path: pending-intro cache, API timeouts, honest failure message",
+    "summary": "The three things from the last review, one commit each.",
+    "emoji": "🎵",
+    "prNumber": 739
+  },
+  {
+    "date": "August 2026",
     "title": "Fix intros overwriting each other, and add a clip form to the context menu",
     "summary": "Both reported problems, plus the feature that closes the second one.",
     "emoji": "🎵",
