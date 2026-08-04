@@ -343,9 +343,9 @@ class IntroWebService(
         IntroClip.validate(startMs, endMs, sourceDurationMs)
 
     // Shared with the slash-command path via IntroSlots — see there for why
-    // walking the range beats `size + 1`.
+    // occupancy is read from the ids rather than the index column.
     private fun nextFreeIndex(existingIntros: List<MusicDto>): Int? =
-        IntroSlots.nextFreeIndex(existingIntros.map { it.index })
+        IntroSlots.nextFreeSlot(existingIntros.map { it.id })
 
     private fun requireOwnedIntro(discordId: Long, guildId: Long, introId: String): String? =
         if (introId.startsWith("${guildId}_${discordId}_")) null
@@ -418,8 +418,22 @@ class IntroWebService(
     }
 
     /**
-     * Reassign the `index` field across the caller's intros to match the supplied id ordering.
-     * The rest of the bot selects randomly between intros so order is purely organisational.
+     * Reorder the caller's intros to match the supplied id ordering.
+     *
+     * This moves the intros *between* slots rather than renumbering the slots.
+     * It has to: a row's id is `guildId_discordId_slot`, so the slot is part of
+     * the primary key and can't be reassigned without deleting and reinserting.
+     *
+     * The old implementation rewrote the `index` column and left the ids alone,
+     * which quietly broke the invariant the rest of the bot relies on. A user
+     * who dragged a row could end up holding ids `[_1, _3]` with indexes
+     * `[2, 1]`; the next intro they added was allocated slot 3 — free by index,
+     * occupied by id — and `createNewMusicFile` merged it straight over the
+     * intro already living there. They were told it saved. The other one was
+     * gone.
+     *
+     * So the slots stay exactly where they are and the contents move. Which
+     * is what the drag actually means to the person doing it.
      */
     fun reorderIntros(discordId: Long, guildId: Long, orderedIds: List<String>): String? {
         val expectedPrefix = "${guildId}_${discordId}_"
@@ -429,19 +443,26 @@ class IntroWebService(
         val currentIds = user.musicDtos.map { it.id }.toSet()
         if (orderedIds.toSet() != currentIds) return "Reorder list does not match your intros."
 
-        // Two-phase rename: stash as negative temp indexes first to avoid unique-key collisions,
-        // then assign the final 1..N indexes.
-        orderedIds.forEachIndexed { idx, id ->
-            musicFileService.getMusicFileById(id)?.let { dto ->
-                dto.index = -(idx + 1)
-                musicFileService.updateMusicFile(dto)
-            }
+        // Snapshot every intro's content before writing anything: the rows are
+        // about to be overwritten with each other's contents, so reading them
+        // lazily would copy already-copied data.
+        val contentById = orderedIds.associateWith { id ->
+            musicFileService.getMusicFileById(id)?.contentSnapshot()
         }
-        orderedIds.forEachIndexed { idx, id ->
-            musicFileService.getMusicFileById(id)?.let { dto ->
-                dto.index = idx + 1
-                musicFileService.updateMusicFile(dto)
-            }
+        if (contentById.values.any { it == null }) return "One or more intros could not be read."
+
+        // The slots in play, low to high — the same set before and after, which
+        // is what keeps sparse layouts (say [1, 3] after a delete) intact.
+        val slots = user.musicDtos.mapNotNull { it.id }.sortedBy { IntroSlots.slotFromId(it) ?: Int.MAX_VALUE }
+
+        slots.zip(orderedIds).forEach { (slotId, wantedId) ->
+            if (slotId == wantedId) return@forEach
+            val row = musicFileService.getMusicFileById(slotId) ?: return "One or more intros could not be read."
+            row.copyContentFrom(contentById.getValue(wantedId)!!)
+            // Put `index` back in step with the id while we're here: rows that
+            // predate this fix may still carry a drifted value.
+            IntroSlots.slotFromId(slotId)?.let { row.index = it }
+            musicFileService.updateMusicFile(row)
         }
         return null
     }

@@ -456,17 +456,77 @@ class IntroWebServiceTest {
     }
 
     @Test
-    fun `reorderIntros reassigns indexes via a two-phase rename`() {
-        val a = intro(1); val b = intro(2)
+    fun `reorderIntros moves the contents between slots, not the slots`() {
+        // Slots are identity: the id is `guildId_discordId_slot` and is the
+        // primary key, so a reorder can't renumber them. It used to rewrite
+        // the `index` column and leave the ids alone, which put the two out of
+        // step — and the next intro the user added was then allocated a slot
+        // that was free by index and occupied by id, overwriting whatever was
+        // already there.
+        val a = intro(1, fileName = "A"); val b = intro(2, fileName = "B")
         every { userService.getUserById(discordId, guildId) } returns user(a, b)
         every { musicFileService.getMusicFileById(a.id!!) } returns a
         every { musicFileService.getMusicFileById(b.id!!) } returns b
 
         // Reverse the order: b first, then a.
         val result = service.reorderIntros(discordId, guildId, listOf(b.id!!, a.id!!))
+
         assertNull(result)
-        assertEquals(1, b.index)
-        assertEquals(2, a.index)
+        // Ids and indexes are untouched and still agree with each other...
+        assertEquals("${guildId}_${discordId}_1", a.id)
+        assertEquals(1, a.index)
+        assertEquals("${guildId}_${discordId}_2", b.id)
+        assertEquals(2, b.index)
+        // ...and the tracks have swapped places, which is what the drag meant.
+        assertEquals("B", a.fileName)
+        assertEquals("A", b.fileName)
+    }
+
+    @Test
+    fun `reorderIntros leaves a sparse layout sparse`() {
+        // Slots [1, 3] after a delete stay [1, 3]; renumbering them to [1, 2]
+        // would move a row onto an id that is not its own.
+        val a = intro(1, fileName = "A"); val c = intro(3, fileName = "C")
+        every { userService.getUserById(discordId, guildId) } returns user(a, c)
+        every { musicFileService.getMusicFileById(a.id!!) } returns a
+        every { musicFileService.getMusicFileById(c.id!!) } returns c
+
+        assertNull(service.reorderIntros(discordId, guildId, listOf(c.id!!, a.id!!)))
+
+        assertEquals(1, a.index)
+        assertEquals(3, c.index)
+        assertEquals("C", a.fileName)
+        assertEquals("A", c.fileName)
+    }
+
+    @Test
+    fun `reorderIntros carries an intro's playback history with it`() {
+        // Health and play counts describe the track, not the slot; leaving
+        // them behind would blame the wrong intro for the wrong failures.
+        val a = intro(1, fileName = "A").apply { playCount = 7; failureCount = 2 }
+        val b = intro(2, fileName = "B").apply { playCount = 1; failureCount = 0 }
+        every { userService.getUserById(discordId, guildId) } returns user(a, b)
+        every { musicFileService.getMusicFileById(a.id!!) } returns a
+        every { musicFileService.getMusicFileById(b.id!!) } returns b
+
+        assertNull(service.reorderIntros(discordId, guildId, listOf(b.id!!, a.id!!)))
+
+        assertEquals(1, a.playCount)
+        assertEquals(0, a.failureCount)
+        assertEquals(7, b.playCount)
+        assertEquals(2, b.failureCount)
+    }
+
+    @Test
+    fun `reorderIntros to the same order writes nothing`() {
+        val a = intro(1); val b = intro(2)
+        every { userService.getUserById(discordId, guildId) } returns user(a, b)
+        every { musicFileService.getMusicFileById(a.id!!) } returns a
+        every { musicFileService.getMusicFileById(b.id!!) } returns b
+
+        assertNull(service.reorderIntros(discordId, guildId, listOf(a.id!!, b.id!!)))
+
+        verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
     }
 
     // --- preview helpers (offline) --------------------------------------

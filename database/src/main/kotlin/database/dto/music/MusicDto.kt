@@ -117,6 +117,35 @@ class MusicDto(
         START
     }
 
+    /**
+     * Copy everything about [other] except which row this is.
+     *
+     * `id` encodes the slot and is the primary key, so reordering intros can't
+     * move rows — it moves their contents between fixed slots instead. `id`,
+     * `userDto` and `index` are the row's identity and stay put; everything
+     * else, playback history included, travels with the track it describes.
+     *
+     * Adding a column to this entity means adding it here too.
+     */
+    fun copyContentFrom(other: MusicDto) {
+        fileName = other.fileName
+        introVolume = other.introVolume
+        musicBlob = other.musicBlob
+        musicBlobHash = other.musicBlobHash
+        startMs = other.startMs
+        endMs = other.endMs
+        enabled = other.enabled
+        playCount = other.playCount
+        lastPlayedAt = other.lastPlayedAt
+        failureCount = other.failureCount
+        lastFailureAt = other.lastFailureAt
+        lastFailureReason = other.lastFailureReason
+        measuredRms = other.measuredRms
+    }
+
+    /** Detached copy used to stage a reorder before any row is written. */
+    fun contentSnapshot(): MusicDto = MusicDto().also { it.copyContentFrom(this) }
+
     override fun toString(): String {
         val blobPreview = musicBlob?.take(10)?.joinToString(", ") { it.toString() } // First 10 bytes
         return "MusicDto(id=$id, fileName=$fileName, introVolume=$introVolume, musicBlobPreview=[$blobPreview])"

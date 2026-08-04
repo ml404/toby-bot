@@ -230,9 +230,10 @@ class IntroHelper(
         val fileContents = mediaLoader.readContents(inputStream)
             ?: return event.hook.replyEphemeralAndDelete("Unable to read file '$filename'", deleteDelay)
 
-        val index = selectedMusicDto?.index ?: allocateSlot(targetDto)
+        val index = selectedMusicDto?.let { slotOf(it) } ?: allocateSlot(targetDto)
             ?: return rejectIntroForFullSlots(event, deleteDelay)
         val musicDto = selectedMusicDto?.apply {
+            this.index = index
             this.musicBlob = fileContents
             this.musicBlobHash = computeHash(fileContents)
             this.fileName = filename
@@ -272,10 +273,14 @@ class IntroHelper(
         logger.setGuildAndMemberContext(event.guild, event.member)
         logger.info { "Persisting music URL for user '$memberName' on guild: ${event.guild?.idLong}" }
         val urlBytes = url.toByteArray()
-        val index = selectedMusicDto?.index ?: allocateSlot(targetDto)
+        val index = selectedMusicDto?.let { slotOf(it) } ?: allocateSlot(targetDto)
             ?: return rejectIntroForFullSlots(event, deleteDelay)
         val musicDto = selectedMusicDto?.apply {
-            this.id = "${targetDto.guildId}_${targetDto.discordId}_$index"
+            // Deliberately *not* reassigning `id`. It is the primary key, and
+            // rewriting it made `merge` insert a second row and orphan the
+            // original whenever `index` had drifted from the id — which the
+            // web drag-reorder causes, since it rewrites index only.
+            this.index = index
             this.userDto = targetDto
             this.musicBlob = urlBytes
             this.musicBlobHash = computeHash(urlBytes)
@@ -306,17 +311,23 @@ class IntroHelper(
      * The slot a brand-new intro should take, re-reading the user so the count
      * reflects anything saved since the command started.
      *
-     * This used to be `musicDtos.size + 1`, which is wrong whenever a delete
-     * has left a gap: with intros in slots [1, 3] it picks 3, and since
-     * `createNewMusicFile` turns an id collision into an update, the intro
-     * already in slot 3 was silently overwritten. `IntroSlots.nextFreeIndex`
-     * walks the range instead — the same allocator the web form uses.
+     * Allocates against the existing **ids**, which is what a new row can
+     * collide with — see [IntroSlots.nextFreeSlot] for why reading the `index`
+     * column silently overwrote people's intros.
      *
      * @return the free slot, or null when all [IntroSlots.MAX_INTRO_COUNT] are taken.
      */
+    /**
+     * The slot an existing intro occupies, read from its id rather than its
+     * `index` column. The two can disagree — the web drag-reorder rewrites
+     * `index` and can't rewrite the id — and the id is the one that decides
+     * which row a write lands on, so it wins.
+     */
+    private fun slotOf(intro: MusicDto): Int? = IntroSlots.slotFromId(intro.id) ?: intro.index
+
     private fun allocateSlot(targetDto: database.dto.user.UserDto): Int? {
         val existing = userDtoHelper.calculateUserDto(targetDto.discordId, targetDto.guildId).musicDtos
-        return IntroSlots.nextFreeIndex(existing.map { it.index })
+        return IntroSlots.nextFreeSlot(existing.map { it.id })
     }
 
     private fun rejectIntroForFullSlots(event: IReplyCallback, deleteDelay: Int) {
