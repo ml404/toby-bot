@@ -273,11 +273,9 @@ class SetIntroCommand @Autowired constructor(
      *
      * Deliberately not gated on being a super-user: this reads someone's
      * intro, which plays out loud to the whole channel every time they join,
-     * and writes only to the caller's own slots. What it does *not* do is
-     * carry across their play count or failure history — a copy is a new intro
-     * that happens to sound the same, and inheriting a "BROKEN" marker from
-     * somebody else's row would be a mystery with no fix. The measured
-     * loudness does come along, since that is a property of the audio.
+     * and writes only to the caller's own slots. What a copy carries across
+     * and what it leaves behind is [IntroHelper.copyIntroInto]'s business,
+     * shared with the right-click **View intros** menu.
      */
     private fun handleCopy(event: SlashCommandInteractionEvent, requestingUserDto: UserDto, deleteDelay: Int) {
         val guild = event.guild ?: run { refuse(event, GUILD_ONLY); return }
@@ -294,30 +292,7 @@ class SetIntroCommand @Autowired constructor(
         val destination = pickDestinationSlot(event, requestingUserDto) ?: return
 
         val name = IntroPresenter.displayName(source)
-        val saved = if (destination.replacing != null) {
-            destination.replacing.apply {
-                fileName = source.fileName
-                introVolume = source.introVolume
-                musicBlob = source.musicBlob?.copyOf()
-                musicBlobHash = source.musicBlobHash
-                startMs = source.startMs
-                endMs = source.endMs
-                enabled = true
-                measuredRms = source.measuredRms
-            }.let { introHelper.updateIntro(it) }
-        } else {
-            introHelper.createIntro(
-                MusicDto(
-                    requestingUserDto,
-                    destination.slot,
-                    source.fileName,
-                    source.introVolume ?: 100,
-                    source.musicBlob?.copyOf(),
-                    source.startMs,
-                    source.endMs,
-                ).apply { measuredRms = source.measuredRms }
-            )
-        }
+        val saved = introHelper.copyIntroInto(source, requestingUserDto, destination.slot, destination.replacing)
 
         if (saved == null) {
             logger.warn { "Failed to copy intro '$name' into slot ${destination.slot}" }
@@ -374,7 +349,7 @@ class SetIntroCommand @Autowired constructor(
             return Destination(requested, occupant)
         }
         // Allocated against ids for the same reason.
-        val free = IntroSlots.nextFreeSlot(mine.map { it.id })
+        val free = introHelper.freeSlotFor(requestingUserDto)
             ?: return refuse(
                 event,
                 "You already have ${IntroSlots.MAX_INTRO_COUNT} intros — pass `into:` to say which to " +

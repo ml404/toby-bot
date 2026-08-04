@@ -3,6 +3,7 @@ import bot.toby.handler.StartUpHandler
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.managers.DefaultCommandManager
 import core.managers.MessageContextManager
+import core.managers.UserContextManager
 import database.service.guild.ConfigService
 import database.service.social.SocialCreditAwardService
 import io.mockk.*
@@ -30,13 +31,18 @@ class StartUpHandlerTest {
         DefaultCommandManager(configService, userDtoHelper, awardService, emptyList())
     private val globalCommandRegistrar: GlobalCommandRegistrar = mockk(relaxed = true)
     private val contextCommandData: List<CommandData> = listOf(Commands.message("Set as my intro"))
+    private val userContextCommandData: List<CommandData> = listOf(Commands.user("View intros"))
     private val messageContextManager: MessageContextManager = mockk(relaxed = true) {
         every { this@mockk.contextCommandData } returns this@StartUpHandlerTest.contextCommandData
+    }
+    private val userContextManager: UserContextManager = mockk(relaxed = true) {
+        every { this@mockk.contextCommandData } returns this@StartUpHandlerTest.userContextCommandData
     }
     private val handler = spyk(
         StartUpHandler(
             commandManager,
             messageContextManager,
+            userContextManager,
             globalCommandRegistrar
         )
     )
@@ -57,10 +63,14 @@ class StartUpHandlerTest {
         handler.onReady(readyEvent())
 
         verify(exactly = 1) { globalCommandRegistrar.register(jda, any()) }
-        // Both surfaces share the global command set: sending them as two
-        // overwrites would have the second delete the first.
+        // All three surfaces share the global command set: sending them as
+        // separate overwrites would have each delete the one before it.
         assertTrue(submitted.captured.any { it.name == "Set as my intro" })
-        assertEquals(commandManager.allSlashCommands.size + contextCommandData.size, submitted.captured.size)
+        assertTrue(submitted.captured.any { it.name == "View intros" })
+        assertEquals(
+            commandManager.allSlashCommands.size + contextCommandData.size + userContextCommandData.size,
+            submitted.captured.size,
+        )
     }
 
     @Test

@@ -256,6 +256,68 @@ class IntroHelper(
 
     fun createIntro(musicDto: MusicDto) = musicFileService.createNewMusicFile(musicDto)
 
+    /**
+     * The lowest slot [target] has free, or null when all are taken.
+     *
+     * Allocated against the existing **ids**, which is what a new row can
+     * collide with — see [IntroSlots.nextFreeSlot] for why reading the `index`
+     * column silently overwrote people's intros.
+     */
+    fun freeSlotFor(target: database.dto.user.UserDto): Int? =
+        IntroSlots.nextFreeSlot(target.musicDtos.map { it.id })
+
+    /**
+     * Copy [source]'s audio and settings into [target]'s [slot].
+     *
+     * Shared by `/setintro copy` and the right-click **View intros** menu so
+     * the two can't drift on what a copy actually means.
+     *
+     * A copy is a new intro that happens to sound the same, so it starts with
+     * a clean history: play counts and failures describe *that* row's life,
+     * and inheriting a "BROKEN" marker from someone else's would be a mystery
+     * with no fix. That reset matters just as much on the replace path — the
+     * slot holds different audio afterwards, so the numbers it accumulated for
+     * the old track are about a track that is no longer there. The measured
+     * loudness is the one thing that does travel, because it is a property of
+     * the audio rather than of the row.
+     *
+     * @param replacing the row already in that slot, when there is one.
+     * @return the saved intro, or null when the write was refused (most often
+     *         because [target] already has this exact audio).
+     */
+    fun copyIntroInto(
+        source: MusicDto,
+        target: database.dto.user.UserDto,
+        slot: Int,
+        replacing: MusicDto? = null,
+    ): MusicDto? {
+        val blob = source.musicBlob?.copyOf()
+        if (replacing == null) {
+            return musicFileService.createNewMusicFile(
+                MusicDto(
+                    target, slot, source.fileName, source.introVolume ?: 100, blob, source.startMs, source.endMs
+                ).apply { measuredRms = source.measuredRms }
+            )
+        }
+        return musicFileService.updateMusicFile(
+            replacing.apply {
+                fileName = source.fileName
+                introVolume = source.introVolume
+                musicBlob = blob
+                musicBlobHash = source.musicBlobHash
+                startMs = source.startMs
+                endMs = source.endMs
+                enabled = true
+                measuredRms = source.measuredRms
+                playCount = 0
+                lastPlayedAt = null
+                failureCount = 0
+                lastFailureAt = null
+                lastFailureReason = null
+            }
+        )
+    }
+
     fun updateIntro(musicDto: MusicDto) = musicFileService.updateMusicFile(musicDto)
 
     fun deleteIntro(musicDto: MusicDto) = musicFileService.deleteMusicFileById(musicDto.id)

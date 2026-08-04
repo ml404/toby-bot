@@ -31,6 +31,7 @@ class JdaListenerRegistrarTest {
         val menuEventListener = mockk<MenuEventListener>()
         val modalEventListener = mockk<ModalEventListener>()
         val messageContextEventListener = mockk<bot.toby.handler.MessageContextEventListener>()
+        val userContextEventListener = mockk<bot.toby.handler.UserContextEventListener>()
         val autocompleteEventListener = mockk<AutocompleteEventListener>()
         val activityEventHandler = mockk<ActivityEventHandler>()
         val guildLeaveCleanupHandler = mockk<GuildLeaveCleanupHandler>()
@@ -48,6 +49,7 @@ class JdaListenerRegistrarTest {
             menuEventListener,
             modalEventListener,
             messageContextEventListener,
+            userContextEventListener,
             autocompleteEventListener,
             activityEventHandler,
             guildLeaveCleanupHandler,
@@ -66,6 +68,7 @@ class JdaListenerRegistrarTest {
                 menuEventListener,
                 modalEventListener,
                 messageContextEventListener,
+                userContextEventListener,
                 autocompleteEventListener,
                 activityEventHandler,
                     guildLeaveCleanupHandler,

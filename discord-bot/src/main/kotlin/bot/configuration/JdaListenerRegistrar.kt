@@ -11,6 +11,7 @@ import bot.toby.handler.MessageContextEventListener
 import bot.toby.handler.ModalEventListener
 import bot.toby.handler.SlashCommandEventListener
 import bot.toby.handler.StartUpHandler
+import bot.toby.handler.UserContextEventListener
 import bot.toby.handler.VoiceEventHandler
 import bot.toby.handler.WelcomeAndAutoRoleHandler
 import bot.toby.install.InstallWelcomeHandler
@@ -30,6 +31,7 @@ class JdaListenerRegistrar @Autowired constructor(
     menuEventListener: MenuEventListener,
     modalEventListener: ModalEventListener,
     messageContextEventListener: MessageContextEventListener,
+    userContextEventListener: UserContextEventListener,
     autocompleteEventListener: AutocompleteEventListener,
     activityEventHandler: ActivityEventHandler,
     guildLeaveCleanupHandler: GuildLeaveCleanupHandler,
@@ -47,6 +49,7 @@ class JdaListenerRegistrar @Autowired constructor(
             menuEventListener,
             modalEventListener,
             messageContextEventListener,
+            userContextEventListener,
             autocompleteEventListener,
             activityEventHandler,
             guildLeaveCleanupHandler,
