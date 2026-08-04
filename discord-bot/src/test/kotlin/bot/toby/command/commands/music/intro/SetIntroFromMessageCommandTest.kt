@@ -2,6 +2,7 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.PendingIntro
+import bot.toby.modal.modals.SetIntroFromMessageModal
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import io.mockk.every
@@ -9,7 +10,8 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
-import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.label.Label
+import net.dv8tion.jda.api.components.textinput.TextInput
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.Message
@@ -21,11 +23,12 @@ import net.dv8tion.jda.api.interactions.InteractionHook
 import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.net.URI
+import net.dv8tion.jda.api.modals.Modal as JdaModal
 
 class SetIntroFromMessageCommandTest {
 
@@ -88,24 +91,31 @@ class SetIntroFromMessageCommandTest {
     }
 
     @Test
-    fun `an mp3 attachment becomes the intro`() {
+    fun `an mp3 attachment opens the clip form with the file parked for it`() {
         val file = mp3()
         withMessage(attachments = listOf(file))
 
         command.handle(event, userDto, 5)
 
-        verify { introHelper.handleAttachment(event, userDto, "Joiner", 5, file, 80) }
+        // Nothing is saved from the command any more — the modal validates and
+        // persists, which is how this entry point finally gets clip bounds and
+        // the duration check that lives with them.
+        verify(exactly = 0) { introHelper.handleAttachment(any(), any(), any(), any(), any(), any()) }
+        verify { event.replyModal(any()) }
+        assertEquals(file, pending[1L]?.attachment)
+        assertNull(pending[1L]?.url)
+        assertEquals(80, pending[1L]?.volume)
     }
 
     @Test
-    fun `a link in the message body becomes the intro`() {
+    fun `a link in the message body is parked for the clip form`() {
         withMessage(content = "this one https://www.youtube.com/watch?v=abc is unreal")
 
         command.handle(event, userDto, 5)
 
-        val uri = slot<URI>()
-        verify { introHelper.handleUrl(event, userDto, "Joiner", 5, capture(uri), 80) }
-        assertEquals("https://www.youtube.com/watch?v=abc", uri.captured.toString())
+        verify { event.replyModal(any()) }
+        assertEquals("https://www.youtube.com/watch?v=abc", pending[1L]?.url)
+        assertNull(pending[1L]?.attachment)
     }
 
     @Test
@@ -115,8 +125,8 @@ class SetIntroFromMessageCommandTest {
 
         command.handle(event, userDto, 5)
 
-        verify { introHelper.handleAttachment(event, userDto, "Joiner", 5, file, 80) }
-        verify(exactly = 0) { introHelper.handleUrl(any(), any(), any(), any(), any(), any()) }
+        assertEquals(file, pending[1L]?.attachment)
+        assertNull(pending[1L]?.url)
     }
 
     @Test
@@ -125,45 +135,60 @@ class SetIntroFromMessageCommandTest {
 
         command.handle(event, userDto, 5)
 
-        verify { introHelper.handleUrl(any(), any(), any(), any(), any(), any()) }
+        assertEquals("https://youtu.be/abc", pending[1L]?.url)
+        assertNull(pending[1L]?.attachment)
     }
 
     @Test
-    fun `a message with nothing usable explains itself`() {
+    fun `a message with nothing usable explains itself without opening a form`() {
         withMessage(attachments = listOf(nonAudio()), content = "lol")
 
         command.handle(event, userDto, 5)
 
-        verify(exactly = 0) { introHelper.handleAttachment(any(), any(), any(), any(), any(), any()) }
-        verify(exactly = 0) { introHelper.handleUrl(any(), any(), any(), any(), any(), any()) }
-        assertTrue(replies.single().contains("no MP3 attachment or link"))
+        // The refusal goes out via event.reply, a JDA default interface method
+        // that mockk can't intercept on these mocks, so the assertion is on the
+        // observable contract: no form, and nothing parked to save later.
+        verify(exactly = 0) { event.replyModal(any()) }
+        assertNull(pending[1L])
     }
 
     @Test
-    fun `at the slot limit the user is asked what to replace`() {
-        val embeds = mutableListOf<MessageEmbed>()
-        val embedSend = mockk<WebhookMessageCreateAction<Message>>(relaxed = true)
-        every { hook.sendMessageEmbeds(capture(embeds)) } returns embedSend
-        every { embedSend.addContent(any()) } returns embedSend
-        // Keep the builder fluent: JDA's covariant addComponents bridge
-        // ClassCastExceptions if a relaxed child answers it.
-        every { embedSend.addComponents(any<ActionRow>()) } returns embedSend
-        every { embedSend.setEphemeral(true) } returns embedSend
+    fun `the form title names the source that was picked`() {
+        withMessage(attachments = listOf(mp3("banger.mp3")))
+        val modal = slot<JdaModal>()
+        every { event.replyModal(capture(modal)) } returns mockk(relaxed = true)
 
-        val full = UserDto(discordId = 1L, guildId = 7L).apply {
-            musicDtos = (1..3).map { MusicDto(this, it, "existing$it", 90, byteArrayOf(1)) }.toMutableList()
-        }
-        val file = mp3()
-        withMessage(attachments = listOf(file))
+        command.handle(event, userDto, 5)
 
-        command.handle(event, full, 5)
+        assertTrue(modal.captured.title.contains("banger.mp3"), modal.captured.title)
+    }
 
-        // Nothing saved yet — the pick is parked for SetIntroMenu to resolve.
-        verify(exactly = 0) { introHelper.handleAttachment(any(), any(), any(), any(), any(), any()) }
-        assertEquals(file, pending[1L]?.attachment)
-        assertEquals(80, pending[1L]?.volume)
-        assertNull(pending[1L]?.url)
-        assertEquals(3, embeds.single().fields.size)
+    @Test
+    fun `the form offers volume and both clip bounds`() {
+        withMessage(attachments = listOf(mp3()))
+        val modal = slot<JdaModal>()
+        every { event.replyModal(capture(modal)) } returns mockk(relaxed = true)
+
+        command.handle(event, userDto, 5)
+
+        val fieldIds = modal.captured.components
+            .mapNotNull { (it as? Label)?.child as? TextInput }
+            .map { it.customId }
+        assertEquals(
+            listOf(
+                SetIntroFromMessageModal.FIELD_VOLUME,
+                SetIntroFromMessageModal.FIELD_START,
+                SetIntroFromMessageModal.FIELD_END,
+            ),
+            fieldIds,
+        )
+    }
+
+    @Test
+    fun `the command does not defer, so the form can open at all`() {
+        // A modal has to be an interaction's first response; deferring first
+        // makes replyModal impossible.
+        assertFalse(command.defersReply)
     }
 
     @Test

@@ -2,8 +2,7 @@ package bot.toby.command.commands.music.intro
 
 import bot.toby.helpers.IntroHelper
 import bot.toby.helpers.PendingIntro
-import bot.toby.helpers.URLHelper
-import common.intro.IntroSlots
+import bot.toby.modal.modals.SetIntroFromMessageModal
 import core.command.MessageContextCommand
 import database.dto.user.UserDto
 import net.dv8tion.jda.api.entities.Message
@@ -24,7 +23,12 @@ import org.springframework.stereotype.Component
  * super-user targeting on `/setintro` has no equivalent here, and silently
  * changing someone else's intro from their own message would be a trap.
  *
- * Clip bounds aren't part of this flow; `/editintro` trims afterwards.
+ * Picking the source is all this does. It opens [SetIntroFromMessageModal] for
+ * the volume and clip bounds, which is also where the intro is validated and
+ * saved. Going straight to the save skipped the clip form entirely, so this
+ * entry point was the one that couldn't trim — and, because the duration check
+ * lives with the clip rules, the one that would happily set a ten-minute video
+ * as somebody's intro.
  */
 @Component
 class SetIntroFromMessageCommand @Autowired constructor(
@@ -33,11 +37,15 @@ class SetIntroFromMessageCommand @Autowired constructor(
 
     override val name: String get() = COMMAND_NAME
 
+    /** Opens a modal, which has to be the interaction's first response. */
+    override val defersReply: Boolean = false
+
     override fun handle(event: MessageContextInteractionEvent, requestingUserDto: UserDto, deleteDelay: Int) {
         logger.setGuildAndMemberContext(event.guild, event.member)
 
         val source = extractSource(event.target) ?: run {
-            event.hook.sendMessage(
+            // Not deferred, so this replies directly rather than via the hook.
+            event.reply(
                 "That message has no MP3 attachment or link to use. Attach an MP3 (or post a YouTube link) " +
                     "and try again, or use `/setintro`."
             ).setEphemeral(true).queue()
@@ -46,28 +54,23 @@ class SetIntroFromMessageCommand @Autowired constructor(
 
         val volume = introHelper.defaultIntroVolume(event.guild?.id)
 
-        // At the slot limit the user has to choose what to replace, exactly as
-        // `/setintro` does — stash the pick and hand them the same menu.
-        val intros = requestingUserDto.musicDtos
-        if (intros.size >= IntroSlots.MAX_INTRO_COUNT) {
-            introHelper.pendingIntros[requestingUserDto.discordId] = PendingIntro(
-                attachment = (source as? Source.File)?.attachment,
-                url = (source as? Source.Link)?.url,
+        // Stashed for the modal to pick up: an attachment URL is far too long
+        // for a modal custom id, and the id travels through the client anyway.
+        introHelper.pendingIntros[requestingUserDto.discordId] = PendingIntro(
+            attachment = (source as? Source.File)?.attachment,
+            url = (source as? Source.Link)?.url,
+            volume = volume,
+        )
+
+        event.replyModal(
+            SetIntroFromMessageModal.buildFor(
+                sourceLabel = when (source) {
+                    is Source.File -> source.attachment.fileName
+                    is Source.Link -> source.url
+                },
                 volume = volume,
             )
-            sendReplacePrompt(event.hook, event.member, intros)
-            return
-        }
-
-        val userName = event.member?.effectiveName ?: event.user.effectiveName
-        when (source) {
-            is Source.File -> introHelper.handleAttachment(
-                event, requestingUserDto, userName, deleteDelay, source.attachment, volume
-            )
-            is Source.Link -> introHelper.handleUrl(
-                event, requestingUserDto, userName, deleteDelay, URLHelper.fromUrlString(source.url), volume
-            )
-        }
+        ).queue()
     }
 
     /**
