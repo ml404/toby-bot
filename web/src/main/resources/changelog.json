@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fix intros overwriting each other, and add a clip form to the context menu",
+    "summary": "Both reported problems, plus the feature that closes the second one.",
+    "emoji": "🎵",
+    "prNumber": 738
+  },
+  {
+    "date": "August 2026",
     "title": "Fix the stuck-intro resume leak, and close four unauthenticated reads",
     "summary": "Two defects, one commit each. Both are silent — nothing surfaces either to a user or an admin.",
     "emoji": "🎵",
