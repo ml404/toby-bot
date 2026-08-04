@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fix the stuck-intro resume leak, and close four unauthenticated reads",
+    "summary": "Two defects, one commit each. Both are silent — nothing surfaces either to a user or an admin.",
+    "emoji": "🎵",
+    "prNumber": 737
+  },
+  {
+    "date": "August 2026",
     "title": "Intro health, guild controls, loudness matching and play stats",
     "summary": "Four intro improvements, one commit each. The first is a live defect; the rest are features that were missing rather than broken.",
     "emoji": "🛡️",
