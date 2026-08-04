@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component
  * The form is pre-filled with the guild's default volume and no clip, so
  * submitting it untouched does exactly what the old one-click flow did, minus
  * the missing validation. The source itself is carried in
- * [IntroHelper.pendingIntros] rather than the modal id — a Discord attachment
+ * [IntroHelper.parkPendingIntro] rather than the modal id — a Discord attachment
  * URL is far longer than the 100 characters a custom id allows.
  */
 @Component
@@ -39,7 +39,7 @@ class SetIntroFromMessageModal(
         val event = ctx.event
         logger.setGuildAndMemberContext(ctx.guild, ctx.member)
 
-        val pending = introHelper.pendingIntros[event.user.idLong] ?: return reply(
+        val pending = introHelper.pendingIntro(ctx.guild.idLong, event.user.idLong) ?: return reply(
             ctx,
             "That form lost track of which track it was for — right-click the message and try again.",
         )
@@ -74,16 +74,21 @@ class SetIntroFromMessageModal(
     private fun save(ctx: ModalContext, deleteDelay: Int, pending: bot.toby.helpers.PendingIntro) {
         val event = ctx.event
         val requestingUserDto: UserDto = introHelper.findUserById(event.user.idLong, ctx.guild.idLong)
-        introHelper.pendingIntros[event.user.idLong] = pending
 
-        // At the slot limit the user still has to choose what to replace. The
-        // pending intro now carries their volume and clip, so the menu picks up
+        // At the slot limit the user still has to choose what to replace, so
+        // re-park with the volume and clip they just typed — the menu picks up
         // where this left off.
         val intros = requestingUserDto.musicDtos
         if (intros.size >= IntroSlots.MAX_INTRO_COUNT) {
+            introHelper.parkPendingIntro(ctx.guild.idLong, event.user.idLong, pending)
             sendReplacePrompt(event.hook, ctx.member, intros)
             return
         }
+
+        // Saving now, so there is nothing left to hold: releasing it here means
+        // the entry goes when the flow ends rather than lingering until it
+        // expires, holding an attachment reference for no reason.
+        introHelper.clearPendingIntro(ctx.guild.idLong, event.user.idLong)
 
         val userName = ctx.member?.effectiveName ?: event.user.effectiveName
         pending.attachment?.let {

@@ -170,12 +170,16 @@ class SetIntroCommand @Autowired constructor(
     ): Boolean {
         val introList = requestingUserDto.musicDtos
         if (introList.size >= LIMIT) {
-            introHelper.pendingIntros[requestingUserDto.discordId] = PendingIntro(
-                attachment = attachmentOption?.asAttachment,
-                url = linkOption,
-                volume = introVolume,
-                startMs = clip.startMs,
-                endMs = clip.endMs,
+            introHelper.parkPendingIntro(
+                requestingUserDto.guildId,
+                requestingUserDto.discordId,
+                PendingIntro(
+                    attachment = attachmentOption?.asAttachment,
+                    url = linkOption,
+                    volume = introVolume,
+                    startMs = clip.startMs,
+                    endMs = clip.endMs,
+                ),
             )
             sendReplacePrompt(hook, member, introList)
             return true

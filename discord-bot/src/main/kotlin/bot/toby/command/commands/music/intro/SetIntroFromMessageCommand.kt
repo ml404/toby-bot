@@ -56,10 +56,14 @@ class SetIntroFromMessageCommand @Autowired constructor(
 
         // Stashed for the modal to pick up: an attachment URL is far too long
         // for a modal custom id, and the id travels through the client anyway.
-        introHelper.pendingIntros[requestingUserDto.discordId] = PendingIntro(
-            attachment = (source as? Source.File)?.attachment,
-            url = (source as? Source.Link)?.url,
-            volume = volume,
+        introHelper.parkPendingIntro(
+            requestingUserDto.guildId,
+            requestingUserDto.discordId,
+            PendingIntro(
+                attachment = (source as? Source.File)?.attachment,
+                url = (source as? Source.Link)?.url,
+                volume = volume,
+            ),
         )
 
         event.replyModal(
