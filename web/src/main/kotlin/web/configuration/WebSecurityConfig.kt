@@ -21,7 +21,19 @@ class WebSecurityConfig {
             .authorizeHttpRequests { auth ->
                 auth.requestMatchers(
                     "/", "/terms", "/privacy", "/changelog",
-                    "/brother", "/config", "/music", "/user",
+                    // `/music` is anonymous by necessity — lavaplayer fetches
+                    // stored intro audio over plain HTTP with no session — so
+                    // it authorises on a signed token instead of a cookie.
+                    // See common.media.MediaToken and BotController.
+                    //
+                    // `/brother`, `/config` and `/user` used to sit here too.
+                    // They are unauthenticated reads of arbitrary rows keyed
+                    // on a Discord id: a whole UserDto (social credit,
+                    // superuser flag), any guild's config value, any brother
+                    // row. Nothing in the codebase calls them — they predate
+                    // the web app having authentication at all — so they now
+                    // fall through to anyRequest().authenticated() below.
+                    "/music",
                     "/commands", "/commands/**",
                     // Health probe only — the rest of /actuator/* (env,
                     // heapdump, …) must never be anonymously reachable even

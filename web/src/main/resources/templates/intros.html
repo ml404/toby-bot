@@ -157,8 +157,15 @@
                                title="Open link">↗</a>
                             <!-- Direct play for file intros -->
                             <span th:unless="${intro.url != null}">
+                                <!--
+                                    Signed rather than `/music?id=…`: that
+                                    endpoint stays anonymous so lavaplayer can
+                                    fetch it, and intro ids are public, so the
+                                    signature is what keeps it from being an
+                                    open read of everyone's uploads.
+                                -->
                                 <audio th:id="'audio-' + ${intro.id}"
-                                       th:src="@{/music(id=${intro.id})}"
+                                       th:src="${intro.mediaUrl}"
                                        preload="none"></audio>
                                 <button type="button" class="btn-play"
                                         th:attr="data-audio-id='audio-' + ${intro.id},
