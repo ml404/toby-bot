@@ -7,6 +7,7 @@ import bot.configuration.TestManagerConfig
 import bot.toby.install.menu.InstallCategoryMenu
 import bot.toby.managers.DefaultMenuManager
 import bot.toby.menu.menus.ActivityContribMenu
+import bot.toby.menu.menus.CopyIntroMenu
 import bot.toby.menu.menus.DeleteIntroMenu
 import bot.toby.menu.menus.EditIntroMenu
 import bot.toby.menu.menus.HelpCategoryMenu
@@ -63,6 +64,7 @@ internal class MenuManagerTest {
             SetIntroMenu::class.java,
             EditIntroMenu::class.java,
             DeleteIntroMenu::class.java,
+            CopyIntroMenu::class.java,
             ActivityContribMenu::class.java,
             InstallCategoryMenu::class.java,
             HelpCategoryMenu::class.java,
