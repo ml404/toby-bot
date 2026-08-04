@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fade intros, capture what's playing, and share intros (slash + right-click)",
+    "summary": "Four things, all in the same corner of the intro flow.",
+    "emoji": "🎵",
+    "prNumber": 740
+  },
+  {
+    "date": "August 2026",
     "title": "Tidy up the intro save path: pending-intro cache, API timeouts, honest failure message",
     "summary": "The three things from the last review, one commit each.",
     "emoji": "🎵",
