@@ -73,13 +73,18 @@ class GuildMusicManagerTest {
             AudioTrackInfo("Intro", "Author", 12_000L, "identifier", false, "http://example.com")
         every { intro.duration } returns 12_000L
         guildMusicManager.scheduler.queueIntro(intro, 0L, null, 60, requesterId = null, introId = "1_2_1")
+        // The player is on the intro, which is how the factory identifies it —
+        // lavaplayer passes null for the track.
+        every { guildMusicManager.audioPlayer.playingTrack } returns intro
 
         assertTrue(
-            factory.captured.buildChain(intro, format, output).isNotEmpty(),
+            factory.captured.buildChain(null, format, output).isNotEmpty(),
             "the factory should see this scheduler's intro bookkeeping",
         )
+
+        every { guildMusicManager.audioPlayer.playingTrack } returns mockk<AudioTrack>(relaxed = true)
         assertTrue(
-            factory.captured.buildChain(mockk(relaxed = true), format, output).isEmpty(),
+            factory.captured.buildChain(null, format, output).isEmpty(),
             "an unrelated track should still get an empty chain",
         )
     }
