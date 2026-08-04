@@ -1,5 +1,6 @@
 package web.controller
 
+import common.media.MediaToken
 import database.dto.guild.ConfigDto
 import database.service.social.BrotherService
 import database.service.guild.ConfigService
@@ -30,11 +31,26 @@ class BotController(
     fun getConfig(@RequestParam("name") name: String?, @RequestParam("guildId") guildId: String): ConfigDto? = configService.getConfigByName(name, guildId)
 
 
+    /**
+     * Serves an intro's stored audio.
+     *
+     * Anonymous by necessity — lavaplayer fetches this with no session when it
+     * plays a file intro — so access is gated on a signature instead. Without
+     * it, ids of the form `guildId_discordId_index` made every uploaded MP3 in
+     * every server an unauthenticated, unmetered read for anyone who could
+     * read a Discord snowflake. See [MediaToken].
+     */
     @GetMapping("/music")
     fun getMusicBlob(
         @RequestParam("id") id: String,
+        @RequestParam(value = MediaToken.EXPIRY_PARAM, required = false) expiresAt: Long? = null,
+        @RequestParam(value = MediaToken.SIGNATURE_PARAM, required = false) signature: String? = null,
         @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) ifNoneMatch: String? = null
     ): ResponseEntity<ByteArray> {
+        // 404 rather than 403: an unsigned request shouldn't be able to tell
+        // an id that exists from one that doesn't.
+        if (!MediaToken.isValid(id, expiresAt, signature)) return ResponseEntity.notFound().build()
+
         val dto = musicFileService.getMusicFileById(id) ?: return ResponseEntity.notFound().build()
         val blob = dto.musicBlob ?: return ResponseEntity.notFound().build()
 

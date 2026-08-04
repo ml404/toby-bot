@@ -89,7 +89,10 @@ class PageRenderSmokeIT {
             "/commands",
             "/commands/wiki",
             "/changelog",
-            // Bot info pages (public)
+            // Legacy JSON endpoints from BotController. /brother, /config and
+            // /user now require authentication (this suite is authenticated);
+            // /music stays anonymous for lavaplayer but needs a signed token,
+            // so an unsigned hit here is a 404 rather than a render.
             "/brother",
             "/config",
             "/music",

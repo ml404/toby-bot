@@ -7,6 +7,7 @@ import common.intro.IntroHealth
 import common.intro.IntroLoudness
 import common.intro.IntroSlots
 import common.logging.DiscordLogger
+import common.media.MediaToken
 import database.dto.music.MusicDto
 import database.dto.user.UserDto
 import database.service.music.MusicFileService
@@ -625,6 +626,16 @@ data class IntroViewModel(
 
     /** "quiet source" / "loud source" — context for the volume slider. */
     val loudnessLabel: String? get() = IntroLoudness.describe(measuredRms)
+
+    /**
+     * Signed URL for this intro's stored audio, for the row's `<audio>` tag.
+     *
+     * `/music` can't require a session — lavaplayer fetches it too — so the
+     * page mints a token the same way the player does rather than relying on
+     * the id alone, which is public. Minted per render, so a tab left open
+     * past the token's hour needs a reload before the preview plays.
+     */
+    val mediaUrl: String get() = MediaToken.urlFor(id)
 }
 
 data class GuildInfo(

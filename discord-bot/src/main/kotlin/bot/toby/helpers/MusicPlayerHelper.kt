@@ -12,6 +12,7 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import common.discord.embed
 import common.intro.IntroLoudness
 import common.logging.DiscordLogger
+import common.media.MediaToken
 import core.command.Command.Companion.replyEmbedAndDelete
 import core.command.Command.Companion.replyEphemeralEmbedAndDelete
 import database.dto.music.MusicDto
@@ -289,8 +290,11 @@ object MusicPlayerHelper {
         // If musicBlob contains a URL (e.g. fileName stores the video title), use that
         val blobString = it.musicBlob?.let { bytes -> String(bytes) } ?: ""
         if (utilIsUrl(blobString).isNotEmpty()) return blobString
-        // Otherwise, serve the binary data via the web endpoint
-        return "$BOT_WEB_URL/music?id=${it.id}"
+        // Otherwise, serve the binary data via the web endpoint. Signed: that
+        // endpoint has to stay anonymous for lavaplayer to fetch it, and intro
+        // ids are guessable, so the signature is what stops it being an open
+        // read of every uploaded MP3 in every server.
+        return "$BOT_WEB_URL${MediaToken.urlFor(it.id.orEmpty())}"
     }
 
     fun resetMessages(guildId: Long) = nowPlayingManager.resetNowPlayingMessage(guildId)

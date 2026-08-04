@@ -207,6 +207,7 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
             player.startTrack(resume, false)
             return
         }
+        if (wasIntro) releaseStaleResumeSlot(endReason)
         if (endReason.mayStartNext) {
             handleNextTrack(player, track)
         } else if (endReason != AudioTrackEndReason.REPLACED) {
@@ -249,6 +250,38 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         }
     }
 
+    /**
+     * An intro ended without handing the player back to the track it preempted.
+     *
+     * Two ways that happens: something else took the player over (REPLACED —
+     * a skip landing mid-intro, or the stuck-track recovery below), or the
+     * player is being torn down (CLEANUP). Either way the resume slot is now
+     * stale, and leaving it set is the expensive part: [queueIntro] treats a
+     * non-null slot as "an intro is already in flight" and falls back to
+     * queueing, so one stranded slot quietly disables intro preemption for the
+     * rest of this player's life.
+     *
+     * On a takeover the preempted track goes back to the front of the queue
+     * rather than being dropped — the listener skipped the intro, not the music
+     * they were already playing. On CLEANUP there's nothing left to play it.
+     */
+    private fun releaseStaleResumeSlot(endReason: AudioTrackEndReason) {
+        val stranded = resumeAfterIntro ?: return
+        resumeAfterIntro = null
+        if (endReason != AudioTrackEndReason.REPLACED) {
+            logger.info("Dropping preempted track ${stranded.info.title}: player is going away ($endReason)")
+            return
+        }
+        logger.info("Intro was taken over; requeueing preempted track ${stranded.info.title} at the front")
+        synchronized(queue) {
+            val rest = queue.toMutableList()
+            queue.clear()
+            queue.offer(stranded)
+            rest.forEach { queue.offer(it) }
+        }
+        publishQueueChanged()
+    }
+
     private fun AudioPlayer.setVolumeToPrevious() {
         previousVolume?.let { previousVol ->
             if (player.volume != previousVol) {
@@ -260,13 +293,36 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         }
     }
 
+    /**
+     * Lavaplayer reports a track as stuck once it has gone [thresholdMs]
+     * (10 seconds by default) without producing a frame. That is a dead track,
+     * not a hiccup, so it is always recovered from — the old `position == 0L`
+     * guard meant a stall that started after playback began was never skipped
+     * and simply hung the queue with nothing to unstick it.
+     */
     override fun onTrackStuck(player: AudioPlayer, track: AudioTrack, thresholdMs: Long) {
-        if (track.position == 0L) {
-            event?.channel
-                ?.sendMessage("Track ${track.info.title} got stuck, skipping.")
-                ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
-            nextTrack()
-        }
+        logger.warn(
+            "'${track.info.title}' produced no audio for ${thresholdMs}ms at position " +
+                "${track.position}ms on guild $guildId; recovering."
+        )
+        event?.channel
+            ?.sendMessage("Track ${track.info.title} got stuck, skipping.")
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
+
+        // Read before stopping: stopping is what consumes the resume slot.
+        val resumesPreemptedTrack = introTracks.contains(track) && resumeAfterIntro != null
+
+        // Stop through the player rather than jumping straight to nextTrack().
+        // onTrackEnd is the only place that restores a preempted track, drops
+        // the intro bookkeeping and tears down the now-playing message; going
+        // around it was how a single stuck intro lost the music it interrupted
+        // and left the resume slot set forever.
+        player.stopTrack()
+
+        // STOPPED has mayStartNext = false, so onTrackEnd deliberately doesn't
+        // advance the queue. Correct when the preempted track has just been
+        // put back on the player; wrong for everything else.
+        if (!resumesPreemptedTrack) nextTrack()
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int): Boolean {

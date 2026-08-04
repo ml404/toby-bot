@@ -2,6 +2,7 @@ package web.service
 
 import common.intro.IntroHealth
 import common.intro.IntroLoudness
+import common.media.MediaToken
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -69,5 +70,26 @@ class IntroViewModelTest {
         val clipped = row().copy(startMs = 1_000, endMs = 5_000)
 
         assertEquals("0:01 – 0:05", clipped.clipLabel)
+    }
+
+    @Test
+    fun `the row's audio url is signed rather than just carrying the id`() {
+        // `/music` stays anonymous so lavaplayer can fetch it, and intro ids
+        // are two public Discord snowflakes — the signature is the only thing
+        // between them and every uploaded MP3 on the bot.
+        val url = row().mediaUrl
+
+        assertTrue(url.startsWith("/music?id=1_2_1&"), url)
+        assertTrue(url.contains("${MediaToken.EXPIRY_PARAM}="), url)
+        assertTrue(url.contains("${MediaToken.SIGNATURE_PARAM}="), url)
+    }
+
+    @Test
+    fun `the minted url is one the endpoint will actually accept`() {
+        val url = row().mediaUrl
+        val expiry = Regex("${MediaToken.EXPIRY_PARAM}=(\\d+)").find(url)!!.groupValues[1].toLong()
+        val signature = Regex("${MediaToken.SIGNATURE_PARAM}=([0-9a-f]+)").find(url)!!.groupValues[1]
+
+        assertTrue(MediaToken.isValid("1_2_1", expiry, signature))
     }
 }
