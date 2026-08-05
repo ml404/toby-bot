@@ -64,15 +64,15 @@ class IntroStatsCommand @Autowired constructor(
         }
 
         val stats = musicFileService.getGuildIntroStats(guild.idLong, IntroHealth.UNHEALTHY_AFTER_FAILURES)
-        event.hook.sendMessageEmbeds(statsEmbed(guild, stats))
+        event.hook.sendMessageEmbeds(statsEmbed(guild, stats, instance.isSourceRefusingRequests()))
             .addComponents(ActionRow.of(IntroPresenter.webDashboardButton(guild.idLong)))
             .setEphemeral(true)
             .queue()
     }
 
-    private fun statsEmbed(guild: Guild, stats: GuildIntroStats) = embed(
+    private fun statsEmbed(guild: Guild, stats: GuildIntroStats, sourceRefusing: Boolean) = embed(
         title = "Intro report — ${guild.name}",
-        color = INTRO_COLOR,
+        color = if (sourceRefusing) OUTAGE_COLOR else INTRO_COLOR,
         description = if (stats.introCount == 0L) {
             "Nobody on this server has set an intro yet."
         } else {
@@ -80,6 +80,16 @@ class IntroStatsCommand @Autowired constructor(
                 "${stats.userCount} member${plural(stats.userCount)}."
         },
     ) {
+        // First, because it changes how everything under it should be read.
+        if (sourceRefusing) {
+            field(
+                name = "⚠️ The audio source is refusing us",
+                value = "Nothing is playing anywhere at the moment — this is TobyBot being rate-limited or " +
+                    "blocked, not a problem with anyone's intro. It usually clears on its own.\n\n" +
+                    "Intro health is **paused** while it lasts, so nobody is being told their intro is " +
+                    "broken and the counts below all predate it.",
+            )
+        }
         field(name = "Plays", value = "**${stats.totalPlays}** since play counts were added", inline = true)
         field(name = "Stored audio", value = "**${formatBytes(stats.storedBytes)}**", inline = true)
         field(
@@ -89,13 +99,16 @@ class IntroStatsCommand @Autowired constructor(
         )
         field(
             name = "Not playing",
-            value = if (stats.brokenCount == 0L) {
-                "**0** — every intro is loading fine"
-            } else {
+            value = when {
+                stats.brokenCount == 0L -> "**0** — every intro is loading fine"
+                // The usual advice is actively wrong mid-outage: their links
+                // are fine, and no DM went out to explain the silence.
+                sourceRefusing -> "**${stats.brokenCount}** were failing before the outage started. " +
+                    "Worth re-checking once the source is back."
                 // Owners are DM'd when theirs breaks, but that DM can be
                 // missed or muted, so the count is repeated where an admin
                 // will see it.
-                "**${stats.brokenCount}** failing to load. Owners have been " +
+                else -> "**${stats.brokenCount}** failing to load. Owners have been " +
                     "DM'd; they can replace the link with `/setintro`."
             },
         )
@@ -136,5 +149,8 @@ class IntroStatsCommand @Autowired constructor(
 
     companion object {
         private val INTRO_COLOR: Color = Color(88, 101, 242) // Discord blurple
+
+        /** Amber, so an outage is visible before a word of it is read. */
+        private val OUTAGE_COLOR: Color = Color(250, 166, 26)
     }
 }

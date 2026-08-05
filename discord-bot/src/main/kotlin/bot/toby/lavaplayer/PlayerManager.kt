@@ -365,6 +365,16 @@ class PlayerManager(
     }
 
     /**
+     * Whether the audio source currently looks like it is refusing us.
+     *
+     * Bot-wide rather than per-guild: it describes YouTube's opinion of this
+     * IP, not anything about a server. Read by `/introstats` so an admin
+     * looking at a pile of "not playing" intros can tell a real problem from
+     * an episode that will clear on its own.
+     */
+    fun isSourceRefusingRequests(): Boolean = outageTracker.isOutage()
+
+    /**
      * Records a failed load and answers whether the host — rather than the
      * track — now looks like the problem. Logs the onset once, with the bit an
      * operator can act on.
