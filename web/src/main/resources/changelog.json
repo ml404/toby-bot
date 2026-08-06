@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Show an active source outage in the intro report",
+    "summary": "The follow-on flagged in #741. `/introstats` is the one place an admin looks when several intros stop playing — and during a rate limit or IP block that's every intro at once, which is exactly when the report was least trustworthy.",
+    "emoji": "🎵",
+    "prNumber": 746
+  },
+  {
+    "date": "August 2026",
     "title": "Play the intro you picked, not one of theirs at random",
     "summary": "The **View intros** menu lists a member's intros by name, then offered a single **▶ Play theirs** button which went through the ordinary rotation. With three slots that's a one-in-three chance of hearing the one you were looking at — and it was inconsistent with the copy menu directly below it, which has always made you choose.",
     "emoji": "🎵",
