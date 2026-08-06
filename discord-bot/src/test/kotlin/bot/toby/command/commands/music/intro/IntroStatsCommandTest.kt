@@ -17,6 +17,7 @@ import io.mockk.verify
 import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -40,6 +41,7 @@ class IntroStatsCommandTest : MusicCommandTest {
         every { requestingUserDto.superUser } returns true
         every { configService.getConfigByName(any(), any()) } returns null
         every { musicFileService.getGuildIntroStats(any(), any()) } returns GuildIntroStats()
+        every { MusicCommandTest.playerManager.isSourceRefusingRequests() } returns false
     }
 
     @AfterEach
@@ -49,7 +51,7 @@ class IntroStatsCommandTest : MusicCommandTest {
     }
 
     private fun runAndCaptureEmbed(): MessageEmbed {
-        command.handle(ctx, requestingUserDto, 5)
+        command.handleMusicCommand(ctx, MusicCommandTest.playerManager, requestingUserDto, 5)
         val embeds = mutableListOf<MessageEmbed>()
         verify { event.hook.sendMessageEmbeds(capture(embeds)) }
         return embeds.single()
@@ -63,7 +65,7 @@ class IntroStatsCommandTest : MusicCommandTest {
         // rather than a personal one.
         every { requestingUserDto.superUser } returns false
 
-        command.handle(ctx, requestingUserDto, 5)
+        command.handleMusicCommand(ctx, MusicCommandTest.playerManager, requestingUserDto, 5)
 
         verify(exactly = 0) { musicFileService.getGuildIntroStats(any(), any()) }
     }
@@ -72,7 +74,7 @@ class IntroStatsCommandTest : MusicCommandTest {
     fun `broken intros are counted using the shared threshold`() {
         // Drifting from IntroSelection's definition would have the report
         // disagree with which intros actually get skipped.
-        command.handle(ctx, requestingUserDto, 5)
+        command.handleMusicCommand(ctx, MusicCommandTest.playerManager, requestingUserDto, 5)
 
         verify { musicFileService.getGuildIntroStats(any(), IntroHealth.UNHEALTHY_AFTER_FAILURES) }
     }
@@ -163,4 +165,82 @@ class IntroStatsCommandTest : MusicCommandTest {
         assertEquals("1.5 MB", command.formatBytes(1024 * 1024 * 3 / 2))
         assertEquals("2.00 GB", command.formatBytes(2L * 1024 * 1024 * 1024))
     }
+
+    // --- when the source is refusing us -------------------------------------
+    //
+    // The report is the one place an admin looks when several intros stop
+    // playing. During a rate limit or IP block that is every intro at once,
+    // and the usual reading — "these links are broken, tell their owners" —
+    // is wrong in every particular.
+
+    private fun duringOutage() {
+        every { MusicCommandTest.playerManager.isSourceRefusingRequests() } returns true
+    }
+
+    @Test
+    fun `an active outage is called out before anything else`() {
+        duringOutage()
+
+        val embed = runAndCaptureEmbed()
+
+        val first = embed.fields.first()
+        assertTrue(first.name!!.contains("refusing us"), first.name!!)
+        assertTrue(first.value!!.contains("not a problem with anyone's intro"), first.value!!)
+    }
+
+    @Test
+    fun `the outage says intro health is paused and the counts predate it`() {
+        // Otherwise an admin reads a broken count that stopped moving and
+        // concludes the problem is smaller than it is.
+        duringOutage()
+
+        val embed = runAndCaptureEmbed()
+
+        val warning = embed.fields.first().value!!
+        assertTrue(warning.contains("paused"), warning)
+        assertTrue(warning.contains("predate"), warning)
+    }
+
+    @Test
+    fun `mid-outage the broken count drops the advice to replace links`() {
+        // Their links are fine, and no DM went out to explain the silence, so
+        // both halves of the usual sentence are untrue.
+        duringOutage()
+        every { musicFileService.getGuildIntroStats(any(), any()) } returns
+            GuildIntroStats(introCount = 4, userCount = 2, brokenCount = 3)
+
+        val embed = runAndCaptureEmbed()
+
+        val notPlaying = embed.fields.single { it.name == "Not playing" }.value!!
+        assertTrue(notPlaying.contains("before the outage started"), notPlaying)
+        assertTrue(!notPlaying.contains("DM'd"), notPlaying)
+        assertTrue(!notPlaying.contains("/setintro"), notPlaying)
+    }
+
+    @Test
+    fun `an outage is visible from the colour before a word is read`() {
+        // Two runs in one capture: comparing the reports against each other
+        // beats pinning the exact swatches, which are presentation detail.
+        command.handleMusicCommand(ctx, MusicCommandTest.playerManager, requestingUserDto, 5)
+        duringOutage()
+        command.handleMusicCommand(ctx, MusicCommandTest.playerManager, requestingUserDto, 5)
+
+        val embeds = mutableListOf<MessageEmbed>()
+        verify { event.hook.sendMessageEmbeds(capture(embeds)) }
+        assertEquals(2, embeds.size)
+        assertNotEquals(embeds[0].colorRaw, embeds[1].colorRaw)
+    }
+
+    @Test
+    fun `with the source healthy nothing about an outage is mentioned`() {
+        every { musicFileService.getGuildIntroStats(any(), any()) } returns
+            GuildIntroStats(introCount = 4, userCount = 2, brokenCount = 3)
+
+        val embed = runAndCaptureEmbed()
+
+        assertTrue(embed.fields.none { it.name!!.contains("refusing") }, embed.fields.map { it.name }.toString())
+        val notPlaying = embed.fields.single { it.name == "Not playing" }.value!!
+        assertTrue(notPlaying.contains("DM'd"), notPlaying)
+    }
+
 }
