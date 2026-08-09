@@ -225,11 +225,29 @@
                 <span class="cube-spinner" data-spinner="generate" hidden aria-hidden="true"></span>
                 <p class="cube-status" data-status="generate" aria-live="polite"></p>
             </div>
+            <p class="cube-shared-banner" th:if="${sharedDealName}" data-shared-deal-banner
+               th:text="'📥 Loaded shared deal: ' + ${sharedDealName}">Loaded shared deal</p>
+            <p class="cube-shared-missing" th:if="${sharedDealMissing}" data-shared-deal-missing>
+                That shared deal link wasn't found — it may have been mistyped.
+            </p>
+            <!-- The shared deal's pack list, handed to the browser to load
+                 through the same /api/packs path a downloaded file takes.
+                 A textarea because its content is entity-decoded on read,
+                 exactly as the shared-cube list box relies on. -->
+            <textarea data-shared-deal-packs th:if="${sharedDealPacks}" th:text="${sharedDealPacks}"
+                      hidden aria-hidden="true" tabindex="-1"></textarea>
             <p class="cube-empty" data-empty="generate">Choose your cards above, then hit <strong>Generate packs</strong>.</p>
             <div class="cube-generate-summary" data-summary="generate" hidden></div>
             <p class="cube-notfound" data-notfound="generate" hidden></p>
             <div class="cube-result-actions" data-actions="generate" hidden>
                 <button type="button" class="btn btn-secondary" data-download="generate">⬇ Download pack list (.txt)</button>
+                <button type="button" class="btn btn-secondary" data-share="generate" th:if="${loggedIn}">🔗 Share this deal</button>
+            </div>
+            <div class="cube-share-result" data-share-deal-result hidden>
+                <label>Deal link
+                    <input type="text" data-share-deal-url readonly aria-label="Shared deal link">
+                </label>
+                <button type="button" class="btn btn-secondary" data-share-deal-copy>Copy</button>
             </div>
             <div class="cube-packs" data-result="generate" hidden></div>
             <details class="cube-breakdown" data-breakdown="generate" hidden>
@@ -263,6 +281,7 @@
                 <button type="button" class="btn btn-secondary" data-sample-pack="preview">🎴 Open a sample pack</button>
                 <button type="button" class="btn btn-secondary" data-copy="preview">⧉ Copy card list</button>
                 <button type="button" class="btn btn-secondary" data-download="preview">⬇ Download cube (.txt)</button>
+                <button type="button" class="btn btn-secondary" data-download-sample="preview" hidden>⬇ Download sample pack (.txt)</button>
             </div>
             <div class="cube-packs" data-sample="preview" hidden></div>
             <div class="cube-groups" data-result="preview" hidden></div>

@@ -5,6 +5,7 @@ import common.mtg.MtgCurrency
 import database.dto.user.CardPriceWatchDto
 import database.service.user.CardPriceWatchService
 import database.service.user.CubeListService
+import database.dto.user.SharedCubeKind
 import database.service.user.SharedCubeService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -51,7 +52,8 @@ import web.util.displayName
  * logged-in Discord user and persist per-user via [CubeListService], so a
  * saved cube follows the user across devices. A logged-in user can also
  * publish an immutable shareable snapshot via [SharedCubeService]; anyone can
- * open it at `/magic/c/{token}` (no login).
+ * open it at `/magic/c/{token}` — or, for a dealt set of packs,
+ * `/magic/d/{token}` — with no login.
  */
 @Controller
 @RequestMapping("/magic")
@@ -97,12 +99,36 @@ class CubeController(
     ): String {
         model.addAttribute("username", user.displayName())
         model.addAttribute("loggedIn", user != null)
-        val shared = sharedCubes.get(token)
+        val shared = sharedCubes.get(token)?.takeIf { it.kind == SharedCubeKind.CUBE }
         if (shared != null) {
             model.addAttribute("sharedName", shared.name)
             model.addAttribute("sharedCards", shared.cards)
         } else {
             model.addAttribute("sharedMissing", true)
+        }
+        return "magic"
+    }
+
+    /**
+     * Opens a shared deal: the same page, carrying the pack list so the
+     * Generate tab can render those exact packs. The text rides along in the
+     * page rather than being resolved here, so opening a link and loading a
+     * downloaded file take the identical path through `/api/packs`.
+     */
+    @GetMapping("/d/{token}")
+    fun sharedDealPage(
+        @PathVariable token: String,
+        @AuthenticationPrincipal user: OAuth2User?,
+        model: Model,
+    ): String {
+        model.addAttribute("username", user.displayName())
+        model.addAttribute("loggedIn", user != null)
+        val shared = sharedCubes.get(token)?.takeIf { it.kind == SharedCubeKind.DEAL }
+        if (shared != null) {
+            model.addAttribute("sharedDealName", shared.name)
+            model.addAttribute("sharedDealPacks", shared.cards)
+        } else {
+            model.addAttribute("sharedDealMissing", true)
         }
         return "magic"
     }
@@ -419,6 +445,27 @@ class CubeController(
         return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/magic/c/${row.token}", name = row.name))
     }
 
+    /**
+     * Publishes a dealt set of packs as a link. Same snapshot rules as
+     * [share] — logged-in to create, immutable, anyone can open — but the
+     * payload is a pack list, so it opens on the Generate tab with the packs
+     * intact rather than as a card list to re-deal.
+     */
+    @PostMapping("/api/share-deal", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun shareDeal(
+        @RequestBody request: ShareDealRequest,
+        @AuthenticationPrincipal user: OAuth2User?,
+    ): ResponseEntity<ShareCubeResponse> {
+        val discordId = user?.discordIdOrNull() ?: return ResponseEntity.status(401).build()
+        if (request.packs.isBlank() || request.packs.length > MAX_CARDS_LENGTH) {
+            return ResponseEntity.badRequest().build()
+        }
+        val name = request.name.trim().ifEmpty { "Shared deal" }.take(MAX_NAME_LENGTH)
+        val row = sharedCubes.create(discordId, name, request.packs, kind = SharedCubeKind.DEAL)
+        return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/magic/d/${row.token}", name = row.name))
+    }
+
     private companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_LISTS_PER_USER = 50
@@ -456,6 +503,9 @@ private fun CardPriceWatchDto.toView() = CardWatchView(
 )
 
 data class ShareCubeRequest(val name: String = "", val cards: String = "")
+
+/** A dealt set of packs (the pack-list text) published as a link. */
+data class ShareDealRequest(val name: String = "", val packs: String = "")
 
 data class ShareCubeResponse(val token: String, val url: String, val name: String)
 

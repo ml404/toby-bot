@@ -15,6 +15,7 @@ import common.mtg.CubeCard
 import common.mtg.DeckLegality
 import common.mtg.MtgColor
 import common.mtg.MtgCurrency
+import common.mtg.PackListWriter
 import common.mtg.Rarity
 import database.dto.user.CubeListDto
 import net.dv8tion.jda.api.entities.MessageEmbed
@@ -471,22 +472,26 @@ internal object CubeEmbeds {
      * Renders the dealt packs as a plain-text file body. 24 packs of 15 is
      * far past what fits in an embed, so the full lists ride along as an
      * attachment.
+     *
+     * Written through [PackListWriter] so the file loads straight back into
+     * the website's Generate tab: prices and image URLs hang off the markers
+     * [CardListParser] strips, rather than becoming part of a card's name.
      */
-    fun packsFile(packs: List<List<CubeCard>>, currency: MtgCurrency = MtgCurrency.DEFAULT): ByteArray = buildString {
-        packs.forEachIndexed { i, pack ->
-            val priced = pack.mapNotNull { it.price(currency)?.toDoubleOrNull() }
-            val packTotal = priced.takeIf { it.isNotEmpty() }
-                ?.let { " — ≈ ${currency.format(it.sum())}" }
-                .orEmpty()
-            appendLine("== Pack ${i + 1} (${pack.size} cards)$packTotal ==")
-            pack.forEach { card ->
+    fun packsFile(packs: List<List<CubeCard>>, currency: MtgCurrency = MtgCurrency.DEFAULT): ByteArray =
+        PackListWriter.write(
+            packs = packs,
+            packSuffix = { pack ->
+                val priced = pack.mapNotNull { it.price(currency)?.toDoubleOrNull() }
+                priced.takeIf { it.isNotEmpty() }
+                    ?.let { "${PackListWriter.ANNOTATION_SEPARATOR}≈ ${currency.format(it.sum())}" }
+                    .orEmpty()
+            },
+            annotate = { card ->
                 val price = card.price(currency)?.let { " (${currency.wrap(it)})" }.orEmpty()
-                val image = card.imageUrl?.let { " — $it" }.orEmpty()
-                appendLine("  ${card.name}$price$image")
-            }
-            appendLine()
-        }
-    }.toByteArray(StandardCharsets.UTF_8)
+                val image = card.imageUrl?.let { "${PackListWriter.ANNOTATION_SEPARATOR}$it" }.orEmpty()
+                price + image
+            },
+        ).toByteArray(StandardCharsets.UTF_8)
 
     private fun format(value: Double): String = String.format("%.2f", value)
 }

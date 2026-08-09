@@ -36,12 +36,20 @@ import kotlin.random.Random
  * web page can't drift on as-fan numbers or pack-dealing rules.
  */
 @Service
-class CubeWebService {
+class CubeWebService(
+    private val throttle: ScryfallThrottle = ScryfallThrottle(),
+) {
 
     private val http: HttpClient = HttpClient.newBuilder()
         .connectTimeout(Duration.ofSeconds(5))
         .build()
     private val jackson = ObjectMapper()
+
+    // Pool resolution is what a draft hammers: everyone opens the same shared
+    // cube at once. Both caches are keyed on exactly what was asked for, so a
+    // hit is indistinguishable from a fresh fetch apart from the latency.
+    private val poolCache = TtlCache<String, List<ScryfallCard>>(MAX_CACHED_POOLS, CACHE_TTL)
+    private val collectionCache = TtlCache<String, List<ScryfallCard>>(MAX_CACHED_COLLECTIONS, CACHE_TTL)
 
     /** The as-fan calculator: (type ÷ cube) × pack size. */
     fun asFan(total: Int, cubeSize: Int, packSize: Int): CubeResult<Double> =
@@ -219,9 +227,19 @@ class CubeWebService {
         }
     }
 
-    /** A short GET against Scryfall with the standard headers and timeout. */
-    private fun scryfallGet(url: String): HttpResponse<String> =
-        http.send(
+    /**
+     * Claims a slot before an outbound Scryfall call. Refusal throws, so the
+     * callers' existing IOException handling surfaces "try again in a moment"
+     * rather than parking a servlet thread behind a long queue.
+     */
+    private fun awaitScryfallSlot() {
+        if (!throttle.awaitSlot()) throw IOException(SCRYFALL_BUSY)
+    }
+
+    /** A short, throttled GET against Scryfall with the standard headers and timeout. */
+    private fun scryfallGet(url: String): HttpResponse<String> {
+        awaitScryfallSlot()
+        return http.send(
             HttpRequest.newBuilder(URI.create(url))
                 .header("User-Agent", "tobybot-web/1.0")
                 .header("Accept", "application/json")
@@ -230,6 +248,7 @@ class CubeWebService {
                 .build(),
             HttpResponse.BodyHandlers.ofString(),
         )
+    }
 
     /** Maps a resolved card to the lookup view, resolving rarity + colours for display. */
     internal fun lookupView(sc: ScryfallCard): CardLookupView = CardLookupView(
@@ -599,23 +618,20 @@ class CubeWebService {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return CubeResult.error("Enter a Scryfall search query (e.g. set:vow).")
 
+        // A whole draft pod opening the same shared cube resolves the same
+        // query within a minute or two; only the first of them pays for it.
+        poolCache[trimmed]?.let { return CubeResult.ok(it) }
+
         val cards = mutableListOf<ScryfallCard>()
         var url: String? = searchUrl(trimmed)
         var page = 0
         try {
             while (url != null && cards.size < MAX_CARDS && page < MAX_PAGES) {
-                val response = http.send(
-                    HttpRequest.newBuilder(URI.create(url))
-                        .header("User-Agent", "tobybot-web/1.0")
-                        .header("Accept", "application/json")
-                        .timeout(Duration.ofSeconds(10))
-                        .GET()
-                        .build(),
-                    HttpResponse.BodyHandlers.ofString(),
-                )
+                val response = scryfallGet(url)
                 when (response.statusCode()) {
                     200 -> {}
                     404 -> return CubeResult.error("No cards matched that query.")
+                    429 -> return CubeResult.error(RATE_LIMITED)
                     else -> return CubeResult.error("Scryfall returned ${response.statusCode()}.")
                 }
                 val root = jackson.readTree(response.body())
@@ -635,7 +651,7 @@ class CubeWebService {
         }
 
         if (cards.isEmpty()) return CubeResult.error("No usable cards matched that query.")
-        return CubeResult.ok(cards.take(MAX_CARDS))
+        return CubeResult.ok(cards.take(MAX_CARDS).also { poolCache[trimmed] = it })
     }
 
     private fun searchUrl(query: String): String {
@@ -711,11 +727,17 @@ class CubeWebService {
         return MatchResult(pool, notFound.distinct())
     }
 
-    /** One `/cards/collection` POST for up to 75 names. */
+    /** One throttled `/cards/collection` POST for up to 75 names. */
     private fun fetchCollection(names: List<String>): CubeResult<List<ScryfallCard>> {
+        // Order doesn't change the answer, so the key is order-independent —
+        // two people whose lists differ only in sort still share the entry.
+        val cacheKey = names.sorted().joinToString(" ")
+        collectionCache[cacheKey]?.let { return CubeResult.ok(it) }
+
         val identifiers = names.joinToString(",") { """{"name":${jackson.writeValueAsString(it)}}""" }
         val body = """{"identifiers":[$identifiers]}"""
         return try {
+            awaitScryfallSlot()
             val response = http.send(
                 HttpRequest.newBuilder(URI.create(COLLECTION_ENDPOINT))
                     .header("User-Agent", "tobybot-web/1.0")
@@ -726,10 +748,11 @@ class CubeWebService {
                     .build(),
                 HttpResponse.BodyHandlers.ofString(),
             )
+            if (response.statusCode() == 429) return CubeResult.error(RATE_LIMITED)
             if (response.statusCode() != 200) {
                 return CubeResult.error("Scryfall returned ${response.statusCode()} resolving your list.")
             }
-            CubeResult.ok(parseScryfall(jackson.readTree(response.body())))
+            CubeResult.ok(parseScryfall(jackson.readTree(response.body())).also { collectionCache[cacheKey] = it })
         } catch (e: IOException) {
             CubeResult.error("Could not reach Scryfall: ${e.message}")
         } catch (e: InterruptedException) {
@@ -758,6 +781,18 @@ class CubeWebService {
         // Stat line for a re-imported pack slot whose name Scryfall didn't
         // recognise — the tile still renders, just without art or maths.
         const val UNRESOLVED_TYPE_LINE = "Not found on Scryfall"
+
+        const val RATE_LIMITED = "Scryfall is rate-limiting us right now — try again in a moment."
+        const val SCRYFALL_BUSY = "too many lookups are queued right now — try again in a moment."
+
+        // Long enough to cover a draft pod all opening the same cube, short
+        // enough that a cube edited on the site shows its new cards next go.
+        val CACHE_TTL: Duration = Duration.ofMinutes(10)
+
+        // A pooled entry can hold 750 cards, so keep few of them; collection
+        // chunks are ≤75 cards each and much cheaper to hold.
+        const val MAX_CACHED_POOLS = 16
+        const val MAX_CACHED_COLLECTIONS = 128
     }
 }
 

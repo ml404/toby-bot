@@ -93,6 +93,28 @@ class CardListParserTest {
     }
 
     @Test
+    fun `strips a trailing annotation, priced or not`() {
+        // How the bot's pack export decorates a card line. An unpriced card
+        // has no bracket for the set-tag rule to catch, so the annotation
+        // marker has to be handled in its own right.
+        assertEquals(
+            CardListParser.Entry("Lightning Bolt", 1),
+            CardListParser.parse("  Lightning Bolt (\$1.50) — https://img/bolt.jpg").single(),
+        )
+        assertEquals(
+            CardListParser.Entry("Forest", 1),
+            CardListParser.parse("  Forest — https://img/forest.jpg").single(),
+        )
+    }
+
+    @Test
+    fun `leaves hyphens and dashes inside a card name alone`() {
+        // Only a spaced em dash introduces an annotation.
+        assertEquals("Fire-Lit Thicket", CardListParser.parse("Fire-Lit Thicket").single().name)
+        assertEquals("Ratchet, Field Medic", CardListParser.parse("Ratchet, Field Medic").single().name)
+    }
+
+    @Test
     fun `caps an absurd quantity`() {
         assertEquals(CardListParser.MAX_PER_NAME, CardListParser.parse("99999 Forest").single().count)
     }

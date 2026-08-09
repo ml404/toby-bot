@@ -2,6 +2,7 @@ package web.controller
 
 import database.dto.user.CubeListDto
 import database.dto.user.SharedCubeDto
+import database.dto.user.SharedCubeKind
 import database.service.user.CubeListService
 import database.service.user.SharedCubeService
 import io.mockk.every
@@ -44,6 +45,9 @@ import java.time.Instant
 class CubeControllerTest {
 
     private val discordId = 100L
+
+    /** A minimal downloaded pack list, as the share endpoint receives it. */
+    private val PACK_TEXT = "== Pack 1 (2 cards) ==\n  Bolt\n  Forest\n"
 
     private lateinit var service: CubeWebService
     private lateinit var cubeLists: CubeListService
@@ -618,6 +622,79 @@ class CubeControllerTest {
         assertEquals("magic", controller.sharedPage("nope", null, model))
 
         verify { model.addAttribute("sharedMissing", true) }
+    }
+
+    // --- shared deals (a dealt set of packs, published as a link) -------
+
+    private fun deal(token: String = "deal1", name: String = "Vintage — packs", packs: String = PACK_TEXT) =
+        SharedCubeDto(token, discordId, name, packs, Instant.EPOCH, SharedCubeKind.DEAL)
+
+    @Test
+    fun `shareDeal mints a deal snapshot and returns its deal url`() {
+        every { sharedCubes.create(discordId, "Vintage — packs", PACK_TEXT, any(), SharedCubeKind.DEAL) } returns deal()
+
+        val response = controller.shareDeal(ShareDealRequest("Vintage — packs", PACK_TEXT), loggedIn())
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        assertEquals("deal1", response.body!!.token)
+        assertEquals("/magic/d/deal1", response.body!!.url) { "a deal opens on /d/, not the cube's /c/" }
+    }
+
+    @Test
+    fun `shareDeal defaults a blank name and rejects blank or oversized packs`() {
+        every { sharedCubes.create(discordId, "Shared deal", PACK_TEXT, any(), SharedCubeKind.DEAL) } returns
+            deal(name = "Shared deal")
+
+        assertEquals(HttpStatus.OK, controller.shareDeal(ShareDealRequest("  ", PACK_TEXT), loggedIn()).statusCode)
+
+        assertEquals(HttpStatus.BAD_REQUEST, controller.shareDeal(ShareDealRequest("N", "  "), loggedIn()).statusCode)
+        assertEquals(
+            HttpStatus.BAD_REQUEST,
+            controller.shareDeal(ShareDealRequest("N", "x".repeat(100_001)), loggedIn()).statusCode,
+        )
+    }
+
+    @Test
+    fun `shareDeal rejects an anonymous user with 401`() {
+        assertEquals(HttpStatus.UNAUTHORIZED, controller.shareDeal(ShareDealRequest("X", PACK_TEXT), anon()).statusCode)
+        verify(exactly = 0) { sharedCubes.create(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `sharedDealPage hands the packs to the page`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("deal1") } returns deal()
+
+        assertEquals("magic", controller.sharedDealPage("deal1", loggedIn(), model))
+
+        verify { model.addAttribute("sharedDealName", "Vintage — packs") }
+        verify { model.addAttribute("sharedDealPacks", PACK_TEXT) }
+    }
+
+    @Test
+    fun `sharedDealPage flags a missing token`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("nope") } returns null
+
+        assertEquals("magic", controller.sharedDealPage("nope", null, model))
+
+        verify { model.addAttribute("sharedDealMissing", true) }
+    }
+
+    @Test
+    fun `the two share routes don't open each other's snapshots`() {
+        val model = mockk<Model>(relaxed = true)
+        // Cubes and deals share a token space, so each route has to check the
+        // kind — opening a deal as a card list would flatten and re-deal it.
+        every { sharedCubes.get("deal1") } returns deal()
+        every { sharedCubes.get("cube1") } returns
+            SharedCubeDto("cube1", discordId, "My Cube", "Bolt", Instant.EPOCH, SharedCubeKind.CUBE)
+
+        controller.sharedPage("deal1", null, model)
+        verify { model.addAttribute("sharedMissing", true) }
+
+        controller.sharedDealPage("cube1", null, model)
+        verify { model.addAttribute("sharedDealMissing", true) }
     }
 
     // --- price watches -------------------------------------------------
