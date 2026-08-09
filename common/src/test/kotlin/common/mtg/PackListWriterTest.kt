@@ -1,6 +1,8 @@
 package common.mtg
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class PackListWriterTest {
@@ -14,6 +16,32 @@ class PackListWriterTest {
     @Test
     fun `header carries an annotation between the count and the closing marker`() {
         assertEquals("== Pack 1 (2 cards) — ≈ \$4.20 ==", PackListWriter.header(1, 2, " — ≈ \$4.20"))
+    }
+
+    @Test
+    fun `provenance says where a deal came from, its shape and when`() {
+        assertEquals(
+            "# cube:vintage — 24 packs of 15 — 2026-08-09",
+            PackListWriter.provenance(24, 15, "cube:vintage", "2026-08-09"),
+        )
+        // Either part may be missing; the shape rides along with whatever's left.
+        assertEquals("# 8 packs of 15 — 2026-08-09", PackListWriter.provenance(8, 15, "  ", "2026-08-09"))
+        assertEquals("# cube:vintage — 8 packs of 15", PackListWriter.provenance(8, 15, "cube:vintage"))
+        // Nothing to say about where it came from — no line, not an empty one.
+        assertNull(PackListWriter.provenance(1, 15))
+    }
+
+    @Test
+    fun `a written provenance line is a comment the parser ignores`() {
+        val text = PackListWriter.write(
+            listOf(listOf(CubeCard("Lightning Bolt", setOf(MtgColor.RED)))),
+            source = "cube:vintage",
+            dealtOn = "2026-08-09",
+        )
+
+        assertTrue(text.startsWith("# cube:vintage")) { "expected the provenance line first, got:\n${text.take(80)}" }
+        assertEquals("# cube:vintage — 1 pack of 1 — 2026-08-09", PackListParser.provenanceOf(text))
+        assertEquals(listOf("Lightning Bolt"), PackListParser.parse(text).single().entries.map { it.name })
     }
 
     @Test

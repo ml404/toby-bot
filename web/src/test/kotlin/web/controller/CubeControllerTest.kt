@@ -682,6 +682,41 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `sharedDealPackPage hands over one seat's pack and nothing else`() {
+        val model = mockk<Model>(relaxed = true)
+        val onePack = "== Pack 2 (1 card) ==\n  Forest\n"
+        every { sharedCubes.get("deal1") } returns deal()
+        every { service.singlePack(PACK_TEXT, 2) } returns onePack
+
+        assertEquals("magic", controller.sharedDealPackPage("deal1", 2, null, model))
+
+        verify { model.addAttribute("sharedDealPacks", onePack) }
+        verify { model.addAttribute("sharedDealName", "Vintage — packs · pack 2") }
+        verify { model.addAttribute("sharedDealToken", "deal1") }
+    }
+
+    @Test
+    fun `sharedDealPackPage flags a pack number the deal doesn't have`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("deal1") } returns deal()
+        every { service.singlePack(PACK_TEXT, 99) } returns null
+
+        assertEquals("magic", controller.sharedDealPackPage("deal1", 99, null, model))
+
+        verify { model.addAttribute("sharedDealMissing", true) }
+    }
+
+    @Test
+    fun `sharedDealPage carries the token so packs can be handed out per seat`() {
+        val model = mockk<Model>(relaxed = true)
+        every { sharedCubes.get("deal1") } returns deal()
+
+        controller.sharedDealPage("deal1", null, model)
+
+        verify { model.addAttribute("sharedDealToken", "deal1") }
+    }
+
+    @Test
     fun `the two share routes don't open each other's snapshots`() {
         val model = mockk<Model>(relaxed = true)
         // Cubes and deals share a token space, so each route has to check the

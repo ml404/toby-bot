@@ -21,6 +21,7 @@ import database.dto.user.CubeListDto
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.awt.Color
 import java.nio.charset.StandardCharsets
+import java.time.LocalDate
 
 /**
  * Embed + attachment factories for the Magic commands. Keeps the visual grammar of
@@ -476,10 +477,21 @@ internal object CubeEmbeds {
      * Written through [PackListWriter] so the file loads straight back into
      * the website's Generate tab: prices and image URLs hang off the markers
      * [CardListParser] strips, rather than becoming part of a card's name.
+     *
+     * [source] (the query or saved cube it was dealt from) and [dealtOn] go
+     * into the file's `#` provenance line, so a saved attachment still says
+     * where it came from months later.
      */
-    fun packsFile(packs: List<List<CubeCard>>, currency: MtgCurrency = MtgCurrency.DEFAULT): ByteArray =
+    fun packsFile(
+        packs: List<List<CubeCard>>,
+        currency: MtgCurrency = MtgCurrency.DEFAULT,
+        source: String? = null,
+        dealtOn: LocalDate? = null,
+    ): ByteArray =
         PackListWriter.write(
             packs = packs,
+            source = source,
+            dealtOn = dealtOn?.toString(),
             packSuffix = { pack ->
                 val priced = pack.mapNotNull { it.price(currency)?.toDoubleOrNull() }
                 priced.takeIf { it.isNotEmpty() }

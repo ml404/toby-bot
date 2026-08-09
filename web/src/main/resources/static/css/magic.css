@@ -799,6 +799,24 @@ button:disabled {
     margin: 0;
 }
 
+/* "Copy this seat's link" in a pack heading — quiet until you go near it. */
+.cube-pack-link {
+    flex: none;
+    background: none;
+    border: 0;
+    padding: 2px 6px;
+    font-size: 0.9rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity var(--dur-fast) var(--ease-out);
+}
+
+.cube-pack-link:hover,
+.cube-pack-link:focus-visible {
+    opacity: 1;
+}
+
 .cube-collapse-chevron {
     flex: none;
     color: var(--text-muted);

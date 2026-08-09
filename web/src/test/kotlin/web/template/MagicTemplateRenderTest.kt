@@ -134,6 +134,21 @@ class MagicTemplateRenderTest {
     }
 
     @Test
+    fun `a shared deal carries its token, so packs can be linked per seat`() {
+        val html = render(
+            mapOf(
+                "loggedIn" to false,
+                "sharedDealName" to "Vintage — packs",
+                "sharedDealPacks" to "== Pack 1 (1 card) ==\n  Forest\n",
+                "sharedDealToken" to "abc123",
+            )
+        )
+
+        assertTrue(html.contains("data-shared-deal-token")) { "expected the token field" }
+        assertTrue(html.contains("abc123")) { "expected the token value itself" }
+    }
+
+    @Test
     fun `a dead deal link says so rather than rendering nothing`() {
         val html = render(mapOf("loggedIn" to false, "sharedDealMissing" to true))
 

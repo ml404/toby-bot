@@ -103,6 +103,41 @@ describe('pack list formatting', () => {
     });
 });
 
+describe('provenance line', () => {
+    test('records the source, shape and date', () => {
+        expect(Cube.provenanceLine([[1, 2], [1, 2]], { source: 'cube:vintage', dealtOn: '2026-08-09' }))
+            .toBe('# cube:vintage — 2 packs of 2 — 2026-08-09');
+    });
+
+    test('matches PackListWriter.provenance for a single pack', () => {
+        expect(Cube.provenanceLine([[1]], { source: 'cube:vintage', dealtOn: '2026-08-09' }))
+            .toBe('# cube:vintage — 1 pack of 1 — 2026-08-09');
+    });
+
+    test('packsToText opens with it and keeps the packs parseable below', () => {
+        const text = Cube.packsToText([[{ name: 'Bolt' }, { name: 'Shock' }]], { source: 'set:vow', dealtOn: '2026-08-09' });
+        expect(text.split('\n')[0]).toBe('# set:vow — 1 pack of 2 — 2026-08-09');
+        expect(text).toContain('== Pack 1 (2 cards) ==');
+        expect(text).toContain('  Bolt');
+    });
+
+    test('packsToText uses a file’s own line verbatim when reloading it', () => {
+        const text = Cube.packsToText([[{ name: 'Bolt' }]], { line: '# cube:vintage — 24 packs of 15 — 2020-01-01' });
+        expect(text.split('\n')[0]).toBe('# cube:vintage — 24 packs of 15 — 2020-01-01');
+    });
+});
+
+describe('dealPackUrl', () => {
+    test('addresses one seat of a shared deal', () => {
+        expect(Cube.dealPackUrl('https://toby.example', 'abc123', 3))
+            .toBe('https://toby.example/magic/d/abc123/3');
+    });
+
+    test('encodes the token', () => {
+        expect(Cube.dealPackUrl('', 'a/b', 1)).toBe('/magic/d/a%2Fb/1');
+    });
+});
+
 describe('notFoundText', () => {
     test('lists the names when there are only a few', () => {
         expect(Cube.notFoundText(['Bolt', 'Shock'])).toBe('Couldn’t find 2 cards: Bolt, Shock');

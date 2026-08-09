@@ -70,6 +70,23 @@ class PackListParserTest {
     }
 
     @Test
+    fun `provenanceOf reads the leading comment, if there is one`() {
+        val text = "# cube:vintage — 2 packs of 1 — 2026-08-09\n\n== Pack 1 (1 card) ==\n  Sol Ring\n"
+
+        assertEquals("# cube:vintage — 2 packs of 1 — 2026-08-09", PackListParser.provenanceOf(text))
+        assertNull(PackListParser.provenanceOf("== Pack 1 (1 card) ==\n  Sol Ring\n"))
+        assertNull(PackListParser.provenanceOf(""))
+    }
+
+    @Test
+    fun `provenanceOf ignores a comment that isn't the preamble`() {
+        // A note someone added next to a card is theirs, not the deal's.
+        val text = "== Pack 1 (1 card) ==\n  Sol Ring\n# my favourite pack\n"
+
+        assertNull(PackListParser.provenanceOf(text))
+    }
+
+    @Test
     fun `round-trips a full 24-pack deal`() {
         val deal = (1..24).map { p -> (1..15).map { c -> "Card $p-$c" } }
 

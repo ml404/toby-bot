@@ -6,6 +6,8 @@ import common.mtg.CubeCard
 import common.mtg.MtgColor
 import common.mtg.PackListParser
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -620,6 +622,57 @@ class CubeWebServiceTest {
 
         assertEquals(3, data.distribution.sumOf { it.count })
         assertEquals(2, data.distribution.first { it.category == CardCategory.LAND.displayName }.count)
+    }
+
+    // --- singlePack (handing one seat its packs out of a shared deal) ---
+
+    private val dealText = """
+        # cube:vintage — 3 packs of 2 — 2026-08-09
+
+        == Pack 1 (2 cards) ==
+          Bolt
+          Forest
+
+        == Pack 2 (2 cards) ==
+          Sol Ring
+          Swords
+
+        == Pack 3 (1 card) ==
+          Shock
+    """.trimIndent()
+
+    @Test
+    fun `singlePack hands back only the pack asked for`() {
+        val pack = service.singlePack(dealText, 2)!!
+
+        assertEquals(listOf("Sol Ring", "Swords"), PackListParser.parse(pack).single().entries.map { it.name })
+        assertFalse(pack.contains("Bolt")) { "a seat link must not leak the other seats' packs" }
+        assertFalse(pack.contains("Shock"))
+    }
+
+    @Test
+    fun `singlePack keeps the pack's own number and the deal's provenance`() {
+        val pack = service.singlePack(dealText, 3)!!
+
+        assertTrue(pack.contains("== Pack 3 (1 card) ==")) { "expected pack 3 to stay pack 3, got:\n\$pack" }
+        assertEquals("# cube:vintage — 3 packs of 2 — 2026-08-09", PackListParser.provenanceOf(pack))
+    }
+
+    @Test
+    fun `singlePack is null outside the deal`() {
+        assertNull(service.singlePack(dealText, 0))
+        assertNull(service.singlePack(dealText, 4))
+        assertNull(service.singlePack("", 1))
+    }
+
+    @Test
+    fun `singlePack round-trips through the parser it was written for`() {
+        val pack = service.singlePack(dealText, 1)!!
+
+        val data = successOf(service.buildPacks(PackListParser.parse(pack), listOf(sc("Bolt"), sc("Forest"))))
+
+        assertEquals(1, data.packCount)
+        assertEquals(listOf("Bolt", "Forest"), data.packs.single().map { it.name })
     }
 
     // --- matchEntries (pasted names ↔ fetched cards, incl. multi-faced) ---
