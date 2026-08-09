@@ -2,6 +2,8 @@ package database.dto.user
 
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.NamedQueries
 import jakarta.persistence.NamedQuery
@@ -10,11 +12,21 @@ import org.springframework.transaction.annotation.Transactional
 import java.io.Serializable
 import java.time.Instant
 
+/** What a shared snapshot holds, and therefore how opening it renders. */
+enum class SharedCubeKind {
+    /** A cube card list, opened at `/magic/c/<token>`. */
+    CUBE,
+
+    /** A dealt set of packs, opened at `/magic/d/<token>`. */
+    DEAL,
+}
+
 /**
- * An immutable, publicly-shareable snapshot of a cube card list, addressed
- * by a short random [token] (`/magic/c/<token>`). Created by a logged-in
- * user; readable by anyone with the link. `cards` is the raw list text so
- * the web layer re-parses it on open (same format as [CubeListDto]).
+ * An immutable, publicly-shareable snapshot of card text, addressed by a
+ * short random [token]. Created by a logged-in user; readable by anyone with
+ * the link. `cards` is the raw text so the web layer re-parses it on open —
+ * a card list (same format as [CubeListDto]) for [SharedCubeKind.CUBE], a
+ * pack list for [SharedCubeKind.DEAL].
  */
 @NamedQueries(
     NamedQuery(
@@ -41,4 +53,8 @@ class SharedCubeDto(
 
     @Column(name = "created_at", nullable = false)
     var createdAt: Instant = Instant.now(),
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "kind", nullable = false)
+    var kind: SharedCubeKind = SharedCubeKind.CUBE,
 ) : Serializable

@@ -4,6 +4,8 @@ import common.mtg.AsFan
 import common.mtg.CubeAnalytics
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import common.mtg.MtgCurrency
+import common.mtg.PackListParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -493,7 +495,50 @@ class CubeEmbedsTest {
     fun `packsFile omits prices and the pack total when nothing is priced`() {
         val packs = listOf(listOf(CubeCard("Forest", isLand = true)))
         val text = String(CubeEmbeds.packsFile(packs), StandardCharsets.UTF_8)
-        assertTrue(text.contains("== Pack 1 (1 cards) =="), text) // no " — ≈ " total
+        assertTrue(text.contains("== Pack 1 (1 card) =="), text) // no " — ≈ " total
         assertFalse(text.contains("≈"))
+    }
+
+    /**
+     * The attachment is named the same as the website's pack download and
+     * carries the same dividers, so people load one into the other. These
+     * pin that round trip: whatever `packsFile` writes, [PackListParser] must
+     * read back as the same packs of the same cards.
+     */
+    @Test
+    fun `packsFile round-trips through the pack list parser`() {
+        val packs = listOf(
+            listOf(
+                CubeCard("Lightning Bolt", setOf(MtgColor.RED), imageUrl = "https://img/bolt.jpg", priceUsd = "2.00"),
+                CubeCard("Forest", isLand = true, priceUsd = "0.10"),
+            ),
+            listOf(CubeCard("Archangel Avacyn // Avacyn, the Purifier", setOf(MtgColor.WHITE), priceUsd = "9.99")),
+        )
+
+        val parsed = PackListParser.parse(String(CubeEmbeds.packsFile(packs), StandardCharsets.UTF_8))
+
+        assertEquals(
+            packs.map { pack -> pack.map { it.name } },
+            parsed.map { pack -> pack.entries.map { it.name } },
+        )
+    }
+
+    @Test
+    fun `packsFile round-trips when cards have no price in the chosen currency`() {
+        // The regression: an unpriced card has no bracket to end its name, so
+        // the trailing image URL used to become part of the name and the whole
+        // file failed to import. Most cards are unpriced in tix.
+        val packs = listOf(
+            listOf(
+                CubeCard("Lightning Bolt", setOf(MtgColor.RED), imageUrl = "https://img/bolt.jpg", priceUsd = "2.00"),
+                CubeCard("Forest", isLand = true, imageUrl = "https://img/forest.jpg"),
+            ),
+        )
+
+        val parsed = PackListParser.parse(
+            String(CubeEmbeds.packsFile(packs, MtgCurrency.TIX), StandardCharsets.UTF_8)
+        )
+
+        assertEquals(listOf("Lightning Bolt", "Forest"), parsed.single().entries.map { it.name })
     }
 }

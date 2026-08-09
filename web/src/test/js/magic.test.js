@@ -86,8 +86,68 @@ describe('packsToText', () => {
         ]);
         expect(text).toContain('== Pack 1 (2 cards) ==');
         expect(text).toContain('  Bolt');
-        expect(text).toContain('== Pack 2 (1 cards) ==');
+        expect(text).toContain('== Pack 2 (1 card) ==');
         expect(text).toContain('  Forest');
+    });
+});
+
+describe('pack list formatting', () => {
+    test('a one-card pack is not "1 cards"', () => {
+        expect(Cube.cardCountLabel(1)).toBe('1 card');
+        expect(Cube.cardCountLabel(15)).toBe('15 cards');
+        expect(Cube.packHeader(2, 1)).toBe('== Pack 2 (1 card) ==');
+    });
+
+    test('packHeader matches the format the bot writes (PackListWriter.header)', () => {
+        expect(Cube.packHeader(1, 15)).toBe('== Pack 1 (15 cards) ==');
+    });
+});
+
+describe('notFoundText', () => {
+    test('lists the names when there are only a few', () => {
+        expect(Cube.notFoundText(['Bolt', 'Shock'])).toBe('Couldn’t find 2 cards: Bolt, Shock');
+    });
+
+    test('singularises a lone name', () => {
+        expect(Cube.notFoundText(['Bolt'])).toBe('Couldn’t find 1 card: Bolt');
+    });
+
+    test('summarises the tail rather than printing hundreds of names', () => {
+        const names = Array.from({ length: 42 }, (_, i) => 'Card ' + i);
+        const text = Cube.notFoundText(names);
+        expect(text).toContain('Couldn’t find 42 cards');
+        expect(text).toContain('Card 9');
+        expect(text).not.toContain('Card 10');
+        expect(text).toContain('and 32 more');
+    });
+});
+
+describe('applyPackShape', () => {
+    function form(packsMax, sizeMax) {
+        const el = document.createElement('form');
+        el.innerHTML = '<input name="packs" max="' + packsMax + '" value="24">' +
+            '<input name="packSize" max="' + sizeMax + '" value="15">';
+        return el;
+    }
+
+    test('adopts a loaded deal’s shape', () => {
+        const el = form(90, 30);
+        expect(Cube.applyPackShape(el, { packCount: 8, packSize: 12 })).toEqual({ packs: 8, packSize: 12 });
+        expect(el.querySelector('[name="packs"]').value).toBe('8');
+        expect(el.querySelector('[name="packSize"]').value).toBe('12');
+    });
+
+    test('clamps to what the inputs accept', () => {
+        const el = form(90, 30);
+        Cube.applyPackShape(el, { packCount: 500, packSize: 60 });
+        expect(el.querySelector('[name="packs"]').value).toBe('90');
+        expect(el.querySelector('[name="packSize"]').value).toBe('30');
+    });
+
+    test('leaves the boxes alone when the response says nothing useful', () => {
+        const el = form(90, 30);
+        expect(Cube.applyPackShape(el, {})).toEqual({});
+        expect(el.querySelector('[name="packs"]').value).toBe('24');
     });
 });
 
@@ -108,6 +168,32 @@ describe('pack list re-import', () => {
         expect(Cube.importFileError(null)).toMatch(/Choose a pack list/);
         expect(Cube.importFileError({ size: 0 })).toMatch(/empty/);
         expect(Cube.importFileError({ size: 100001 })).toMatch(/too big/);
+    });
+
+    test('shareDealRequest posts the deal as a pack list', () => {
+        const req = Cube.shareDealRequest([[{ name: 'Bolt' }, { name: 'Shock' }]], 'My cube — packs');
+        expect(req.method).toBe('POST');
+        expect(req.url).toBe('/magic/api/share-deal');
+        expect(req.body.name).toBe('My cube — packs');
+        expect(req.body.packs).toContain('== Pack 1 (2 cards) ==');
+        expect(req.body.packs).toContain('  Bolt');
+    });
+
+    test('shareDealRequest leaves the name blank when there isn’t one', () => {
+        expect(Cube.shareDealRequest([[{ name: 'Bolt' }]], undefined).body.name).toBe('');
+    });
+
+    test('dealShareName prefers the saved cube name, then the query', () => {
+        const doc = document.implementation.createHTMLDocument('t');
+        doc.body.innerHTML = '<input data-saved-lists value="Vintage cube">' +
+            '<div data-source-panel="search"><input name="query" value="cube:vintage"></div>';
+        expect(Cube.dealShareName(doc)).toBe('Vintage cube — packs');
+
+        doc.querySelector('[data-saved-lists]').value = '';
+        expect(Cube.dealShareName(doc)).toBe('cube:vintage — packs');
+
+        doc.querySelector('[name="query"]').value = '';
+        expect(Cube.dealShareName(doc)).toBe('');
     });
 
     test('packsSummary says the packs were loaded, not dealt', () => {

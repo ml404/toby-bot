@@ -1,6 +1,7 @@
 package database.service.user.impl
 
 import database.dto.user.SharedCubeDto
+import database.dto.user.SharedCubeKind
 import database.persistence.user.SharedCubePersistence
 import database.service.user.SharedCubeService
 import org.springframework.stereotype.Service
@@ -14,7 +15,13 @@ class DefaultSharedCubeService(
 
     private val random = SecureRandom()
 
-    override fun create(discordId: Long, name: String, cards: String, at: Instant): SharedCubeDto {
+    override fun create(
+        discordId: Long,
+        name: String,
+        cards: String,
+        at: Instant,
+        kind: SharedCubeKind,
+    ): SharedCubeDto {
         val token = freshToken()
         return persistence.insert(
             SharedCubeDto(
@@ -23,6 +30,7 @@ class DefaultSharedCubeService(
                 name = name,
                 cards = cards,
                 createdAt = at,
+                kind = kind,
             )
         )
     }

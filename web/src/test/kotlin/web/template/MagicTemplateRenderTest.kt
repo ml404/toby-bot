@@ -1,6 +1,7 @@
 package web.template
 
 import common.mtg.MtgCommandRef
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.context.support.GenericApplicationContext
@@ -120,6 +121,39 @@ class MagicTemplateRenderTest {
         // The download button it pairs with must still be there — the two are
         // the two halves of the round trip.
         assertTrue(html.contains("data-download=\"generate\"")) { "expected the pack-list download button" }
+    }
+
+    @Test
+    fun `a shared deal hands its pack list to the page`() {
+        val packs = "== Pack 1 (2 cards) ==\n  Lightning Bolt\n  Forest\n"
+        val html = render(mapOf("loggedIn" to false, "sharedDealName" to "Vintage — packs", "sharedDealPacks" to packs))
+
+        assertTrue(html.contains("Vintage — packs")) { "expected the shared-deal banner name" }
+        assertTrue(html.contains("data-shared-deal-packs")) { "expected the element carrying the pack list" }
+        assertTrue(html.contains("Lightning Bolt")) { "expected the pack list itself to reach the page" }
+    }
+
+    @Test
+    fun `a dead deal link says so rather than rendering nothing`() {
+        val html = render(mapOf("loggedIn" to false, "sharedDealMissing" to true))
+
+        assertTrue(html.contains("data-shared-deal-missing")) { "expected the missing-deal notice" }
+        assertTrue(html.contains("shared deal link wasn't found")) { "expected the missing-deal copy" }
+    }
+
+    @Test
+    fun `only a logged-in user is offered the deal share button`() {
+        assertTrue(render(mapOf("loggedIn" to true, "username" to "tester")).contains("data-share=\"generate\""))
+        assertFalse(render(mapOf("loggedIn" to false)).contains("data-share=\"generate\"")) {
+            "sharing needs an account, so the button shouldn't render for anonymous visitors"
+        }
+    }
+
+    @Test
+    fun `a sample pack can be saved like any other deal`() {
+        val html = render(mapOf("loggedIn" to false))
+
+        assertTrue(html.contains("data-download-sample=\"preview\"")) { "expected the sample-pack download button" }
     }
 
     @Test

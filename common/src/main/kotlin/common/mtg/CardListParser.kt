@@ -8,6 +8,8 @@ package common.mtg
  *  - an optional leading quantity — `3 Forest`, `3x Forest`, `3X Forest`;
  *  - an optional trailing set/collector tag — `Lightning Bolt (2X2) 117`;
  *  - an optional trailing finish marker — `Sol Ring (C21) 263 *F*`;
+ *  - an optional trailing ` — …` annotation, which is how [PackListWriter]
+ *    hangs a price or an image URL off a card line;
  *  - blank lines, `#` / `//` comments, and exporter section headers
  *    (`Deck`, `Sideboard`, `Commander`, …) ignored;
  *  - `== ... ==` divider lines ignored, so a pack list downloaded from the
@@ -33,6 +35,13 @@ object CardListParser {
     // etched), kept separate so it's stripped even on lines without a
     // set/collector tag for SET_SUFFIX to swallow.
     private val FINISH_SUFFIX = Regex("\\s+\\*[^*]*\\*\\s*$")
+
+    // A trailing " — ..." annotation: what the bot's pack export hangs a
+    // price and image URL off a card line with. Stripped BEFORE SET_SUFFIX,
+    // because an unpriced card carries no bracket for SET_SUFFIX to catch
+    // and would otherwise keep the whole URL as part of its name. Safe to
+    // strip wholesale: card names use hyphens, never a spaced em dash.
+    private val ANNOTATION_SUFFIX = Regex("\\s+—\\s.*$")
 
     // Standalone section headers deck exporters (Arena, MTGO, Moxfield) emit
     // between card groups. No real Magic card is named any of these, so a
@@ -61,7 +70,7 @@ object CardListParser {
                 count = match.groupValues[1].toIntOrNull()?.coerceIn(1, MAX_PER_NAME) ?: 1
                 line = line.substring(match.range.last + 1).trim()
             }
-            line = line.replace(SET_SUFFIX, "").replace(FINISH_SUFFIX, "").trim()
+            line = line.replace(ANNOTATION_SUFFIX, "").replace(SET_SUFFIX, "").replace(FINISH_SUFFIX, "").trim()
             if (line.isEmpty()) null else Entry(line, count)
         }.toList()
 }

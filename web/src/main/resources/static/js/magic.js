@@ -89,10 +89,24 @@
         return TABS.indexOf(id) >= 0 ? id : null;
     }
 
+    /** "1 card" / "15 cards" — the pack size, pluralised. */
+    function cardCountLabel(n) {
+        return n + (n === 1 ? ' card' : ' cards');
+    }
+
+    /**
+     * The header opening one pack in a downloaded pack list. Mirrors
+     * PackListWriter.header on the Kotlin side (the bot writes the same
+     * format), so a file saved from either end loads on either end.
+     */
+    function packHeader(index, size) {
+        return '== Pack ' + index + ' (' + cardCountLabel(size) + ') ==';
+    }
+
     /** Plain-text rendering of the dealt packs, for the download button. */
     function packsToText(packs) {
         return packs.map(function (pack, i) {
-            return '== Pack ' + (i + 1) + ' (' + pack.length + ' cards) ==\n' +
+            return packHeader(i + 1, pack.length) + '\n' +
                 pack.map(function (c) { return '  ' + c.name; }).join('\n');
         }).join('\n\n') + '\n';
     }
@@ -121,12 +135,50 @@
         return { method: 'POST', url: '/magic/api/packs', body: { text: text } };
     }
 
+    /** The request that publishes a dealt set of packs as a link. */
+    function shareDealRequest(packs, name) {
+        return {
+            method: 'POST',
+            url: '/magic/api/share-deal',
+            body: { name: name || '', packs: packsToText(packs) },
+        };
+    }
+
     /** The headline for a reloaded deal — no pack maths, these were already dealt. */
     function packsSummary(json) {
         const count = Number(json.packCount) || 0;
         return 'Loaded ' + count + (count === 1 ? ' pack' : ' packs') + ' from your file — ' +
             json.poolSize + ' cards, exactly as they were dealt. Click any card to view it on Scryfall.' +
             (json.note ? ' ' + json.note : '');
+    }
+
+    /**
+     * Points the generate form's "how many packs / cards per pack" boxes at a
+     * loaded deal's shape, clamped to what the inputs accept. Returns the
+     * values applied so it's unit-testable.
+     */
+    function applyPackShape(form, json) {
+        const applied = {};
+        [['packs', json.packCount], ['packSize', json.packSize]].forEach(function (pair) {
+            const input = form && form.querySelector('[name="' + pair[0] + '"]');
+            const value = Number(pair[1]);
+            if (!input || !value || value < 1) return;
+            const max = Number(input.max);
+            applied[pair[0]] = max > 0 ? Math.min(value, max) : value;
+            input.value = applied[pair[0]];
+        });
+        return applied;
+    }
+
+    /** Saves [text] to the user's downloads as [filename]. */
+    function downloadText(filename, text) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     /** Reads a picked file as text. */
@@ -929,7 +981,7 @@
             heading.textContent = 'Pack ' + (i + 1);
             const count = document.createElement('span');
             count.className = 'cube-pack-count';
-            count.textContent = pack.length + ' cards';
+            count.textContent = cardCountLabel(pack.length);
             heading.appendChild(count);
             summary.appendChild(heading);
             card.appendChild(summary);
@@ -1193,6 +1245,42 @@
         return (origin || '') + path;
     }
 
+    /** Best-effort clipboard write; silent when the browser blocks it. */
+    function copyToClipboard(text) {
+        if (root && root.navigator && root.navigator.clipboard) {
+            root.navigator.clipboard.writeText(text).then(function () {}, function () {});
+        }
+    }
+
+    /**
+     * What to call a shared deal: the saved-cube name if the user has one
+     * typed, else the Scryfall query it was dealt from, else nothing (the
+     * server falls back to "Shared deal"). Pure so it's unit-testable.
+     */
+    function dealShareName(doc) {
+        const saved = q(doc, '[data-saved-lists]');
+        const named = ((saved && saved.value) || '').trim();
+        if (named) return named + ' — packs';
+        const query = q(doc, '[data-source-panel="search"] input[name="query"]');
+        const q1 = ((query && query.value) || '').trim();
+        return q1 ? q1 + ' — packs' : '';
+    }
+
+    /** How many unresolved names to spell out before summarising the rest. */
+    const MAX_NOT_FOUND_NAMES = 10;
+
+    /**
+     * The "couldn't find these names" sentence. A badly-mangled list can fail
+     * on hundreds of names, so only the first few are spelled out — the rest
+     * are counted. Pure so it's unit-testable.
+     */
+    function notFoundText(names) {
+        const shown = names.slice(0, MAX_NOT_FOUND_NAMES);
+        const rest = names.length - shown.length;
+        return 'Couldn’t find ' + cardCountLabel(names.length) + ': ' + shown.join(', ') +
+            (rest > 0 ? ', and ' + rest + ' more' : '');
+    }
+
     /** Renders the "couldn't find these names" warning after a list lookup. */
     function renderNotFound(el, names) {
         if (!el) return;
@@ -1201,8 +1289,7 @@
             el.textContent = '';
             return;
         }
-        el.textContent = 'Couldn’t find ' + names.length + ' card' + (names.length > 1 ? 's' : '') +
-            ': ' + names.join(', ');
+        el.textContent = notFoundText(names);
         el.hidden = false;
     }
 
@@ -2075,8 +2162,10 @@
         const copyBtn = q(doc, '[data-copy="preview"]');
         const downloadBtn = q(doc, '[data-download="preview"]');
         const sampleBtn = q(doc, '[data-sample-pack="preview"]');
+        const sampleDownloadBtn = q(doc, '[data-download-sample="preview"]');
         const sample = q(doc, '[data-sample="preview"]');
         let lastGroups = [];
+        let lastSample = [];
 
         if (copyBtn) {
             const label = copyBtn.textContent;
@@ -2094,13 +2183,7 @@
         if (downloadBtn) {
             downloadBtn.addEventListener('click', function () {
                 if (!lastGroups.length) return;
-                const blob = new Blob([cubeListText(lastGroups)], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'cube.txt';
-                a.click();
-                URL.revokeObjectURL(url);
+                downloadText('cube.txt', cubeListText(lastGroups));
             });
         }
 
@@ -2112,15 +2195,27 @@
                 const req = samplePackRequest(src, new FormData(form).get('packSize'));
                 sampleBtn.disabled = true;
                 if (sample) hide(sample);
+                if (sampleDownloadBtn) hide(sampleDownloadBtn);
                 const pending = req.method === 'POST' ? postJson(req.url, req.body) : getJson(req.url);
                 pending
                     .then(function (json) {
                         if (!json.ok) { setStatus(status, json.error || 'Could not deal a pack.'); return; }
                         renderPacks(sample, json.packs);
                         show(sample);
+                        // A sample is a deal like any other: let it be saved,
+                        // and therefore loaded back on the Generate tab.
+                        lastSample = json.packs;
+                        if (sampleDownloadBtn) show(sampleDownloadBtn);
                     })
                     .catch(function () { setStatus(status, 'Something went wrong. Try again.'); })
                     .then(function () { sampleBtn.disabled = false; });
+            });
+        }
+
+        if (sampleDownloadBtn) {
+            sampleDownloadBtn.addEventListener('click', function () {
+                if (!lastSample.length) return;
+                downloadText('sample-pack.txt', packsToText(lastSample));
             });
         }
 
@@ -2170,24 +2265,26 @@
         const downloadBtn = q(doc, '[data-download="generate"]');
         const importBtn = q(doc, '[data-import="generate"]');
         const importFile = q(doc, '[data-import-file="generate"]');
+        const shareBtn = q(doc, '[data-share="generate"]');
+        const shareResult = q(doc, '[data-share-deal-result]');
+        const shareUrl = q(doc, '[data-share-deal-url]');
+        const shareCopyBtn = q(doc, '[data-share-deal-copy]');
         let lastPacks = [];
 
         if (downloadBtn) {
             downloadBtn.addEventListener('click', function () {
                 if (!lastPacks.length) return;
-                const blob = new Blob([packsToText(lastPacks)], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'cube-packs.txt';
-                a.click();
-                URL.revokeObjectURL(url);
+                downloadText('cube-packs.txt', packsToText(lastPacks));
             });
         }
 
-        /** Clears the result area before a deal is generated or loaded. */
+        /**
+         * Clears the result area before a deal is generated or loaded. The
+         * share link goes too — it points at the old deal, not the new one.
+         */
         function resetResults() {
             hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
+            if (shareResult) hide(shareResult);
         }
 
         /**
@@ -2208,6 +2305,30 @@
             renderNotFound(notFound, json.notFound);
         }
 
+        /**
+         * Loads a pack list (from a file or a share link) and paints it.
+         * Both routes go through /api/packs, so a link and a file can't
+         * render differently.
+         */
+        function loadPacks(text, readingMessage) {
+            setStatus(status, readingMessage);
+            resetResults();
+            setSpinner(doc, 'generate', true);
+            const req = packImportRequest(text);
+            return postJson(req.url, req.body)
+                .then(function (json) {
+                    if (!json.ok) { setStatus(status, json.error || 'Could not read that pack list.'); return; }
+                    setStatus(status, '');
+                    // Adopt the loaded deal's shape, so hitting Generate
+                    // straight after re-deals to the same size rather than
+                    // to whatever the boxes happened to say.
+                    applyPackShape(form, json);
+                    showPacks(json, packsSummary(json));
+                })
+                .catch(function () { setStatus(status, 'Could not load those packs.'); })
+                .then(function () { setSpinner(doc, 'generate', false); });
+        }
+
         // Re-import: read a previously downloaded pack list and show those
         // exact packs. Deliberately independent of the cube source above —
         // the file already says which cards are in which pack.
@@ -2219,21 +2340,50 @@
                 importFile.value = '';
                 const err = importFileError(file);
                 if (err) { setStatus(status, err); return; }
-                setStatus(status, 'Reading your pack list…');
-                resetResults();
-                setSpinner(doc, 'generate', true);
                 readFileText(file)
-                    .then(function (text) {
-                        const req = packImportRequest(text);
-                        return postJson(req.url, req.body);
-                    })
-                    .then(function (json) {
-                        if (!json.ok) { setStatus(status, json.error || 'Could not read that pack list.'); return; }
-                        setStatus(status, '');
-                        showPacks(json, packsSummary(json));
-                    })
-                    .catch(function () { setStatus(status, 'Could not read that file.'); })
-                    .then(function () { setSpinner(doc, 'generate', false); });
+                    .then(function (text) { return loadPacks(text, 'Reading your pack list…'); })
+                    .catch(function () { setStatus(status, 'Could not read that file.'); });
+            });
+        }
+
+        // A deal opened from a share link: the page carries the pack list, so
+        // it loads through exactly the same path as a picked file. A dead link
+        // still switches tabs — its "not found" note lives in this panel.
+        const sharedDeal = q(doc, '[data-shared-deal-packs]');
+        if (sharedDeal && sharedDeal.value.trim()) {
+            activateTab(doc, 'generate');
+            loadPacks(sharedDeal.value, 'Loading the shared deal…');
+        } else if (q(doc, '[data-shared-deal-missing]')) {
+            activateTab(doc, 'generate');
+        }
+
+        if (shareBtn) {
+            shareBtn.addEventListener('click', function () {
+                if (!lastPacks.length) return;
+                const req = shareDealRequest(lastPacks, dealShareName(doc));
+                setStatus(status, 'Creating link…');
+                fetch(req.url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(req.body),
+                }).then(function (r) {
+                    if (r.status === 401) { setStatus(status, 'Log in to create a share link.'); return null; }
+                    if (!r.ok) { setStatus(status, 'Couldn’t create a link. Try again.'); return null; }
+                    return r.json();
+                }).then(function (json) {
+                    if (!json) return;
+                    const full = absoluteUrl(root.location && root.location.origin, json.url);
+                    if (shareUrl) shareUrl.value = full;
+                    if (shareResult) shareResult.hidden = false;
+                    setStatus(status, 'Anyone with this link can open these packs.');
+                    copyToClipboard(full);
+                }).catch(function () { setStatus(status, 'Couldn’t create a link. Try again.'); });
+            });
+        }
+
+        if (shareCopyBtn) {
+            shareCopyBtn.addEventListener('click', function () {
+                if (shareUrl && shareUrl.value) copyToClipboard(shareUrl.value);
             });
         }
 
@@ -2483,8 +2633,14 @@
         splitQuantityPrefix: splitQuantityPrefix,
         applyCardChoice: applyCardChoice,
         packsToText: packsToText,
+        packHeader: packHeader,
+        cardCountLabel: cardCountLabel,
+        notFoundText: notFoundText,
+        applyPackShape: applyPackShape,
         importFileError: importFileError,
         packImportRequest: packImportRequest,
+        shareDealRequest: shareDealRequest,
+        dealShareName: dealShareName,
         packsSummary: packsSummary,
         groupsToList: groupsToList,
         cubeListText: cubeListText,
