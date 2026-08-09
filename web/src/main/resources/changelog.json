@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Hand a drafter their seat, and say where a pack list came from",
+    "summary": "Two follow-ups to the shared-deal work in #748.",
+    "emoji": "✨",
+    "prNumber": 749
+  },
+  {
+    "date": "August 2026",
     "title": "Fix the pack-list round trip, pace Scryfall, and share a deal by link",
     "summary": "Follow-ups around the pack tooling from #747, working outwards from the file format.",
     "emoji": "✨",
