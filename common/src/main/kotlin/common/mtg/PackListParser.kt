@@ -28,6 +28,22 @@ object PackListParser {
     /** One recovered pack: its header text (null when there was no divider) and its cards. */
     data class Pack(val label: String?, val entries: List<CardListParser.Entry>)
 
+    /**
+     * The `#` provenance line a file opens with (see [PackListWriter]), or
+     * null when it has none. Only the preamble counts — a comment further
+     * down belongs to whoever wrote it, not to the deal — so the search
+     * stops at the first pack.
+     */
+    fun provenanceOf(text: String): String? {
+        for (raw in text.lineSequence()) {
+            val line = raw.trim()
+            if (line.isEmpty()) continue
+            if (line.startsWith("#")) return line
+            return null
+        }
+        return null
+    }
+
     fun parse(text: String): List<Pack> {
         val packs = mutableListOf<Pack>()
         var label: String? = null

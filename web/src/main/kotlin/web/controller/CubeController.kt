@@ -120,13 +120,31 @@ class CubeController(
         @PathVariable token: String,
         @AuthenticationPrincipal user: OAuth2User?,
         model: Model,
-    ): String {
+    ): String = dealPage(token, null, user, model)
+
+    /**
+     * One seat's packs out of a shared deal (`/magic/d/{token}/3`). A drafter
+     * shouldn't have to be told "yours are packs 9 to 11" — and shouldn't be
+     * looking at everyone else's packs either, so only the requested one is
+     * sent to the browser.
+     */
+    @GetMapping("/d/{token}/{pack}")
+    fun sharedDealPackPage(
+        @PathVariable token: String,
+        @PathVariable pack: Int,
+        @AuthenticationPrincipal user: OAuth2User?,
+        model: Model,
+    ): String = dealPage(token, pack, user, model)
+
+    private fun dealPage(token: String, pack: Int?, user: OAuth2User?, model: Model): String {
         model.addAttribute("username", user.displayName())
         model.addAttribute("loggedIn", user != null)
         val shared = sharedCubes.get(token)?.takeIf { it.kind == SharedCubeKind.DEAL }
-        if (shared != null) {
-            model.addAttribute("sharedDealName", shared.name)
-            model.addAttribute("sharedDealPacks", shared.cards)
+        val packs = shared?.let { if (pack == null) it.cards else cubeWebService.singlePack(it.cards, pack) }
+        if (shared != null && packs != null) {
+            model.addAttribute("sharedDealName", if (pack == null) shared.name else "${shared.name} · pack $pack")
+            model.addAttribute("sharedDealPacks", packs)
+            model.addAttribute("sharedDealToken", token)
         } else {
             model.addAttribute("sharedDealMissing", true)
         }
@@ -196,10 +214,11 @@ class CubeController(
                     distribution = result.value.distribution,
                     notFound = result.value.notFound,
                     note = result.value.note,
+                    provenance = result.value.provenance,
                 )
             )
             is CubeResult.Failure -> ResponseEntity.badRequest().body(
-                CubePacksResponse(false, result.error, 0, 0, 0, emptyList(), emptyList(), emptyList(), null)
+                CubePacksResponse(false, result.error, 0, 0, 0, emptyList(), emptyList(), emptyList(), null, null)
             )
         }
 
@@ -589,6 +608,8 @@ data class CubePacksResponse(
     val distribution: List<CategoryAsFan>,
     val notFound: List<String> = emptyList(),
     val note: String? = null,
+    /** The `#` line the loaded file opened with, so a re-download keeps it. */
+    val provenance: String? = null,
 )
 
 data class SaveCubeListRequest(val name: String = "", val cards: String = "")

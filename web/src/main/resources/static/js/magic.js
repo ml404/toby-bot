@@ -103,12 +103,40 @@
         return '== Pack ' + index + ' (' + cardCountLabel(size) + ') ==';
     }
 
-    /** Plain-text rendering of the dealt packs, for the download button. */
-    function packsToText(packs) {
-        return packs.map(function (pack, i) {
+    /**
+     * The `#` line saying where a deal came from. A comment, so it's ignored
+     * on the way back in — it exists so a folder of cube-packs.txt files can
+     * be told apart. Mirrors PackListWriter.provenance on the Kotlin side.
+     */
+    function provenanceLine(packs, meta) {
+        const size = packs.reduce(function (max, p) { return Math.max(max, p.length); }, 0);
+        const shape = packs.length + (packs.length === 1 ? ' pack of ' : ' packs of ') + size;
+        const parts = [];
+        if (meta && meta.source) parts.push(meta.source);
+        parts.push(shape);
+        if (meta && meta.dealtOn) parts.push(meta.dealtOn);
+        return '# ' + parts.join(' — ');
+    }
+
+    /**
+     * Plain-text rendering of the dealt packs, for the download button.
+     * [meta] fills in the provenance line ({ source, dealtOn }).
+     */
+    function packsToText(packs, meta) {
+        if (!packs.length) return '';
+        const body = packs.map(function (pack, i) {
             return packHeader(i + 1, pack.length) + '\n' +
                 pack.map(function (c) { return '  ' + c.name; }).join('\n');
         }).join('\n\n') + '\n';
+        // A reloaded deal keeps the line its file already had, so saving it
+        // again doesn't relabel someone else's deal as dealt by you today.
+        const line = (meta && meta.line) || provenanceLine(packs, meta);
+        return line + '\n\n' + body;
+    }
+
+    /** Today, as the ISO date the provenance line carries. */
+    function today() {
+        return new Date().toISOString().slice(0, 10);
     }
 
     /**
@@ -967,7 +995,43 @@
         return container;
     }
 
-    function renderPacks(container, packs) {
+    /**
+     * The link to one seat's pack out of a shared deal. Pure so it's
+     * unit-testable; mirrors the `/magic/d/{token}/{pack}` route.
+     */
+    function dealPackUrl(origin, token, index) {
+        return absoluteUrl(origin, '/magic/d/' + encodeURIComponent(token) + '/' + index);
+    }
+
+    /** The per-pack "copy this seat's link" button in a pack heading. */
+    function packLinkButton(url, index) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cube-pack-link';
+        btn.textContent = '🔗';
+        btn.title = 'Copy a link to pack ' + index;
+        btn.setAttribute('aria-label', 'Copy a link to pack ' + index);
+        btn.setAttribute('data-pack-link', url);
+        btn.addEventListener('click', function (e) {
+            // The heading is a <summary>; copying shouldn't collapse the pack.
+            e.preventDefault();
+            e.stopPropagation();
+            copyToClipboard(url);
+            const previous = btn.textContent;
+            btn.textContent = '✓';
+            if (root && root.setTimeout) root.setTimeout(function () { btn.textContent = previous; }, 1500);
+        });
+        return btn;
+    }
+
+    /**
+     * Renders the dealt packs. When [options.packLink] is given it's called
+     * with a 1-based pack number and, if it returns a URL, that pack gets a
+     * button copying its own link — which is how a drafter is handed their
+     * seat instead of the whole deal.
+     */
+    function renderPacks(container, packs, options) {
+        const packLink = (options && options.packLink) || function () { return null; };
         container.replaceChildren();
         if (packs.length > 1) container.appendChild(collapseToggle(container));
         packs.forEach(function (pack, i) {
@@ -984,6 +1048,8 @@
             count.textContent = cardCountLabel(pack.length);
             heading.appendChild(count);
             summary.appendChild(heading);
+            const url = packLink(i + 1);
+            if (url) summary.appendChild(packLinkButton(url, i + 1));
             card.appendChild(summary);
             const grid = document.createElement('div');
             grid.className = 'cube-card-grid';
@@ -2270,11 +2336,23 @@
         const shareUrl = q(doc, '[data-share-deal-url]');
         const shareCopyBtn = q(doc, '[data-share-deal-copy]');
         let lastPacks = [];
+        // What the current deal came from, for the file's provenance line:
+        // the source it was dealt from, or the line a loaded file already had.
+        let lastMeta = {};
+        // The share token, once this deal has one — from sharing it, or from
+        // having been opened by link. It's what makes per-seat links possible.
+        let lastToken = '';
+
+        /** Links each pack to its own seat page, once the deal has a token. */
+        function packLinkFor(index) {
+            if (!lastToken) return null;
+            return dealPackUrl(root.location && root.location.origin, lastToken, index);
+        }
 
         if (downloadBtn) {
             downloadBtn.addEventListener('click', function () {
                 if (!lastPacks.length) return;
-                downloadText('cube-packs.txt', packsToText(lastPacks));
+                downloadText('cube-packs.txt', packsToText(lastPacks, lastMeta));
             });
         }
 
@@ -2285,6 +2363,10 @@
         function resetResults() {
             hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
             if (shareResult) hide(shareResult);
+            // The old token belongs to the old deal — its seat links would
+            // point at packs that are no longer on screen.
+            lastToken = '';
+            lastMeta = {};
         }
 
         /**
@@ -2297,7 +2379,7 @@
             lastPacks = json.packs;
             summary.textContent = summaryText;
             show(summary);
-            renderPacks(result, json.packs);
+            renderPacks(result, json.packs, { packLink: packLinkFor });
             show(result);
             show(actions);
             renderDistribution(dist, json.distribution);
@@ -2310,7 +2392,7 @@
          * Both routes go through /api/packs, so a link and a file can't
          * render differently.
          */
-        function loadPacks(text, readingMessage) {
+        function loadPacks(text, readingMessage, token) {
             setStatus(status, readingMessage);
             resetResults();
             setSpinner(doc, 'generate', true);
@@ -2323,6 +2405,12 @@
                     // straight after re-deals to the same size rather than
                     // to whatever the boxes happened to say.
                     applyPackShape(form, json);
+                    // Keep what the file said about itself, so re-downloading
+                    // a loaded deal doesn't relabel it as dealt today.
+                    lastMeta = { line: json.provenance || null, dealtOn: today() };
+                    // Opened by link: the deal already has a token, so its
+                    // packs can be handed out individually straight away.
+                    lastToken = token || '';
                     showPacks(json, packsSummary(json));
                 })
                 .catch(function () { setStatus(status, 'Could not load those packs.'); })
@@ -2350,9 +2438,14 @@
         // it loads through exactly the same path as a picked file. A dead link
         // still switches tabs — its "not found" note lives in this panel.
         const sharedDeal = q(doc, '[data-shared-deal-packs]');
+        const sharedDealToken = q(doc, '[data-shared-deal-token]');
         if (sharedDeal && sharedDeal.value.trim()) {
             activateTab(doc, 'generate');
-            loadPacks(sharedDeal.value, 'Loading the shared deal…');
+            loadPacks(
+                sharedDeal.value,
+                'Loading the shared deal…',
+                (sharedDealToken && sharedDealToken.value) || '',
+            );
         } else if (q(doc, '[data-shared-deal-missing]')) {
             activateTab(doc, 'generate');
         }
@@ -2375,8 +2468,12 @@
                     const full = absoluteUrl(root.location && root.location.origin, json.url);
                     if (shareUrl) shareUrl.value = full;
                     if (shareResult) shareResult.hidden = false;
-                    setStatus(status, 'Anyone with this link can open these packs.');
+                    setStatus(status, 'Anyone with this link can open these packs. Each pack now has its own 🔗 for one seat.');
                     copyToClipboard(full);
+                    // The deal has a token now, so every pack can be linked
+                    // individually — repaint to hang those links off it.
+                    lastToken = json.token;
+                    renderPacks(result, lastPacks, { packLink: packLinkFor });
                 }).catch(function () { setStatus(status, 'Couldn’t create a link. Try again.'); });
             });
         }
@@ -2407,6 +2504,7 @@
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'Could not build packs.'); return; }
                     setStatus(status, '');
+                    lastMeta = { source: sourceLabel(src), dealtOn: today() };
                     showPacks(
                         json,
                         'Dealt ' + json.packCount + ' packs of ' + json.packSize +
@@ -2634,6 +2732,8 @@
         applyCardChoice: applyCardChoice,
         packsToText: packsToText,
         packHeader: packHeader,
+        provenanceLine: provenanceLine,
+        dealPackUrl: dealPackUrl,
         cardCountLabel: cardCountLabel,
         notFoundText: notFoundText,
         applyPackShape: applyPackShape,

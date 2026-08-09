@@ -21,6 +21,7 @@ import net.dv8tion.jda.api.interactions.commands.build.SubcommandData
 import net.dv8tion.jda.api.utils.FileUpload
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
+import java.time.LocalDate
 import kotlin.random.Random
 
 /**
@@ -132,7 +133,7 @@ class CubeCommand @Autowired constructor(
                             note = resolved.note,
                             currency = currency,
                         )
-                        val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs, currency), ATTACHMENT_NAME)
+                        val file = FileUpload.fromData(CubeEmbeds.packsFile(packs.value.packs, currency, resolved.label, LocalDate.now()), ATTACHMENT_NAME)
                         ctx.event.hook.sendMessageEmbeds(embed).addFiles(file).queue()
                     }
                 }

@@ -16,6 +16,7 @@ import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
 import common.mtg.PackListParser
+import common.mtg.PackListWriter
 import common.mtg.Rarity
 import common.mtg.scryfall.ScryfallCardMapper
 import org.springframework.stereotype.Service
@@ -423,7 +424,30 @@ class CubeWebService(
             }
         }
 
-        return buildPacks(kept, fetched, note)
+        return buildPacks(kept, fetched, note, PackListParser.provenanceOf(text))
+    }
+
+    /**
+     * One pack out of a pack list, re-written as a pack list of its own, or
+     * null when [pack] (1-based) isn't in there. Lets a shared deal hand a
+     * drafter their seat without handing over everyone else's packs.
+     *
+     * The file's provenance line is carried over and the pack keeps its
+     * original number, so a seat link still says which deal it came from and
+     * which pack of it this is.
+     */
+    fun singlePack(text: String, pack: Int): String? {
+        val packs = PackListParser.parse(text)
+        val wanted = packs.getOrNull(pack - 1) ?: return null
+        val provenance = PackListParser.provenanceOf(text)
+        return buildString {
+            provenance?.let { appendLine(it); appendLine() }
+            appendLine(PackListWriter.header(pack, wanted.entries.sumOf { it.count }))
+            wanted.entries.forEach { entry ->
+                repeat(entry.count) { appendLine(PackListWriter.cardLine(entry.name)) }
+            }
+            appendLine()
+        }
     }
 
     /**
@@ -435,6 +459,7 @@ class CubeWebService(
         parsed: List<PackListParser.Pack>,
         fetched: List<ScryfallCard>,
         note: String? = null,
+        provenance: String? = null,
     ): CubeResult<PacksData> {
         val byKey = MtgNames.index(fetched) { it.card.name }
         val notFound = mutableListOf<String>()
@@ -466,6 +491,7 @@ class CubeWebService(
                 distribution = distribution(resolved, packSize),
                 notFound = notFound.distinct(),
                 note = note,
+                provenance = provenance,
             )
         )
     }
@@ -1001,6 +1027,11 @@ data class PacksData(
     val distribution: List<CategoryAsFan>,
     val notFound: List<String> = emptyList(),
     val note: String? = null,
+    /**
+     * The `#` line the file opened with, echoed back so re-downloading a
+     * loaded deal keeps saying where it originally came from.
+     */
+    val provenance: String? = null,
 )
 
 data class GenerateData(

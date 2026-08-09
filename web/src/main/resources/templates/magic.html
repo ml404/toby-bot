@@ -236,6 +236,8 @@
                  exactly as the shared-cube list box relies on. -->
             <textarea data-shared-deal-packs th:if="${sharedDealPacks}" th:text="${sharedDealPacks}"
                       hidden aria-hidden="true" tabindex="-1"></textarea>
+            <!-- The deal's token, so each pack can offer a link to its own seat. -->
+            <input type="hidden" data-shared-deal-token th:if="${sharedDealToken}" th:value="${sharedDealToken}">
             <p class="cube-empty" data-empty="generate">Choose your cards above, then hit <strong>Generate packs</strong>.</p>
             <div class="cube-generate-summary" data-summary="generate" hidden></div>
             <p class="cube-notfound" data-notfound="generate" hidden></p>
