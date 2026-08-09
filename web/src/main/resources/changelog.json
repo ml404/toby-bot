@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Fix the pack-list round trip, pace Scryfall, and share a deal by link",
+    "summary": "Follow-ups around the pack tooling from #747, working outwards from the file format.",
+    "emoji": "✨",
+    "prNumber": 748
+  },
+  {
+    "date": "August 2026",
     "title": "Load a downloaded pack list back in to see the same packs",
     "summary": "The Generate tab could write a deal out as a `.txt`, but there was no way back in.",
     "emoji": "✨",
