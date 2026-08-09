@@ -29,6 +29,7 @@ import web.service.DiffData
 import web.service.DiffLineView
 import web.service.DuplicateView
 import web.service.GenerateData
+import web.service.PacksData
 import web.service.PreviewData
 import web.service.RarityCountView
 import web.service.ComboView
@@ -398,6 +399,46 @@ class CubeControllerTest {
         assertTrue(response.body!!.ok)
         assertEquals(listOf("Mystery Card"), response.body!!.notFound)
         assertEquals(1, response.body!!.packs.size)
+    }
+
+    @Test
+    fun `packs returns the reloaded deal exactly as the file had it`() {
+        val text = "== Pack 1 (2 cards) ==\n  Bolt\n  Forest\n"
+        val data = PacksData(
+            poolSize = 2, packCount = 1, packSize = 2,
+            packs = listOf(
+                listOf(
+                    CardView("Bolt", "https://img/bolt.jpg", "https://img/bolt-lg.jpg", "Instant", 1.0),
+                    CardView("Forest", null, null, "Basic Land — Forest", 0.0),
+                )
+            ),
+            distribution = listOf(CategoryAsFan("Red", 1, 1.0)),
+            notFound = listOf("Mystery Card"),
+            note = "That file holds 30 packs; only the first 24 fit the 750-card limit.",
+        )
+        every { service.packsFromText(text) } returns CubeResult.ok(data)
+
+        val response = controller.packs(CubePacksRequest(text))
+
+        assertEquals(HttpStatus.OK, response.statusCode)
+        val body = response.body!!
+        assertTrue(body.ok)
+        assertEquals(1, body.packCount)
+        assertEquals(2, body.poolSize)
+        assertEquals(listOf("Bolt", "Forest"), body.packs.single().map { it.name })
+        assertEquals(listOf("Mystery Card"), body.notFound)
+        assertTrue(body.note!!.contains("only the first 24"))
+    }
+
+    @Test
+    fun `packs returns 400 when the file has nothing to show`() {
+        every { service.packsFromText(any()) } returns CubeResult.error("That file doesn't have any card names in it.")
+
+        val response = controller.packs(CubePacksRequest("== Pack 1 (0 cards) =="))
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        assertFalse(response.body!!.ok)
+        assertTrue(response.body!!.packs.isEmpty())
     }
 
     @Test

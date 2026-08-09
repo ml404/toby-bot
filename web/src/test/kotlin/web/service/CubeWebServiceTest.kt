@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import common.mtg.CardCategory
 import common.mtg.CubeCard
 import common.mtg.MtgColor
+import common.mtg.PackListParser
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -524,6 +525,101 @@ class CubeWebServiceTest {
     fun `generateList rejects an empty list without hitting the network`() {
         val result = assertInstanceOf(CubeResult.Failure::class.java, service.generateList("# just a comment", 24, 15, true))
         assertTrue(result.error.contains("at least one card"))
+    }
+
+    // --- packsFromText / buildPacks (reloading a downloaded deal) --------
+
+    /** Unwraps a successful result, failing the test when it isn't one. */
+    private fun <T> successOf(result: CubeResult<T>): T = when (result) {
+        is CubeResult.Success -> result.value
+        is CubeResult.Failure -> throw AssertionError("expected success, got: ${result.error}")
+    }
+
+    @Test
+    fun `packsFromText rejects a file with no card names without hitting the network`() {
+        val result = assertInstanceOf(
+            CubeResult.Failure::class.java,
+            service.packsFromText("== Pack 1 (0 cards) ==\n\n# nothing here\n"),
+        )
+        assertTrue(result.error.contains("any card names"))
+    }
+
+    @Test
+    fun `packsFromText rejects text past the length cap without hitting the network`() {
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.packsFromText("Forest\n".repeat(20_000)))
+        assertTrue(result.error.contains("too large"))
+    }
+
+    @Test
+    fun `packsFromText rejects a single pack bigger than the pool cap`() {
+        val huge = "== Pack 1 ==\n" + (1..800).joinToString("\n") { "  Card $it" }
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.packsFromText(huge))
+        assertTrue(result.error.contains("bigger than")) { "expected the pool-cap error, got: ${result.error}" }
+    }
+
+    @Test
+    fun `buildPacks keeps every pack's cards in the order the file had them`() {
+        val parsed = PackListParser.parse(
+            "== Pack 1 (3 cards) ==\n  Forest\n  Bolt\n  Forest\n\n== Pack 2 (1 cards) ==\n  Swords\n"
+        )
+
+        val data = successOf(service.buildPacks(parsed, listOf(sc("Bolt"), sc("Forest"), sc("Swords"))))
+
+        assertEquals(2, data.packCount)
+        assertEquals(4, data.poolSize)
+        // Order and repeats preserved — this is the deal that happened, not a re-draw.
+        assertEquals(listOf("Forest", "Bolt", "Forest"), data.packs[0].map { it.name })
+        assertEquals(listOf("Swords"), data.packs[1].map { it.name })
+        assertEquals(3, data.packSize) // as-fan maths uses the largest pack
+        assertTrue(data.notFound.isEmpty())
+    }
+
+    @Test
+    fun `buildPacks keeps an unresolved name in its slot and reports it`() {
+        val parsed = PackListParser.parse("== Pack 1 (2 cards) ==\n  Bolt\n  Definitely Not A Card\n")
+
+        val data = successOf(service.buildPacks(parsed, listOf(sc("Bolt"))))
+
+        // The pack still has both slots, so its size matches the file.
+        assertEquals(listOf("Bolt", "Definitely Not A Card"), data.packs.single().map { it.name })
+        assertEquals(listOf("Definitely Not A Card"), data.notFound)
+        assertEquals(null, data.packs.single().last().imageUrl)
+    }
+
+    @Test
+    fun `buildPacks resolves a transform card written as its front face`() {
+        val parsed = PackListParser.parse("== Pack 1 ==\n  Archangel Avacyn\n")
+
+        val data = successOf(service.buildPacks(parsed, listOf(sc("Archangel Avacyn // Avacyn, the Purifier"))))
+
+        assertEquals(listOf("Archangel Avacyn // Avacyn, the Purifier"), data.packs.single().map { it.name })
+        assertTrue(data.notFound.isEmpty())
+    }
+
+    @Test
+    fun `buildPacks fails when nothing in the file resolved`() {
+        val parsed = PackListParser.parse("== Pack 1 ==\n  Nope\n  Also Nope\n")
+
+        val result = assertInstanceOf(CubeResult.Failure::class.java, service.buildPacks(parsed, emptyList()))
+        assertTrue(result.error.contains("matched Scryfall"))
+    }
+
+    @Test
+    fun `buildPacks counts the resolved cards once each in the breakdown`() {
+        val parsed = PackListParser.parse("== Pack 1 ==\n  Forest\n  Forest\n  Bolt\n")
+
+        val data = successOf(
+            service.buildPacks(
+                parsed,
+                listOf(
+                    ScryfallCard(CubeCard("Forest", isLand = true), null, null),
+                    ScryfallCard(CubeCard("Bolt", setOf(MtgColor.RED)), null, null),
+                ),
+            )
+        )
+
+        assertEquals(3, data.distribution.sumOf { it.count })
+        assertEquals(2, data.distribution.first { it.category == CardCategory.LAND.displayName }.count)
     }
 
     // --- matchEntries (pasted names ↔ fetched cards, incl. multi-faced) ---

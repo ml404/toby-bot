@@ -9,7 +9,10 @@ package common.mtg
  *  - an optional trailing set/collector tag — `Lightning Bolt (2X2) 117`;
  *  - an optional trailing finish marker — `Sol Ring (C21) 263 *F*`;
  *  - blank lines, `#` / `//` comments, and exporter section headers
- *    (`Deck`, `Sideboard`, `Commander`, …) ignored.
+ *    (`Deck`, `Sideboard`, `Commander`, …) ignored;
+ *  - `== ... ==` divider lines ignored, so a pack list downloaded from the
+ *    Generate tab (`== Pack 1 (15 cards) ==`) pastes straight back in
+ *    without its headers surfacing as "couldn't find" noise.
  *
  * This keeps a list pasted straight out of Arena / MTGO / Moxfield from
  * surfacing its group headers as "couldn't find" noise.
@@ -40,11 +43,19 @@ object CardListParser {
         "maybeboard", "mainboard", "tokens", "about",
     )
 
+    /**
+     * A `== Pack 1 (15 cards) ==` style divider — what the pack download on
+     * the Generate tab writes between packs. No Magic card name starts with
+     * `==`, so such a line is always a header; [PackListParser] splits on the
+     * same marker to recover the pack boundaries.
+     */
+    const val DIVIDER_MARKER = "=="
+
     fun parse(text: String): List<Entry> =
         text.lineSequence().mapNotNull { raw ->
             var line = raw.trim()
             if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) return@mapNotNull null
-            if (line.lowercase() in SECTION_HEADERS) return@mapNotNull null
+            if (line.lowercase() in SECTION_HEADERS || line.startsWith(DIVIDER_MARKER)) return@mapNotNull null
             var count = 1
             QUANTITY_PREFIX.find(line)?.let { match ->
                 count = match.groupValues[1].toIntOrNull()?.coerceIn(1, MAX_PER_NAME) ?: 1

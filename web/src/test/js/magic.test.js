@@ -91,6 +91,39 @@ describe('packsToText', () => {
     });
 });
 
+describe('pack list re-import', () => {
+    test('a downloaded pack list is what the import endpoint is sent', () => {
+        const text = Cube.packsToText([[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        const req = Cube.packImportRequest(text);
+        expect(req.method).toBe('POST');
+        expect(req.url).toBe('/magic/api/packs');
+        expect(req.body).toEqual({ text: text });
+    });
+
+    test('importFileError accepts a plausible pack list', () => {
+        expect(Cube.importFileError({ size: 4200 })).toBeNull();
+    });
+
+    test('importFileError rejects nothing chosen, an empty file and an oversized one', () => {
+        expect(Cube.importFileError(null)).toMatch(/Choose a pack list/);
+        expect(Cube.importFileError({ size: 0 })).toMatch(/empty/);
+        expect(Cube.importFileError({ size: 100001 })).toMatch(/too big/);
+    });
+
+    test('packsSummary says the packs were loaded, not dealt', () => {
+        const summary = Cube.packsSummary({ packCount: 24, poolSize: 360 });
+        expect(summary).toContain('Loaded 24 packs');
+        expect(summary).toContain('360 cards');
+        expect(summary).not.toMatch(/Dealt/);
+    });
+
+    test('packsSummary singularises one pack and appends any note', () => {
+        expect(Cube.packsSummary({ packCount: 1, poolSize: 15 })).toContain('Loaded 1 pack from');
+        expect(Cube.packsSummary({ packCount: 2, poolSize: 30, note: 'Only the first 2 fit.' }))
+            .toContain('Only the first 2 fit.');
+    });
+});
+
 describe('URL builders', () => {
     test('asfanUrl carries the three calculator params', () => {
         expect(Cube.asfanUrl({ total: 60, cubeSize: 540, packSize: 15 }))

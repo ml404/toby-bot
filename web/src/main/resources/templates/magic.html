@@ -214,6 +214,13 @@
                 </label>
                 <button type="submit" class="btn cube-submit">Generate packs</button>
             </form>
+            <div class="cube-import">
+                <button type="button" class="btn btn-secondary" data-import="generate">⬆ Load a pack list (.txt)</button>
+                <input type="file" accept=".txt,text/plain" data-import-file="generate" hidden
+                       aria-label="Pack list file to load">
+                <small class="cube-hint">Already downloaded a deal? Load that file to see those exact packs
+                    again — nothing is re-dealt.</small>
+            </div>
             <div class="cube-statusline">
                 <span class="cube-spinner" data-spinner="generate" hidden aria-hidden="true"></span>
                 <p class="cube-status" data-status="generate" aria-live="polite"></p>
