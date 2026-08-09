@@ -147,6 +147,91 @@ class ScryfallCardMapperTest {
     }
 
     @Test
+    fun `a face with no rules text is skipped, not rendered blank`() {
+        // Meld backs and some tokens carry a face with no oracle_text.
+        val node = node(
+            "name" to "A // B",
+            "card_faces" to listOf(
+                mapOf("name" to "A", "oracle_text" to "Do A."),
+                mapOf("name" to "B"),
+            ),
+        )
+
+        assertEquals("A\nDo A.", ScryfallCardMapper.toCubeCard(node)!!.oracleText)
+    }
+
+    @Test
+    fun `a nameless face keeps its text undecorated`() {
+        val node = node(
+            "name" to "A // B",
+            "card_faces" to listOf(mapOf("oracle_text" to "Do A."), mapOf("name" to "B", "oracle_text" to "Do B.")),
+        )
+
+        assertEquals(
+            "Do A.\n\n**B**\nDo B.",
+            ScryfallCardMapper.toCubeCard(node, decorateFaceName = { "**$it**" })!!.oracleText,
+        )
+    }
+
+    @Test
+    fun `faces with no text at all leave the card textless`() {
+        val node = node(
+            "name" to "A // B",
+            "card_faces" to listOf(mapOf("name" to "A"), mapOf("name" to "B")),
+        )
+
+        assertNull(ScryfallCardMapper.toCubeCard(node)!!.oracleText) { "empty text should be absent, not an empty string" }
+    }
+
+    @Test
+    fun `a card with no images anywhere has none`() {
+        val node = node("name" to "Bolt", "type_line" to "Instant")
+
+        assertNull(ScryfallCardMapper.frontImageUrl(node, "small"))
+        assertNull(ScryfallCardMapper.backImageUrl(node))
+    }
+
+    @Test
+    fun `a size Scryfall didn't send is null rather than a wrong image`() {
+        val node = node("name" to "Bolt", "image_uris" to mapOf("small" to "s.jpg"))
+
+        assertEquals("s.jpg", ScryfallCardMapper.frontImageUrl(node, "small"))
+        assertNull(ScryfallCardMapper.frontImageUrl(node, "png"))
+    }
+
+    @Test
+    fun `a single-face list has no back image`() {
+        // Adventure cards are sometimes shaped this way in older payloads.
+        val node = node(
+            "name" to "Bolt",
+            "card_faces" to listOf(mapOf("name" to "Bolt", "image_uris" to mapOf("normal" to "front.jpg"))),
+        )
+
+        assertEquals("front.jpg", ScryfallCardMapper.frontImageUrl(node, "normal"))
+        assertNull(ScryfallCardMapper.backImageUrl(node)) { "one face means there's no back to show" }
+    }
+
+    @Test
+    fun `a face with no mana cost of its own leaves the card costless`() {
+        val node = node("name" to "Land", "card_faces" to listOf(mapOf("name" to "Land")))
+
+        assertNull(ScryfallCardMapper.toCubeCard(node)!!.manaCost)
+    }
+
+    @Test
+    fun `the front face's cost wins over a back face that has one`() {
+        val node = node(
+            "name" to "A // B",
+            "card_faces" to listOf(
+                mapOf("name" to "A", "mana_cost" to "{U}"),
+                mapOf("name" to "B", "mana_cost" to "{2}{R}"),
+            ),
+        )
+
+        assertEquals("{U}", ScryfallCardMapper.toCubeCard(node)!!.manaCost) { "you cast the front face" }
+    }
+
+    @Test
     fun `colours come back in canonical WUBRG order regardless of input order`() {
         val card = ScryfallCardMapper.toCubeCard(
             node("name" to "Niv-Mizzet", "type_line" to "Creature", "color_identity" to listOf("R", "U")),

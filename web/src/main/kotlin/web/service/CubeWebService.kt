@@ -21,11 +21,7 @@ import common.mtg.Rarity
 import common.mtg.scryfall.ScryfallCardMapper
 import org.springframework.stereotype.Service
 import java.io.IOException
-import java.net.URI
 import java.net.URLEncoder
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Duration
 import kotlin.random.Random
@@ -39,11 +35,9 @@ import kotlin.random.Random
 @Service
 class CubeWebService(
     private val throttle: ScryfallThrottle = ScryfallThrottle(),
+    private val transport: HttpTransport = JdkHttpTransport(),
 ) {
 
-    private val http: HttpClient = HttpClient.newBuilder()
-        .connectTimeout(Duration.ofSeconds(5))
-        .build()
     private val jackson = ObjectMapper()
 
     // Pool resolution is what a draft hammers: everyone opens the same shared
@@ -69,21 +63,14 @@ class CubeWebService(
         if (trimmed.isEmpty()) return CubeResult.error("Enter a card name to look up.")
         val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
         return try {
-            val response = http.send(
-                HttpRequest.newBuilder(URI.create(url))
-                    .header("User-Agent", "tobybot-web/1.0")
-                    .header("Accept", "application/json")
-                    .timeout(Duration.ofSeconds(10))
-                    .GET()
-                    .build(),
-                HttpResponse.BodyHandlers.ofString(),
-            )
-            when (response.statusCode()) {
-                200 -> cardOf(jackson.readTree(response.body()))
+            val response = scryfallGet(url)
+            when (response.statusCode) {
+                200 -> cardOf(jackson.readTree(response.body))
                     ?.let { CubeResult.ok(lookupView(it)) }
                     ?: CubeResult.error("Scryfall returned an unexpected card.")
                 404 -> CubeResult.error("No card found matching “$trimmed”.")
-                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+                429 -> CubeResult.error(RATE_LIMITED)
+                else -> CubeResult.error("Scryfall returned ${response.statusCode}.")
             }
         } catch (e: IOException) {
             CubeResult.error("Could not reach Scryfall: ${e.message}")
@@ -105,9 +92,9 @@ class CubeWebService(
         val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
         return try {
             val response = scryfallGet(url)
-            when (response.statusCode()) {
+            when (response.statusCode) {
                 200 -> {
-                    val card = jackson.readTree(response.body())
+                    val card = jackson.readTree(response.body)
                     val cardName = card.path("name").asText("").takeIf { it.isNotBlank() }
                         ?: return CubeResult.error("Scryfall returned an unexpected card.")
                     val scryfallUri = card.path("scryfall_uri").asText("").takeIf { it.isNotBlank() }
@@ -116,7 +103,8 @@ class CubeWebService(
                     CubeResult.ok(RulingsView(cardName, scryfallUri, rulings))
                 }
                 404 -> CubeResult.error("No card found matching “$trimmed”.")
-                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+                429 -> CubeResult.error(RATE_LIMITED)
+                else -> CubeResult.error("Scryfall returned ${response.statusCode}.")
             }
         } catch (e: IOException) {
             CubeResult.error("Could not reach Scryfall: ${e.message}")
@@ -130,7 +118,7 @@ class CubeWebService(
     private fun fetchRulings(rulingsUri: String): List<RulingView> =
         try {
             val response = scryfallGet(rulingsUri)
-            if (response.statusCode() == 200) rulingsOf(jackson.readTree(response.body())) else emptyList()
+            if (response.statusCode == 200) rulingsOf(jackson.readTree(response.body)) else emptyList()
         } catch (e: IOException) {
             emptyList()
         } catch (e: InterruptedException) {
@@ -160,10 +148,10 @@ class CubeWebService(
         val url = "$SPELLBOOK_ENDPOINT?q=$query&limit=$MAX_COMBOS&ordering=-popularity"
         return try {
             val response = scryfallGet(url)
-            if (response.statusCode() != 200) {
-                return CubeResult.error("Couldn't reach Commander Spellbook (${response.statusCode()}).")
+            if (response.statusCode != 200) {
+                return CubeResult.error("Couldn't reach Commander Spellbook (${response.statusCode}).")
             }
-            CubeResult.ok(CombosView(trimmed, combosOf(jackson.readTree(response.body()))))
+            CubeResult.ok(CombosView(trimmed, combosOf(jackson.readTree(response.body))))
         } catch (e: IOException) {
             CubeResult.error("Could not reach Commander Spellbook: ${e.message}")
         } catch (e: InterruptedException) {
@@ -179,9 +167,9 @@ class CubeWebService(
         val url = "$SETS_ENDPOINT/" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
         return try {
             val response = scryfallGet(url)
-            when (response.statusCode()) {
+            when (response.statusCode) {
                 200 -> {
-                    val node = jackson.readTree(response.body())
+                    val node = jackson.readTree(response.body)
                     val name = node.path("name").asText("").takeIf { it.isNotBlank() }
                         ?: return CubeResult.error("Scryfall returned an unexpected set.")
                     CubeResult.ok(
@@ -197,7 +185,8 @@ class CubeWebService(
                     )
                 }
                 404 -> CubeResult.error("No set found with code “$trimmed”.")
-                else -> CubeResult.error("Scryfall returned ${response.statusCode()}.")
+                429 -> CubeResult.error(RATE_LIMITED)
+                else -> CubeResult.error("Scryfall returned ${response.statusCode}.")
             }
         } catch (e: IOException) {
             CubeResult.error("Could not reach Scryfall: ${e.message}")
@@ -238,17 +227,9 @@ class CubeWebService(
     }
 
     /** A short, throttled GET against Scryfall with the standard headers and timeout. */
-    private fun scryfallGet(url: String): HttpResponse<String> {
+    private fun scryfallGet(url: String): HttpReply {
         awaitScryfallSlot()
-        return http.send(
-            HttpRequest.newBuilder(URI.create(url))
-                .header("User-Agent", "tobybot-web/1.0")
-                .header("Accept", "application/json")
-                .timeout(Duration.ofSeconds(10))
-                .GET()
-                .build(),
-            HttpResponse.BodyHandlers.ofString(),
-        )
+        return transport.send(getRequest(url))
     }
 
     /** Maps a resolved card to the lookup view, resolving rarity + colours for display. */
@@ -654,13 +635,13 @@ class CubeWebService(
         try {
             while (url != null && cards.size < MAX_CARDS && page < MAX_PAGES) {
                 val response = scryfallGet(url)
-                when (response.statusCode()) {
+                when (response.statusCode) {
                     200 -> {}
                     404 -> return CubeResult.error("No cards matched that query.")
                     429 -> return CubeResult.error(RATE_LIMITED)
-                    else -> return CubeResult.error("Scryfall returned ${response.statusCode()}.")
+                    else -> return CubeResult.error("Scryfall returned ${response.statusCode}.")
                 }
-                val root = jackson.readTree(response.body())
+                val root = jackson.readTree(response.body)
                 cards.addAll(parseScryfall(root))
                 url = if (root.path("has_more").asBoolean(false)) {
                     root.path("next_page").asText(null)
@@ -764,21 +745,12 @@ class CubeWebService(
         val body = """{"identifiers":[$identifiers]}"""
         return try {
             awaitScryfallSlot()
-            val response = http.send(
-                HttpRequest.newBuilder(URI.create(COLLECTION_ENDPOINT))
-                    .header("User-Agent", "tobybot-web/1.0")
-                    .header("Accept", "application/json")
-                    .header("Content-Type", "application/json")
-                    .timeout(Duration.ofSeconds(10))
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .build(),
-                HttpResponse.BodyHandlers.ofString(),
-            )
-            if (response.statusCode() == 429) return CubeResult.error(RATE_LIMITED)
-            if (response.statusCode() != 200) {
-                return CubeResult.error("Scryfall returned ${response.statusCode()} resolving your list.")
+            val response = transport.send(postRequest(COLLECTION_ENDPOINT, body))
+            if (response.statusCode == 429) return CubeResult.error(RATE_LIMITED)
+            if (response.statusCode != 200) {
+                return CubeResult.error("Scryfall returned ${response.statusCode} resolving your list.")
             }
-            CubeResult.ok(parseScryfall(jackson.readTree(response.body())).also { collectionCache[cacheKey] = it })
+            CubeResult.ok(parseScryfall(jackson.readTree(response.body)).also { collectionCache[cacheKey] = it })
         } catch (e: IOException) {
             CubeResult.error("Could not reach Scryfall: ${e.message}")
         } catch (e: InterruptedException) {
