@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Split magic.js into three layers",
+    "summary": "2,790 lines in one IIFE. The layering was already latent in it, so this makes it physical:",
+    "emoji": "✨",
+    "prNumber": 751
+  },
+  {
+    "date": "August 2026",
     "title": "Make the Scryfall calls testable, and fix what that turned up",
     "summary": "I went looking for what else was worth improving in the Magic area and ran a coverage pass to find where the tests were thin. The answer was blunt: `CubeWebService` built its own `HttpClient` inline, so **every** network path — status handling, pagination, batching, the cache, the throttle — could only be exercised by really calling Scryfall.",
     "emoji": "✨",
