@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Load a downloaded pack list back in to see the same packs",
+    "summary": "The Generate tab could write a deal out as a `.txt`, but there was no way back in.",
+    "emoji": "✨",
+    "prNumber": 747
+  },
+  {
+    "date": "August 2026",
     "title": "Show an active source outage in the intro report",
     "summary": "The follow-on flagged in #741. `/introstats` is the one place an admin looks when several intros stop playing — and during a rate limit or IP block that's every intro at once, which is exactly when the report was least trustworthy.",
     "emoji": "🎵",
