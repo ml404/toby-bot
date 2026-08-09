@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Make the Scryfall calls testable, and fix what that turned up",
+    "summary": "I went looking for what else was worth improving in the Magic area and ran a coverage pass to find where the tests were thin. The answer was blunt: `CubeWebService` built its own `HttpClient` inline, so **every** network path — status handling, pagination, batching, the cache, the throttle — could only be exercised by really calling Scryfall.",
+    "emoji": "✨",
+    "prNumber": 750
+  },
+  {
+    "date": "August 2026",
     "title": "Hand a drafter their seat, and say where a pack list came from",
     "summary": "Two follow-ups to the shared-deal work in #748.",
     "emoji": "✨",
