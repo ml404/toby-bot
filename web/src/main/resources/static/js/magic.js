@@ -2,1096 +2,120 @@
 // / as-fan / compare), card tools (lookup / legality / price watch) and
 // reference (sets / keywords) — over the /magic/api/* JSON endpoints. The
 // emphasis is on showing the actual CARDS: generated packs and the preview
-// both list real card names linked to Scryfall. Pure helpers (URL builders,
-// formatting, colours, card links, hash↔tab mapping, DOM renderers) are
-// exported for Jest; the DOM wiring only runs in a browser.
+// both list real card names linked to Scryfall.
+//
+// Layer 3 of 3, and the page's entry point: the event wiring, the fetches and
+// the per-tab state. Nothing here runs outside a browser except via the
+// exports at the bottom, which re-publish all three layers as `TobyCube` so
+// the Jest suite (and anything else) sees one surface.
+//
+//   magic-format.js  pure helpers — no DOM, no network
+//   magic-render.js  response -> DOM, no state
+//   magic.js         this file: wiring, fetching, state
 (function (root) {
     'use strict';
 
-    const TABS = ['card', 'legality', 'watch', 'reference', 'generate', 'preview', 'asfan', 'compare'];
-
-    // The tab shown on load when there's no #hash deep-link. The toolkit leads
-    // with the broadly-useful card lookup rather than the niche cube builder.
-    const DEFAULT_TAB = 'card';
-
-    // Tools that work off their own inputs, not the shared "Your cube" source.
-    const NO_SHARED_SOURCE = ['asfan', 'compare', 'card', 'legality', 'reference', 'watch'];
-
-    // Colour-pie palette for swatches/bars. Tuned to read on the dark
-    // dashboard background while staying recognisably W/U/B/R/G + gold
-    // multicolour, silver colourless, brown land.
-    const CATEGORY_COLORS = {
-        White: '#f5edd6',
-        Blue: '#3b82f6',
-        Black: '#9aa0b5',
-        Red: '#ef4444',
-        Green: '#22c55e',
-        Multicolor: '#f1c40f',
-        Colorless: '#c7ccd4',
-        Land: '#b9895a',
-    };
-
-    function categoryColor(name) {
-        return CATEGORY_COLORS[name] || '#7a7a8a';
-    }
-
-    function formatAsFan(value) {
-        return Number(value).toFixed(2);
-    }
-
-    function asfanSentence(value, packSize) {
-        return 'On average you\'ll open about ' + formatAsFan(value) +
-            ' of these in a ' + packSize + '-card pack.';
-    }
-
-    /**
-     * The one-line "stat line" shown under the hover-zoom: the type line
-     * plus mana value (omitted for 0-cost cards like lands). e.g.
-     * "Instant · MV 1", or just "Basic Land — Forest".
-     */
-    function cardStatline(typeLine, manaValue) {
-        const parts = [];
-        if (typeLine) parts.push(typeLine);
-        const mv = Number(manaValue);
-        if (mv > 0) parts.push('MV ' + (Number.isInteger(mv) ? mv : mv));
-        return parts.join(' · ');
-    }
-
-    /**
-     * Scryfall card-symbol SVG URLs for a mana cost like "{1}{R}{R}". Each
-     * {sym} maps to svgs.scryfall.io/card-symbols/<code>.svg, where <code> is
-     * the symbol with braces and slashes removed ({W/U} -> WU). Pure, so it's
-     * unit-testable; returns [] for null/empty/costless cards.
-     */
-    function manaSymbolUrls(manaCost) {
-        if (!manaCost) return [];
-        const out = [];
-        const re = /\{([^}]+)\}/g;
-        let m;
-        while ((m = re.exec(manaCost)) !== null) {
-            const code = m[1].replace(/\//g, '').toUpperCase();
-            out.push({
-                symbol: '{' + m[1] + '}',
-                url: 'https://svgs.scryfall.io/card-symbols/' + encodeURIComponent(code) + '.svg',
-            });
-        }
-        return out;
-    }
-
-    /** Exact-name Scryfall search for a card, so the link opens that card. */
-    function scryfallCardUrl(name) {
-        return 'https://scryfall.com/search?q=' + encodeURIComponent('!"' + name + '"');
-    }
-
-    /** The tab id encoded in a URL hash, or null if it isn't a real tab. */
-    function tabIdFromHash(hash) {
-        const id = (hash || '').replace(/^#/, '');
-        return TABS.indexOf(id) >= 0 ? id : null;
-    }
-
-    /** "1 card" / "15 cards" — the pack size, pluralised. */
-    function cardCountLabel(n) {
-        return n + (n === 1 ? ' card' : ' cards');
-    }
-
-    /**
-     * The header opening one pack in a downloaded pack list. Mirrors
-     * PackListWriter.header on the Kotlin side (the bot writes the same
-     * format), so a file saved from either end loads on either end.
-     */
-    function packHeader(index, size) {
-        return '== Pack ' + index + ' (' + cardCountLabel(size) + ') ==';
-    }
-
-    /**
-     * The `#` line saying where a deal came from. A comment, so it's ignored
-     * on the way back in — it exists so a folder of cube-packs.txt files can
-     * be told apart. Mirrors PackListWriter.provenance on the Kotlin side.
-     */
-    function provenanceLine(packs, meta) {
-        const size = packs.reduce(function (max, p) { return Math.max(max, p.length); }, 0);
-        const shape = packs.length + (packs.length === 1 ? ' pack of ' : ' packs of ') + size;
-        const parts = [];
-        if (meta && meta.source) parts.push(meta.source);
-        parts.push(shape);
-        if (meta && meta.dealtOn) parts.push(meta.dealtOn);
-        return '# ' + parts.join(' — ');
-    }
-
-    /**
-     * Plain-text rendering of the dealt packs, for the download button.
-     * [meta] fills in the provenance line ({ source, dealtOn }).
-     */
-    function packsToText(packs, meta) {
-        if (!packs.length) return '';
-        const body = packs.map(function (pack, i) {
-            return packHeader(i + 1, pack.length) + '\n' +
-                pack.map(function (c) { return '  ' + c.name; }).join('\n');
-        }).join('\n\n') + '\n';
-        // A reloaded deal keeps the line its file already had, so saving it
-        // again doesn't relabel someone else's deal as dealt by you today.
-        const line = (meta && meta.line) || provenanceLine(packs, meta);
-        return line + '\n\n' + body;
-    }
-
-    /** Today, as the ISO date the provenance line carries. */
-    function today() {
-        return new Date().toISOString().slice(0, 10);
-    }
-
-    /**
-     * The most text the pack-import endpoint accepts, mirroring the service's
-     * own cap. File size is in bytes and the cap is in characters, so this
-     * only ever rejects early — never lets something oversized through.
-     */
-    const MAX_IMPORT_BYTES = 100000;
-
-    /**
-     * Why a chosen file can't be loaded as a pack list, or null when it's
-     * fine. Checked before reading so an accidental pick of something huge
-     * fails instantly rather than after a long read. Pure so it's testable.
-     */
-    function importFileError(file) {
-        if (!file) return 'Choose a pack list (.txt) to load.';
-        if (!file.size) return 'That file is empty.';
-        if (file.size > MAX_IMPORT_BYTES) return 'That file is too big (max 100,000 characters).';
-        return null;
-    }
-
-    /** The request that reloads a downloaded deal. Pure so it's unit-testable. */
-    function packImportRequest(text) {
-        return { method: 'POST', url: '/magic/api/packs', body: { text: text } };
-    }
-
-    /** The request that publishes a dealt set of packs as a link. */
-    function shareDealRequest(packs, name) {
-        return {
-            method: 'POST',
-            url: '/magic/api/share-deal',
-            body: { name: name || '', packs: packsToText(packs) },
-        };
-    }
-
-    /** The headline for a reloaded deal — no pack maths, these were already dealt. */
-    function packsSummary(json) {
-        const count = Number(json.packCount) || 0;
-        return 'Loaded ' + count + (count === 1 ? ' pack' : ' packs') + ' from your file — ' +
-            json.poolSize + ' cards, exactly as they were dealt. Click any card to view it on Scryfall.' +
-            (json.note ? ' ' + json.note : '');
-    }
-
-    /**
-     * Points the generate form's "how many packs / cards per pack" boxes at a
-     * loaded deal's shape, clamped to what the inputs accept. Returns the
-     * values applied so it's unit-testable.
-     */
-    function applyPackShape(form, json) {
-        const applied = {};
-        [['packs', json.packCount], ['packSize', json.packSize]].forEach(function (pair) {
-            const input = form && form.querySelector('[name="' + pair[0] + '"]');
-            const value = Number(pair[1]);
-            if (!input || !value || value < 1) return;
-            const max = Number(input.max);
-            applied[pair[0]] = max > 0 ? Math.min(value, max) : value;
-            input.value = applied[pair[0]];
-        });
-        return applied;
-    }
-
-    /** Saves [text] to the user's downloads as [filename]. */
-    function downloadText(filename, text) {
-        const blob = new Blob([text], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    }
-
-    /** Reads a picked file as text. */
-    function readFileText(file) {
-        return new Promise(function (resolve, reject) {
-            const reader = new FileReader();
-            reader.onload = function () { resolve(String(reader.result || '')); };
-            reader.onerror = function () { reject(reader.error); };
-            reader.readAsText(file);
-        });
-    }
-
-    /**
-     * The cube's cards as "<count> <name>" lines, from the de-duped preview
-     * groups (count is the copies in the pool, so "10 Forest"). A
-     * re-importable decklist — the read side of CardListParser.
-     */
-    function groupsToList(groups) {
-        const lines = [];
-        (groups || []).forEach(function (g) {
-            (g.cards || []).forEach(function (c) {
-                lines.push((c.count && c.count > 1 ? c.count : 1) + ' ' + c.name);
-            });
-        });
-        return lines;
-    }
-
-    function cubeListText(groups) {
-        return groupsToList(groups).join('\n') + '\n';
-    }
-
-    function asfanUrl(p) {
-        const q = new URLSearchParams({ total: p.total, cubeSize: p.cubeSize, packSize: p.packSize });
-        return '/magic/api/asfan?' + q.toString();
-    }
-
-    function previewUrl(p) {
-        const q = new URLSearchParams({ query: p.query, packSize: p.packSize });
-        return '/magic/api/preview?' + q.toString();
-    }
-
-    function generateUrl(p) {
-        const q = new URLSearchParams({
-            query: p.query,
-            packs: p.packs,
-            packSize: p.packSize,
-            balanced: p.balanced ? 'true' : 'false',
-        });
-        return '/magic/api/generate?' + q.toString();
-    }
-
-    /**
-     * The request to deal ONE balanced pack from a preview's source — reuses
-     * the generate endpoint (packs=1). GET for a Scryfall search, POST for a
-     * pasted list. Pure so it's unit-testable.
-     */
-    function samplePackRequest(src, packSize) {
-        const ps = Number(packSize) || 15;
-        if (src.mode === 'list') {
-            return { method: 'POST', url: '/magic/api/generate', body: { list: src.list, packs: 1, packSize: ps, balanced: true } };
-        }
-        return { method: 'GET', url: generateUrl({ query: src.query, packs: 1, packSize: ps, balanced: true }) };
-    }
-
-    /**
-     * A card as a thumbnail tile linking to its Scryfall page. Falls back
-     * to a captioned placeholder box when Scryfall has no image for it.
-     * Images lazy-load so a 500-card preview doesn't fetch everything at once.
-     */
-    function cardTile(card) {
-        const a = document.createElement('a');
-        a.className = 'cube-card';
-        a.href = scryfallCardUrl(card.name);
-        a.target = '_blank';
-        a.rel = 'noopener';
-        a.title = card.name;
-        // A reliable name hook for click-through (the search grid opens the
-        // in-page detail panel; the href stays as a Scryfall fallback).
-        a.setAttribute('data-card-name', card.name);
-        // The larger image + stat line drive the hover-to-enlarge preview.
-        if (card.imageUrlLarge) a.setAttribute('data-large', card.imageUrlLarge);
-        a.setAttribute('data-statline', cardStatline(card.typeLine, card.manaValue));
-        if (card.imageUrl) {
-            const img = document.createElement('img');
-            img.className = 'cube-card-img';
-            img.src = card.imageUrl;
-            img.alt = card.name;
-            img.setAttribute('loading', 'lazy');
-            img.setAttribute('width', '146');
-            img.setAttribute('height', '204');
-            a.appendChild(img);
-        } else {
-            const placeholder = document.createElement('span');
-            placeholder.className = 'cube-card-img cube-card-img-empty';
-            a.appendChild(placeholder);
-        }
-        const name = document.createElement('span');
-        name.className = 'cube-card-name';
-        name.textContent = card.name;
-        a.appendChild(name);
-
-        // Mana cost as a row of Scryfall symbol SVGs, so the cost is scannable
-        // without squinting at the thumbnail.
-        const symbols = manaSymbolUrls(card.manaCost);
-        if (symbols.length) {
-            const mana = document.createElement('span');
-            mana.className = 'cube-card-mana';
-            symbols.forEach(function (s) {
-                const sym = document.createElement('img');
-                sym.className = 'cube-mana-symbol';
-                sym.src = s.url;
-                sym.alt = s.symbol;
-                sym.setAttribute('loading', 'lazy');
-                mana.appendChild(sym);
-            });
-            a.appendChild(mana);
-        }
-
-        // Copy count for de-duped preview tiles ("×10 Forest").
-        if (card.count && card.count > 1) {
-            const qty = document.createElement('span');
-            qty.className = 'cube-card-qty';
-            qty.textContent = '×' + card.count;
-            a.appendChild(qty);
-        }
-
-        // Double-faced cards get a flip control that swaps the thumbnail and
-        // the hover/lightbox image between the front and back faces.
-        if (card.imageUrlBack) {
-            a.setAttribute('data-back', card.imageUrlBack);
-            a.setAttribute('data-front-large', card.imageUrlLarge || card.imageUrl || '');
-            a.setAttribute('data-front-thumb', card.imageUrl || card.imageUrlLarge || '');
-            const flip = document.createElement('button');
-            flip.type = 'button';
-            flip.className = 'cube-card-flip';
-            flip.setAttribute('aria-label', 'Flip card');
-            flip.title = 'Flip card';
-            flip.textContent = '⇄';
-            a.appendChild(flip);
-        }
-        return a;
-    }
-
-    // A neutral bar colour for analytics with no colour-pie meaning (curve,
-    // types, rarity), matching the categoryColor fallback.
-    const NEUTRAL_BAR = '#7a7a8a';
-
-    /** A length-scaled bar track from a 0..1 [ratio] in [color]. */
-    function barTrack(ratio, color) {
-        const track = document.createElement('div');
-        track.className = 'cube-bar-track';
-        const fill = document.createElement('div');
-        fill.className = 'cube-bar-fill';
-        fill.style.width = (ratio > 0 ? Math.max(2, Math.round(ratio * 100)) : 0) + '%';
-        fill.style.background = color;
-        track.appendChild(fill);
-        return track;
-    }
-
-    function asFanBar(category, asFan, max) {
-        return barTrack(max > 0 ? asFan / max : 0, categoryColor(category));
-    }
-
-    /** A `label | bar | value` row (no colour swatch) for the analytics panels. */
-    function statRow(labelText, valueText, ratio, color) {
-        const rowEl = document.createElement('div');
-        rowEl.className = 'cube-bar-row';
-        const label = document.createElement('span');
-        label.className = 'cube-bar-label';
-        label.textContent = labelText;
-        const value = document.createElement('span');
-        value.className = 'cube-bar-value';
-        value.textContent = valueText;
-        rowEl.appendChild(label);
-        rowEl.appendChild(barTrack(ratio, color));
-        rowEl.appendChild(value);
-        return rowEl;
-    }
-
-    /** The mana curve: one bar per bucket ("0".."7+"), scaled to the tallest. */
-    function renderManaCurve(container, curve) {
-        container.replaceChildren();
-        const max = curve.reduce(function (m, b) { return Math.max(m, b.count); }, 0);
-        curve.forEach(function (b) {
-            container.appendChild(statRow(b.label, String(b.count), max > 0 ? b.count / max : 0, NEUTRAL_BAR));
-        });
-        return container;
-    }
-
-    /** The card-type breakdown: count + as-fan per type. */
-    function renderTypeBreakdown(container, types) {
-        container.replaceChildren();
-        const max = types.reduce(function (m, t) { return Math.max(m, t.asFan); }, 0);
-        types.forEach(function (t) {
-            container.appendChild(statRow(t.type, formatAsFan(t.asFan) + ' / pack · ' + t.count, max > 0 ? t.asFan / max : 0, NEUTRAL_BAR));
-        });
-        return container;
-    }
-
-    /** The rarity breakdown: count + as-fan per rarity. */
-    function renderRarity(container, rarities) {
-        container.replaceChildren();
-        const max = rarities.reduce(function (m, r) { return Math.max(m, r.asFan); }, 0);
-        rarities.forEach(function (r) {
-            container.appendChild(statRow(r.rarity, formatAsFan(r.asFan) + ' / pack · ' + r.count, max > 0 ? r.asFan / max : 0, NEUTRAL_BAR));
-        });
-        return container;
-    }
-
-    /** The two-colour guild breakdown (archetype support). */
-    function renderColorPairs(container, pairs) {
-        container.replaceChildren();
-        const max = pairs.reduce(function (m, p) { return Math.max(m, p.count); }, 0);
-        pairs.forEach(function (p) {
-            container.appendChild(statRow(p.pair, String(p.count), max > 0 ? p.count / max : 0, NEUTRAL_BAR));
-        });
-        return container;
-    }
-
-    /** The pip-weighted colour balance, each bar tinted with its colour swatch. */
-    function renderColorPips(container, pips) {
-        container.replaceChildren();
-        const max = pips.reduce(function (m, p) { return Math.max(m, p.count); }, 0);
-        pips.forEach(function (p) {
-            container.appendChild(statRow(p.color, String(p.count), max > 0 ? p.count / max : 0, categoryColor(p.color)));
-        });
-        return container;
-    }
-
-    /** A singleton-violation warning; hidden when the cube has no non-basic duplicates. */
-    function renderDuplicates(el, duplicates) {
-        if (!el) return;
-        if (!duplicates || !duplicates.length) { el.hidden = true; el.textContent = ''; return; }
-        el.textContent = '⚠️ ' + duplicates.length + ' non-basic card' + (duplicates.length > 1 ? 's' : '') +
-            ' duplicated: ' + duplicates.map(function (d) { return d.name + ' ×' + d.count; }).join(', ');
-        el.hidden = false;
-    }
-
-    /**
-     * Renders the whole cube report into the preview panels (duplicates
-     * warning always-visible, the rest inside a collapsible). Tolerates a
-     * missing analytics payload (older responses) and any missing element.
-     */
-    function renderAnalytics(analytics, els) {
-        renderDuplicates(els.dupes, analytics && analytics.duplicates);
-        if (!analytics) { hide(els.breakdown); return; }
-        if (els.avgMv) {
-            els.avgMv.textContent = analytics.nonLandCount > 0
-                ? 'Average mana value ' + formatAsFan(analytics.averageManaValue) +
-                    ' over ' + analytics.nonLandCount + ' nonland card' + (analytics.nonLandCount > 1 ? 's' : '')
-                : 'No nonland cards.';
-        }
-        if (els.curve) renderManaCurve(els.curve, analytics.curve || []);
-        if (els.types) renderTypeBreakdown(els.types, analytics.types || []);
-        if (els.rarity) renderRarity(els.rarity, analytics.rarities || []);
-        if (els.pairs) renderColorPairs(els.pairs, analytics.colorPairs || []);
-        if (els.pips) renderColorPips(els.pips, analytics.colorPips || []);
-        const totals = analytics.totalValues || [];
-        const code = (els.valueCurrency && els.valueCurrency.value) || 'usd';
-        renderTotalValue(els.value, totals, code);
-        renderValueExtremes(els.extremes, analytics.valueExtremes || [], code);
-        // Only offer the currency switch when something in the pool is priced.
-        if (els.valueCurrency) els.valueCurrency.hidden = totals.length === 0;
-        show(els.breakdown);
-    }
-
-    // Market currencies, mirroring common.mtg.MtgCurrency. The `code` matches
-    // the AnalyticsView total-value entries and the currency-toggle option
-    // values; symbol/suffix format an amount ($1.50 / €1.50 / 1.50 tix).
-    const CURRENCIES = [
-        { code: 'usd', display: 'USD', symbol: '$', suffix: '' },
-        { code: 'eur', display: 'EUR', symbol: '€', suffix: '' },
-        { code: 'tix', display: 'Tix', symbol: '', suffix: ' tix' },
-    ];
-
-    function currencyMeta(code) {
-        return CURRENCIES.filter(function (c) { return c.code === code; })[0] || CURRENCIES[0];
-    }
-
-    /** The total-value line for [code] from a totals list, or '' when nothing is priced in it. Pure. */
-    function totalValueText(totalValues, code) {
-        const match = (totalValues || []).filter(function (t) { return t.currency === code; })[0];
-        if (!match) return '';
-        const m = currencyMeta(code);
-        return '≈ ' + m.symbol + Number(match.amount).toFixed(2) + m.suffix + ' in priced cards (' + m.display + ')';
-    }
-
-    /** Renders the cube's total value in the [code] currency; hides when nothing is priced in it. */
-    function renderTotalValue(el, totalValues, code) {
-        if (!el) return;
-        const text = totalValueText(totalValues, code);
-        if (!text) { el.hidden = true; el.textContent = ''; return; }
-        el.textContent = text;
-        el.hidden = false;
-    }
-
-    /** Formats one currency amount, e.g. "$1.50" / "1.50 tix". Pure. */
-    function formatMoney(amount, code) {
-        const m = currencyMeta(code);
-        return m.symbol + Number(amount).toFixed(2) + m.suffix;
-    }
-
-    /** Renders the most/least valuable cards in [code] as two rows; hides when none priced. */
-    function renderValueExtremes(el, valueExtremes, code) {
-        if (!el) return;
-        const match = (valueExtremes || []).filter(function (e) { return e.currency === code; })[0];
-        if (!match) { el.hidden = true; el.replaceChildren(); return; }
-        el.replaceChildren();
-        function row(label, name, amount) {
-            const div = document.createElement('div');
-            div.className = 'cube-extreme';
-            const tag = document.createElement('span');
-            tag.className = 'cube-extreme-label';
-            tag.textContent = label;
-            const card = document.createElement('span');
-            card.className = 'cube-extreme-card';
-            card.textContent = name + ' (' + formatMoney(amount, code) + ')';
-            div.appendChild(tag);
-            div.appendChild(card);
-            return div;
-        }
-        el.appendChild(row('Most valuable', match.mostName, match.mostAmount));
-        el.appendChild(row('Least valuable', match.leastName, match.leastAmount));
-        el.hidden = false;
-    }
-
-    /** As-fan bars only (the secondary "balance" view under a generate). */
-    function renderDistribution(container, distribution) {
-        container.replaceChildren();
-        const max = distribution.reduce(function (m, r) { return Math.max(m, r.asFan); }, 0);
-        distribution.forEach(function (row) {
-            const rowEl = document.createElement('div');
-            rowEl.className = 'cube-bar-row';
-
-            const label = document.createElement('span');
-            label.className = 'cube-bar-label';
-            const swatch = document.createElement('span');
-            swatch.className = 'cube-swatch';
-            swatch.style.background = categoryColor(row.category);
-            label.appendChild(swatch);
-            label.appendChild(document.createTextNode(row.category));
-
-            const value = document.createElement('span');
-            value.className = 'cube-bar-value';
-            value.textContent = formatAsFan(row.asFan) + ' / pack · ' + row.count;
-
-            rowEl.appendChild(label);
-            rowEl.appendChild(asFanBar(row.category, row.asFan, max));
-            rowEl.appendChild(value);
-            container.appendChild(rowEl);
-        });
-        return container;
-    }
-
-    /** GET URL for the single-card lookup. */
-    function cardUrl(name) {
-        return '/magic/api/card?name=' + encodeURIComponent(name);
-    }
-
-    /**
-     * GET URL for a card search, carrying only the filled-in filters
-     * (name / type / advanced Scryfall query) as query params. Pure.
-     */
-    function searchUrl(filters) {
-        const params = new URLSearchParams();
-        if (filters.name) params.set('name', filters.name);
-        if (filters.type) params.set('type', filters.type);
-        if (filters.query) params.set('query', filters.query);
-        return '/magic/api/search?' + params.toString();
-    }
-
-    /**
-     * A Scryfall-style headline for a search result: "7 cards match" (or
-     * "750+ cards match" when the search hit the fetch ceiling). Pure.
-     */
-    function searchSentence(total, capped) {
-        const n = total + (capped ? '+' : '');
-        return n + ' card' + (total === 1 ? '' : 's') + ' match';
-    }
-
-    /** GET URL for a card's official rulings. */
-    function rulingsUrl(name) {
-        return '/magic/api/rulings?name=' + encodeURIComponent(name);
-    }
-
-    /**
-     * A card's market prices as a compact one-liner ("$1.50 · €1.20 · 0.03 tix"),
-     * present currencies only, or '' when Scryfall has no price for it. Pure.
-     */
-    function priceLine(card) {
-        const parts = [];
-        if (card.priceUsd) parts.push('$' + card.priceUsd);
-        if (card.priceEur) parts.push('€' + card.priceEur);
-        if (card.priceTix) parts.push(card.priceTix + ' tix');
-        return parts.join(' · ');
-    }
-
-    /** Renders a looked-up card: its (large) image beside a list of facts. */
-    function renderCardLookup(container, card) {
-        container.replaceChildren();
-        const wrap = document.createElement('div');
-        wrap.className = 'cube-cardlookup';
-
-        const big = card.imageUrlLarge || card.imageUrl;
-        if (big) {
-            const img = document.createElement('img');
-            img.className = 'cube-cardlookup-img';
-            img.src = big;
-            img.alt = card.name;
-            wrap.appendChild(img);
-        }
-
-        const facts = document.createElement('div');
-        facts.className = 'cube-cardlookup-facts';
-        const h = document.createElement('h3');
-        h.textContent = card.name;
-        facts.appendChild(h);
-
-        function fact(label, value) {
-            if (value == null || value === '') return;
-            const p = document.createElement('p');
-            p.className = 'cube-cardlookup-fact';
-            const b = document.createElement('strong');
-            b.textContent = label + ' ';
-            p.appendChild(b);
-            p.appendChild(document.createTextNode(String(value)));
-            facts.appendChild(p);
-        }
-
-        fact('Type', card.typeLine);
-        const symbols = manaSymbolUrls(card.manaCost);
-        if (symbols.length) {
-            const p = document.createElement('p');
-            p.className = 'cube-cardlookup-fact';
-            const b = document.createElement('strong');
-            b.textContent = 'Mana cost ';
-            p.appendChild(b);
-            symbols.forEach(function (s) {
-                const sym = document.createElement('img');
-                sym.className = 'cube-mana-symbol';
-                sym.src = s.url;
-                sym.alt = s.symbol;
-                p.appendChild(sym);
-            });
-            facts.appendChild(p);
-        }
-        fact('Mana value', card.manaValue);
-        fact('Rarity', card.rarity);
-        fact('Colour identity', (card.colors && card.colors.length) ? card.colors.join(', ') : 'Colourless');
-        fact('Price', priceLine(card));
-        fact('Legal', (card.legalFormats && card.legalFormats.length) ? card.legalFormats.join(', ') : '');
-
-        if (card.oracleText) {
-            const oracle = document.createElement('p');
-            oracle.className = 'cube-cardlookup-oracle';
-            // Oracle text carries real newlines (and DFC face breaks); keep them.
-            oracle.textContent = card.oracleText;
-            facts.appendChild(oracle);
-        }
-
-        const link = document.createElement('a');
-        link.className = 'btn btn-secondary cube-cardlookup-link';
-        link.href = scryfallCardUrl(card.name);
-        link.target = '_blank';
-        link.rel = 'noopener';
-        link.textContent = 'View on Scryfall ↗';
-        facts.appendChild(link);
-
-        // On-demand rulings: a button that fetches /magic/api/rulings for this
-        // card and renders them into the box below (wired in wireCardLookup).
-        const rulingsBtn = document.createElement('button');
-        rulingsBtn.type = 'button';
-        rulingsBtn.className = 'btn btn-secondary cube-rulings-btn';
-        rulingsBtn.setAttribute('data-load-rulings', '');
-        rulingsBtn.setAttribute('data-card-name', card.name);
-        rulingsBtn.textContent = 'Show rulings';
-        facts.appendChild(rulingsBtn);
-
-        // On-demand combos: fetches /magic/api/combos for this card.
-        const combosBtn = document.createElement('button');
-        combosBtn.type = 'button';
-        combosBtn.className = 'btn btn-secondary cube-combos-btn';
-        combosBtn.setAttribute('data-load-combos', '');
-        combosBtn.setAttribute('data-card-name', card.name);
-        combosBtn.textContent = 'Show combos';
-        facts.appendChild(combosBtn);
-
-        wrap.appendChild(facts);
-        container.appendChild(wrap);
-
-        const rulingsBox = document.createElement('div');
-        rulingsBox.className = 'cube-rulings';
-        rulingsBox.setAttribute('data-rulings-result', '');
-        rulingsBox.hidden = true;
-        container.appendChild(rulingsBox);
-
-        const combosBox = document.createElement('div');
-        combosBox.className = 'cube-combos';
-        combosBox.setAttribute('data-combos-result', '');
-        combosBox.hidden = true;
-        container.appendChild(combosBox);
-        return container;
-    }
-
-    /** GET URL for a card's combos. */
-    function combosUrl(name) {
-        return '/magic/api/combos?name=' + encodeURIComponent(name);
-    }
-
-    /** Renders a card's combos (pieces → produces, each linked), or a friendly empty state. */
-    function renderCombos(container, data) {
-        container.replaceChildren();
-        const combos = (data && data.combos) || [];
-
-        const head = document.createElement('div');
-        head.className = 'cube-combos-head';
-        const h = document.createElement('h4');
-        h.className = 'cube-combos-h';
-        h.textContent = 'Combos';
-        head.appendChild(h);
-        if (combos.length) {
-            const count = document.createElement('span');
-            count.className = 'cube-combos-count';
-            count.textContent = String(combos.length);
-            head.appendChild(count);
-        }
-        container.appendChild(head);
-
-        if (!combos.length) {
-            const p = document.createElement('p');
-            p.className = 'cube-combos-empty';
-            p.textContent = 'No combos found for this card on Commander Spellbook.';
-            container.appendChild(p);
-            return container;
-        }
-
-        // Renders a labelled row of card-name chips ("Needs …", "Makes …").
-        function chipRow(rowClass, label, names, chipClass) {
-            const row = document.createElement('div');
-            row.className = rowClass;
-            const tag = document.createElement('span');
-            tag.className = 'cube-combo-label';
-            tag.textContent = label;
-            row.appendChild(tag);
-            (names || []).forEach(function (name) {
-                const chip = document.createElement('span');
-                chip.className = chipClass;
-                chip.textContent = name;
-                row.appendChild(chip);
-            });
-            return row;
-        }
-
-        const ul = document.createElement('ul');
-        ul.className = 'cube-combos-list';
-        combos.forEach(function (combo, i) {
-            const li = document.createElement('li');
-            li.className = 'cube-combo';
-
-            const num = document.createElement('span');
-            num.className = 'cube-combo-num';
-            num.setAttribute('aria-hidden', 'true');
-            num.textContent = String(i + 1);
-            li.appendChild(num);
-
-            const body = document.createElement('div');
-            body.className = 'cube-combo-body';
-            body.appendChild(chipRow('cube-combo-uses', 'Needs', combo.uses, 'cube-combo-piece'));
-            body.appendChild(chipRow('cube-combo-produces', 'Makes', combo.produces, 'cube-combo-result'));
-            if (combo.url) {
-                const a = document.createElement('a');
-                a.className = 'cube-combo-link';
-                a.href = combo.url;
-                a.target = '_blank';
-                a.rel = 'noopener';
-                a.textContent = 'View combo ↗';
-                body.appendChild(a);
-            }
-            li.appendChild(body);
-            ul.appendChild(li);
-        });
-        container.appendChild(ul);
-        return container;
-    }
-
-    /** Renders a card's official rulings (date + note each), or a friendly empty state. */
-    function renderRulings(container, data) {
-        container.replaceChildren();
-        const h = document.createElement('h4');
-        h.className = 'cube-rulings-h';
-        h.textContent = 'Rulings';
-        container.appendChild(h);
-        const rulings = (data && data.rulings) || [];
-        if (!rulings.length) {
-            const p = document.createElement('p');
-            p.className = 'cube-rulings-empty';
-            p.textContent = 'No official rulings have been published for this card.';
-            container.appendChild(p);
-            return container;
-        }
-        const ul = document.createElement('ul');
-        ul.className = 'cube-rulings-list';
-        rulings.forEach(function (r) {
-            const li = document.createElement('li');
-            li.className = 'cube-ruling';
-            if (r.publishedAt) {
-                const date = document.createElement('span');
-                date.className = 'cube-ruling-date';
-                date.textContent = r.publishedAt;
-                li.appendChild(date);
-            }
-            const text = document.createElement('span');
-            text.className = 'cube-ruling-text';
-            text.textContent = r.comment;
-            li.appendChild(text);
-            ul.appendChild(li);
-        });
-        container.appendChild(ul);
-        return container;
-    }
-
-    /** Renders a cube diff: Added / Removed / Count-changed sections of card names. */
-    function renderDiff(container, data) {
-        container.replaceChildren();
-        function section(title, lines, sign) {
-            if (!lines || !lines.length) return;
-            const block = document.createElement('div');
-            block.className = 'cube-diff-group';
-            const h = document.createElement('h4');
-            h.className = 'cube-diff-h';
-            h.textContent = title + ' (' + lines.length + ')';
-            block.appendChild(h);
-            const ul = document.createElement('ul');
-            ul.className = 'cube-diff-list';
-            const prefix = sign === 'add' ? '+ ' : (sign === 'remove' ? '− ' : '~ ');
-            lines.forEach(function (line) {
-                const li = document.createElement('li');
-                li.className = 'cube-diff-line cube-diff-' + sign;
-                li.textContent = prefix + line.name +
-                    (sign === 'change' ? ' (' + line.from + ' → ' + line.to + ')' : '');
-                ul.appendChild(li);
-            });
-            block.appendChild(ul);
-            container.appendChild(block);
-        }
-        section('Added', data.added, 'add');
-        section('Removed', data.removed, 'remove');
-        section('Count changed', data.changed, 'change');
-        const total = (data.added || []).length + (data.removed || []).length + (data.changed || []).length;
-        if (total === 0) {
-            const p = document.createElement('p');
-            p.className = 'cube-diff-empty';
-            p.textContent = 'No differences — the two lists match.';
-            container.appendChild(p);
-        }
-        return container;
-    }
-
-    /** POST body builder isn't needed; the URL is constant. */
-    function legalityUrl() {
-        return '/magic/api/legality';
-    }
-
-    /**
-     * Renders a deck-legality verdict: a legal/illegal headline, then the
-     * offending cards bucketed (banned / not in format / restricted / unknown).
-     */
-    function renderLegality(container, data) {
-        container.replaceChildren();
-        const headline = document.createElement('p');
-        headline.className = 'cube-legality-headline ' + (data.legal ? 'is-legal' : 'is-illegal');
-        headline.textContent = (data.legal ? '✅ Legal in ' : '🚫 Not legal in ') + data.format +
-            ' — checked ' + data.total + ' card' + (data.total === 1 ? '' : 's');
-        container.appendChild(headline);
-
-        function bucket(title, names, kind) {
-            if (!names || !names.length) return;
-            const block = document.createElement('div');
-            block.className = 'cube-legality-group cube-legality-' + kind;
-            const h = document.createElement('h4');
-            h.className = 'cube-legality-h';
-            h.textContent = title + ' (' + names.length + ')';
-            block.appendChild(h);
-            const ul = document.createElement('ul');
-            ul.className = 'cube-legality-list';
-            names.forEach(function (name) {
-                const li = document.createElement('li');
-                li.textContent = name;
-                ul.appendChild(li);
-            });
-            block.appendChild(ul);
-            container.appendChild(block);
-        }
-        bucket('Banned', data.banned, 'banned');
-        bucket('Not in format', data.notLegal, 'notlegal');
-        bucket('Restricted (max 1)', data.restricted, 'restricted');
-        bucket('Unknown', data.unknown, 'unknown');
-        if (data.legal && (!data.restricted || !data.restricted.length)) {
-            const ok = document.createElement('p');
-            ok.className = 'cube-legality-empty';
-            ok.textContent = 'Every card is legal in ' + data.format + '.';
-            container.appendChild(ok);
-        }
-        return container;
-    }
-
-    /** A chevron that rotates when its parent <details> is open. */
-    function collapseChevron() {
-        const c = document.createElement('span');
-        c.className = 'cube-collapse-chevron';
-        c.setAttribute('aria-hidden', 'true');
-        c.textContent = '▸';
-        return c;
-    }
-
-    /**
-     * A "Collapse all / Expand all" control for a result area full of
-     * collapsible <details> sections — makes a 24-pack deal navigable.
-     */
-    function collapseToggle(container) {
-        const bar = document.createElement('div');
-        bar.className = 'cube-collapse-bar';
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'cube-link-btn';
-        btn.setAttribute('data-collapse-all', '');
-        btn.textContent = 'Collapse all';
-        btn.addEventListener('click', function () {
-            const sections = container.querySelectorAll('details.cube-pack, details.cube-group');
-            const anyOpen = Array.prototype.some.call(sections, function (d) { return d.open; });
-            Array.prototype.forEach.call(sections, function (d) { d.open = !anyOpen; });
-            btn.textContent = anyOpen ? 'Expand all' : 'Collapse all';
-        });
-        bar.appendChild(btn);
-        return bar;
-    }
-
-    /** The preview: each colour/land group with its as-fan AND its cards. */
-    function renderGroups(container, groups) {
-        container.replaceChildren();
-        if (groups.length > 1) container.appendChild(collapseToggle(container));
-        const max = groups.reduce(function (m, g) { return Math.max(m, g.asFan); }, 0);
-        groups.forEach(function (group) {
-            const block = document.createElement('details');
-            block.className = 'cube-group';
-            block.open = true;
-
-            const summary = document.createElement('summary');
-            summary.className = 'cube-section-summary';
-            summary.appendChild(collapseChevron());
-            const head = document.createElement('div');
-            head.className = 'cube-group-head';
-            const label = document.createElement('span');
-            label.className = 'cube-bar-label';
-            const swatch = document.createElement('span');
-            swatch.className = 'cube-swatch';
-            swatch.style.background = categoryColor(group.category);
-            label.appendChild(swatch);
-            label.appendChild(document.createTextNode(group.category + ' (' + group.count + ')'));
-            const value = document.createElement('span');
-            value.className = 'cube-bar-value';
-            value.textContent = formatAsFan(group.asFan) + ' / pack';
-            head.appendChild(label);
-            head.appendChild(asFanBar(group.category, group.asFan, max));
-            head.appendChild(value);
-            summary.appendChild(head);
-            block.appendChild(summary);
-
-            const grid = document.createElement('div');
-            grid.className = 'cube-card-grid';
-            group.cards.forEach(function (card) {
-                grid.appendChild(cardTile(card));
-            });
-            block.appendChild(grid);
-            container.appendChild(block);
-        });
-        return container;
-    }
-
-    /** A flat grid of search-result cards, each a thumbnail tile (like the preview). */
-    function renderSearchResults(container, cards) {
-        container.replaceChildren();
-        cards.forEach(function (card) {
-            container.appendChild(cardTile(card));
-        });
-        return container;
-    }
-
-    /**
-     * The link to one seat's pack out of a shared deal. Pure so it's
-     * unit-testable; mirrors the `/magic/d/{token}/{pack}` route.
-     */
-    function dealPackUrl(origin, token, index) {
-        return absoluteUrl(origin, '/magic/d/' + encodeURIComponent(token) + '/' + index);
-    }
-
-    /** The per-pack "copy this seat's link" button in a pack heading. */
-    function packLinkButton(url, index) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'cube-pack-link';
-        btn.textContent = '🔗';
-        btn.title = 'Copy a link to pack ' + index;
-        btn.setAttribute('aria-label', 'Copy a link to pack ' + index);
-        btn.setAttribute('data-pack-link', url);
-        btn.addEventListener('click', function (e) {
-            // The heading is a <summary>; copying shouldn't collapse the pack.
-            e.preventDefault();
-            e.stopPropagation();
-            copyToClipboard(url);
-            const previous = btn.textContent;
-            btn.textContent = '✓';
-            if (root && root.setTimeout) root.setTimeout(function () { btn.textContent = previous; }, 1500);
-        });
-        return btn;
-    }
-
-    /**
-     * Renders the dealt packs. When [options.packLink] is given it's called
-     * with a 1-based pack number and, if it returns a URL, that pack gets a
-     * button copying its own link — which is how a drafter is handed their
-     * seat instead of the whole deal.
-     */
-    function renderPacks(container, packs, options) {
-        const packLink = (options && options.packLink) || function () { return null; };
-        container.replaceChildren();
-        if (packs.length > 1) container.appendChild(collapseToggle(container));
-        packs.forEach(function (pack, i) {
-            const card = document.createElement('details');
-            card.className = 'cube-pack';
-            card.open = true;
-            const summary = document.createElement('summary');
-            summary.className = 'cube-section-summary cube-pack-head';
-            summary.appendChild(collapseChevron());
-            const heading = document.createElement('h3');
-            heading.textContent = 'Pack ' + (i + 1);
-            const count = document.createElement('span');
-            count.className = 'cube-pack-count';
-            count.textContent = cardCountLabel(pack.length);
-            heading.appendChild(count);
-            summary.appendChild(heading);
-            const url = packLink(i + 1);
-            if (url) summary.appendChild(packLinkButton(url, i + 1));
-            card.appendChild(summary);
-            const grid = document.createElement('div');
-            grid.className = 'cube-card-grid';
-            pack.forEach(function (c) {
-                grid.appendChild(cardTile(c));
-            });
-            card.appendChild(grid);
-            container.appendChild(card);
-        });
-        return container;
-    }
-
-    function setStatus(el, msg) {
-        if (el) el.textContent = msg;
-    }
-
-    /** True on touch / no-hover devices, where tap-to-enlarge replaces hover. */
-    function prefersTap() {
-        return !!(root && root.matchMedia && root.matchMedia('(hover: none)').matches);
-    }
-
-    /**
-     * Where to put the hover-zoom image: offset from the cursor, flipped to
-     * the cursor's other side if it would overflow, and clamped inside the
-     * viewport with a small margin. Pure so it's unit-testable.
-     */
-    function zoomPosition(px, py, w, h, vw, vh) {
-        const OFFSET = 18;
-        const MARGIN = 8;
-        let left = px + OFFSET;
-        if (left + w > vw - MARGIN) left = px - OFFSET - w; // flip to the left
-        if (left < MARGIN) left = MARGIN;
-        let top = py - h / 2;
-        if (top + h > vh - MARGIN) top = vh - h - MARGIN;
-        if (top < MARGIN) top = MARGIN;
-        return { left: left, top: top };
-    }
-
-    function show(el) { if (el) el.hidden = false; }
-    function hide(el) { if (el) el.hidden = true; }
-
-    // --- DOM wiring (browser only) -------------------------------------
+    // The layers below: `require` under Jest, the shared global in the
+    // browser (the page loads the three files in dependency order).
+    const fmt = (typeof module !== 'undefined' && module.exports)
+        ? require('./magic-format.js')
+        : root.TobyCubeFormat;
+
+    const rnd = (typeof module !== 'undefined' && module.exports)
+        ? require('./magic-render.js')
+        : root.TobyCubeRender;
+
+    // Hoisted into scope so the wiring below reads exactly as it did when
+    // this all lived in one file.
+    const AUTO_SEARCH_DEBOUNCE_MS = fmt.AUTO_SEARCH_DEBOUNCE_MS;
+    const AUTO_SEARCH_MIN = fmt.AUTO_SEARCH_MIN;
+    const DEFAULT_TAB = fmt.DEFAULT_TAB;
+    const LISTS_API = fmt.LISTS_API;
+    const MAX_CARD_SUGGEST = fmt.MAX_CARD_SUGGEST;
+    const NO_SHARED_SOURCE = fmt.NO_SHARED_SOURCE;
+    const TABS = fmt.TABS;
+    const WATCHES_API = fmt.WATCHES_API;
+    const absoluteUrl = fmt.absoluteUrl;
+    const applyCardChoice = fmt.applyCardChoice;
+    const asfanSentence = fmt.asfanSentence;
+    const asfanUrl = fmt.asfanUrl;
+    const cardCountLabel = fmt.cardCountLabel;
+    const cardStatline = fmt.cardStatline;
+    const cardUrl = fmt.cardUrl;
+    const categoryColor = fmt.categoryColor;
+    const combosUrl = fmt.combosUrl;
+    const countCards = fmt.countCards;
+    const cubeListText = fmt.cubeListText;
+    const currentLineInfo = fmt.currentLineInfo;
+    const dealPackUrl = fmt.dealPackUrl;
+    const deleteListUrl = fmt.deleteListUrl;
+    const formatAsFan = fmt.formatAsFan;
+    const formatMoney = fmt.formatMoney;
+    const generateUrl = fmt.generateUrl;
+    const groupsToList = fmt.groupsToList;
+    const importFileError = fmt.importFileError;
+    const legalityUrl = fmt.legalityUrl;
+    const manaSymbolUrls = fmt.manaSymbolUrls;
+    const notFoundText = fmt.notFoundText;
+    const packHeader = fmt.packHeader;
+    const packImportRequest = fmt.packImportRequest;
+    const packsSummary = fmt.packsSummary;
+    const packsToText = fmt.packsToText;
+    const previewUrl = fmt.previewUrl;
+    const priceLine = fmt.priceLine;
+    const provenanceLine = fmt.provenanceLine;
+    const queryShareUrl = fmt.queryShareUrl;
+    const readUrlPrefill = fmt.readUrlPrefill;
+    const ruleUrl = fmt.ruleUrl;
+    const rulingsUrl = fmt.rulingsUrl;
+    const samplePackRequest = fmt.samplePackRequest;
+    const scryfallAutocompleteUrl = fmt.scryfallAutocompleteUrl;
+    const scryfallCardUrl = fmt.scryfallCardUrl;
+    const searchSentence = fmt.searchSentence;
+    const searchUrl = fmt.searchUrl;
+    const setUrl = fmt.setUrl;
+    const shareDealRequest = fmt.shareDealRequest;
+    const splitQuantityPrefix = fmt.splitQuantityPrefix;
+    const tabIdFromHash = fmt.tabIdFromHash;
+    const today = fmt.today;
+    const totalValueText = fmt.totalValueText;
+    const watchLine = fmt.watchLine;
+    const zoomPosition = fmt.zoomPosition;
+
+    // Hoisted from the render layer, as above.
+    const applyPackShape = rnd.applyPackShape;
+    const cardDetailModal = rnd.cardDetailModal;
+    const copyToClipboard = rnd.copyToClipboard;
+    const downloadText = rnd.downloadText;
+    const hide = rnd.hide;
+    const prefersTap = rnd.prefersTap;
+    const readFileText = rnd.readFileText;
+    const renderAnalytics = rnd.renderAnalytics;
+    const renderCardLookup = rnd.renderCardLookup;
+    const renderColorPairs = rnd.renderColorPairs;
+    const renderColorPips = rnd.renderColorPips;
+    const renderCombos = rnd.renderCombos;
+    const renderDiff = rnd.renderDiff;
+    const renderDistribution = rnd.renderDistribution;
+    const renderDuplicates = rnd.renderDuplicates;
+    const renderGroups = rnd.renderGroups;
+    const renderLegality = rnd.renderLegality;
+    const renderManaCurve = rnd.renderManaCurve;
+    const renderNotFound = rnd.renderNotFound;
+    const renderPacks = rnd.renderPacks;
+    const renderRarity = rnd.renderRarity;
+    const renderRule = rnd.renderRule;
+    const renderRulings = rnd.renderRulings;
+    const renderSearchResults = rnd.renderSearchResults;
+    const renderSet = rnd.renderSet;
+    const renderTotalValue = rnd.renderTotalValue;
+    const renderTypeBreakdown = rnd.renderTypeBreakdown;
+    const renderValueExtremes = rnd.renderValueExtremes;
+    const renderWatches = rnd.renderWatches;
+    const setStatus = rnd.setStatus;
+    const show = rnd.show;
+
+    // --- Tabs, panels and the shared JSON helpers ----------------------
 
     function q(doc, sel) { return doc.querySelector(sel); }
     function statusFor(doc, name) { return q(doc, '[data-status="' + name + '"]'); }
@@ -1178,34 +202,6 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
         }).then(function (r) { return r.json(); });
-    }
-
-    // --- Deep links, card count, in-progress spinner -------------------
-
-    /** A shareable URL that pre-loads a Scryfall query (no login needed). */
-    function queryShareUrl(origin, query) {
-        return (origin || '') + '/magic?q=' + encodeURIComponent(query);
-    }
-
-    /** Reads ?q= / ?list= prefill params from a URL search string. */
-    function readUrlPrefill(search) {
-        const params = new URLSearchParams(search || '');
-        const out = {};
-        const q = params.get('q');
-        const list = params.get('list');
-        if (q) out.q = q;
-        if (list) out.list = list;
-        return out;
-    }
-
-    /** Counts the card lines in a pasted list (skips blanks and comments). */
-    function countCards(text) {
-        return (text || '').split('\n')
-            .map(function (line) { return line.trim(); })
-            .filter(function (line) {
-                return line !== '' && line.indexOf('#') !== 0 && line.indexOf('//') !== 0;
-            })
-            .length;
     }
 
     function setSpinner(doc, name, on) {
@@ -1297,27 +293,6 @@
         if (btn) btn.disabled = busy;
     }
 
-    // --- Saved lists (account-bound; persisted server-side) ------------
-
-    const LISTS_API = '/magic/api/lists';
-
-    /** DELETE URL for a saved list, with the name safely encoded. */
-    function deleteListUrl(name) {
-        return LISTS_API + '?name=' + encodeURIComponent(name);
-    }
-
-    /** Joins the page origin with a server-returned relative share path. */
-    function absoluteUrl(origin, path) {
-        return (origin || '') + path;
-    }
-
-    /** Best-effort clipboard write; silent when the browser blocks it. */
-    function copyToClipboard(text) {
-        if (root && root.navigator && root.navigator.clipboard) {
-            root.navigator.clipboard.writeText(text).then(function () {}, function () {});
-        }
-    }
-
     /**
      * What to call a shared deal: the saved-cube name if the user has one
      * typed, else the Scryfall query it was dealt from, else nothing (the
@@ -1330,33 +305,6 @@
         const query = q(doc, '[data-source-panel="search"] input[name="query"]');
         const q1 = ((query && query.value) || '').trim();
         return q1 ? q1 + ' — packs' : '';
-    }
-
-    /** How many unresolved names to spell out before summarising the rest. */
-    const MAX_NOT_FOUND_NAMES = 10;
-
-    /**
-     * The "couldn't find these names" sentence. A badly-mangled list can fail
-     * on hundreds of names, so only the first few are spelled out — the rest
-     * are counted. Pure so it's unit-testable.
-     */
-    function notFoundText(names) {
-        const shown = names.slice(0, MAX_NOT_FOUND_NAMES);
-        const rest = names.length - shown.length;
-        return 'Couldn’t find ' + cardCountLabel(names.length) + ': ' + shown.join(', ') +
-            (rest > 0 ? ', and ' + rest + ' more' : '');
-    }
-
-    /** Renders the "couldn't find these names" warning after a list lookup. */
-    function renderNotFound(el, names) {
-        if (!el) return;
-        if (!names || !names.length) {
-            el.hidden = true;
-            el.textContent = '';
-            return;
-        }
-        el.textContent = notFoundText(names);
-        el.hidden = false;
     }
 
     // --- Card source (Scryfall search vs pasted list) ------------------
@@ -1524,45 +472,6 @@
         });
     }
 
-    // --- Card-name autocomplete (Scryfall) -----------------------------
-
-    const MAX_CARD_SUGGEST = 10;
-
-    // Card-search autosearch: how long to wait after the last keystroke before
-    // firing, and the shortest filter that auto-fires (the Search button has no
-    // minimum). Tuned to coalesce typing into one request and stay polite to
-    // Scryfall.
-    const AUTO_SEARCH_DEBOUNCE_MS = 400;
-    const AUTO_SEARCH_MIN = 3;
-
-    function scryfallAutocompleteUrl(query) {
-        return 'https://api.scryfall.com/cards/autocomplete?q=' + encodeURIComponent(query);
-    }
-
-    /** The line of [value] the caret sits on: its bounds and text. */
-    function currentLineInfo(value, caret) {
-        const start = value.lastIndexOf('\n', caret - 1) + 1;
-        let end = value.indexOf('\n', caret);
-        if (end < 0) end = value.length;
-        return { start: start, end: end, text: value.slice(start, end) };
-    }
-
-    /** Splits a leading quantity (`3 `, `3x `) off a decklist line. */
-    function splitQuantityPrefix(line) {
-        const m = line.match(/^(\d+[xX]?\s+)/);
-        return m ? { prefix: m[1], name: line.slice(m[1].length) } : { prefix: '', name: line };
-    }
-
-    /** Replaces the card name on the caret's line with [choice], keeping the quantity. */
-    function applyCardChoice(value, caret, choice) {
-        const line = currentLineInfo(value, caret);
-        const newLine = splitQuantityPrefix(line.text).prefix + choice;
-        return {
-            value: value.slice(0, line.start) + newLine + value.slice(line.end),
-            caret: line.start + newLine.length,
-        };
-    }
-
     /**
      * Wires every card-input on the page to Scryfall's autocomplete API.
      * Each input/textarea sits inside a [.cube-list-wrap] with a sibling
@@ -1650,49 +559,6 @@
             else if (e.key === 'Escape') { close(); }
         });
         field.addEventListener('blur', function () { setTimeout(close, 150); });
-    }
-
-    /**
-     * Presents the card-detail panel as a dismissible modal overlay. Creates
-     * one shared backdrop + close button in the document and toggles the
-     * panel's `is-modal` class to lift it into a centered, scrollable sheet
-     * over the backdrop. Dismissed by the close button, a backdrop click, or
-     * Escape, each running `onClose` (to clear the panel and restore focus).
-     * Returns { open, close, isOpen }, or null when there's nowhere to mount.
-     */
-    function cardDetailModal(doc, panel, onClose) {
-        if (!doc.body || !panel) return null;
-        const backdrop = doc.createElement('div');
-        backdrop.className = 'cube-detail-backdrop';
-        backdrop.hidden = true;
-        const closeBtn = doc.createElement('button');
-        closeBtn.type = 'button';
-        closeBtn.className = 'cube-detail-close';
-        closeBtn.setAttribute('aria-label', 'Close');
-        closeBtn.textContent = '✕';
-        backdrop.appendChild(closeBtn);
-        doc.body.appendChild(backdrop);
-
-        let isOpen = false;
-        function open() {
-            isOpen = true;
-            panel.classList.add('is-modal');
-            backdrop.hidden = false;
-            if (closeBtn.focus) closeBtn.focus();
-        }
-        function close() {
-            if (!isOpen) return;
-            isOpen = false;
-            panel.classList.remove('is-modal');
-            backdrop.hidden = true;
-            if (typeof onClose === 'function') onClose();
-        }
-        // A click on the dark backdrop dismisses; the lifted panel is a
-        // separate subtree, so clicks inside it never reach here.
-        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
-        closeBtn.addEventListener('click', close);
-        doc.addEventListener('keydown', function (e) { if (e.key === 'Escape' && isOpen) close(); });
-        return { open: open, close: close, isOpen: function () { return isOpen; } };
     }
 
     function wireSearch(doc) {
@@ -1987,105 +853,9 @@
         });
     }
 
-    /** GET URL for a set lookup by code. */
-    function setUrl(code) {
-        return '/magic/api/set?code=' + encodeURIComponent(code);
-    }
-
-    /** GET URL for a glossary keyword lookup. */
-    function ruleUrl(term) {
-        return '/magic/api/rule?term=' + encodeURIComponent(term);
-    }
-
-    /** Renders a set's headline facts (type, release date, card count) with a Scryfall link. */
-    function renderSet(container, set) {
-        container.replaceChildren();
-        const h = document.createElement('h3');
-        h.className = 'cube-setinfo-h';
-        h.textContent = set.name + ' (' + set.code + ')';
-        container.appendChild(h);
-        function fact(label, value) {
-            if (value == null || value === '') return;
-            const p = document.createElement('p');
-            p.className = 'cube-setinfo-fact';
-            const b = document.createElement('strong');
-            b.textContent = label + ' ';
-            p.appendChild(b);
-            p.appendChild(document.createTextNode(String(value)));
-            container.appendChild(p);
-        }
-        fact('Type', set.setType);
-        fact('Released', set.releasedAt);
-        fact('Cards', set.cardCount);
-        if (set.scryfallUri) {
-            const a = document.createElement('a');
-            a.className = 'btn btn-secondary';
-            a.href = set.scryfallUri;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            a.textContent = 'View on Scryfall ↗';
-            container.appendChild(a);
-        }
-        return container;
-    }
-
-    /** Renders a keyword glossary entry. */
-    function renderRule(container, rule) {
-        container.replaceChildren();
-        const h = document.createElement('h3');
-        h.className = 'cube-rule-h';
-        h.textContent = rule.keyword;
-        const p = document.createElement('p');
-        p.className = 'cube-rule-text';
-        p.textContent = rule.text;
-        container.appendChild(h);
-        container.appendChild(p);
-        return container;
-    }
-
     function wireReference(doc) {
         wireLookupForm(doc, 'set', 'code', setUrl, function (json) { return json.set; }, renderSet, 'Enter a set code.');
         wireLookupForm(doc, 'rule', 'term', ruleUrl, function (json) { return json.rule; }, renderRule, 'Enter a keyword.');
-    }
-
-    const WATCHES_API = '/magic/api/watches';
-
-    /** Formats a watch as "Card — below $30 (USD)". Pure. */
-    function watchLine(watch) {
-        const m = currencyMeta(watch.currency);
-        return watch.cardName + ' — ' + watch.direction + ' ' + m.symbol +
-            Number(watch.threshold).toFixed(2) + m.suffix + ' (' + m.display + ')';
-    }
-
-    /** Renders the user's price watches with a Remove button each; [onRemove] gets the id. */
-    function renderWatches(container, watches, onRemove) {
-        container.replaceChildren();
-        if (!watches || !watches.length) {
-            const p = document.createElement('p');
-            p.className = 'cube-watches-empty muted';
-            p.textContent = 'No price watches yet. Add one above.';
-            container.appendChild(p);
-            return container;
-        }
-        const ul = document.createElement('ul');
-        ul.className = 'cube-watches-list';
-        watches.forEach(function (w) {
-            const li = document.createElement('li');
-            li.className = 'cube-watch';
-            const span = document.createElement('span');
-            span.className = 'cube-watch-text';
-            span.textContent = watchLine(w);
-            li.appendChild(span);
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-secondary cube-watch-remove';
-            btn.textContent = 'Remove';
-            btn.addEventListener('click', function () { onRemove(w.id); });
-            li.appendChild(btn);
-            ul.appendChild(li);
-        });
-        container.appendChild(ul);
-        return container;
     }
 
     function wireWatch(doc) {
@@ -2709,6 +1479,7 @@
     }
 
     if (root && root.document) wire(root.document);
+
 
     const api = {
         formatAsFan: formatAsFan,

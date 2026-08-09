@@ -4,8 +4,8 @@ package common.mtg
  * Writes a dealt set of packs as plain text — the format [PackListParser]
  * reads back. Both exports go through here in spirit: the bot's `/cube
  * generate` attachment calls it directly, and the website's "Download pack
- * list" button mirrors it in `magic.js` (`packsToText`), so a file saved from
- * either end loads on either end.
+ * list" button mirrors it in `magic-format.js` (`packsToText`), so a file
+ * saved from either end loads on either end.
  *
  * ```
  * # cube:vintage — 24 packs of 15 — 2026-08-09

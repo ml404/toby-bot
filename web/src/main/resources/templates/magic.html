@@ -517,6 +517,11 @@
     </div>
 </main>
 
+<!-- Three layers, loaded bottom-up: pure helpers, then renderers, then the
+     page wiring that uses both. Each reads the one below off the shared
+     global, so the order here matters. -->
+<script th:src="@{/js/magic-format.js}"></script>
+<script th:src="@{/js/magic-render.js}"></script>
 <script th:src="@{/js/magic.js}"></script>
 <footer th:replace="~{fragments/footer :: footer}"></footer>
 </body>
