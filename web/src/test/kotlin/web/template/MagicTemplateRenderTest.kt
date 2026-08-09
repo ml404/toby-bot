@@ -112,6 +112,17 @@ class MagicTemplateRenderTest {
     }
 
     @Test
+    fun `the generate panel offers to load a downloaded pack list back in`() {
+        val html = render(mapOf("loggedIn" to false))
+
+        assertTrue(html.contains("data-import=\"generate\"")) { "expected the pack-list import button" }
+        assertTrue(html.contains("data-import-file=\"generate\"")) { "expected the hidden file input the button opens" }
+        // The download button it pairs with must still be there — the two are
+        // the two halves of the round trip.
+        assertTrue(html.contains("data-download=\"generate\"")) { "expected the pack-list download button" }
+    }
+
+    @Test
     fun `command names render from the MtgCommandRef model attribute`() {
         val html = render(mapOf("loggedIn" to true, "username" to "tester"))
 

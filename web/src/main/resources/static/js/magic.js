@@ -98,6 +98,48 @@
     }
 
     /**
+     * The most text the pack-import endpoint accepts, mirroring the service's
+     * own cap. File size is in bytes and the cap is in characters, so this
+     * only ever rejects early — never lets something oversized through.
+     */
+    const MAX_IMPORT_BYTES = 100000;
+
+    /**
+     * Why a chosen file can't be loaded as a pack list, or null when it's
+     * fine. Checked before reading so an accidental pick of something huge
+     * fails instantly rather than after a long read. Pure so it's testable.
+     */
+    function importFileError(file) {
+        if (!file) return 'Choose a pack list (.txt) to load.';
+        if (!file.size) return 'That file is empty.';
+        if (file.size > MAX_IMPORT_BYTES) return 'That file is too big (max 100,000 characters).';
+        return null;
+    }
+
+    /** The request that reloads a downloaded deal. Pure so it's unit-testable. */
+    function packImportRequest(text) {
+        return { method: 'POST', url: '/magic/api/packs', body: { text: text } };
+    }
+
+    /** The headline for a reloaded deal — no pack maths, these were already dealt. */
+    function packsSummary(json) {
+        const count = Number(json.packCount) || 0;
+        return 'Loaded ' + count + (count === 1 ? ' pack' : ' packs') + ' from your file — ' +
+            json.poolSize + ' cards, exactly as they were dealt. Click any card to view it on Scryfall.' +
+            (json.note ? ' ' + json.note : '');
+    }
+
+    /** Reads a picked file as text. */
+    function readFileText(file) {
+        return new Promise(function (resolve, reject) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(String(reader.result || '')); };
+            reader.onerror = function () { reject(reader.error); };
+            reader.readAsText(file);
+        });
+    }
+
+    /**
      * The cube's cards as "<count> <name>" lines, from the de-duped preview
      * groups (count is the copies in the pool, so "10 Forest"). A
      * re-importable decklist — the read side of CardListParser.
@@ -2126,6 +2168,8 @@
         const result = q(doc, '[data-result="generate"]');
         const notFound = q(doc, '[data-notfound="generate"]');
         const downloadBtn = q(doc, '[data-download="generate"]');
+        const importBtn = q(doc, '[data-import="generate"]');
+        const importFile = q(doc, '[data-import-file="generate"]');
         let lastPacks = [];
 
         if (downloadBtn) {
@@ -2141,6 +2185,58 @@
             });
         }
 
+        /** Clears the result area before a deal is generated or loaded. */
+        function resetResults() {
+            hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
+        }
+
+        /**
+         * Paints a set of packs — shared by generating a new deal and
+         * reloading a downloaded one, so both render identically (and both
+         * leave the deal downloadable again).
+         */
+        function showPacks(json, summaryText) {
+            hide(empty);
+            lastPacks = json.packs;
+            summary.textContent = summaryText;
+            show(summary);
+            renderPacks(result, json.packs);
+            show(result);
+            show(actions);
+            renderDistribution(dist, json.distribution);
+            show(breakdown);
+            renderNotFound(notFound, json.notFound);
+        }
+
+        // Re-import: read a previously downloaded pack list and show those
+        // exact packs. Deliberately independent of the cube source above —
+        // the file already says which cards are in which pack.
+        if (importBtn && importFile) {
+            importBtn.addEventListener('click', function () { importFile.click(); });
+            importFile.addEventListener('change', function () {
+                const file = importFile.files && importFile.files[0];
+                // Let the same file be picked again straight afterwards.
+                importFile.value = '';
+                const err = importFileError(file);
+                if (err) { setStatus(status, err); return; }
+                setStatus(status, 'Reading your pack list…');
+                resetResults();
+                setSpinner(doc, 'generate', true);
+                readFileText(file)
+                    .then(function (text) {
+                        const req = packImportRequest(text);
+                        return postJson(req.url, req.body);
+                    })
+                    .then(function (json) {
+                        if (!json.ok) { setStatus(status, json.error || 'Could not read that pack list.'); return; }
+                        setStatus(status, '');
+                        showPacks(json, packsSummary(json));
+                    })
+                    .catch(function () { setStatus(status, 'Could not read that file.'); })
+                    .then(function () { setSpinner(doc, 'generate', false); });
+            });
+        }
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             const data = new FormData(form);
@@ -2151,7 +2247,7 @@
             const err = sourceError(src);
             if (err) { setStatus(status, err); return; }
             setStatus(status, src.mode === 'list' ? 'Resolving your list and dealing packs…' : 'Drawing cards and dealing packs…');
-            hide(summary); hide(actions); hide(breakdown); hide(result); hide(notFound);
+            resetResults();
             withBusy(form, true);
             setSpinner(doc, 'generate', true);
             const request = src.mode === 'list'
@@ -2161,18 +2257,12 @@
                 .then(function (json) {
                     if (!json.ok) { setStatus(status, json.error || 'Could not build packs.'); return; }
                     setStatus(status, '');
-                    hide(empty);
-                    lastPacks = json.packs;
-                    summary.textContent = 'Dealt ' + json.packCount + ' packs of ' + json.packSize +
+                    showPacks(
+                        json,
+                        'Dealt ' + json.packCount + ' packs of ' + json.packSize +
                         ' from a ' + json.poolSize + '-card pool. Click any card to view it on Scryfall.' +
-                        (json.note ? ' ' + json.note : '');
-                    show(summary);
-                    renderPacks(result, json.packs);
-                    show(result);
-                    show(actions);
-                    renderDistribution(dist, json.distribution);
-                    show(breakdown);
-                    renderNotFound(notFound, json.notFound);
+                        (json.note ? ' ' + json.note : '')
+                    );
                 })
                 .catch(function () { setStatus(status, 'Something went wrong building packs.'); })
                 .then(function () { withBusy(form, false); setSpinner(doc, 'generate', false); });
@@ -2393,6 +2483,9 @@
         splitQuantityPrefix: splitQuantityPrefix,
         applyCardChoice: applyCardChoice,
         packsToText: packsToText,
+        importFileError: importFileError,
+        packImportRequest: packImportRequest,
+        packsSummary: packsSummary,
         groupsToList: groupsToList,
         cubeListText: cubeListText,
         asfanUrl: asfanUrl,

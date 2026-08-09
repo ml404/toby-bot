@@ -1062,6 +1062,15 @@ details[open] > .cube-section-summary .cube-collapse-chevron {
     display: none;
 }
 
+/* Re-import a downloaded pack list: the button plus its explanatory hint. */
+.cube-import {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
 .cube-result-actions {
     margin-top: var(--space-3);
 }

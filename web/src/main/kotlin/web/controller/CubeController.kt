@@ -150,6 +150,33 @@ class CubeController(
     ): ResponseEntity<CubeGenerateResponse> =
         generateResponse(cubeWebService.generateList(request.list, request.packs, request.packSize, request.balanced))
 
+    /**
+     * Reloads a pack list downloaded from the Generate tab, so a deal can be
+     * looked at again later. Unlike the generate endpoints this deals
+     * nothing — the packs come back exactly as the file had them.
+     */
+    @PostMapping("/api/packs", consumes = ["application/json"], produces = ["application/json"])
+    @ResponseBody
+    fun packs(@RequestBody request: CubePacksRequest): ResponseEntity<CubePacksResponse> =
+        when (val result = cubeWebService.packsFromText(request.text)) {
+            is CubeResult.Success -> ResponseEntity.ok(
+                CubePacksResponse(
+                    ok = true,
+                    error = null,
+                    poolSize = result.value.poolSize,
+                    packCount = result.value.packCount,
+                    packSize = result.value.packSize,
+                    packs = result.value.packs,
+                    distribution = result.value.distribution,
+                    notFound = result.value.notFound,
+                    note = result.value.note,
+                )
+            )
+            is CubeResult.Failure -> ResponseEntity.badRequest().body(
+                CubePacksResponse(false, result.error, 0, 0, 0, emptyList(), emptyList(), emptyList(), null)
+            )
+        }
+
     @GetMapping("/api/search", produces = ["application/json"])
     @ResponseBody
     fun search(
@@ -497,6 +524,21 @@ data class CubeListGenerateRequest(
     val packs: Int = 24,
     val packSize: Int = 15,
     val balanced: Boolean = true,
+)
+
+/** The raw text of a downloaded pack list, uploaded to be visualised again. */
+data class CubePacksRequest(val text: String = "")
+
+data class CubePacksResponse(
+    val ok: Boolean,
+    val error: String?,
+    val poolSize: Int,
+    val packCount: Int,
+    val packSize: Int,
+    val packs: List<List<CardView>>,
+    val distribution: List<CategoryAsFan>,
+    val notFound: List<String> = emptyList(),
+    val note: String? = null,
 )
 
 data class SaveCubeListRequest(val name: String = "", val cards: String = "")

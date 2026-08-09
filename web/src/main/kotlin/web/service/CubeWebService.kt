@@ -15,6 +15,7 @@ import common.mtg.MtgCurrency
 import common.mtg.MtgNames
 import common.mtg.MtgColor
 import common.mtg.PackGenerator
+import common.mtg.PackListParser
 import common.mtg.Rarity
 import common.mtg.scryfall.ScryfallCardMapper
 import org.springframework.stereotype.Service
@@ -355,6 +356,101 @@ class CubeWebService {
                 buildGenerate("your list", resolved.value.cards, packCount, packSize, balanced, resolved.value.notFound, resolved.value.note)
         }
 
+    /**
+     * Reloads a deal that was already dealt: parses a downloaded pack list
+     * back into its packs ([PackListParser]), resolves the names against
+     * Scryfall and hands the packs back **in file order**. Nothing is
+     * re-dealt — the point is to see the same packs again, so pasting the
+     * same file into [generateList] (which flattens it into one pool and
+     * re-deals) is not a substitute.
+     *
+     * A name Scryfall doesn't know keeps its slot as an image-less
+     * placeholder so pack sizes still match the file, and is reported in
+     * [PacksData.notFound].
+     */
+    fun packsFromText(text: String): CubeResult<PacksData> {
+        if (text.length > MAX_LIST_LENGTH) return CubeResult.error(TOO_LARGE)
+        val parsed = PackListParser.parse(text)
+        if (parsed.isEmpty()) return CubeResult.error("That file doesn't have any card names in it.")
+
+        // Trim to the pool cap on a whole-pack boundary: showing most of the
+        // packs is useful, showing half of one is just confusing.
+        val kept = mutableListOf<PackListParser.Pack>()
+        var total = 0
+        for (pack in parsed) {
+            val size = pack.entries.sumOf { it.count }
+            if (total + size > MAX_CARDS) break
+            kept.add(pack)
+            total += size
+        }
+        if (kept.isEmpty()) return CubeResult.error("That file's first pack is bigger than the $MAX_CARDS-card limit.")
+        val note = if (kept.size < parsed.size) {
+            "That file holds ${parsed.size} packs; only the first ${kept.size} fit the $MAX_CARDS-card limit."
+        } else {
+            null
+        }
+
+        val requestNames = kept.asSequence()
+            .flatMap { it.entries.asSequence() }
+            .map { MtgNames.requestName(it.name) }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .toList()
+        val fetched = mutableListOf<ScryfallCard>()
+        for (chunk in requestNames.chunked(COLLECTION_BATCH)) {
+            when (val batch = fetchCollection(chunk)) {
+                is CubeResult.Failure -> return CubeResult.error(batch.error)
+                is CubeResult.Success -> fetched.addAll(batch.value)
+            }
+        }
+
+        return buildPacks(kept, fetched, note)
+    }
+
+    /**
+     * Ties parsed packs back to the cards Scryfall returned, preserving each
+     * pack's contents and order. Split out from [packsFromText] so the
+     * matching rules are testable without an HTTP round trip.
+     */
+    internal fun buildPacks(
+        parsed: List<PackListParser.Pack>,
+        fetched: List<ScryfallCard>,
+        note: String? = null,
+    ): CubeResult<PacksData> {
+        val byKey = MtgNames.index(fetched) { it.card.name }
+        val notFound = mutableListOf<String>()
+        val resolved = mutableListOf<CubeCard>()
+        val packs = parsed.map { pack ->
+            pack.entries.flatMap { entry ->
+                val card = byKey[MtgNames.lookupKey(entry.name)]
+                if (card == null) {
+                    notFound.add(entry.name)
+                    List(entry.count) { CardView(entry.name, null, null, UNRESOLVED_TYPE_LINE, 0.0) }
+                } else {
+                    repeat(entry.count) { resolved.add(card.card) }
+                    List(entry.count) { card.toView() }
+                }
+            }
+        }
+        if (packs.isEmpty()) return CubeResult.error("That file doesn't have any card names in it.")
+        if (resolved.isEmpty()) return CubeResult.error("None of those card names matched Scryfall. Check the spelling?")
+
+        // As-fan maths needs one pack size; an uneven file (a part-drafted
+        // deal) takes its biggest pack.
+        val packSize = packs.maxOf { it.size }
+        return CubeResult.ok(
+            PacksData(
+                poolSize = packs.sumOf { it.size },
+                packCount = packs.size,
+                packSize = packSize,
+                packs = packs,
+                distribution = distribution(resolved, packSize),
+                notFound = notFound.distinct(),
+                note = note,
+            )
+        )
+    }
+
     private fun buildPreview(
         label: String,
         pool: List<ScryfallCard>,
@@ -658,6 +754,10 @@ class CubeWebService {
         // unauthenticated POST can't force a huge parse/allocation.
         const val MAX_LIST_LENGTH = 100_000
         const val TOO_LARGE = "That list is too large (max 100,000 characters)."
+
+        // Stat line for a re-imported pack slot whose name Scryfall didn't
+        // recognise — the tile still renders, just without art or maths.
+        const val UNRESOLVED_TYPE_LINE = "Not found on Scryfall"
     }
 }
 
@@ -850,6 +950,20 @@ data class PreviewData(
     val packSize: Int,
     val groups: List<CategoryGroup>,
     val analytics: AnalyticsView,
+    val notFound: List<String> = emptyList(),
+    val note: String? = null,
+)
+
+/**
+ * A deal reloaded from a downloaded pack list: the packs exactly as the file
+ * had them, plus the same colour/land breakdown the Generate tab shows.
+ */
+data class PacksData(
+    val poolSize: Int,
+    val packCount: Int,
+    val packSize: Int,
+    val packs: List<List<CardView>>,
+    val distribution: List<CategoryAsFan>,
     val notFound: List<String> = emptyList(),
     val note: String? = null,
 )

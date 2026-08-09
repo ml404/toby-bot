@@ -76,6 +76,23 @@ class CardListParserTest {
     }
 
     @Test
+    fun `skips the pack dividers a downloaded pack list carries`() {
+        // Pasting a downloaded deal straight into the card list box used to
+        // report every "== Pack N ==" header as a card it couldn't find.
+        val entries = CardListParser.parse(
+            """
+            == Pack 1 (2 cards) ==
+              Lightning Bolt
+              Sol Ring
+
+            == Pack 2 (1 cards) ==
+              Forest
+            """.trimIndent()
+        )
+        assertEquals(listOf("Lightning Bolt", "Sol Ring", "Forest"), entries.map { it.name })
+    }
+
+    @Test
     fun `caps an absurd quantity`() {
         assertEquals(CardListParser.MAX_PER_NAME, CardListParser.parse("99999 Forest").single().count)
     }
