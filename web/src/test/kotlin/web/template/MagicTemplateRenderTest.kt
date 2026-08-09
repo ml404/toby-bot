@@ -124,6 +124,22 @@ class MagicTemplateRenderTest {
     }
 
     @Test
+    fun `the three script layers load in dependency order`() {
+        val html = render(mapOf("loggedIn" to false))
+
+        // Each file reads the one below it off the shared global at load
+        // time, so the order of these tags is load-bearing: shuffle them and
+        // the page dies with an undefined-property error before it wires up.
+        val format = html.indexOf("magic-format.js")
+        val renderJs = html.indexOf("magic-render.js")
+        val wiring = html.indexOf("/js/magic.js")
+
+        assertTrue(format >= 0) { "expected the format layer to be included" }
+        assertTrue(renderJs > format) { "the render layer must load after the helpers it uses" }
+        assertTrue(wiring > renderJs) { "the wiring must load after both layers it builds on" }
+    }
+
+    @Test
     fun `a shared deal hands its pack list to the page`() {
         val packs = "== Pack 1 (2 cards) ==\n  Lightning Bolt\n  Forest\n"
         val html = render(mapOf("loggedIn" to false, "sharedDealName" to "Vintage — packs", "sharedDealPacks" to packs))
