@@ -360,6 +360,75 @@ describe('renderPacks', () => {
     });
 });
 
+describe('per-seat pack links', () => {
+    /** Captures what the page tried to put on the clipboard. */
+    function stubClipboard() {
+        const copied = [];
+        Object.defineProperty(window.navigator, 'clipboard', {
+            value: { writeText: (t) => { copied.push(t); return Promise.resolve(); } },
+            configurable: true,
+        });
+        return copied;
+    }
+
+    test('no link button until the deal has a token to link to', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]]);
+        expect(container.querySelectorAll('[data-pack-link]')).toHaveLength(0);
+    });
+
+    test('each pack gets a button carrying its own seat link', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }], [{ name: 'Island' }]], {
+            packLink: (i) => Cube.dealPackUrl('https://toby.example', 'tok', i),
+        });
+        const links = Array.from(container.querySelectorAll('[data-pack-link]'));
+        expect(links.map((b) => b.getAttribute('data-pack-link'))).toEqual([
+            'https://toby.example/magic/d/tok/1',
+            'https://toby.example/magic/d/tok/2',
+            'https://toby.example/magic/d/tok/3',
+        ]);
+        // The pack it belongs to must be obvious to a screen reader too.
+        expect(links[1].getAttribute('aria-label')).toBe('Copy a link to pack 2');
+    });
+
+    test('a pack whose link builder returns nothing gets no button', () => {
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]], {
+            packLink: (i) => (i === 1 ? '/magic/d/tok/1' : null),
+        });
+        expect(container.querySelectorAll('[data-pack-link]')).toHaveLength(1);
+    });
+
+    test('clicking copies that pack\'s link and acknowledges it', () => {
+        const copied = stubClipboard();
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }], [{ name: 'Forest' }]], {
+            packLink: (i) => '/magic/d/tok/' + i,
+        });
+
+        container.querySelectorAll('[data-pack-link]')[1].click();
+
+        expect(copied).toEqual(['/magic/d/tok/2']);
+        expect(container.querySelectorAll('[data-pack-link]')[1].textContent).toBe('✓');
+    });
+
+    test('clicking the link does not collapse the pack it sits in', () => {
+        stubClipboard();
+        const container = document.createElement('div');
+        Cube.renderPacks(container, [[{ name: 'Bolt' }]], { packLink: () => '/magic/d/tok/1' });
+        const pack = container.querySelector('details.cube-pack');
+        expect(pack.open).toBe(true);
+
+        const event = new window.MouseEvent('click', { bubbles: true, cancelable: true });
+        container.querySelector('[data-pack-link]').dispatchEvent(event);
+
+        // The button lives in a <summary>; without the guard the browser
+        // would toggle the <details> out from under the click.
+        expect(event.defaultPrevented).toBe(true);
+    });
+});
+
 describe('collapsible result sections', () => {
     test('packs render as open <details> with a summary, so they can be collapsed', () => {
         const container = document.createElement('div');
