@@ -8,7 +8,9 @@ import common.logging.DiscordLogger
 import common.mtg.CardCombos
 import common.mtg.CardRulings
 import common.mtg.CubeCard
+import common.helpers.TtlCache
 import common.mtg.MtgSet
+import common.mtg.ScryfallThrottle
 import common.mtg.scryfall.ScryfallCardMapper
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.timeout
@@ -27,6 +29,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
@@ -54,7 +57,15 @@ import java.nio.charset.StandardCharsets
 class ScryfallCubeFetcher @Autowired constructor(
     private val client: HttpClient,
     private val dispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val throttle: ScryfallThrottle = ScryfallThrottle(),
 ) {
+
+    // The inline `[[card]]` listener fires on every message that mentions a
+    // card, in every guild that has it on, so the same popular card was being
+    // re-fetched indefinitely. Searches are cached for the same reason a
+    // draft pod re-resolves one cube.
+    private val namedCache = TtlCache<String, CubeCard>(MAX_CACHED_CARDS, CACHE_TTL)
+    private val searchCache = TtlCache<String, Result.Success>(MAX_CACHED_SEARCHES, CACHE_TTL)
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val gson: Gson = Gson()
@@ -79,6 +90,10 @@ class ScryfallCubeFetcher @Autowired constructor(
     suspend fun fetch(query: String, maxCards: Int = DEFAULT_MAX_CARDS): Result = withContext(dispatcher) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return@withContext Result.Failure("Give me a Scryfall search query (e.g. `set:vow`).")
+        // Keyed on the query and the ceiling, since the ceiling changes what
+        // gets fetched and whether the result counts as capped.
+        val cacheKey = "$maxCards|$trimmed"
+        searchCache[cacheKey]?.let { return@withContext it }
 
         val cards = mutableListOf<CubeCard>()
         var url: String? = searchUrl(trimmed)
@@ -86,6 +101,7 @@ class ScryfallCubeFetcher @Autowired constructor(
 
         try {
             while (url != null && cards.size < maxCards && page < MAX_PAGES) {
+                awaitScryfallSlot()
                 val response = client.get(url) {
                     header(HttpHeaders.Accept, "application/json")
                     timeout { requestTimeoutMillis = TIMEOUT_MS }
@@ -112,7 +128,7 @@ class ScryfallCubeFetcher @Autowired constructor(
         // The query matched more than we deal from if we overshot the ceiling
         // on the last page, or stopped with pages still unfetched.
         val capped = cards.size > maxCards || url != null
-        Result.Success(cards.take(maxCards), capped)
+        Result.Success(cards.take(maxCards), capped).also { searchCache[cacheKey] = it }
     }
 
     /**
@@ -169,8 +185,24 @@ class ScryfallCubeFetcher @Autowired constructor(
     suspend fun fetchNamed(name: String): CubeCard? = withContext(dispatcher) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return@withContext null
+        val key = trimmed.lowercase()
+        namedCache[key]?.let { return@withContext it }
         val url = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
+        // A miss isn't cached: a name that resolves to nothing is usually a
+        // typo, and remembering it would outlast the correction.
         getAndParse(url, "Scryfall named lookup failed for '$trimmed'") { parseCard(it) }
+            ?.also { namedCache[key] = it }
+    }
+
+    /**
+     * Waits for this call's turn at Scryfall, or throws when the queue is
+     * already too long. `delay` rather than a blocking sleep: everything here
+     * runs on a coroutine, so parking the thread would waste an IO worker.
+     */
+    private suspend fun awaitScryfallSlot() {
+        val wait = throttle.reserveSlotMillis()
+            ?: throw IllegalStateException("Too many Scryfall lookups are queued right now.")
+        if (wait > 0) delay(wait)
     }
 
     /**
@@ -182,6 +214,7 @@ class ScryfallCubeFetcher @Autowired constructor(
      */
     private suspend fun <T> getAndParse(url: String, context: String, parse: (JsonObject) -> T?): T? =
         try {
+            awaitScryfallSlot()
             val response = client.get(url) {
                 header(HttpHeaders.Accept, "application/json")
                 timeout { requestTimeoutMillis = TIMEOUT_MS }
@@ -207,6 +240,7 @@ class ScryfallCubeFetcher @Autowired constructor(
         if (trimmed.isEmpty()) return@withContext null
         val namedUrl = "$NAMED_ENDPOINT?fuzzy=" + URLEncoder.encode(trimmed, StandardCharsets.UTF_8)
         try {
+            awaitScryfallSlot()
             val cardResp = client.get(namedUrl) {
                 header(HttpHeaders.Accept, "application/json")
                 timeout { requestTimeoutMillis = TIMEOUT_MS }
@@ -218,6 +252,7 @@ class ScryfallCubeFetcher @Autowired constructor(
             val rulingsUri = card.get("rulings_uri")?.asString
                 ?: return@withContext CardRulings(cardName, scryfallUri, emptyList())
 
+            awaitScryfallSlot()
             val rulingsResp = client.get(rulingsUri) {
                 header(HttpHeaders.Accept, "application/json")
                 timeout { requestTimeoutMillis = TIMEOUT_MS }
@@ -305,6 +340,7 @@ class ScryfallCubeFetcher @Autowired constructor(
 
     /** One `/cards/collection` POST for up to 75 names. */
     private suspend fun fetchCollectionBatch(chunk: List<String>): BatchResult {
+        awaitScryfallSlot()
         val response: HttpResponse = client.post(COLLECTION_ENDPOINT) {
             header(HttpHeaders.Accept, "application/json")
             timeout { requestTimeoutMillis = TIMEOUT_MS }
@@ -366,6 +402,12 @@ class ScryfallCubeFetcher @Autowired constructor(
 
         /** Bounds the concurrent `/cards/collection` POSTs to stay polite to Scryfall. */
         private const val MAX_CONCURRENT_BATCHES = 3
+
+        // Card data barely moves; long enough to absorb a chat full of the
+        // same mention, short enough that a price correction lands the same day.
+        private val CACHE_TTL: java.time.Duration = java.time.Duration.ofMinutes(10)
+        private const val MAX_CACHED_CARDS = 512
+        private const val MAX_CACHED_SEARCHES = 16
         private const val TIMEOUT_MS = 10_000L
     }
 }

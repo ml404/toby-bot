@@ -32,6 +32,14 @@ enum class SharedCubeKind {
     NamedQuery(
         name = "SharedCubeDto.get",
         query = "select s from SharedCubeDto s where s.token = :token"
+    ),
+    NamedQuery(
+        name = "SharedCubeDto.countForUser",
+        query = "select count(s) from SharedCubeDto s where s.discordId = :discordId"
+    ),
+    NamedQuery(
+        name = "SharedCubeDto.deleteOlderThan",
+        query = "delete from SharedCubeDto s where s.createdAt < :cutoff"
     )
 )
 @Entity

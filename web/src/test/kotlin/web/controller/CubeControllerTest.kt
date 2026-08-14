@@ -604,6 +604,45 @@ class CubeControllerTest {
     }
 
     @Test
+    fun `share refuses once the per-user snapshot cap is hit`() {
+        // The exact ceiling is the controller's business; that there is one
+        // is the behaviour worth pinning.
+        every { sharedCubes.countForUser(discordId) } returns Long.MAX_VALUE
+
+        val response = controller.share(ShareCubeRequest("My Cube", "Bolt"), loggedIn())
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        verify(exactly = 0) { sharedCubes.create(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `shareDeal refuses once the per-user snapshot cap is hit`() {
+        every { sharedCubes.countForUser(discordId) } returns Long.MAX_VALUE
+
+        val response = controller.shareDeal(ShareDealRequest("Deal", PACK_TEXT), loggedIn())
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+        verify(exactly = 0) { sharedCubes.create(any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `a user under the cap can still share`() {
+        every { sharedCubes.countForUser(discordId) } returns 0L
+        every { sharedCubes.create(discordId, "My Cube", "Bolt", any(), any()) } returns
+            SharedCubeDto("tok", discordId, "My Cube", "Bolt", Instant.EPOCH)
+
+        assertEquals(HttpStatus.OK, controller.share(ShareCubeRequest("My Cube", "Bolt"), loggedIn()).statusCode)
+    }
+
+    @Test
+    fun `the cap is checked after the payload, so junk doesn't consume the count`() {
+        val response = controller.share(ShareCubeRequest("My Cube", "  "), loggedIn())
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
+        verify(exactly = 0) { sharedCubes.countForUser(any()) }
+    }
+
+    @Test
     fun `sharedPage pre-loads the cube into the model when the token resolves`() {
         val model = mockk<Model>(relaxed = true)
         every { sharedCubes.get("tok123") } returns SharedCubeDto("tok123", discordId, "My Cube", "Bolt\nForest", Instant.EPOCH)

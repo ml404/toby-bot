@@ -22,4 +22,18 @@ interface SharedCubeService {
     ): SharedCubeDto
 
     fun get(token: String): SharedCubeDto?
+
+    /**
+     * How many snapshots [discordId] has published. Snapshots are immutable
+     * and never overwritten, so without a ceiling one account could mint them
+     * without limit — this is what the web layer's cap is checked against.
+     */
+    fun countForUser(discordId: Long): Long
+
+    /**
+     * Deletes snapshots older than [olderThan], returning how many went.
+     * Nothing else ever removes a row: a share link is meant to outlive the
+     * draft it was made for, but not by years.
+     */
+    fun purge(olderThan: Instant): Int
 }

@@ -459,6 +459,7 @@ class CubeController(
         if (request.cards.isBlank() || request.cards.length > MAX_CARDS_LENGTH) {
             return ResponseEntity.badRequest().build()
         }
+        if (sharedCubes.countForUser(discordId) >= MAX_SHARES_PER_USER) return ResponseEntity.status(409).build()
         val name = request.name.trim().ifEmpty { "Shared cube" }.take(MAX_NAME_LENGTH)
         val row = sharedCubes.create(discordId, name, request.cards)
         return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/magic/c/${row.token}", name = row.name))
@@ -480,6 +481,7 @@ class CubeController(
         if (request.packs.isBlank() || request.packs.length > MAX_CARDS_LENGTH) {
             return ResponseEntity.badRequest().build()
         }
+        if (sharedCubes.countForUser(discordId) >= MAX_SHARES_PER_USER) return ResponseEntity.status(409).build()
         val name = request.name.trim().ifEmpty { "Shared deal" }.take(MAX_NAME_LENGTH)
         val row = sharedCubes.create(discordId, name, request.packs, kind = SharedCubeKind.DEAL)
         return ResponseEntity.ok(ShareCubeResponse(token = row.token, url = "/magic/d/${row.token}", name = row.name))
@@ -488,6 +490,11 @@ class CubeController(
     private companion object {
         const val MAX_NAME_LENGTH = 100
         const val MAX_LISTS_PER_USER = 50
+
+        // Saved lists are capped per user; snapshots weren't, and they're
+        // immutable — every Share click was another permanent row. Generous
+        // enough that nobody drafting hits it.
+        const val MAX_SHARES_PER_USER = 200
 
         // Generous ceiling on stored list text — comfortably fits a 750-card
         // cube with set tags, while bounding what an account can persist.
