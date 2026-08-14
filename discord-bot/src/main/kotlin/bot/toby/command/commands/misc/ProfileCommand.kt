@@ -1,17 +1,16 @@
 package bot.toby.command.commands.misc
 
+import bot.toby.helpers.ProfileCardHelper
+import bot.toby.profile.ProfilePresenter
 import core.command.Command.Companion.replyEphemeralAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.EmbedBuilder
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import net.dv8tion.jda.api.utils.FileUpload
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
-import web.profile.ProfileCardRenderer
-import web.service.ProfileCardAggregator
 
 /**
  * `/profile [user]` — renders the target member's profile card (level,
@@ -20,14 +19,17 @@ import web.service.ProfileCardAggregator
  *
  * Defers the reply (rendering + avatar fetch can take ~100-300ms,
  * which is close to Discord's 3-second initial-response budget under
- * load). The aggregator + renderer are the same pair used by the web
- * PNG endpoint, so a screenshot from chat and a `card.png` URL render
- * identically.
+ * load). The rendering itself lives in [ProfileCardHelper], shared with
+ * the right-click **Profile** entry.
+ *
+ * The card posts publicly here, unlike the right-click entry: a slash
+ * command is something you chose to say out loud. The buttons under it
+ * are per-presser regardless — each opens an ephemeral reply or a form
+ * belonging to whoever pressed, not to whoever ran the command.
  */
 @Component
 class ProfileCommand @Autowired constructor(
-    private val aggregator: ProfileCardAggregator,
-    private val renderer: ProfileCardRenderer,
+    private val profileCardHelper: ProfileCardHelper,
 ) : MiscCommand {
 
     override val name: String = "profile"
@@ -48,32 +50,19 @@ class ProfileCommand @Autowired constructor(
             event.hook.replyEphemeralAndDelete("Could not resolve a member.", deleteDelay)
             return
         }
-        val data = aggregator.build(guild, target)
-        val png = runCatching { renderer.renderPng(data) }
-            .onFailure {
-                logger.error {
-                    "Profile card render failed for guild ${guild.id} user ${target.id}: " +
-                        "${it.javaClass.simpleName}: ${it.message}"
-                }
-            }
-            .getOrNull()
-        if (png == null) {
+        val png = profileCardHelper.renderPng(guild, target) ?: run {
             event.hook.replyEphemeralAndDelete(
                 "Sorry — couldn't render that profile card. The error has been logged.", deleteDelay
             )
             return
         }
-        val embed = EmbedBuilder()
-            .setColor(0x5B8DEF)
-            .setImage("attachment://$ATTACHMENT_NAME")
-            .build()
-        event.hook.sendMessageEmbeds(embed)
-            .addFiles(FileUpload.fromData(png, ATTACHMENT_NAME))
+        event.hook.sendMessageEmbeds(ProfilePresenter.embed())
+            .addFiles(FileUpload.fromData(png, ProfilePresenter.ATTACHMENT_NAME))
+            .addComponents(ProfilePresenter.rows(target, isSelf = target.idLong == event.user.idLong))
             .queue()
     }
 
     companion object {
         private const val OPT_USER = "user"
-        private const val ATTACHMENT_NAME = "profile.png"
     }
 }

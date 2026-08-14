@@ -6,7 +6,10 @@ import bot.toby.command.CommandTest.Companion.guild
 import bot.toby.command.CommandTest.Companion.member
 import bot.toby.command.CommandTest.Companion.requestingUserDto
 import bot.toby.command.CommandTest.Companion.webhookMessageCreateAction
+import bot.toby.button.buttons.economy.TipUserButton
+import bot.toby.button.buttons.music.ViewIntrosButton
 import bot.toby.command.DefaultCommandContext
+import bot.toby.helpers.ProfileCardHelper
 import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.just
@@ -15,6 +18,8 @@ import io.mockk.runs
 import io.mockk.slot
 import io.mockk.unmockkAll
 import io.mockk.verify
+import net.dv8tion.jda.api.components.actionrow.ActionRow
+import net.dv8tion.jda.api.components.buttons.Button
 import net.dv8tion.jda.api.entities.Member
 import net.dv8tion.jda.api.entities.MessageEmbed
 import net.dv8tion.jda.api.interactions.commands.OptionMapping
@@ -39,7 +44,10 @@ internal class ProfileCommandTest : CommandTest {
         setUpCommonMocks()
         aggregator = mockk(relaxed = true)
         renderer = mockk(relaxed = true)
-        command = ProfileCommand(aggregator, renderer)
+        // The real helper over mocked collaborators: the aggregate/render pair
+        // is what these tests are about, and going through the helper keeps
+        // its catch-and-return-null in the path being exercised.
+        command = ProfileCommand(ProfileCardHelper(aggregator, renderer))
         every { member.idLong } returns 1L
         every { guild.idLong } returns 100L
         every { guild.id } returns "100"
@@ -47,8 +55,14 @@ internal class ProfileCommandTest : CommandTest {
         // The happy path goes through the chained `event.hook.sendMessageEmbeds(embed).addFiles(file).queue()`;
         // CommandTest's relaxed mocks cover most of that — only addFiles needs an explicit return wire.
         every { webhookMessageCreateAction.addFiles(any<FileUpload>()) } returns webhookMessageCreateAction
+        rows.clear()
+        every { webhookMessageCreateAction.addComponents(capture(rows)) } returns webhookMessageCreateAction
         every { webhookMessageCreateAction.queue() } just runs
     }
+
+    private val rows = mutableListOf<Collection<ActionRow>>()
+
+    private fun buttons() = rows.flatten().flatMap { it.components }.filterIsInstance<Button>()
 
     @AfterEach
     fun tearDown() {
@@ -102,6 +116,75 @@ internal class ProfileCommandTest : CommandTest {
             reply.captured.contains("couldn't render"),
             "reply text should explain the render failure, got: ${reply.captured}",
         )
+    }
+
+    @Test
+    fun `the card offers a way through to their intros`() {
+        // The card is a picture, so without this it is a dead end — the intro
+        // is the one thing on a profile you can actually go and hear.
+        val targetMember = mockk<Member>(relaxed = true).also {
+            every { it.idLong } returns 7L
+            every { it.effectiveName } returns "Bob"
+        }
+        every { event.getOption("user") } returns
+            mockk<OptionMapping>(relaxed = true).also { every { it.asMember } returns targetMember }
+        every { aggregator.build(guild, targetMember) } returns sampleData()
+        every { renderer.renderPng(any()) } returns ByteArray(2048)
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
+
+        assertTrue(
+            buttons().any { it.customId == "${ViewIntrosButton.BUTTON_NAME}:7" },
+            buttons().map { it.customId }.toString(),
+        )
+    }
+
+    @Test
+    fun `looking at someone else offers to tip them`() {
+        val targetMember = mockk<Member>(relaxed = true).also {
+            every { it.idLong } returns 7L
+            every { it.effectiveName } returns "Bob"
+        }
+        every { event.getOption("user") } returns
+            mockk<OptionMapping>(relaxed = true).also { every { it.asMember } returns targetMember }
+        every { aggregator.build(guild, targetMember) } returns sampleData()
+        every { renderer.renderPng(any()) } returns ByteArray(2048)
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
+
+        assertTrue(
+            buttons().any { it.customId == "${TipUserButton.BUTTON_NAME}:7" },
+            buttons().map { it.customId }.toString(),
+        )
+    }
+
+    @Test
+    fun `your own card does not offer to tip yourself`() {
+        // TipService would refuse it, and a button that can only fail is
+        // worse than no button.
+        every { event.getOption("user") } returns null
+        every { aggregator.build(guild, member) } returns sampleData()
+        every { renderer.renderPng(any()) } returns ByteArray(2048)
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
+
+        assertTrue(buttons().none { it.customId?.startsWith(TipUserButton.BUTTON_NAME) == true })
+        // ...but your own intros are still one press away.
+        assertTrue(buttons().any { it.customId?.startsWith(ViewIntrosButton.BUTTON_NAME) == true })
+    }
+
+    @Test
+    fun `a failed render posts no card and no buttons`() {
+        every { event.getOption("user") } returns null
+        every { aggregator.build(guild, member) } throws RuntimeException("aggregate blew up")
+        captureReply()
+
+        command.handle(DefaultCommandContext(event), requestingUserDto, 0)
+
+        // The aggregate step reaches for the avatar over the network, so it is
+        // no less able to throw than the drawing that follows it.
+        verify(exactly = 0) { webhookMessageCreateAction.addFiles(any<FileUpload>()) }
+        assertTrue(rows.isEmpty())
     }
 
     @Test

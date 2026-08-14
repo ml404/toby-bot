@@ -4,12 +4,8 @@ import bot.toby.modal.modals.TipMessageModal
 import core.command.CommandContext
 import database.dto.user.UserDto
 import database.service.social.TipService
-import net.dv8tion.jda.api.components.label.Label
-import net.dv8tion.jda.api.components.textinput.TextInput
-import net.dv8tion.jda.api.components.textinput.TextInputStyle
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
-import net.dv8tion.jda.api.modals.Modal
 import org.springframework.stereotype.Component
 
 /**
@@ -72,20 +68,6 @@ class TipCommand : EconomyCommand {
             return
         }
 
-        event.replyModal(buildTipMessageModal(targetUser.idLong, amount)).queue()
-    }
-
-    private fun buildTipMessageModal(recipientDiscordId: Long, amount: Long): Modal {
-        val noteInput = TextInput.create(TipMessageModal.FIELD_NOTE, TextInputStyle.PARAGRAPH)
-            .setPlaceholder("Optional note that ships with the tip.")
-            .setRequired(false)
-            .setRequiredRange(0, TipService.MAX_NOTE_LENGTH)
-            .build()
-        return Modal.create(
-            TipMessageModal.customId(recipientDiscordId, amount),
-            "Tip $amount credits",
-        )
-            .addComponents(Label.of("Note (optional, max ${TipService.MAX_NOTE_LENGTH} chars)", noteInput))
-            .build()
+        event.replyModal(TipMessageModal.noteForm(targetUser.idLong, amount)).queue()
     }
 }

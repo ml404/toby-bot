@@ -1,5 +1,6 @@
 package bot.toby.command.commands.music.intro
 
+import bot.toby.button.buttons.misc.ViewProfileButton
 import bot.toby.button.buttons.music.PlayIntroButton
 import bot.toby.helpers.IntroHelper
 import bot.toby.menu.menus.CopyIntroMenu
@@ -157,13 +158,46 @@ class ViewIntrosContextCommandTest {
     }
 
     @Test
-    fun `the play buttons and the web link still fit one action row`() {
-        // Three slots plus the link is four, inside Discord's five.
+    fun `playing and going-elsewhere are separate rows`() {
+        // Three slots plus two links is exactly five: it fits today and breaks
+        // silently the day a fourth slot is added, so they don't share a row.
         every { introHelper.findUserById(targetId, guildId) } returns theirIntros(3)
 
         command.handle(event, caller, 5)
 
-        assertTrue(rows.flatten().first().components.size <= 5)
+        val first = rows.flatten().first().components
+        assertEquals(3, first.size)
+        assertTrue(first.all { (it as Button).customId?.startsWith("playintro") == true })
+        assertTrue(rows.flatten().all { it.components.size <= 5 })
+    }
+
+    @Test
+    fun `the list crosses over to their profile`() {
+        // The other half of the cross-link: somebody's intro playing is the
+        // most common reason to wonder who they are.
+        every { introHelper.findUserById(targetId, guildId) } returns theirIntros(2)
+
+        command.handle(event, caller, 5)
+
+        assertTrue(
+            components().filterIsInstance<Button>().any { it.customId == "${ViewProfileButton.BUTTON_NAME}:$targetId" },
+            components().filterIsInstance<Button>().map { it.customId }.toString(),
+        )
+    }
+
+    @Test
+    fun `a member with no intros still gets the way out to their profile`() {
+        // An empty list is exactly when the cross-link matters most — there is
+        // nothing else on the message to do.
+        every { introHelper.findUserById(targetId, guildId) } returns theirIntros(0)
+
+        command.handle(event, caller, 5)
+
+        assertTrue(
+            components().filterIsInstance<Button>().any { it.customId == "${ViewProfileButton.BUTTON_NAME}:$targetId" },
+        )
+        // No empty play row: JDA rejects an action row with nothing in it.
+        assertTrue(rows.flatten().all { it.components.isNotEmpty() })
     }
 
     @Test

@@ -1,13 +1,9 @@
 package bot.toby.command.commands.music.intro
 
-import bot.toby.button.buttons.music.PlayIntroButton
 import bot.toby.helpers.IntroHelper
-import bot.toby.intro.IntroPresenter
-import bot.toby.menu.menus.CopyIntroMenu
-import common.intro.IntroSlots
+import bot.toby.intro.IntroListView
 import core.command.UserContextCommand
 import database.dto.user.UserDto
-import net.dv8tion.jda.api.components.actionrow.ActionRow
 import net.dv8tion.jda.api.events.interaction.command.UserContextInteractionEvent
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Component
@@ -28,6 +24,9 @@ import org.springframework.stereotype.Component
  * out loud to the whole channel on every join, so there is nothing here that
  * looking could reveal. The copy menu is left off your own list, where it
  * would only ever duplicate a row you already have.
+ *
+ * The layout itself lives in [IntroListView], shared with the button that
+ * arrives here from a profile card.
  */
 @Component
 class ViewIntrosContextCommand @Autowired constructor(
@@ -54,22 +53,10 @@ class ViewIntrosContextCommand @Autowired constructor(
 
         logger.info { "Showing ${intros.size} intro(s) for ${target.idLong}" }
 
-        val rows = buildList {
-            val buttons = buildList {
-                // One button per intro rather than a single "play theirs": the
-                // embed right above names them, and picking from a list only
-                // to hear a different one is a strange thing to do to someone.
-                // The slot cap keeps this to three, so they fit beside the
-                // link in one row without ever needing a second menu.
-                IntroPresenter.sorted(intros).forEach { add(PlayIntroButton.button(it)) }
-                add(IntroPresenter.webDashboardButton(guild.idLong))
-            }
-            add(ActionRow.of(buttons))
-            if (intros.isNotEmpty() && !isSelf) add(ActionRow.of(CopyIntroMenu.menu(intros)))
-        }
+        val view = IntroListView.of(target, intros, isSelf)
 
-        event.hook.sendMessageEmbeds(IntroPresenter.listEmbed(target, intros, IntroSlots.MAX_INTRO_COUNT))
-            .addComponents(rows)
+        event.hook.sendMessageEmbeds(view.embed)
+            .addComponents(view.rows)
             .setEphemeral(true)
             .queue()
     }
