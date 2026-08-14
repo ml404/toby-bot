@@ -50,12 +50,52 @@ class DefaultSharedCubeServiceTest {
     }
 
     /** In-memory stand-in for the JPA persistence. */
+    @Test
+    fun `countForUser counts only that user's snapshots`() {
+        service.create(100L, "A", "Bolt")
+        service.create(100L, "B", "Bolt")
+        service.create(200L, "C", "Bolt")
+
+        assertEquals(2L, service.countForUser(100L))
+        assertEquals(1L, service.countForUser(200L))
+        assertEquals(0L, service.countForUser(300L))
+    }
+
+    @Test
+    fun `purge removes snapshots created before the cutoff and leaves the rest`() {
+        val old = service.create(100L, "Old", "Bolt", Instant.parse("2024-01-01T00:00:00Z"))
+        val fresh = service.create(100L, "Fresh", "Bolt", Instant.parse("2026-08-01T00:00:00Z"))
+
+        val deleted = service.purge(Instant.parse("2026-01-01T00:00:00Z"))
+
+        assertEquals(1, deleted)
+        assertNull(service.get(old.token)) { "a year-old link is one nobody is coming back to" }
+        assertEquals("Fresh", service.get(fresh.token)?.name) { "a recent link must survive the sweep" }
+    }
+
+    @Test
+    fun `purge is a no-op when nothing is old enough`() {
+        service.create(100L, "Fresh", "Bolt", Instant.parse("2026-08-01T00:00:00Z"))
+
+        assertEquals(0, service.purge(Instant.parse("2026-01-01T00:00:00Z")))
+        assertEquals(1L, service.countForUser(100L))
+    }
+
     private class InMemorySharedCubePersistence : SharedCubePersistence {
         private val store = mutableMapOf<String, SharedCubeDto>()
         override fun get(token: String): SharedCubeDto? = store[token]
         override fun insert(row: SharedCubeDto): SharedCubeDto {
             store[row.token] = row
             return row
+        }
+
+        override fun countForUser(discordId: Long): Long =
+            store.values.count { it.discordId == discordId }.toLong()
+
+        override fun deleteOlderThan(cutoff: java.time.Instant): Int {
+            val doomed = store.values.filter { it.createdAt < cutoff }.map { it.token }
+            doomed.forEach { store.remove(it) }
+            return doomed.size
         }
     }
 }

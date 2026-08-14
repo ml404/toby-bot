@@ -3,6 +3,7 @@ package bot.toby.command.commands.mtg
 import com.google.gson.JsonParser
 import common.mtg.CardCategory
 import common.mtg.MtgColor
+import common.mtg.ScryfallThrottle
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.time.Duration
 
 class ScryfallCubeFetcherTest {
 
@@ -618,5 +620,137 @@ class ScryfallCubeFetcherTest {
         val result = fetcherWith(MockEngine { throw IOException("network down") }).fetch("t:elf", maxCards = 10)
         val failure = assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, result)
         assertTrue(failure.message.contains("Couldn't reach Scryfall"))
+    }
+
+    // --- pacing and caching (shared with the website via common) -------
+
+    /** A throttle that hands out slots instantly, so tests don't wait. */
+    private fun noWait() = ScryfallThrottle(Duration.ZERO, Duration.ofSeconds(3), { 0L }, {})
+
+    /** A throttle with nothing left to give: every call is refused. */
+    private fun refusing() =
+        ScryfallThrottle(Duration.ofDays(1), Duration.ZERO, { 0L }, {}).also { it.awaitSlot() }
+
+    private fun fetcherWith(engine: MockEngine, throttle: ScryfallThrottle): ScryfallCubeFetcher =
+        ScryfallCubeFetcher(HttpClient(engine) { install(HttpTimeout) }, Dispatchers.Unconfined, throttle)
+
+    private fun cardJson(name: String) =
+        """{"name":"$name","color_identity":["R"],"type_line":"Instant","cmc":1.0}"""
+
+    @Test
+    fun `the same mention is only fetched once`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respond(cardJson("Lightning Bolt"), HttpStatusCode.OK, jsonHeaders) }
+        val fetcher = fetcherWith(engine, noWait())
+
+        val first = runBlocking { fetcher.fetchNamed("bolt") }
+        val second = runBlocking { fetcher.fetchNamed("BOLT") }
+
+        assertEquals("Lightning Bolt", first!!.name)
+        assertEquals("Lightning Bolt", second!!.name)
+        assertEquals(1, calls) { "a chat full of the same [[mention]] shouldn't re-ask Scryfall each time" }
+    }
+
+    @Test
+    fun `different mentions are fetched separately`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respond(cardJson("Card $calls"), HttpStatusCode.OK, jsonHeaders) }
+        val fetcher = fetcherWith(engine, noWait())
+
+        runBlocking { fetcher.fetchNamed("bolt") }
+        runBlocking { fetcher.fetchNamed("shock") }
+
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun `a name that resolves to nothing is not remembered`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respondError(HttpStatusCode.NotFound) }
+        val fetcher = fetcherWith(engine, noWait())
+
+        assertNull(runBlocking { fetcher.fetchNamed("zzzz") })
+        assertNull(runBlocking { fetcher.fetchNamed("zzzz") })
+
+        assertEquals(2, calls) { "a typo shouldn't be cached past its correction" }
+    }
+
+    @Test
+    fun `the same search is only fetched once`() {
+        var calls = 0
+        val engine = MockEngine {
+            calls++
+            respond("""{"has_more":false,"data":[${cardJson("Bolt")}]}""", HttpStatusCode.OK, jsonHeaders)
+        }
+        val fetcher = fetcherWith(engine, noWait())
+
+        runBlocking { fetcher.fetch("c:r") }
+        runBlocking { fetcher.fetch("c:r") }
+
+        assertEquals(1, calls)
+    }
+
+    @Test
+    fun `a search with a different ceiling is fetched again`() {
+        var calls = 0
+        val engine = MockEngine {
+            calls++
+            respond("""{"has_more":false,"data":[${cardJson("Bolt")}]}""", HttpStatusCode.OK, jsonHeaders)
+        }
+        val fetcher = fetcherWith(engine, noWait())
+
+        runBlocking { fetcher.fetch("c:r", maxCards = 10) }
+        runBlocking { fetcher.fetch("c:r", maxCards = 20) }
+
+        assertEquals(2, calls) { "the ceiling changes what's fetched and whether it counts as capped" }
+    }
+
+    @Test
+    fun `a failed search is not cached`() {
+        var calls = 0
+        val engine = MockEngine {
+            calls++
+            if (calls == 1) respondError(HttpStatusCode.InternalServerError)
+            else respond("""{"has_more":false,"data":[${cardJson("Bolt")}]}""", HttpStatusCode.OK, jsonHeaders)
+        }
+        val fetcher = fetcherWith(engine, noWait())
+
+        assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, runBlocking { fetcher.fetch("c:r") })
+        assertInstanceOf(ScryfallCubeFetcher.Result.Success::class.java, runBlocking { fetcher.fetch("c:r") })
+        assertEquals(2, calls)
+    }
+
+    @Test
+    fun `every outbound call takes a throttle slot`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respond(cardJson("Bolt"), HttpStatusCode.OK, jsonHeaders) }
+        val fetcher = fetcherWith(engine, refusing())
+
+        // Refused before the request is built, so nothing reaches Scryfall.
+        assertNull(runBlocking { fetcher.fetchNamed("bolt") })
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun `a refused search fails rather than bypassing the pacing`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respond("{}", HttpStatusCode.OK, jsonHeaders) }
+        val fetcher = fetcherWith(engine, refusing())
+
+        assertInstanceOf(ScryfallCubeFetcher.Result.Failure::class.java, runBlocking { fetcher.fetch("c:r") })
+        assertEquals(0, calls)
+    }
+
+    @Test
+    fun `a cached mention needs no throttle slot`() {
+        var calls = 0
+        val engine = MockEngine { calls++; respond(cardJson("Lightning Bolt"), HttpStatusCode.OK, jsonHeaders) }
+        // One slot, then refuse: the second lookup can only come from cache.
+        val throttle = ScryfallThrottle(Duration.ofDays(1), Duration.ZERO, { 0L }, {})
+        val fetcher = fetcherWith(engine, throttle)
+
+        assertEquals("Lightning Bolt", runBlocking { fetcher.fetchNamed("bolt") }!!.name)
+        assertEquals("Lightning Bolt", runBlocking { fetcher.fetchNamed("bolt") }!!.name)
+        assertEquals(1, calls)
     }
 }

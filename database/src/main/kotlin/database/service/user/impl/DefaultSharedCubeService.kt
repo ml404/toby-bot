@@ -37,6 +37,10 @@ class DefaultSharedCubeService(
 
     override fun get(token: String): SharedCubeDto? = persistence.get(token)
 
+    override fun countForUser(discordId: Long): Long = persistence.countForUser(discordId)
+
+    override fun purge(olderThan: Instant): Int = persistence.deleteOlderThan(olderThan)
+
     /** A random token not already taken (collisions are astronomically rare). */
     private fun freshToken(): String {
         repeat(MAX_TRIES) {

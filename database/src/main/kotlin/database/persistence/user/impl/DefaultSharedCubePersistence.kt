@@ -7,6 +7,7 @@ import jakarta.persistence.PersistenceContext
 import jakarta.persistence.TypedQuery
 import org.springframework.stereotype.Repository
 import org.springframework.transaction.annotation.Transactional
+import java.time.Instant
 
 @Repository
 @Transactional
@@ -27,4 +28,15 @@ class DefaultSharedCubePersistence : SharedCubePersistence {
         entityManager.flush()
         return row
     }
+
+    override fun countForUser(discordId: Long): Long =
+        entityManager.createNamedQuery("SharedCubeDto.countForUser", java.lang.Long::class.java)
+            .setParameter("discordId", discordId)
+            .singleResult
+            .toLong()
+
+    override fun deleteOlderThan(cutoff: Instant): Int =
+        entityManager.createNamedQuery("SharedCubeDto.deleteOlderThan")
+            .setParameter("cutoff", cutoff)
+            .executeUpdate()
 }

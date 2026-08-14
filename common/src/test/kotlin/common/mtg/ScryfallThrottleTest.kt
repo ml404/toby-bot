@@ -1,7 +1,8 @@
-package web.service
+package common.mtg
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
@@ -68,6 +69,40 @@ class ScryfallThrottleTest {
 
         // Each arrival claims the next free slot instead of piling onto one.
         assertEquals(listOf(10L, 20L, 30L), time.slept)
+    }
+
+    @Test
+    fun `reserveSlotMillis hands the wait to the caller instead of doing it`() {
+        val time = FakeTime(advanceOnSleep = false)
+        val throttle = throttle(time, Duration.ofMillis(10), Duration.ofSeconds(3))
+
+        assertEquals(0L, throttle.reserveSlotMillis())
+        assertEquals(10L, throttle.reserveSlotMillis())
+        assertEquals(20L, throttle.reserveSlotMillis())
+        assertTrue(time.slept.isEmpty()) { "reserving must not sleep — that's the coroutine caller's job" }
+    }
+
+    @Test
+    fun `reserveSlotMillis returns null when the queue is too long`() {
+        val time = FakeTime(advanceOnSleep = false)
+        val throttle = throttle(time, Duration.ofMillis(10), Duration.ofMillis(10))
+
+        assertEquals(0L, throttle.reserveSlotMillis())
+        assertEquals(10L, throttle.reserveSlotMillis())
+        assertNull(throttle.reserveSlotMillis())
+    }
+
+    @Test
+    fun `a reserving caller and a blocking caller share one queue`() {
+        // The two surfaces wait differently but must not double-book a slot.
+        val time = FakeTime(advanceOnSleep = false)
+        val throttle = throttle(time, Duration.ofMillis(10), Duration.ofSeconds(3))
+
+        assertEquals(0L, throttle.reserveSlotMillis())
+        assertTrue(throttle.awaitSlot())
+
+        assertEquals(listOf(10L), time.slept) { "the blocking caller waits behind the reserving one" }
+        assertEquals(20L, throttle.reserveSlotMillis())
     }
 
     @Test

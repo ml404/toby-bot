@@ -1,5 +1,6 @@
 package web.service
 
+import common.mtg.ScryfallThrottle
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertTrue

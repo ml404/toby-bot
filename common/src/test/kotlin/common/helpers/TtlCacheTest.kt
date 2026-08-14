@@ -1,4 +1,4 @@
-package web.service
+package common.helpers
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull

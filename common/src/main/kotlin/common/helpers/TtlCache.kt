@@ -1,4 +1,4 @@
-package web.service
+package common.helpers
 
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
