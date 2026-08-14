@@ -16,11 +16,18 @@ internal object TipEmbeds {
     private val OK_COLOR = Color(87, 242, 135)
     private val ERROR_COLOR = Color(237, 66, 69)
 
-    fun okEmbed(outcome: TipOutcome.Ok): MessageEmbed = EmbedBuilder()
+    /**
+     * @param jumpLink the message the tip was for, when it came from the
+     *   **Tip this** right-click entry. Without it the announcement says who
+     *   and how much but not what for, which is the half everyone else in the
+     *   channel is missing.
+     */
+    fun okEmbed(outcome: TipOutcome.Ok, jumpLink: String? = null): MessageEmbed = EmbedBuilder()
         .setTitle("💸 Tip sent")
         .setDescription(
             "<@${outcome.sender}> tipped <@${outcome.recipient}> **${outcome.amount} credits**." +
-                outcome.note?.let { "\n*${it}*" }.orEmpty()
+                outcome.note?.let { "\n*${it}*" }.orEmpty() +
+                jumpLink?.let { "\n\n[Jump to what it was for]($it)" }.orEmpty()
         )
         .addField("Sender balance", "${outcome.senderNewBalance} credits", true)
         .addField(

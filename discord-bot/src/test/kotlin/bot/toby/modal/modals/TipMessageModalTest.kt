@@ -75,10 +75,17 @@ class TipMessageModalTest {
         every { channelSend.queue() } just Runs
     }
 
-    private fun submit(modalId: String, note: String? = null) {
+    /**
+     * @param typedAmount what the user put in the amount box, for the forms
+     *   that ask for one. Null means the field wasn't on the form at all,
+     *   which is how the `/tip` path submits.
+     */
+    private fun submit(modalId: String, note: String? = null, typedAmount: String? = null) {
         every { event.modalId } returns modalId
-        val mapping = note?.let { mockk<ModalMapping> { every { asString } returns it } }
-        every { event.getValue(TipMessageModal.FIELD_NOTE) } returns mapping
+        every { event.getValue(TipMessageModal.FIELD_NOTE) } returns
+            note?.let { mockk<ModalMapping> { every { asString } returns it } }
+        every { event.getValue(TipMessageModal.FIELD_AMOUNT) } returns
+            typedAmount?.let { mockk<ModalMapping> { every { asString } returns it } }
     }
 
     @Test
@@ -155,6 +162,124 @@ class TipMessageModalTest {
         assertTrue(contentSlot.captured.contains("<@9>"))
         assertEquals(listOf("Tip sent."), hookText)
     }
+
+    @Test
+    fun `an amount typed into the form is used when the id has none`() {
+        // The right-click and button paths know who but not how much, so the
+        // id leaves the segment blank and the form carries it instead.
+        submit(TipMessageModal.askAmountId(9L), typedAmount = "75")
+        every { tipService.tip(any(), any(), any(), any(), any(), any(), any()) } returns okOutcome(amount = 75L)
+
+        modal.handle(ctx, 0)
+
+        verify(exactly = 1) {
+            tipService.tip(
+                senderDiscordId = 42L, recipientDiscordId = 9L, guildId = 100L,
+                amount = 75L, note = null, at = any(), dailyCap = any(),
+            )
+        }
+    }
+
+    @Test
+    fun `a typed amount that isn't a number is named back rather than swallowed`() {
+        submit(TipMessageModal.askAmountId(9L), typedAmount = "lots")
+
+        modal.handle(ctx, 0)
+
+        assertTrue(hookEmbeds.single().description!!.contains("lots"), hookEmbeds.single().description!!)
+        verify(exactly = 0) { tipService.tip(any(), any(), any(), any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun `an out-of-range typed amount is left for the service to judge`() {
+        // The form can't enforce the range — a numeric TextInput has no min —
+        // so TipService stays the single authority on what a legal tip is.
+        submit(TipMessageModal.askAmountId(9L), typedAmount = "99999")
+        every {
+            tipService.tip(any(), any(), any(), any(), any(), any(), any())
+        } returns TipOutcome.InvalidAmount(TipService.MIN_TIP, TipService.MAX_TIP)
+
+        modal.handle(ctx, 0)
+
+        verify(exactly = 1) {
+            tipService.tip(
+                senderDiscordId = 42L, recipientDiscordId = 9L, guildId = 100L,
+                amount = 99999L, note = null, at = any(), dailyCap = any(),
+            )
+        }
+        assertTrue(hookEmbeds.single().description!!.contains("between"), hookEmbeds.single().description!!)
+    }
+
+    @Test
+    fun `a tip from a message links the announcement back to it`() {
+        // The whole reason to tip from a message rather than by name: without
+        // this the channel sees that credit moved but not what for.
+        submit(TipMessageModal.askAmountId(9L, channelId = 555L, messageId = 777L), typedAmount = "50")
+        every { tipService.tip(any(), any(), any(), any(), any(), any(), any()) } returns okOutcome(amount = 50L)
+        val embed = slot<MessageEmbed>()
+        val channelSend = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embed)) } returns channelSend
+        every { channelSend.addContent(any<String>()) } returns channelSend
+        every { channelSend.queue() } just Runs
+
+        modal.handle(ctx, 0)
+
+        assertTrue(
+            embed.captured.description!!.contains("https://discord.com/channels/100/555/777"),
+            embed.captured.description!!,
+        )
+    }
+
+    @Test
+    fun `a tip that came from no message says nothing about one`() {
+        submit("tip_message:9:250")
+        every { tipService.tip(any(), any(), any(), any(), any(), any(), any()) } returns okOutcome(amount = 250L)
+        val embed = slot<MessageEmbed>()
+        val channelSend = mockk<MessageCreateAction>(relaxed = true)
+        every { channel.sendMessageEmbeds(capture(embed)) } returns channelSend
+        every { channelSend.addContent(any<String>()) } returns channelSend
+        every { channelSend.queue() } just Runs
+
+        modal.handle(ctx, 0)
+
+        assertTrue(!embed.captured.description!!.contains("Jump to"), embed.captured.description!!)
+    }
+
+    @Test
+    fun `the ask-amount id leaves the amount slot empty rather than dropping it`() {
+        // Positions after the amount have to stay fixed, or the channel and
+        // message ids would be read as an amount.
+        assertEquals("tip_message:9:", TipMessageModal.askAmountId(9L))
+        assertEquals("tip_message:9::5:7", TipMessageModal.askAmountId(9L, 5L, 7L))
+    }
+
+    @Test
+    fun `the amount form asks for both fields and names the recipient`() {
+        val form = TipMessageModal.amountForm(9L, "Bob")
+
+        assertEquals("tip_message:9:", form.id)
+        assertTrue(form.title.contains("Bob"), form.title)
+        assertTrue(form.title.length <= 45, form.title)
+    }
+
+    @Test
+    fun `a long name can't push the form title past Discord's cap`() {
+        val form = TipMessageModal.amountForm(9L, "M".repeat(80))
+
+        assertTrue(form.title.length <= 45, "title was ${form.title.length} chars")
+    }
+
+    @Test
+    fun `the note form still carries the amount in its id`() {
+        val form = TipMessageModal.noteForm(9L, 250L)
+
+        assertEquals("tip_message:9:250", form.id)
+    }
+
+    private fun okOutcome(amount: Long) = TipOutcome.Ok(
+        sender = 42L, recipient = 9L, amount = amount, note = null,
+        senderNewBalance = 100L, recipientNewBalance = 350L, sentTodayAfter = amount, dailyCap = 1000L,
+    )
 
     @Test
     fun `failure outcome replies with a friendly ephemeral error and never posts to channel`() {

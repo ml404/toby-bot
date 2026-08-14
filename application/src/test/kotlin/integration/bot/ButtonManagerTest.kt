@@ -53,7 +53,10 @@ import bot.toby.button.buttons.lottery.LotteryBuyButton
 import bot.toby.button.buttons.misc.MemeButton
 import bot.toby.button.buttons.mtg.CardSearchPageButton
 import bot.toby.button.buttons.music.PausePlayButton
+import bot.toby.button.buttons.economy.TipUserButton
+import bot.toby.button.buttons.misc.ViewProfileButton
 import bot.toby.button.buttons.music.PlayIntroButton
+import bot.toby.button.buttons.music.ViewIntrosButton
 import bot.toby.button.buttons.casino.poker.PokerActionButton
 import bot.toby.button.buttons.misc.RandomButton
 import bot.toby.button.buttons.misc.RollButton
@@ -117,6 +120,9 @@ class ButtonManagerTest {
             MemeButton::class.java,
             PausePlayButton::class.java,
             PlayIntroButton::class.java,
+            TipUserButton::class.java,
+            ViewIntrosButton::class.java,
+            ViewProfileButton::class.java,
             PokerActionButton::class.java,
             RandomButton::class.java,
             RollButton::class.java,
