@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Pace and cache the bot's Scryfall calls; bound the share table",
+    "summary": "The two items from the last review round.",
+    "emoji": "✨",
+    "prNumber": 752
+  },
+  {
+    "date": "August 2026",
     "title": "Split magic.js into three layers",
     "summary": "2,790 lines in one IIFE. The layering was already latent in it, so this makes it physical:",
     "emoji": "✨",
