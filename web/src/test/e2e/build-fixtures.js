@@ -13,24 +13,45 @@
  *   3. The fixture build copies the real CSS files unmodified so the
  *      Playwright snapshot pins the actual production stylesheet.
  *
- * Output goes to ./fixtures/{html files} + ./fixtures/css/{copied}.
- * Re-run after editing CSS or fixture HTML.
+ * Output goes to ./fixtures/{html files} + ./fixtures/css/{copied} +
+ * ./fixtures/js/{copied}. Re-run after editing CSS/JS or fixture HTML.
+ *
+ * The JS is copied for the /magic spec, which drives the real page scripts
+ * rather than asserting on markup: unlike the responsive fixtures, that one
+ * needs the page to actually work. Its HTML (fixtures/magic.html) is the real
+ * template's render, refreshed via MagicE2eFixtureTest.
  */
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '../../..');
 const CSS_SRC = path.join(ROOT, 'src/main/resources/static/css');
+const JS_SRC = path.join(ROOT, 'src/main/resources/static/js');
 const FIXTURES = path.resolve(__dirname, 'fixtures');
 const CSS_DEST = path.join(FIXTURES, 'css');
+const JS_DEST = path.join(FIXTURES, 'js');
 
-function copyCss() {
-    fs.mkdirSync(CSS_DEST, { recursive: true });
-    for (const f of fs.readdirSync(CSS_SRC)) {
-        if (!f.endsWith('.css')) continue;
-        fs.copyFileSync(path.join(CSS_SRC, f), path.join(CSS_DEST, f));
+/** Copies every file with [ext] from [src] to [dest], flat. */
+function copyAssets(src, dest, ext) {
+    fs.mkdirSync(dest, { recursive: true });
+    let copied = 0;
+    for (const f of fs.readdirSync(src)) {
+        if (!f.endsWith(ext)) continue;
+        fs.copyFileSync(path.join(src, f), path.join(dest, f));
+        copied++;
     }
+    return copied;
 }
 
-copyCss();
-console.log(`fixtures: copied CSS from ${CSS_SRC} to ${CSS_DEST}`);
+const cssCount = copyAssets(CSS_SRC, CSS_DEST, '.css');
+console.log(`fixtures: copied ${cssCount} CSS files from ${CSS_SRC} to ${CSS_DEST}`);
+
+const jsCount = copyAssets(JS_SRC, JS_DEST, '.js');
+console.log(`fixtures: copied ${jsCount} JS files from ${JS_SRC} to ${JS_DEST}`);
+
+if (!fs.existsSync(path.join(FIXTURES, 'magic.html'))) {
+    console.warn(
+        'fixtures: magic.html is missing — regenerate it with\n' +
+        "  ./gradlew :web:test --tests '*MagicE2eFixtureTest*' -Dfixture.refresh=true",
+    );
+}

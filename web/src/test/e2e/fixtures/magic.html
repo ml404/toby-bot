@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    
+    
+    
+    <title>TobyBot — Magic toolkit</title>
+    <meta name="description" content="Build and balance Magic: The Gathering draft cubes, look up card details, rulings and combos, check deck legality, browse set and keyword reference, and set card price alerts.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="TobyBot — Magic toolkit">
+    <meta property="og:description" content="Build and balance Magic: The Gathering draft cubes, look up card details, rulings and combos, check deck legality, browse set and keyword reference, and set card price alerts.">
+    <meta property="og:image"
+          content="https://www.toby-bot.co.uk/images/preview.svg">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="TobyBot — Magic toolkit">
+    <meta name="twitter:description" content="Build and balance Magic: The Gathering draft cubes, look up card details, rulings and combos, check deck legality, browse set and keyword reference, and set card price alerts.">
+    <meta name="twitter:image"
+          content="https://www.toby-bot.co.uk/images/preview.svg">
+    <link rel="icon" type="image/svg+xml" href="/images/favicon.svg">
+    <link rel="stylesheet" href="/css/base.css">
+    <link rel="stylesheet" href="/css/nav.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/magic.css">
+    <script src="/js/motion.js" defer></script>
+    <script src="/js/toasts.js" defer></script>
+    
+</head>
+<body>
+<a href="#main" class="skip-link">Skip to content</a>
+<nav>
+    <a class="brand" href="/">TobyBot</a>
+    <!--
+        Toggle sits BEFORE .nav-links so it doesn't get pushed below the
+        expanded menu on mobile (nav is flex-wrap: wrap; the open drawer
+        used to take width:100% and wrap the toggle onto a new line).
+        On desktop the toggle is hidden via CSS so layout is unchanged.
+        The glyph is swapped CSS-side off [aria-expanded] — JS only flips
+        the attribute and never mutates button text.
+    -->
+    <button class="nav-toggle"
+            id="nav-toggle"
+            aria-controls="nav-menu"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+            onclick="toggleNav()">
+        <span class="nav-toggle-icon" aria-hidden="true"></span>
+    </button>
+
+    <!--
+        Top-level nav grouping: personal anchors first (Profile,
+        Leaderboards) → "Play" rolls every game (minigames + tables +
+        lottery) into one drop-down so a new admin can find every game
+        under one heading → Economy keeps the credit-flow features
+        together → Social groups passive identity features (intros)
+        → Tools holds reference / utility pages → Admin sits last so
+        the everyday traffic isn't next to it.
+
+        Mobile: .nav-links becomes a fixed-position right drawer with a
+        sticky header + section eyebrows + bottom auth footer. Desktop
+        keeps the flat inline row — eyebrows + drawer chrome are
+        display:none on desktop.
+
+        Each minigame entry below carries a `?game=<slug>` so the
+        /casino/guilds picker can deep-link past itself when the user
+        only shares one server with the bot (or has anchored one as a
+        default). Without the query param the picker still renders the
+        full per-guild game grid — the slug is intent, not routing.
+        Poker / Blackjack / Lottery have dedicated landing routes and
+        are separated by a horizontal divider so the visual grouping
+        matches the routing reality.
+    -->
+    <div class="nav-links" id="nav-menu" aria-label="Main navigation">
+        <div class="nav-drawer-header">
+            <span class="nav-drawer-brand">TobyBot</span>
+            <button type="button"
+                    class="nav-drawer-close"
+                    aria-label="Close menu"
+                    onclick="toggleNav()">&#10005;</button>
+        </div>
+
+        
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Main</div>
+            <a class="nav-item" href="/profile/guilds"><span class="nav-item-icon" aria-hidden="true">&#128100;</span><span>Profile</span></a>
+            <a class="nav-item" href="/leaderboards"><span class="nav-item-icon" aria-hidden="true">&#127942;</span><span>Leaderboards</span></a>
+            
+            <a class="nav-item" href="/commands/wiki"><span class="nav-item-icon" aria-hidden="true">&#128218;</span><span>Commands</span></a>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Casino</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127922;</span><span class="nav-dropdown-label">Casino</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/casino/guilds?game=slots" role="menuitem">&#127920; Slots</a>
+                    <a href="/casino/guilds?game=coinflip" role="menuitem">&#129689; Coinflip</a>
+                    <a href="/casino/guilds?game=dice" role="menuitem">&#127922; Dice</a>
+                    <a href="/casino/guilds?game=highlow" role="menuitem">&#127183; High-Low</a>
+                    <a href="/casino/guilds?game=scratch" role="menuitem">&#127903;&#65039; Scratch</a>
+                    <a href="/casino/guilds?game=keno" role="menuitem">&#127919; Keno</a>
+                    <a href="/casino/guilds?game=roulette" role="menuitem">&#127905; Roulette</a>
+                    <a href="/casino/guilds?game=baccarat" role="menuitem">&#127924; Baccarat</a>
+                    <a href="/casino/guilds?game=casinoholdem" role="menuitem">&#127183; Casino Hold'em</a>
+                    <a href="/casino/guilds?game=plinko" role="menuitem">&#128994; Plinko</a>
+                    <a href="/casino/guilds?game=horse-racing" role="menuitem">&#128014; Horse Racing</a>
+                    <a href="/casino/guilds?game=wheel" role="menuitem">&#127905; Wheel</a>
+                    <hr class="nav-dropdown-separator" aria-hidden="true">
+                    <a href="/poker/guilds" role="menuitem">&#127924; Poker</a>
+                    <a href="/blackjack/guilds" role="menuitem">&#127922; Blackjack</a>
+                    <a href="/lottery/guilds" role="menuitem">&#127903;&#65039; Lottery</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">PvP</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#9876;&#65039;</span><span class="nav-dropdown-label">PvP</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/pvp/guilds?game=duel" role="menuitem">&#9876;&#65039; Duel</a>
+                    <a href="/pvp/guilds?game=rps" role="menuitem">&#9994; Rock-Paper-Scissors</a>
+                    <a href="/pvp/guilds?game=tictactoe" role="menuitem">&#11093; Tic-Tac-Toe</a>
+                    <a href="/pvp/guilds?game=connect4" role="menuitem">&#128308; Connect 4</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Economy</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#128176;</span><span class="nav-dropdown-label">Economy</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/economy/guilds" role="menuitem">Market</a>
+                    <a href="/economy/portfolio" role="menuitem">Portfolio</a>
+                    <a href="/titles/guilds" role="menuitem">Titles</a>
+                    <a href="/tip/guilds" role="menuitem">Tip</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Social</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127925;</span><span class="nav-dropdown-label">Social</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/music-player/guilds" role="menuitem">&#127925; Music</a>
+                    <a href="/intro/guilds" role="menuitem">Intro Songs</a>
+                    <a href="/excuses/guilds" role="menuitem">Excuses</a>
+                    <a href="/teams/guilds" role="menuitem">Teams</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Magic</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#127183;</span><span class="nav-dropdown-label">Magic</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/magic" role="menuitem">&#129443; Magic toolkit</a>
+                    <a href="/magic#card" role="menuitem">&#128269; Card lookup</a>
+                    <a href="/magic#legality" role="menuitem">&#9878; Deck legality</a>
+                    <a href="/magic#reference" role="menuitem">&#128214; Sets &amp; keywords</a>
+                    <a href="/magic#asfan" role="menuitem">&#128290; As-fan calculator</a>
+                    <a href="/magic#preview" role="menuitem">&#128202; Cube preview</a>
+                    <a href="/magic#generate" role="menuitem">&#127183; Pack generator</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Tools</div>
+            <div class="nav-dropdown">
+                <button type="button"
+                        class="nav-dropdown-toggle"
+                        aria-haspopup="true"
+                        aria-expanded="false"
+                        onclick="toggleDropdown(this)"><span class="nav-item-icon" aria-hidden="true">&#128736;&#65039;</span><span class="nav-dropdown-label">Tools</span><span class="nav-dropdown-caret" aria-hidden="true">&#9662;</span></button>
+                <div class="nav-dropdown-menu" role="menu">
+                    <a href="/utils" role="menuitem">Utils</a>
+                    <a href="/dnd" role="menuitem">D&amp;D lookups</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-eyebrow">Moderation</div>
+            <a class="nav-item" href="/moderation/guilds"><span class="nav-item-icon" aria-hidden="true">&#128737;&#65039;</span><span>Admin</span></a>
+            
+        </div>
+
+        <div class="nav-auth">
+            
+            <a href="/oauth2/authorization/discord"
+               class="btn-discord">Log in with Discord</a>
+        </div>
+    </div>
+
+    <div class="nav-backdrop" id="nav-backdrop" hidden onclick="toggleNav()"></div>
+    <script src="/js/home.js"></script>
+</nav>
+
+<main id="main" class="cube-main">
+    <header class="cube-hero">
+        <div class="cube-hero-inner">
+            <p class="cube-eyebrow">Magic: The Gathering</p>
+            <h1>Magic toolkit</h1>
+            <p class="cube-lede">
+                A grab-bag of Magic: The Gathering tools — look up any card's details, rulings and
+                combos, check a deck's format legality, browse set and keyword reference, build and
+                balance a draft cube, and set price-watch alerts. Pick a tool below.
+            </p>
+        </div>
+    </header>
+
+    <div class="cube-shell">
+        <!-- Cube-building onboarding — only shown when a cube tool (Preview /
+             Generate) is active, via data-needs-cube; hidden on the default
+             (Card lookup) tab and the other standalone tools. -->
+        <div class="cube-onboarding" data-needs-cube hidden>
+            <ol class="cube-steps" aria-label="How it works">
+                <li class="cube-step"><span class="cube-step-num">1</span>
+                    <span class="cube-step-text"><strong>Choose your cards</strong> (search or paste a list).</span></li>
+                <li class="cube-step"><span class="cube-step-num">2</span>
+                    <span class="cube-step-text"><strong>Preview</strong> to check it's balanced.</span></li>
+                <li class="cube-step"><span class="cube-step-num">3</span>
+                    <span class="cube-step-text"><strong>Generate</strong> randomised draft packs.</span></li>
+            </ol>
+
+            <details class="cube-explainer">
+                <summary>New to this? Read me first</summary>
+                <div class="cube-explainer-body">
+                    <p><strong>What's a "cube"?</strong> A custom pool of Magic cards you draft from
+                        instead of sealed boosters.</p>
+                    <p><strong>Two ways to define one:</strong></p>
+                    <ul>
+                        <li><strong>Scryfall search</strong> — describe a set of cards, e.g.
+                            <code>set:vow</code>, <code>t:dragon</code>, <code>cube:vintage</code>.</li>
+                        <li><strong>My card list</strong> — paste your own decklist, one card per line
+                            (an optional count works too, like <code>10 Forest</code>).</li>
+                    </ul>
+                    <p><strong>What's "as-fan"?</strong> The average number of a given kind of card you
+                        open per pack — so you can see your draft isn't flooded with lands or starved
+                        of removal.</p>
+                </div>
+            </details>
+        </div>
+
+        <!-- Shared card source, used by Preview and Generate (hidden on the
+             standalone As-fan calculator via data-needs-cube). -->
+        <section class="cube-source-card" data-needs-cube hidden>
+            <div class="cube-source-head">
+                <h2>Your cube</h2>
+                <span class="cube-source-note">Used by Preview &amp; Generate</span>
+            </div>
+            <div class="cube-source-toggle segmented" role="group" aria-label="Card source">
+                <button type="button" class="cube-source-btn" data-source-tab="search" aria-selected="true">
+                    Scryfall search
+                </button>
+                <button type="button" class="cube-source-btn" data-source-tab="list" aria-selected="false">
+                    My card list
+                </button>
+            </div>
+
+            <div data-source-panel="search">
+                <label class="cube-query">Scryfall search
+                    <input type="text" name="query" placeholder="e.g. cube:vintage" autocomplete="off">
+                </label>
+                <span class="cube-inline-examples">Examples:
+                    <button type="button" class="cube-chip" data-example="cube:vintage">cube:vintage</button>
+                    <button type="button" class="cube-chip" data-example="set:vow">set:vow</button>
+                    <button type="button" class="cube-chip" data-example="t:dragon">t:dragon</button>
+                </span>
+                <button type="button" class="cube-link-btn" data-copy-query>🔗 Copy a shareable link to this search</button>
+            </div>
+
+            <div data-source-panel="list" hidden>
+                
+                
+                <div class="cube-listlabel" id="cube-list-label">Your card list
+                    <span class="cube-hint">— type a card to get name suggestions</span>
+                </div>
+                <div class="cube-list-wrap">
+                    <textarea name="list" rows="8" spellcheck="false" aria-labelledby="cube-list-label"
+                              aria-autocomplete="list" aria-controls="cube-card-suggest"
+                              placeholder="One card per line:&#10;1 Lightning Bolt&#10;Sol Ring&#10;10 Forest"></textarea>
+                    <ul class="cube-card-suggest" id="cube-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                </div>
+                <div class="cube-list-meta">
+                    <span class="cube-card-count" data-card-count aria-live="polite">0 cards</span>
+                    <button type="button" class="cube-link-btn" data-clear-list>Clear</button>
+                </div>
+                
+                <p class="cube-saved-login muted">
+                    <a href="/oauth2/authorization/discord">Log in with Discord</a> to save &amp; share lists.
+                </p>
+                <div class="cube-share-result" data-share-result hidden>
+                    <label>Share link
+                        <input type="text" data-share-url readonly aria-label="Share link">
+                    </label>
+                    <button type="button" class="btn btn-secondary" data-share-copy>Copy</button>
+                </div>
+            </div>
+        </section>
+
+        <p class="cube-tabs-hint" id="cube-tabs-hint" data-needs-cube hidden>Then pick a tool:</p>
+        <div class="cube-tabs" role="tablist" aria-label="Magic tools">
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Card &amp; deck tools</span>
+            <button type="button" id="tab-card" class="cube-tab" role="tab"
+                    data-tab="card" aria-controls="panel-card" aria-selected="true">
+                <span class="cube-tab-icon" aria-hidden="true">🔍</span>
+                <span class="cube-tab-label">Card lookup</span>
+                <span class="cube-tab-sub">Find one card</span>
+            </button>
+            <button type="button" id="tab-legality" class="cube-tab" role="tab"
+                    data-tab="legality" aria-controls="panel-legality" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">⚖️</span>
+                <span class="cube-tab-label">Legality</span>
+                <span class="cube-tab-sub">Check a deck</span>
+            </button>
+            <button type="button" id="tab-watch" class="cube-tab" role="tab"
+                    data-tab="watch" aria-controls="panel-watch" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔔</span>
+                <span class="cube-tab-label">Price watch</span>
+                <span class="cube-tab-sub">Alert on price</span>
+            </button>
+            </div>
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Reference</span>
+            <button type="button" id="tab-reference" class="cube-tab" role="tab"
+                    data-tab="reference" aria-controls="panel-reference" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">📖</span>
+                <span class="cube-tab-label">Reference</span>
+                <span class="cube-tab-sub">Sets &amp; keywords</span>
+            </button>
+            </div>
+            <div class="cube-tab-group" role="presentation">
+                <span class="cube-tab-group-label" aria-hidden="true">Build a cube</span>
+            <button type="button" id="tab-generate" class="cube-tab" role="tab"
+                    data-tab="generate" aria-controls="panel-generate" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🃏</span>
+                <span class="cube-tab-label">Generate packs</span>
+                <span class="cube-tab-sub">Deal a draft</span>
+            </button>
+            <button type="button" id="tab-preview" class="cube-tab" role="tab"
+                    data-tab="preview" aria-controls="panel-preview" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">📊</span>
+                <span class="cube-tab-label">Preview a cube</span>
+                <span class="cube-tab-sub">Check the balance</span>
+            </button>
+            <button type="button" id="tab-asfan" class="cube-tab" role="tab"
+                    data-tab="asfan" aria-controls="panel-asfan" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔢</span>
+                <span class="cube-tab-label">As-fan calculator</span>
+                <span class="cube-tab-sub">Quick maths</span>
+            </button>
+            <button type="button" id="tab-compare" class="cube-tab" role="tab"
+                    data-tab="compare" aria-controls="panel-compare" aria-selected="false" tabindex="-1">
+                <span class="cube-tab-icon" aria-hidden="true">🔀</span>
+                <span class="cube-tab-label">Compare</span>
+                <span class="cube-tab-sub">Diff two lists</span>
+            </button>
+            </div>
+        </div>
+
+        <!-- Generate -->
+        <section id="panel-generate" class="cube-panel" role="tabpanel" aria-labelledby="tab-generate"
+                 data-panel="generate" hidden>
+            <p class="cube-panel-intro">
+                Draws cards at random from <strong>your cube</strong> above and deals them into
+                evenly-sized, balanced booster packs.
+            </p>
+            <form class="cube-form" data-form="generate" autocomplete="off">
+                <label>How many packs?
+                    <input type="number" name="packs" min="1" max="90" value="24" required>
+                    <small class="cube-hint">8 players × 3 packs = 24.</small>
+                </label>
+                <label>Cards per pack
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                    <small class="cube-hint">Standard boosters hold 15.</small>
+                </label>
+                <label class="cube-checkbox">
+                    <input type="checkbox" name="balanced" checked>
+                    Spread colours &amp; lands evenly
+                </label>
+                <button type="submit" class="btn cube-submit">Generate packs</button>
+            </form>
+            <div class="cube-import">
+                <button type="button" class="btn btn-secondary" data-import="generate">⬆ Load a pack list (.txt)</button>
+                <input type="file" accept=".txt,text/plain" data-import-file="generate" hidden
+                       aria-label="Pack list file to load">
+                <small class="cube-hint">Already downloaded a deal? Load that file to see those exact packs
+                    again — nothing is re-dealt.</small>
+            </div>
+            <div class="cube-statusline">
+                <span class="cube-spinner" data-spinner="generate" hidden aria-hidden="true"></span>
+                <p class="cube-status" data-status="generate" aria-live="polite"></p>
+            </div>
+            
+            
+            <!-- The shared deal's pack list, handed to the browser to load
+                 through the same /api/packs path a downloaded file takes.
+                 A textarea because its content is entity-decoded on read,
+                 exactly as the shared-cube list box relies on. -->
+            
+            <!-- The deal's token, so each pack can offer a link to its own seat. -->
+            
+            <p class="cube-empty" data-empty="generate">Choose your cards above, then hit <strong>Generate packs</strong>.</p>
+            <div class="cube-generate-summary" data-summary="generate" hidden></div>
+            <p class="cube-notfound" data-notfound="generate" hidden></p>
+            <div class="cube-result-actions" data-actions="generate" hidden>
+                <button type="button" class="btn btn-secondary" data-download="generate">⬇ Download pack list (.txt)</button>
+                
+            </div>
+            <div class="cube-share-result" data-share-deal-result hidden>
+                <label>Deal link
+                    <input type="text" data-share-deal-url readonly aria-label="Shared deal link">
+                </label>
+                <button type="button" class="btn btn-secondary" data-share-deal-copy>Copy</button>
+            </div>
+            <div class="cube-packs" data-result="generate" hidden></div>
+            <details class="cube-breakdown" data-breakdown="generate" hidden>
+                <summary>Show colour &amp; land balance</summary>
+                <div class="cube-dist" data-dist="generate"></div>
+            </details>
+        </section>
+
+        <!-- Preview -->
+        <section id="panel-preview" class="cube-panel" role="tabpanel" aria-labelledby="tab-preview"
+                 data-panel="preview" hidden>
+            <p class="cube-panel-intro">
+                Lists every card in <strong>your cube</strong>, grouped by colour and land, with how
+                many of each kind you'd open per pack.
+            </p>
+            <form class="cube-form" data-form="preview" autocomplete="off">
+                <label>Cards per pack
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                    <small class="cube-hint">Standard boosters hold 15.</small>
+                </label>
+                <button type="submit" class="btn cube-submit">Preview balance</button>
+            </form>
+            <div class="cube-statusline">
+                <span class="cube-spinner" data-spinner="preview" hidden aria-hidden="true"></span>
+                <p class="cube-status" data-status="preview" aria-live="polite"></p>
+            </div>
+            <p class="cube-empty" data-empty="preview">Choose your cards above, then hit <strong>Preview balance</strong>.</p>
+            <p class="cube-notfound" data-notfound="preview" hidden></p>
+            <p class="cube-dup-warning" data-duplicates="preview" hidden></p>
+            <div class="cube-result-actions" data-actions="preview" hidden>
+                <button type="button" class="btn btn-secondary" data-sample-pack="preview">🎴 Open a sample pack</button>
+                <button type="button" class="btn btn-secondary" data-copy="preview">⧉ Copy card list</button>
+                <button type="button" class="btn btn-secondary" data-download="preview">⬇ Download cube (.txt)</button>
+                <button type="button" class="btn btn-secondary" data-download-sample="preview" hidden>⬇ Download sample pack (.txt)</button>
+            </div>
+            <div class="cube-packs" data-sample="preview" hidden></div>
+            <div class="cube-groups" data-result="preview" hidden></div>
+            <details class="cube-breakdown" data-breakdown="preview-analytics" hidden>
+                <summary>Show mana curve, types &amp; rarity</summary>
+                <div class="cube-analytics">
+                    <p class="cube-avg-mv" data-avg-mv="preview"></p>
+                    <h4 class="cube-analytics-h">Mana curve</h4>
+                    <div class="cube-dist" data-curve="preview"></div>
+                    <h4 class="cube-analytics-h">Card types</h4>
+                    <div class="cube-dist" data-types="preview"></div>
+                    <h4 class="cube-analytics-h">Rarity</h4>
+                    <div class="cube-dist" data-rarity="preview"></div>
+                    <h4 class="cube-analytics-h">Colour pairs (two-colour archetypes)</h4>
+                    <div class="cube-dist" data-pairs="preview"></div>
+                    <h4 class="cube-analytics-h">Colour balance (mana pips)</h4>
+                    <div class="cube-dist" data-pips="preview"></div>
+                    <div class="cube-total-value-row">
+                        <p class="cube-total-value" data-value="preview" hidden></p>
+                        <label class="cube-total-currency">
+                            <span class="sr-only">Cube value currency</span>
+                            <select data-value-currency="preview" hidden>
+                                <option value="usd">USD ($)</option>
+                                <option value="eur">EUR (€)</option>
+                                <option value="tix">MTGO Tix</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="cube-extremes" data-value-extremes="preview" hidden></div>
+                </div>
+            </details>
+        </section>
+
+        <!-- As-fan calculator -->
+        <section id="panel-asfan" class="cube-panel" role="tabpanel" aria-labelledby="tab-asfan"
+                 data-panel="asfan" hidden>
+            <p class="cube-panel-intro">
+                Already know your numbers? Work out how many of one kind of card you'll open per pack.
+            </p>
+            <form class="cube-form" data-form="asfan" autocomplete="off">
+                <label>How many of that card type?
+                    <input type="number" name="total" min="0" value="60" required>
+                    <small class="cube-hint">e.g. 60 removal spells in the cube.</small>
+                </label>
+                <label>Cards in the whole cube
+                    <input type="number" name="cubeSize" min="1" value="540" required>
+                    <small class="cube-hint">Your total pool size.</small>
+                </label>
+                <label>Cards per pack
+                    <input type="number" name="packSize" min="1" max="30" value="15" required>
+                    <small class="cube-hint">Standard boosters hold 15.</small>
+                </label>
+                <button type="submit" class="btn cube-submit">Calculate</button>
+            </form>
+            <p class="cube-status" data-status="asfan" aria-live="polite"></p>
+            <div class="cube-asfan-result" data-result="asfan" hidden>
+                <div class="cube-asfan-headline">
+                    <span class="cube-asfan-number" data-asfan-number>0.00</span>
+                    <span class="cube-asfan-unit">per pack</span>
+                </div>
+                <p class="cube-asfan-sentence" data-asfan-sentence></p>
+            </div>
+        </section>
+
+        <!-- Compare two lists -->
+        <section id="panel-compare" class="cube-panel" role="tabpanel" aria-labelledby="tab-compare"
+                 data-panel="compare" hidden>
+            <p class="cube-panel-intro">
+                Paste two card lists to see what changed — handy for iterating a cube. Compares by
+                name (counts included), no Scryfall lookup needed.
+            </p>
+            <form class="cube-form cube-compare-form" data-form="compare" autocomplete="off">
+                <label class="cube-compare-col" id="compare-a-label">List A (before)
+                    <div class="cube-list-wrap">
+                        <textarea name="listA" rows="8" spellcheck="false"
+                                  aria-labelledby="compare-a-label"
+                                  aria-autocomplete="list" aria-controls="compare-a-suggest"
+                                  placeholder="One card per line:&#10;1 Lightning Bolt&#10;10 Forest"></textarea>
+                        <ul class="cube-card-suggest" id="compare-a-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
+                </label>
+                <label class="cube-compare-col" id="compare-b-label">List B (after)
+                    <div class="cube-list-wrap">
+                        <textarea name="listB" rows="8" spellcheck="false"
+                                  aria-labelledby="compare-b-label"
+                                  aria-autocomplete="list" aria-controls="compare-b-suggest"
+                                  placeholder="The new version of the list"></textarea>
+                        <ul class="cube-card-suggest" id="compare-b-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
+                </label>
+                <button type="submit" class="btn cube-submit">Compare</button>
+            </form>
+            <p class="cube-status" data-status="compare" aria-live="polite"></p>
+            <div class="cube-diff" data-result="compare" hidden></div>
+        </section>
+
+        <!-- Card search + lookup -->
+        <section id="panel-card" class="cube-panel" role="tabpanel" aria-labelledby="tab-card"
+                 data-panel="card">
+            <p class="cube-panel-intro">
+                Search Magic cards by name and type and see every match as a grid of images, the
+                way Scryfall does — results update as you type. Click any card, or narrow your
+                search to a single match, for its full details, rulings and combos — the website
+                twin of the <code>/mtgcard lookup</code> Discord command.
+            </p>
+            <form class="cube-form cube-search-form" data-form="search" autocomplete="off">
+                <label id="card-search-name-label">Name includes
+                    <input type="text" name="name" placeholder="e.g. iron man"
+                           autocomplete="off" aria-labelledby="card-search-name-label">
+                </label>
+                <label id="card-search-type-label">Card type
+                    <input type="text" name="type" placeholder="e.g. creature"
+                           autocomplete="off" aria-labelledby="card-search-type-label">
+                </label>
+                <label id="card-search-query-label">Advanced (Scryfall syntax)
+                    <input type="text" name="query" placeholder="e.g. c:r mv&lt;=2, or !&quot;exact name&quot;"
+                           autocomplete="off" aria-labelledby="card-search-query-label">
+                </label>
+                <button type="submit" class="btn cube-submit">Search</button>
+            </form>
+            <p class="cube-status" data-status="search" aria-live="polite"></p>
+            <div class="cube-card-grid" data-result="search" hidden></div>
+
+            <p class="cube-status" data-status="card" aria-live="polite"></p>
+            <div class="cube-cardlookup-wrap" data-result="card" hidden></div>
+        </section>
+
+        <!-- Legality -->
+        <section id="panel-legality" class="cube-panel" role="tabpanel" aria-labelledby="tab-legality"
+                 data-panel="legality" hidden>
+            <p class="cube-panel-intro">
+                Paste a decklist and pick a format to see whether it's legal — every banned or
+                not-in-format card is flagged. The website twin of <code>/mtgdeck legality</code>.
+            </p>
+            <form class="cube-form" data-form="legality" autocomplete="off">
+                <label id="legality-list-label">Decklist
+                    <div class="cube-list-wrap">
+                        <textarea name="list" rows="10" spellcheck="false"
+                                  aria-labelledby="legality-list-label"
+                                  aria-autocomplete="list" aria-controls="legality-card-suggest"
+                                  placeholder="One card per line:&#10;4 Ragavan, Nimble Pilferer&#10;4 Lightning Bolt&#10;20 Mountain"></textarea>
+                        <ul class="cube-card-suggest" id="legality-card-suggest" data-card-suggest role="listbox" hidden></ul>
+                    </div>
+                </label>
+                <label>Format
+                    <select name="format">
+                        <option value="standard">Standard</option>
+                        <option value="pioneer">Pioneer</option>
+                        <option value="modern" selected>Modern</option>
+                        <option value="legacy">Legacy</option>
+                        <option value="vintage">Vintage</option>
+                        <option value="pauper">Pauper</option>
+                        <option value="commander">Commander</option>
+                    </select>
+                </label>
+                <button type="submit" class="btn cube-submit">Check legality</button>
+            </form>
+            <p class="cube-status" data-status="legality" aria-live="polite"></p>
+            <div class="cube-legality" data-result="legality" hidden></div>
+        </section>
+
+        <!-- Reference: set lookup + keyword glossary -->
+        <section id="panel-reference" class="cube-panel" role="tabpanel" aria-labelledby="tab-reference"
+                 data-panel="reference" hidden>
+            <p class="cube-panel-intro">
+                Quick reference — look up a Magic set by its code, or a keyword's reminder text.
+                The website twin of <code>/mtg set</code> and <code>/mtg rule</code>.
+            </p>
+            <form class="cube-form" data-form="set" autocomplete="off">
+                <label>Set code
+                    <input type="text" name="code" placeholder="e.g. vow, mh3, neo" autocomplete="off" required>
+                </label>
+                <button type="submit" class="btn cube-submit">Look up set</button>
+            </form>
+            <p class="cube-status" data-status="set" aria-live="polite"></p>
+            <div class="cube-setinfo" data-result="set" hidden></div>
+
+            <form class="cube-form" data-form="rule" autocomplete="off" style="margin-top: var(--space-4);">
+                <label>Keyword
+                    <input type="text" name="term" placeholder="e.g. trample, deathtouch, flying" autocomplete="off" required>
+                </label>
+                <button type="submit" class="btn cube-submit">Explain keyword</button>
+            </form>
+            <p class="cube-status" data-status="rule" aria-live="polite"></p>
+            <div class="cube-rule" data-result="rule" hidden></div>
+        </section>
+
+        <!-- Price watch (account-bound; logged-in only) -->
+        <section id="panel-watch" class="cube-panel" role="tabpanel" aria-labelledby="tab-watch"
+                 data-panel="watch" hidden>
+            <p class="cube-panel-intro">
+                Get DM'd on Discord when a card's market price crosses your target — the website twin
+                of <code>/mtgprice add</code>. Prices are checked periodically; alerts are one-shot.
+            </p>
+            
+            <p class="cube-saved-login muted">
+                <a href="/oauth2/authorization/discord">Log in with Discord</a> to set price-watch alerts.
+            </p>
+        </section>
+    </div>
+</main>
+
+<!-- Three layers, loaded bottom-up: pure helpers, then renderers, then the
+     page wiring that uses both. Each reads the one below off the shared
+     global, so the order here matters. -->
+<script src="/js/magic-format.js"></script>
+<script src="/js/magic-render.js"></script>
+<script src="/js/magic.js"></script>
+<footer class="site-footer">
+    <div class="site-footer-inner">
+        <p class="site-footer-line">
+            &copy; 2026 TobyBot &mdash;
+            <a href="/terms">Terms of Service</a> &middot;
+            <a href="/privacy">Privacy Policy</a> &middot;
+            <a href="/changelog">Changelog</a>
+        </p>
+        <p class="site-footer-line site-footer-source">
+            Open source on
+            <a href="https://github.com/ml404/toby-bot" rel="noopener" target="_blank">GitHub</a> &middot;
+            <a href="https://ko-fi.com/fratlayton" rel="noopener" target="_blank">Support on Ko-fi</a>.
+            <a href="/commands/wiki">Browse all commands &rarr;</a>
+        </p>
+        <p class="site-footer-stack">
+            <span class="site-footer-stack-label">Built with</span>
+            <span class="site-footer-stack-item">Spring Boot</span>
+            <span class="site-footer-stack-item">Kotlin</span>
+            <span class="site-footer-stack-item">Thymeleaf</span>
+            <span class="site-footer-stack-item">Postgres</span>
+            <span class="site-footer-stack-item">JDA</span>
+            <span class="site-footer-stack-item">Lavalink</span>
+        </p>
+    </div>
+</footer>
+</body>
+</html>
+

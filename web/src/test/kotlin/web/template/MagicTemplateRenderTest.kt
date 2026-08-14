@@ -4,15 +4,6 @@ import common.mtg.MtgCommandRef
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.springframework.context.support.GenericApplicationContext
-import org.springframework.mock.web.MockHttpServletRequest
-import org.springframework.mock.web.MockHttpServletResponse
-import org.springframework.mock.web.MockServletContext
-import org.thymeleaf.context.WebContext
-import org.thymeleaf.spring6.SpringTemplateEngine
-import org.thymeleaf.spring6.templateresolver.SpringResourceTemplateResolver
-import org.thymeleaf.templatemode.TemplateMode
-import org.thymeleaf.web.servlet.JakartaServletWebApplication
 
 /**
  * Renders the real `templates/magic.html` (the Magic toolkit page) against a
@@ -28,21 +19,7 @@ import org.thymeleaf.web.servlet.JakartaServletWebApplication
  */
 class MagicTemplateRenderTest {
 
-    private val servletContext = MockServletContext()
-    private val webApp = JakartaServletWebApplication.buildApplication(servletContext)
-
-    private val engine: SpringTemplateEngine = SpringTemplateEngine().apply {
-        val appCtx = GenericApplicationContext().also { it.refresh() }
-        val resolver = SpringResourceTemplateResolver().apply {
-            setApplicationContext(appCtx)
-            prefix = "classpath:/templates/"
-            suffix = ".html"
-            templateMode = TemplateMode.HTML
-            characterEncoding = "UTF-8"
-            isCacheable = false
-        }
-        setTemplateResolver(resolver)
-    }
+    private val renderer = TemplateRenderer()
 
     // Mirrors CubeController.mtgCommands() — the page reads command names from
     // this model attribute (sourced from MtgCommandRef) rather than hardcoding.
@@ -54,16 +31,8 @@ class MagicTemplateRenderTest {
         "pricewatchAdd" to MtgCommandRef.PRICEWATCH_ADD,
     )
 
-    private fun render(vars: Map<String, Any?>): String {
-        val request = MockHttpServletRequest(servletContext)
-        val response = MockHttpServletResponse()
-        val exchange = webApp.buildExchange(request, response)
-        val ctx = WebContext(exchange).apply {
-            setVariable("mtgCmd", mtgCmd)
-            vars.forEach { (k, v) -> setVariable(k, v) }
-        }
-        return engine.process("magic", ctx)
-    }
+    private fun render(vars: Map<String, Any?>): String =
+        renderer.render("magic", vars + mapOf("mtgCmd" to mtgCmd))
 
     @Test
     fun `anonymous render completes with the SEO description and closes cleanly`() {

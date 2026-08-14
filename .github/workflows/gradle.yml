@@ -38,6 +38,17 @@ jobs:
       - name: Run JS tests
         working-directory: web
         run: npm test
+      - name: Install Playwright Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+      - name: Run browser tests
+        working-directory: web
+        # The /magic project only. It drives the real page (real template
+        # render, real CSS, real scripts) against a stubbed API, so it needs
+        # nothing but a browser. The responsive projects stay local-only for
+        # now — they've never run here, so switching four viewport suites on
+        # belongs in its own change rather than riding along with this one.
+        run: npm run test:e2e:magic
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
       - name: Build with Gradle

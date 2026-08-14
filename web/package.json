@@ -6,6 +6,7 @@
     "test": "jest",
     "test:e2e": "npm run test:e2e:build && playwright test",
     "test:e2e:build": "node src/test/e2e/build-fixtures.js",
+    "test:e2e:magic": "npm run test:e2e:build && playwright test --project=magic",
     "lint:css": "stylelint \"src/main/resources/static/css/**/*.css\""
   },
   "jest": {

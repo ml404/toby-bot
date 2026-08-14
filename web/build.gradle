@@ -58,4 +58,9 @@ java {
 
 test {
     useJUnitPlatform() // Ensure you are using the right testing framework
+
+    // Lets MagicE2eFixtureTest rewrite the Playwright fixture on request:
+    //   ./gradlew :web:test --tests '*MagicE2eFixtureTest*' -Dfixture.refresh=true
+    // Without forwarding, -D lands on the Gradle daemon, not the test JVM.
+    systemProperty 'fixture.refresh', System.getProperty('fixture.refresh', 'false')
 }
