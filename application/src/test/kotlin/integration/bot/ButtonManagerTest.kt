@@ -55,6 +55,7 @@ import bot.toby.button.buttons.mtg.CardSearchPageButton
 import bot.toby.button.buttons.music.PausePlayButton
 import bot.toby.button.buttons.economy.TipUserButton
 import bot.toby.button.buttons.misc.ViewProfileButton
+import bot.toby.button.buttons.moderation.PurgeFromHereButton
 import bot.toby.button.buttons.music.PlayIntroButton
 import bot.toby.button.buttons.music.ViewIntrosButton
 import bot.toby.button.buttons.casino.poker.PokerActionButton
@@ -120,6 +121,7 @@ class ButtonManagerTest {
             MemeButton::class.java,
             PausePlayButton::class.java,
             PlayIntroButton::class.java,
+            PurgeFromHereButton::class.java,
             TipUserButton::class.java,
             ViewIntrosButton::class.java,
             ViewProfileButton::class.java,

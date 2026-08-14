@@ -1,5 +1,6 @@
 package bot.toby.command.commands.moderation
 
+import bot.toby.moderation.MessagePurge
 import core.command.Command.Companion.replyAndDelete
 import core.command.CommandContext
 import database.dto.user.UserDto
@@ -9,8 +10,6 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel
 import net.dv8tion.jda.api.interactions.commands.OptionType
 import net.dv8tion.jda.api.interactions.commands.build.OptionData
 import org.springframework.stereotype.Component
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 @Component
 class PurgeCommand : ModerationCommand {
@@ -56,31 +55,24 @@ class PurgeCommand : ModerationCommand {
             val matching = if (filterUserId != null) {
                 history.filter { it.author.idLong == filterUserId }
             } else history
-            // Discord rejects bulk-deletes for any message older than 14 days,
-            // so split early — recent ones get the bulk endpoint, anything
-            // older is skipped (deleting them one-by-one would burn rate
-            // limits with no real win for a "purge" command).
-            val cutoff = Instant.now().minus(14, ChronoUnit.DAYS)
-            val recent = matching.filter { it.timeCreated.toInstant().isAfter(cutoff) }
-            val skipped = matching.size - recent.size
-            val skipSuffix = if (skipped > 0) " ($skipped older than 14 days skipped)" else ""
-            if (recent.isEmpty()) {
-                val msg = if (skipped > 0) "No deletable messages — $skipped older than 14 days."
+            // Discord's 14-day bulk-delete rule and the one-versus-many split
+            // both live in MessagePurge, shared with the right-click entry.
+            val scope = MessagePurge.deletable(matching)
+            if (scope.messages.isEmpty()) {
+                val msg = if (scope.tooOld > 0) "No deletable messages — ${scope.tooOld} older than 14 days."
                 else "No matching messages found."
                 event.hook.replyAndDelete(msg, deleteDelay)
                 return@queue
             }
-            if (recent.size == 1) {
-                recent[0].delete().reason("Purged via /purge.").queue(
-                    { event.hook.replyAndDelete("Deleted 1 message$skipSuffix.", deleteDelay) },
-                    { error -> event.hook.replyAndDelete("Could not purge: ${error.message}", deleteDelay) }
-                )
-            } else {
-                textChannel.deleteMessages(recent).queue(
-                    { event.hook.replyAndDelete("Deleted ${recent.size} messages$skipSuffix.", deleteDelay) },
-                    { error -> event.hook.replyAndDelete("Could not purge: ${error.message}", deleteDelay) }
-                )
-            }
+            val plural = if (scope.messages.size == 1) "" else "s"
+            MessagePurge.delete(textChannel, scope.messages, "Purged via /purge.").queue(
+                {
+                    event.hook.replyAndDelete(
+                        "Deleted ${scope.messages.size} message$plural${scope.suffix}.", deleteDelay
+                    )
+                },
+                { error -> event.hook.replyAndDelete("Could not purge: ${error.message}", deleteDelay) }
+            )
         }, { error -> event.hook.replyAndDelete("Could not fetch history: ${error.message}", deleteDelay) })
     }
 
