@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Add Tip this and Profile right-click entries, cross-linked with intros",
+    "summary": "Two more Apps entries, and the buttons that join them to what was already there. Slots stand at 2/5 message and 2/5 user.",
+    "emoji": "💰",
+    "prNumber": 753
+  },
+  {
+    "date": "August 2026",
     "title": "Pace and cache the bot's Scryfall calls; bound the share table",
     "summary": "The two items from the last review round.",
     "emoji": "✨",
