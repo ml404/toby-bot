@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Add a Purge from here right-click entry, in two halves",
+    "summary": "`/purge count:` asks moderators for the wrong unit. Nobody knows the mess was twenty-three messages long; they know *which* message it started at. Counting back to a number is a step done only because the command demanded one, and getting it wrong costs either an unfinished job or somebody's unrelated message.",
+    "emoji": "🛡️",
+    "prNumber": 755
+  },
+  {
+    "date": "August 2026",
     "title": "Drive /magic in a real browser, and run it in CI",
     "summary": "The most JS-heavy page in the app had no browser-level test — the Playwright suite was one responsive spec over six fixtures, and `/magic` wasn't one of them. Everything covering it was unit-level; nothing exercised the page actually working.",
     "emoji": "✨",
