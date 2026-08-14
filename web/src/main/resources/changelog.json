@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Drive /magic in a real browser, and run it in CI",
+    "summary": "The most JS-heavy page in the app had no browser-level test — the Playwright suite was one responsive spec over six fixtures, and `/magic` wasn't one of them. Everything covering it was unit-level; nothing exercised the page actually working.",
+    "emoji": "✨",
+    "prNumber": 754
+  },
+  {
+    "date": "August 2026",
     "title": "Add Tip this and Profile right-click entries, cross-linked with intros",
     "summary": "Two more Apps entries, and the buttons that join them to what was already there. Slots stand at 2/5 message and 2/5 user.",
     "emoji": "💰",
