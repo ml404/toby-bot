@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Make the changelog page readable: clean summaries, group by month",
+    "summary": "The changelog page had grown to 86 entries — 80 of them stamped \"May 2026\" — rendered as one flat list with the same date repeated on every row.",
+    "emoji": "✨",
+    "prNumber": 756
+  },
+  {
+    "date": "August 2026",
     "title": "Add a Purge from here right-click entry, in two halves",
     "summary": "`/purge count:` asks moderators for the wrong unit. Nobody knows the mess was twenty-three messages long; they know *which* message it started at. Counting back to a number is a step done only because the command demanded one, and getting it wrong costs either an unfinished job or somebody's unrelated message.",
     "emoji": "🛡️",
