@@ -108,8 +108,7 @@ jobs:
 
             // Summary: prefer the "## Summary" section of the PR body
             // (we have a PR template that puts it there), else first
-            // non-empty paragraph. Cap at 480 chars to keep one entry
-            // visually balanced against the others.
+            // non-empty paragraph.
             const body = (process.env.PR_BODY || '').replace(/\r/g, '');
             let summary = '';
             const summaryMatch = body.match(/##\s+Summary\s*\n+([\s\S]+?)(\n##\s+|\n---|$)/i);
@@ -120,16 +119,64 @@ jobs:
               summary = (firstPara || '').trim();
             }
             // Strip bullet markers + the auto-appended Claude session
-            // link so it doesn't bleed into a public-facing entry.
+            // link so it doesn't bleed into a public-facing entry, then
+            // flatten the markdown the PR body is written in. The page
+            // renders summaries as plain text, so `**bold**`, `###` and
+            // backticks would otherwise show up as literal punctuation.
+            // Mirrors ChangelogController.tidySummary, which re-runs the
+            // same cleanup at render time as a backstop for older
+            // entries and hand-edits.
             summary = summary
               .split('\n')
               .map(line => line.replace(/^\s*[-*]\s+/, ''))
               .filter(line => !/^https?:\/\/claude\.ai\//i.test(line.trim()))
               .join(' ')
+              .replace(/<[^<>]{1,80}>/g, ' ')
+              .replace(/\[([^\[\]]+)\]\([^()\s]*\)/g, '$1')
+              .replace(/#{1,6}\s+/g, '')     // "### What changed" — not "#520"
+              .replace(/\*\*|__|~~/g, '')
+              .replace(/`/g, '')
               .replace(/\s+/g, ' ')
               .trim();
-            if (summary.length > 480) summary = summary.slice(0, 477).trimEnd() + '…';
-            if (!summary) summary = title;
+
+            // Cap length to keep one entry visually balanced against the
+            // others, cutting back to the last whole sentence that fits
+            // rather than mid-word. MAX mirrors
+            // ChangelogController.SUMMARY_MAX_CHARS; MIN is the point
+            // below which what we scraped is a stray section heading
+            // ("## Why") rather than prose, so we fall back to the title.
+            const SUMMARY_MAX = 260;
+            const SUMMARY_MIN = 16;
+            // A terminator only closes a sentence when a space follows
+            // ("v1.2" and "home.css" don't), the next word isn't
+            // lower-case ("(e.g. making …" doesn't), and it isn't
+            // closing an abbreviation ("(e.g. 0/100)", where the digit
+            // would otherwise pass). "etc." is deliberately not listed:
+            // it often does end a sentence.
+            const ABBREVIATIONS = ['e.g.', 'i.e.', 'cf.', 'vs.', 'approx.', 'resp.'];
+            const lastSentenceEnd = (t) => {
+              for (let i = t.length - 1; i >= 0; i--) {
+                if (!'.!?'.includes(t[i])) continue;
+                const tail = t.slice(0, i + 1).toLowerCase();
+                if (ABBREVIATIONS.some(a => tail.endsWith(a))) continue;
+                if (i === t.length - 1) return i;
+                if (t[i + 1] !== ' ') continue;
+                const next = t[i + 2];
+                if (next === undefined || !/[a-z]/.test(next)) return i;
+              }
+              return -1;
+            };
+            if (summary.length > SUMMARY_MAX) {
+              const head = summary.slice(0, SUMMARY_MAX);
+              const cut = lastSentenceEnd(head);
+              if (cut >= SUMMARY_MIN) {
+                summary = head.slice(0, cut + 1);
+              } else {
+                const space = head.lastIndexOf(' ');
+                summary = (space >= SUMMARY_MIN ? head.slice(0, space) : head).trimEnd() + '…';
+              }
+            }
+            if (summary.length < SUMMARY_MIN) summary = title;
 
             // Date: human-readable "Month YYYY" matching the existing
             // seed entries.

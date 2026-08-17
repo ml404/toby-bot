@@ -477,7 +477,11 @@
     justify-content: center;
 }
 
-/* CHANGELOG TIMELINE */
+/* CHANGELOG TIMELINE
+   Entries arrive newest-first and are grouped by month server-side. The
+   month heading sticks while its own entries scroll, so the reader always
+   knows which month they are in without a repeated date on every row —
+   the page runs to dozens of entries under a single month. */
 .changelog-page {
     max-width: 760px;
     margin: 40px auto;
@@ -492,6 +496,60 @@
 .changelog-header .muted { color: var(--text-muted); line-height: 1.5; }
 .changelog-header a { color: var(--accent-light); text-decoration: none; }
 .changelog-header a:hover { text-decoration: underline; }
+
+.changelog-jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-4);
+}
+.changelog-jump a {
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--bg-elevated);
+    color: var(--heading-soft);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-decoration: none;
+}
+.changelog-jump a:hover,
+.changelog-jump a:focus-visible {
+    border-color: var(--accent);
+    color: var(--heading);
+    text-decoration: none;
+}
+
+.changelog-month { margin-bottom: var(--space-8); }
+.changelog-month-label {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-4);
+    padding: var(--space-3) 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    color: var(--heading);
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    /* Anchored from the jump list — keep the heading clear of the
+       sticky edge when it lands. */
+    scroll-margin-top: var(--space-4);
+}
+.changelog-month-count {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    text-transform: none;
+    white-space: nowrap;
+}
+
 .changelog-timeline {
     list-style: none;
     margin: 0;
@@ -513,36 +571,44 @@
     background: var(--bg-elevated);
     border: 2px solid var(--accent);
 }
-.changelog-meta {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
 .changelog-emoji { font-size: 1.05rem; }
 .changelog-title {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-2);
     font-size: 1.05rem;
+    line-height: 1.4;
     color: var(--heading);
-    margin: 0 0 6px;
+    margin: 0 0 8px;
 }
 .changelog-summary {
-    color: var(--text-muted);
-    font-size: 0.92rem;
-    line-height: 1.55;
-    margin: 0 0 8px;
-    max-width: 60ch;
+    color: var(--text);
+    font-size: 0.95rem;
+    line-height: 1.65;
+    margin: 0 0 10px;
+    max-width: 62ch;
 }
 .changelog-pr {
+    display: inline-block;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-elevated);
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.78rem;
     color: var(--accent-light);
     text-decoration: none;
 }
-.changelog-pr:hover { text-decoration: underline; }
+.changelog-pr:hover,
+.changelog-pr:focus-visible {
+    border-color: var(--accent);
+    text-decoration: none;
+}
+.changelog-empty {
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+.changelog-empty a { color: var(--accent-light); }
 
 /* LOGIN PAGE — centred card with feature teaser */
 .login-wrap {
@@ -658,6 +724,9 @@
     .login-card h1 { font-size: 1.5rem; }
     .changelog-page { padding: 0 16px 48px; }
     .changelog-timeline { padding-left: 8px; }
+    .changelog-month-label { font-size: 0.85rem; }
+    .changelog-entry { padding: 14px 0 20px 20px; }
+    .changelog-summary { font-size: 0.92rem; }
 }
 @media (max-width: 380px) {
     .stats-strip { gap: 8px; }
