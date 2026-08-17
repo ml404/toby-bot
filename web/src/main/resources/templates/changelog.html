@@ -17,25 +17,47 @@
             history lives on
             <a href="https://github.com/ml404/toby-bot" rel="noopener" target="_blank">GitHub</a>.
         </p>
+
+        <!-- Jump list. With months of entries on one page, this is the
+             only way to reach February without scrolling past May. -->
+        <nav class="changelog-jump" th:if="${#lists.size(months) > 1}" aria-label="Jump to month">
+            <a th:each="month : ${months}"
+               th:href="'#' + ${month.anchor}"
+               th:text="${month.label}">Month YYYY</a>
+        </nav>
     </header>
 
-    <ol class="changelog-timeline">
-        <li class="changelog-entry" th:each="entry : ${entries}">
-            <div class="changelog-meta">
-                <span class="changelog-emoji" th:if="${entry.emoji != null}" th:text="${entry.emoji}" aria-hidden="true">✨</span>
-                <span class="changelog-date" th:text="${entry.date}">Month YYYY</span>
-            </div>
-            <div class="changelog-body">
-                <h2 class="changelog-title" th:text="${entry.title}">Headline</h2>
-                <p class="changelog-summary" th:text="${entry.summary}">Summary text.</p>
+    <section class="changelog-month" th:each="month : ${months}">
+        <h2 class="changelog-month-label" th:id="${month.anchor}">
+            <span th:text="${month.label}">Month YYYY</span>
+            <span class="changelog-month-count"
+                  th:text="|${month.count} ${month.count == 1 ? 'update' : 'updates'}|">12 updates</span>
+        </h2>
+
+        <ol class="changelog-timeline">
+            <li class="changelog-entry" th:each="entry : ${month.entries}">
+                <h3 class="changelog-title">
+                    <span class="changelog-emoji" th:if="${entry.emoji != null}" th:text="${entry.emoji}" aria-hidden="true">✨</span>
+                    <span th:text="${entry.title}">Headline</span>
+                </h3>
+                <p class="changelog-summary"
+                   th:if="${!#strings.isEmpty(entry.summary)}"
+                   th:text="${entry.summary}">Summary text.</p>
                 <a class="changelog-pr"
                    th:if="${entry.prNumber != null}"
                    th:href="'https://github.com/ml404/toby-bot/pull/' + ${entry.prNumber}"
                    th:text="'#' + ${entry.prNumber}"
+                   th:aria-label="'Pull request #' + ${entry.prNumber} + ' on GitHub'"
                    rel="noopener" target="_blank">#0</a>
-            </div>
-        </li>
-    </ol>
+            </li>
+        </ol>
+    </section>
+
+    <p class="changelog-empty" th:if="${#lists.isEmpty(months)}">
+        Nothing here yet — check
+        <a href="https://github.com/ml404/toby-bot/pulls?q=is%3Apr+is%3Amerged" rel="noopener" target="_blank">recent pull requests</a>
+        instead.
+    </p>
 </main>
 
 <footer th:replace="~{fragments/footer :: footer}"></footer>
