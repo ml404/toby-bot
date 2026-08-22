@@ -27,4 +27,15 @@ object IntroOwnership {
      */
     fun inGuild(introId: String?, guildId: Long): Boolean =
         introId != null && introId.startsWith("${guildId}_")
+
+    /**
+     * The guild an intro belongs to, read straight off the id.
+     *
+     * Used where an outcome has travelled away from the code that had a
+     * `Guild` in hand — the audio path reports by id alone — and something
+     * guild-shaped still has to happen, like telling a server its intros are
+     * silent right now.
+     */
+    fun guildIdOf(introId: String?): Long? =
+        introId?.substringBefore('_', missingDelimiterValue = "")?.toLongOrNull()
 }
