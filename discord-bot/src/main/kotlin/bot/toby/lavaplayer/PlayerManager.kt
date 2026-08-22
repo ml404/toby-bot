@@ -1,7 +1,9 @@
 package bot.toby.lavaplayer
 
 import bot.toby.intro.IntroFailedEvent
+import bot.toby.intro.IntroOwnership
 import bot.toby.intro.IntroPlayedEvent
+import bot.toby.intro.SourceOutageNoticedEvent
 import com.github.topi314.lavasrc.applemusic.AppleMusicSourceManager
 import com.github.topi314.lavasrc.deezer.DeezerAudioSourceManager
 import com.github.topi314.lavasrc.mirror.DefaultMirroringAudioTrackResolver
@@ -35,6 +37,7 @@ import dev.lavalink.youtube.clients.TvHtml5Simply
 import dev.lavalink.youtube.clients.Web
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -385,7 +388,13 @@ class PlayerManager(
      *   either way — it was audible, which is all that row is asking.
      */
     fun reportPlaybackSuccess(introId: String?, uninterrupted: Boolean) {
-        if (uninterrupted) outageTracker.recordSuccess()
+        if (uninterrupted) {
+            outageTracker.recordSuccess()
+            // Audio played, so the episode is over as far as anyone can tell.
+            // Arming the notice again here means a second outage is announced
+            // rather than swallowed as a repeat of the first.
+            outageAnnouncedGuilds.clear()
+        }
         introId?.let { SchedulerEvents.publish(IntroPlayedEvent(it)) }
     }
 
@@ -400,10 +409,13 @@ class PlayerManager(
      *
      * @param sourceKey what failed, used to tell "one dead video" apart from
      *   "the host is refusing us" — so it must identify the track, not the guild.
+     * @return whether another attempt is worth making — false during an
+     *   outage, where a retry is a second request to a host already saying no.
      */
-    fun reportPlaybackFailure(introId: String?, sourceKey: String, reason: String?) {
+    fun reportPlaybackFailure(introId: String?, sourceKey: String, reason: String?): Boolean {
         val outage = noteFailure(sourceKey, definite = SourceOutage.looksLikeBlock(reason))
         introId?.let { reportIntroFailure(it, IntroHealth.normaliseReason(reason), outage) }
+        return !outage
     }
 
     /**
@@ -415,6 +427,9 @@ class PlayerManager(
      * an episode that will clear on its own.
      */
     fun isSourceRefusingRequests(): Boolean = outageTracker.isOutage()
+
+    /** Guilds already told about the episode in progress. See [announceOutageOnce]. */
+    private val outageAnnouncedGuilds: MutableSet<Long> = ConcurrentHashMap.newKeySet()
 
     /**
      * Records a failed load and answers whether the host — rather than the
@@ -450,9 +465,29 @@ class PlayerManager(
     private fun reportIntroFailure(introId: String, reason: String, outage: Boolean) {
         if (outage) {
             logger.warn { "Not counting intro $introId's failure against its health: the source is refusing us." }
+            announceOutageOnce(introId)
             return
         }
         SchedulerEvents.publish(IntroFailedEvent(introId, reason))
+    }
+
+    /**
+     * Tell a server, once, that the silence is ours and not theirs.
+     *
+     * Not counting these failures is right — a rate-limit episode must not
+     * mark everybody's working links dead — but it meant the one time every
+     * intro on the server goes quiet was the one time nothing said why. Every
+     * member-facing surface went on describing their intro as fine.
+     *
+     * Once per guild per episode, because during an outage this runs on every
+     * single voice join. The latch clears when a track finally plays, which is
+     * the same signal that ends the outage itself.
+     */
+    private fun announceOutageOnce(introId: String) {
+        val guildId = IntroOwnership.guildIdOf(introId) ?: return
+        if (!outageAnnouncedGuilds.add(guildId)) return
+        logger.info { "Telling guild $guildId that the audio source is refusing us." }
+        SchedulerEvents.publish(SourceOutageNoticedEvent(guildId))
     }
 
     /**
@@ -471,7 +506,7 @@ class PlayerManager(
     fun destroyMusicManager(guildId: Long) {
         musicManagers.remove(guildId)?.let { mgr ->
             mgr.audioPlayer.destroy()
-            mgr.scheduler.queue.clear()
+            mgr.scheduler.clearQueue()
         }
     }
 

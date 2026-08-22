@@ -2,6 +2,7 @@ package bot.toby.lavaplayer
 
 import bot.toby.intro.IntroFailedEvent
 import bot.toby.intro.IntroPlayedEvent
+import bot.toby.intro.SourceOutageNoticedEvent
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
@@ -376,6 +377,61 @@ class PlayerManagerTest {
 
         failIntro("1_5_1", "url-really-dead")
         assertEquals(3, published.filterIsInstance<IntroFailedEvent>().size)
+    }
+
+    @Test
+    fun `a guild is told, once, that the source is refusing us`() {
+        // During an outage this path runs on every single voice join, so the
+        // latch is the whole point — the alternative is the same notice over
+        // and over while nobody's intro works.
+        val published = captureEvents()
+
+        repeat(3) { i -> failIntro("1_2_$i", "url-$i") }
+        failIntro("1_9_1", "url-more")
+        failIntro("1_9_2", "url-more-still")
+
+        val notices = published.filterIsInstance<SourceOutageNoticedEvent>()
+        assertEquals(listOf(SourceOutageNoticedEvent(1L)), notices)
+    }
+
+    @Test
+    fun `nothing is announced while the source is behaving`() {
+        // Two failures look like two dead links, which is a different message
+        // and the owner's business.
+        val published = captureEvents()
+
+        failIntro("1_2_1", "url-a")
+        failIntro("1_2_2", "url-b")
+
+        assertTrue(published.filterIsInstance<SourceOutageNoticedEvent>().isEmpty())
+    }
+
+    @Test
+    fun `every guild that feels it gets told`() {
+        // The outage is bot-wide, but the notice is per-server: a guild with
+        // nobody in voice has no silence to explain.
+        val published = captureEvents()
+
+        repeat(3) { i -> failIntro("1_2_$i", "url-$i") }
+        failIntro("2_5_1", "url-other-guild")
+
+        assertEquals(
+            listOf(SourceOutageNoticedEvent(1L), SourceOutageNoticedEvent(2L)),
+            published.filterIsInstance<SourceOutageNoticedEvent>(),
+        )
+    }
+
+    @Test
+    fun `a second episode is announced rather than swallowed as a repeat`() {
+        val published = captureEvents()
+        repeat(3) { i -> failIntro("1_2_$i", "url-$i") }
+        assertEquals(1, published.filterIsInstance<SourceOutageNoticedEvent>().size)
+
+        // Audio playing is what ends an episode, so it also re-arms the notice.
+        pm.reportPlaybackSuccess(null, uninterrupted = true)
+        repeat(3) { i -> failIntro("1_3_$i", "url-later-$i") }
+
+        assertEquals(2, published.filterIsInstance<SourceOutageNoticedEvent>().size)
     }
 
     @Test

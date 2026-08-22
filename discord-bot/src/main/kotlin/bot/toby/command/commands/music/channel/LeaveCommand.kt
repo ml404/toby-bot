@@ -64,7 +64,7 @@ class LeaveCommand(
 
         musicManager.scheduler.apply {
             isLooping = false
-            queue.clear()
+            clearQueue()
         }
         musicManager.audioPlayer.apply {
             stopTrack()

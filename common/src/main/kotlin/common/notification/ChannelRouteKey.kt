@@ -63,6 +63,16 @@ enum class ChannelRouteKey(
     ),
 
     /**
+     * "Intros are silent right now and it isn't your link." Unlike
+     * [INTRO_ISSUE] this *does* fall back to the system channel: a broken
+     * intro is one member's business, but an outage is everybody's, and it is
+     * the moment a server is most likely to think the bot is simply broken.
+     * It reuses the intro-issue channel when one is set, so a server that has
+     * chosen somewhere for intro news gets both there.
+     */
+    INTRO_OUTAGE(primaryConfigKey = "INTRO_ISSUE_CHANNEL"),
+
+    /**
      * Direct-to-system-channel routing used by web-initiated flows
      * (tip notifications, duel offers) that have no per-event channel
      * context to fall back to.

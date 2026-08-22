@@ -4,6 +4,7 @@ import bot.toby.helpers.IntroHelper
 import common.intro.IntroLoudness
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.intro.IntroPlaybackTracker
+import bot.toby.intro.IntroRewardLedger
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
@@ -52,6 +53,7 @@ class VoiceEventHandlerTest {
 
     // JUnit builds a fresh test instance per method, so this tracker (and the
     // handler holding it) starts empty for every test.
+    private val rewardLedger: IntroRewardLedger = mockk(relaxed = true)
     private val introPlaybackTracker = IntroPlaybackTracker()
 
     private val handler = spyk(
@@ -65,6 +67,7 @@ class VoiceEventHandlerTest {
             xpAwardService,
             nowPlayingManager,
             introPlaybackTracker,
+            rewardLedger,
         )
     )
 
@@ -640,9 +643,11 @@ class VoiceEventHandlerTest {
 
         handler.onGuildVoiceUpdate(event)
 
-        verify(exactly = 1) {
-            awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
-        }
+        // The join records an expectation; IntroPlayRewardService settles it
+        // when the audio has actually run. Paying here paid a dead link
+        // exactly what it paid a clip everybody heard.
+        verify(exactly = 1) { rewardLedger.expect("7_1_1") }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), "intro-play", any(), any()) }
 
         unmockkObject(MusicPlayerHelper)
         unmockkObject(PlayerManager)
@@ -696,6 +701,7 @@ class VoiceEventHandlerTest {
 
         handler.onGuildVoiceUpdate(event)
 
+        verify(exactly = 0) { rewardLedger.expect(any()) }
         verify(exactly = 0) { awardService.award(any(), any(), any(), "intro-play", any(), any()) }
         verify(exactly = 0) { xpAwardService.award(any(), any(), any(), "intro-play", any(), any()) }
 
@@ -1017,16 +1023,13 @@ class VoiceEventHandlerTest {
         joinWithIntros(11L, mutableListOf(musicDto))
         val second = joinWithIntros(11L, mutableListOf(musicDto))
 
-        // Exactly one playback and one payout across both joins.
+        // Exactly one playback and one expectation across both joins — the
+        // cooldown is what stops a channel hop paying twice, and the payout
+        // itself is now settled against the expectation once audio has run.
         verify(exactly = 0) {
             second.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
         }
-        verify(exactly = 1) {
-            awardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
-        }
-        verify(exactly = 1) {
-            xpAwardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_XP, "intro-play", any(), any(), any())
-        }
+        verify(exactly = 1) { rewardLedger.expect("11_1_1") }
 
         unmockkObject(PlayerManager)
     }

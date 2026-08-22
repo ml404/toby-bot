@@ -54,3 +54,17 @@ data class IntroFailedEvent(
     override val introId: String,
     val reason: String,
 ) : IntroPlaybackEvent
+
+/**
+ * The audio source is refusing us, and a guild has just felt it.
+ *
+ * Separate from [IntroPlaybackEvent] because it is about the host rather than
+ * any one intro: during an outage every intro on every server is silent, and
+ * the failures are deliberately not counted against anybody's row — which left
+ * the one moment when *everyone's* intro was broken as the one moment nothing
+ * explained it.
+ *
+ * Published at most once per guild per episode. [PlayerManager] holds the
+ * latch, because it owns the tracker that knows when the episode ends.
+ */
+data class SourceOutageNoticedEvent(val guildId: Long)

@@ -4,7 +4,10 @@ import bot.toby.BOT_WEB_URL
 import bot.toby.command.commands.music.MusicCommand.Companion.sendDeniedStoppableMessage
 import bot.toby.intro.IntroSelection
 import bot.toby.lavaplayer.GuildMusicManager
+import bot.toby.intro.IntroFailedEvent
+import common.intro.IntroHealth
 import bot.toby.lavaplayer.PlayerManager
+import bot.toby.lavaplayer.SchedulerEvents
 import bot.toby.managers.NowPlayingManager
 import bot.toby.util.isUrl as utilIsUrl
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
@@ -118,8 +121,15 @@ object MusicPlayerHelper {
                 playbackVolume, clipEnd, selected.id,
             )
             selected
-        }.onFailure {
-            logger.warn { "Failed to play intro '${selected.id}': ${it.message}" }
+        }.onFailure { error ->
+            logger.error("Failed to play intro '${selected.id}': ${error.message}")
+            // Anything that throws between picking the intro and handing it to
+            // lavaplayer never reaches PlayerManager, so without this it is
+            // invisible to the failure counter, the owner's DM and the outage
+            // correlation alike — silence with no trace anywhere.
+            selected.id?.let {
+                SchedulerEvents.publish(IntroFailedEvent(it, IntroHealth.normaliseReason(error.message)))
+            }
         }.getOrNull()
     }
 
@@ -210,7 +220,7 @@ object MusicPlayerHelper {
             logger.info { "Stopping the song and clearing the queue." }
             musicManager.scheduler.apply {
                 stopTrack(true)
-                queue.clear()
+                clearQueue()
                 isLooping = false
             }
             musicManager.audioPlayer.isPaused = false
@@ -317,8 +327,13 @@ object MusicPlayerHelper {
     }
 
     private fun determineUrlFromMusicDto(it: MusicDto): String {
+        // file_name is nullable and defaults to null, and `!!` here threw an
+        // NPE that the caller's runCatching swallowed — the one intro failure
+        // that reached none of the health, outage or notification paths,
+        // because it never got as far as PlayerManager.
+        val fileName = it.fileName.orEmpty()
         // If fileName is a URL, use it directly (backward compatibility)
-        if (utilIsUrl(it.fileName!!).isNotEmpty()) return it.fileName!!
+        if (utilIsUrl(fileName).isNotEmpty()) return fileName
         // If musicBlob contains a URL (e.g. fileName stores the video title), use that
         val blobString = it.musicBlob?.let { bytes -> String(bytes) } ?: ""
         if (utilIsUrl(blobString).isNotEmpty()) return blobString

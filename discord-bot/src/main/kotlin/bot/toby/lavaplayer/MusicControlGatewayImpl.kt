@@ -183,7 +183,7 @@ class MusicControlGatewayImpl @Autowired(required = false) constructor(
 
     override fun stop(guildId: Long): Boolean = mutate(guildId) { mm ->
         mm.scheduler.stopTrack(true)
-        mm.scheduler.queue.clear()
+        mm.scheduler.clearQueue()
         mm.scheduler.isLooping = false
         mm.audioPlayer.isPaused = false
         mm.scheduler.publishQueueChanged()
