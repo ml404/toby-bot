@@ -295,6 +295,35 @@ class TrackSchedulerPlaybackOutcomeTest {
     }
 
     @Test
+    fun `an intro that stalls is a failure, not a play`() {
+        // onTrackStuck recovers by stopping the track, which ends it STOPPED —
+        // the very same reason a clipped intro ends at its own marker. Without
+        // the stall being recorded as a failure, ten seconds of silence was
+        // written down as a successful play and cleared the failure counter
+        // behind itself.
+        val intro = track()
+        scheduler.queueIntro(intro, 0L, null, 50, null, "1_2_1")
+
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackStuck(player, intro, 10_000L)
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED)
+
+        assertEquals(1, reporter.failures.size)
+        assertEquals("1_2_1", reporter.failures.single().first)
+        assertTrue(reporter.plays.isEmpty(), reporter.plays.toString())
+    }
+
+    @Test
+    fun `a stall reports what happened, not just that something did`() {
+        val queued = track()
+
+        scheduler.onTrackStart(player, queued)
+        scheduler.onTrackStuck(player, queued, 10_000L)
+
+        assertTrue(reporter.failures.single().third!!.contains("10000"), reporter.failures.toString())
+    }
+
+    @Test
     fun `the same intro failing repeatedly accumulates instead of resetting`() {
         // The whole point. Before this, each attempt's load was reported as a
         // play, which cleared the counter, so an intro failing this way could

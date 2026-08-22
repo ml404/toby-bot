@@ -129,6 +129,36 @@ class IntroPresenterTest {
     }
 
     @Test
+    fun `a single failure says so rather than looking perfectly fine`() {
+        // The reason is written on the very first failure. Withholding it
+        // until the second left somebody who had just heard silence looking
+        // at a row that described itself as healthy — and failures accrue one
+        // per join, so the second could be days away.
+        val flaky = urlIntro(1, "Occasionally slow").apply {
+            failureCount = 1
+            lastFailureReason = "This video is not available in your country"
+        }
+
+        val field = IntroPresenter.listEmbed(member(), listOf(flaky), 3).fields.single()
+
+        assertTrue(field.value!!.contains("Didn't play last time"), field.value!!)
+        assertTrue(field.value!!.contains("not available in your country"), field.value!!)
+        // Still not called broken: one failure is as likely a blip as a fault.
+        assertFalse(field.name!!.contains("⚠️"), field.name!!)
+        assertFalse(field.value!!.contains("Not playing"), field.value!!)
+    }
+
+    @Test
+    fun `an intro that has never failed says nothing about failing`() {
+        val fine = urlIntro(1, "Working")
+
+        val field = IntroPresenter.listEmbed(member(), listOf(fine), 3).fields.single()
+
+        assertFalse(field.value!!.contains("Didn't play"), field.value!!)
+        assertFalse(field.value!!.contains("Not playing"), field.value!!)
+    }
+
+    @Test
     fun `the list embed shows why a broken intro stopped working`() {
         val broken = urlIntro(1, "Dead link").apply {
             failureCount = IntroHealth.UNHEALTHY_AFTER_FAILURES

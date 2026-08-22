@@ -1,4 +1,5 @@
 import bot.toby.handler.VoiceEventHandler
+import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.helpers.IntroHelper
 import common.intro.IntroLoudness
 import bot.toby.helpers.UserDtoHelper
@@ -260,6 +261,15 @@ class VoiceEventHandlerTest {
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns audioPlayerManager
         every { audioPlayerManager.getMusicManager(guild).audioPlayer.volume = any() } just Runs
+        // This test is about connecting and setting the volume. It used to
+        // stop there by accident: connectedChannel is stubbed null, which the
+        // old guard read as "not in the joined channel", so the intro was
+        // skipped. It no longer is, so keep the helper from descending into a
+        // real player.
+        mockkObject(MusicPlayerHelper)
+        every {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns null
 
         val deleteDelayConfig = ConfigDto()
         deleteDelayConfig.value = "30"
@@ -281,6 +291,8 @@ class VoiceEventHandlerTest {
             PlayerManager.instance
             audioPlayerManager.getMusicManager(guild).audioPlayer.volume = any()
         }
+
+        unmockkObject(MusicPlayerHelper)
     }
 
     @Test
@@ -604,11 +616,18 @@ class VoiceEventHandlerTest {
         every { guild.idLong } returns 7L
         every { guild.id } returns "7"
         every { audioManager.isConnected } returns false
-        // Must match event.channelJoined so setupAndPlayUserIntro fires (see VoiceEventHandler line 164).
+        // Must match event.channelJoined so setupAndPlayUserIntro fires.
         every { audioManager.connectedChannel } returns channel
 
         mockkObject(PlayerManager)
         every { PlayerManager.instance } returns audioPlayerManager
+        // The award is for an intro that PLAYED, so one has to. Left to the
+        // real helper it returns null against relaxed mocks, and the credit is
+        // no longer paid for silence.
+        mockkObject(MusicPlayerHelper)
+        every {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk<MusicDto>(relaxed = true) { every { id } returns "7_1_1" }
 
         every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "7") } returns
             ConfigDto().apply { value = "30" }
@@ -625,6 +644,179 @@ class VoiceEventHandlerTest {
             awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
         }
 
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `an intro that made no sound is not paid for`() {
+        // Every intro switched off, a dead link, a stream that died — the
+        // member hears nothing, and the credit landing anyway was both the
+        // only feedback they got and the opposite of the truth. It also let
+        // anyone switch all their intros off and farm the payout on each join.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns channel
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns null
+
+        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "7") } returns
+            ConfigDto().apply { value = "30" }
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 0) { awardService.award(any(), any(), any(), "intro-play", any(), any()) }
+        verify(exactly = 0) { xpAwardService.award(any(), any(), any(), "intro-play", any(), any()) }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `the first person into an empty channel still hears their intro`() {
+        // openAudioConnection only sends the gateway voice-state update; the
+        // audioConnection field that connectedChannel reads is assigned later,
+        // when the handshake completes. Gating the intro on connectedChannel
+        // therefore compared against null on every cold join, and the first
+        // person in was skipped every single time — with no else branch and
+        // not one log line to say so.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { channel.idLong } returns 99L
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        // Exactly the cold-join state: nothing connected yet, and the
+        // connection this call opens has not completed.
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        } returns mockk<MusicDto>(relaxed = true) { every { id } returns "7_1_1" }
+
+        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "7") } returns
+            ConfigDto().apply { value = "30" }
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 1) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `nobody's intro plays into a channel the bot is not in`() {
+        // The other half of the same guard: the bot sits in one channel and
+        // somebody joins another. It must not play there — and now says so in
+        // the log rather than dropping the join on the floor.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val joined = mockk<AudioChannelUnion>(relaxed = true)
+        val elsewhere = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns joined
+        every { event.channelLeft } returns null
+        every { joined.members } returns listOf(member)
+        every { joined.idLong } returns 99L
+        every { elsewhere.idLong } returns 55L
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        // Already connected elsewhere, so nothing new is opened.
+        every { audioManager.isConnected } returns true
+        every { audioManager.connectedChannel } returns elsewhere
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+
+        every { configService.getConfigByName(ConfigDto.Configurations.DELETE_DELAY.configValue, "7") } returns
+            ConfigDto().apply { value = "30" }
+        every { configService.getConfigByName(ConfigDto.Configurations.VOLUME.configValue, "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 0) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
         unmockkObject(PlayerManager)
     }
 

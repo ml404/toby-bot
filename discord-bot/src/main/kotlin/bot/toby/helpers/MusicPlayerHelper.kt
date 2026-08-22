@@ -58,7 +58,14 @@ object MusicPlayerHelper {
 
         val selected = IntroSelection.pick(dbUser.musicDtos, lastPlayedIntroId)
         if (selected == null) {
-            logger.warn { "User does not have a musicDto. Cannot play intro." }
+            // Not the same as having none: the caller only gets here when the
+            // user has intros, so a null pick means every one of them is
+            // switched off. Saying "no musicDto" sent anyone reading the log
+            // looking for a row that was sitting right there.
+            logger.info {
+                "No intro to play for ${dbUser.discordId}: all ${dbUser.musicDtos.size} of their " +
+                    "intros are switched off."
+            }
             return null
         }
         return playIntro(selected, guild, event, deleteDelay, startPosition, member, normaliseVolume)

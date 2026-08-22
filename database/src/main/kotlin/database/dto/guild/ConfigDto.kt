@@ -470,6 +470,13 @@ class ConfigDto(
         // unlocks are DM-only. Stored as a stringified Long.
         ACHIEVEMENT_ANNOUNCE_CHANNEL("ACHIEVEMENT_ANNOUNCE_CHANNEL"),
 
+        // Optional Discord text-channel id where a broken intro is reported
+        // in public, in addition to its owner's DM. When unset, nothing is
+        // posted — an intro failing is the owner's business by default, and
+        // only a server that wants the room to know opts in. Stored as a
+        // stringified Long.
+        INTRO_ISSUE_CHANNEL("INTRO_ISSUE_CHANNEL"),
+
         // Install-wizard sentinel. One of "express" or "custom". Presence
         // (regardless of value) suppresses the auto-welcome on subsequent
         // GuildJoinEvent fires when the bot is re-invited.

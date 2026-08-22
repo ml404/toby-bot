@@ -188,6 +188,29 @@
                                    th:disabled="${!isOwner}">
                             <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
                         </div>
+                        <div class="config-row" data-key="INTRO_ISSUE_CHANNEL">
+                            <label>
+                                Broken intro reports
+                                <span class="config-hint">
+                                    Optional channel where a repeatedly failing intro is
+                                    reported in public, so the people who heard the silence
+                                    can see why. Its owner is DM'd either way. Leave blank
+                                    to keep broken intros private.
+                                </span>
+                            </label>
+                            <div th:replace="~{fragments/channelPicker :: channelPicker(
+                                    name=null,
+                                    id=null,
+                                    channels=${overview.textChannels},
+                                    selectedValue=${overview.config['INTRO_ISSUE_CHANNEL']},
+                                    placeholder='&mdash; keep them private &mdash;',
+                                    emptyLabel='&mdash; keep them private &mdash;',
+                                    required=false,
+                                    valuePrefix='#',
+                                    valueField='id',
+                                    disabled=${!isOwner})}"></div>
+                            <button type="button" class="btn save-config" th:disabled="${!isOwner}">Save</button>
+                        </div>
                     </div>
                     <p class="muted" style="margin: 8px 0 0;">
                         Voice channel ids: enable Developer Mode in Discord, then

@@ -82,10 +82,16 @@ enum class NotificationChannelKind(
         displayName = "Broken intro",
         description = "DM when one of your intros stops loading — a deleted, private, " +
             "age-gated or region-blocked link plays as silence otherwise.",
-        // DM-only and on by default. This one reports a fault in something
-        // the user set up, which they cannot otherwise discover: the intro
-        // simply stops playing, and every surface keeps listing it as fine.
-        perSurfaceDefaults = mapOf(Surface.DM to true),
+        // DM by default, because it reports a fault in something the user
+        // set up which they cannot otherwise discover: the intro simply
+        // stops playing and every surface keeps listing it as fine.
+        //
+        // The channel surface exists because that DM was the only thing
+        // anybody was ever told — everyone else in the voice channel just
+        // heard silence with no way to find out why. It posts only where an
+        // admin has set INTRO_ISSUE_CHANNEL, and this per-user default
+        // governs whether the owner is pinged by name when it does.
+        perSurfaceDefaults = mapOf(Surface.DM to true, Surface.CHANNEL to true),
     );
 
     /** Surfaces this kind ships on. Derived from [perSurfaceDefaults]. */

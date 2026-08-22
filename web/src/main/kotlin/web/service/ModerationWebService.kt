@@ -1227,13 +1227,15 @@ class ModerationWebService(
             }
             ConfigDto.Configurations.LOTTERY_CHANNEL,
             ConfigDto.Configurations.CASINO_MODLOG_CHANNEL_ID,
+            ConfigDto.Configurations.INTRO_ISSUE_CHANNEL,
             ConfigDto.Configurations.ACHIEVEMENT_ANNOUNCE_CHANNEL -> {
                 val v = rawValue.trim()
                 if (v.isEmpty()) {
                     // Empty value clears the override. LOTTERY_CHANNEL falls
                     // back to LEADERBOARD_CHANNEL → systemChannel at runtime;
                     // CASINO_MODLOG_CHANNEL_ID falls back to systemChannel.
-                    // ACHIEVEMENT_ANNOUNCE_CHANNEL is DM-only when unset.
+                    // ACHIEVEMENT_ANNOUNCE_CHANNEL and INTRO_ISSUE_CHANNEL
+                    // are DM-only when unset.
                     ""
                 } else {
                     val id = v.toLongOrNull()
