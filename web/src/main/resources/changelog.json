@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Notice when a stream dies, and stop calling a load a play",
+    "summary": "Diagnosed from the production log at 13:55 today. An intro loaded, started, was written to the database as played, and then died half a second later:",
+    "emoji": "🎵",
+    "prNumber": 757
+  },
+  {
+    "date": "August 2026",
     "title": "Make the changelog page readable: clean summaries, group by month",
     "summary": "The changelog page had grown to 86 entries — 80 of them stamped \"May 2026\" — rendered as one flat list with the same date repeated on every row.",
     "emoji": "✨",
