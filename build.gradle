@@ -12,7 +12,7 @@ buildscript {
         kotlinx_version = '1.10.2'
         ktor_version = '2.3.13'
         mockk_version = '1.13.13'
-        lavaplayer_version = '2.2.6'
+        lavaplayer_version = '2.2.7'
         youtube_common_version = '1.18.2'
         lavasrc_version = '4.8.2'
     }
