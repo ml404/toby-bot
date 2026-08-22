@@ -1,6 +1,6 @@
 package bot.toby.lavaplayer
 
-import bot.toby.intro.IntroLoadFailedEvent
+import bot.toby.intro.IntroFailedEvent
 import bot.toby.intro.IntroPlayedEvent
 import com.github.topi314.lavasrc.applemusic.AppleMusicSourceManager
 import com.github.topi314.lavasrc.deezer.DeezerAudioSourceManager
@@ -273,15 +273,16 @@ class PlayerManager(
             private val requesterId: Long? = event?.member?.idLong
 
             override fun trackLoaded(track: AudioTrack) {
-                // Proof we aren't blocked, and the only thing that ends an
-                // outage — elapsed time would keep reporting one long after
-                // playback started working again.
-                outageTracker.recordSuccess()
+                // Deliberately no success recorded here. A load only proves the
+                // source will talk to us about the track, not that it will hand
+                // over the audio — and treating the two as the same thing is
+                // what let a stream that died on every play keep reporting
+                // itself healthy. Both success signals now come back from
+                // TrackScheduler once audio has actually run.
                 scheduler.event = event
                 scheduler.deleteDelay = deleteDelay
                 if (isIntro) {
                     scheduler.queueIntro(track, startPosition, endPosition, volume, requesterId, introId)
-                    introId?.let { SchedulerEvents.publish(IntroPlayedEvent(it)) }
                 } else {
                     scheduler.queue(track, startPosition, endPosition, volume, requesterId)
                 }
@@ -365,6 +366,47 @@ class PlayerManager(
     }
 
     /**
+     * Audio actually reached the listener.
+     *
+     * A successful *load* turned out to be no proof of this at all: during the
+     * incident that prompted this, every load succeeded and every stream then
+     * died, so the outage window was being wiped clean by the very requests
+     * that were failing.
+     *
+     * @param introId set when the track was somebody's intro, which is the
+     *   only thing that makes a play worth recording against a row.
+     * @param uninterrupted whether the track reached its own end. Only that
+     *   ends a declared outage: a track cut short was very likely streaming
+     *   down a connection opened before the trouble started, so it says
+     *   nothing about whether a *fresh* request would work. Intro preemption
+     *   cuts a track short every time somebody joins voice, so accepting an
+     *   interruption as proof would keep the busiest servers from ever
+     *   declaring an outage. A play still counts against the intro's health
+     *   either way — it was audible, which is all that row is asking.
+     */
+    fun reportPlaybackSuccess(introId: String?, uninterrupted: Boolean) {
+        if (uninterrupted) outageTracker.recordSuccess()
+        introId?.let { SchedulerEvents.publish(IntroPlayedEvent(it)) }
+    }
+
+    /**
+     * A track died part-way through streaming.
+     *
+     * The load path has had this for a while; the streaming path had nothing
+     * at all, so a source that resolved and then refused to hand over audio
+     * was invisible to intro health, to the outage correlation and to the
+     * channel. It is treated exactly like a load failure because the listener
+     * cannot tell the two apart: either way they heard silence.
+     *
+     * @param sourceKey what failed, used to tell "one dead video" apart from
+     *   "the host is refusing us" — so it must identify the track, not the guild.
+     */
+    fun reportPlaybackFailure(introId: String?, sourceKey: String, reason: String?) {
+        val outage = noteFailure(sourceKey, definite = SourceOutage.looksLikeBlock(reason))
+        introId?.let { reportIntroFailure(it, IntroHealth.normaliseReason(reason), outage) }
+    }
+
+    /**
      * Whether the audio source currently looks like it is refusing us.
      *
      * Bot-wide rather than per-guild: it describes YouTube's opinion of this
@@ -410,7 +452,7 @@ class PlayerManager(
             logger.warn { "Not counting intro $introId's failure against its health: the source is refusing us." }
             return
         }
-        SchedulerEvents.publish(IntroLoadFailedEvent(introId, reason))
+        SchedulerEvents.publish(IntroFailedEvent(introId, reason))
     }
 
     /**

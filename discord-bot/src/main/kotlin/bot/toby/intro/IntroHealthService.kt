@@ -24,6 +24,12 @@ import java.time.Instant
  * age-gated produced silence on every join, indefinitely, while `/listintros`
  * and the web page both still described it as fine. The only evidence was a
  * server log nobody reads.
+ *
+ * A play is what makes a failure count "consecutive", so the two halves have
+ * to agree on what counts as a play. They now both mean audio that actually
+ * reached the listener: an intro whose source resolved and then died
+ * mid-stream used to arrive here as a *success*, resetting the very counter
+ * that was supposed to notice it.
  */
 @Service
 class IntroHealthService(
@@ -46,7 +52,7 @@ class IntroHealthService(
     }
 
     @EventListener
-    fun onIntroLoadFailed(event: IntroLoadFailedEvent) {
+    fun onIntroFailed(event: IntroFailedEvent) {
         val reason = IntroHealth.normaliseReason(event.reason)
         val updated = update(event.introId) { dto ->
             dto.failureCount += 1
@@ -104,7 +110,7 @@ class IntroHealthService(
     private fun brokenEmbed(name: String, dto: MusicDto, reason: String) = embed(
         title = "Your intro isn't playing",
         color = BROKEN_COLOR,
-        description = "**$name** (slot #${dto.index ?: '?'}) has failed to load " +
+        description = "**$name** (slot #${dto.index ?: '?'}) has failed " +
             "${dto.failureCount} times in a row, so nothing plays when you join voice.\n\n" +
             "> $reason\n\n" +
             "This usually means the video was deleted, made private, age-gated or " +

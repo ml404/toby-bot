@@ -1,6 +1,6 @@
 package bot.toby.lavaplayer
 
-import bot.toby.intro.IntroLoadFailedEvent
+import bot.toby.intro.IntroFailedEvent
 import bot.toby.intro.IntroPlayedEvent
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayerManager
@@ -108,13 +108,64 @@ class PlayerManagerTest {
     }
 
     @Test
-    fun `a loaded intro is reported as played, against its row`() {
+    fun `a load on its own is not yet a play`() {
+        // A load only proves the source will talk to us about the track. In the
+        // incident that prompted this, every load succeeded and every stream
+        // then died — and because a play clears the failure counter, calling
+        // the load a play erased the evidence on every single attempt.
         val published = captureEvents()
 
         pm.loadAndPlayIntro(guild, null, "url", 5, 0L, 50, null, "1_2_1")
         handlers.last().trackLoaded(mockk(relaxed = true))
 
+        assertTrue(published.filterIsInstance<IntroPlayedEvent>().isEmpty())
+    }
+
+    @Test
+    fun `a play is reported once audio has actually run`() {
+        val published = captureEvents()
+
+        pm.reportPlaybackSuccess("1_2_1", uninterrupted = true)
+
         assertEquals(listOf(IntroPlayedEvent("1_2_1")), published.filterIsInstance<IntroPlayedEvent>())
+    }
+
+    @Test
+    fun `a play that was cut short still counts against the row`() {
+        val published = captureEvents()
+
+        pm.reportPlaybackSuccess("1_2_1", uninterrupted = false)
+
+        assertEquals(listOf(IntroPlayedEvent("1_2_1")), published.filterIsInstance<IntroPlayedEvent>())
+    }
+
+    @Test
+    fun `only an uninterrupted play ends a declared outage`() {
+        // A track cut short was very likely streaming down a connection opened
+        // before the trouble started, so it is no evidence a fresh request
+        // would work. Intro preemption cuts one short on every voice join.
+        val published = captureEvents()
+        repeat(3) { i -> failIntro("1_2_$i", "url-$i") }
+        assertEquals(2, published.filterIsInstance<IntroFailedEvent>().size)
+
+        pm.reportPlaybackSuccess(null, uninterrupted = false)
+        failIntro("1_9_1", "url-still-dead")
+        assertEquals(2, published.filterIsInstance<IntroFailedEvent>().size)
+
+        pm.reportPlaybackSuccess(null, uninterrupted = true)
+        failIntro("1_9_2", "url-really-dead")
+        assertEquals(3, published.filterIsInstance<IntroFailedEvent>().size)
+    }
+
+    @Test
+    fun `a track that was nobody's intro records no play`() {
+        // Ordinary queued music runs through the same report; there is just no
+        // row for it to count against.
+        val published = captureEvents()
+
+        pm.reportPlaybackSuccess(null, uninterrupted = true)
+
+        assertTrue(published.filterIsInstance<IntroPlayedEvent>().isEmpty())
     }
 
     @Test
@@ -124,7 +175,7 @@ class PlayerManagerTest {
         pm.loadAndPlayIntro(guild, null, "url", 5, 0L, 50, null, "1_2_1")
         handlers.last().noMatches()
 
-        val failure = published.filterIsInstance<IntroLoadFailedEvent>().single()
+        val failure = published.filterIsInstance<IntroFailedEvent>().single()
         assertEquals("1_2_1", failure.introId)
         assertEquals("Nothing found at this link", failure.reason)
     }
@@ -142,7 +193,7 @@ class PlayerManagerTest {
             ),
         )
 
-        val failure = published.filterIsInstance<IntroLoadFailedEvent>().single()
+        val failure = published.filterIsInstance<IntroFailedEvent>().single()
         assertEquals("This video is not available in your country", failure.reason)
     }
 
@@ -153,7 +204,7 @@ class PlayerManagerTest {
         pm.loadAndPlayIntro(guild, null, "url", 5, 0L, 50, null, "1_2_1")
         handlers.last().loadFailed(FriendlyException(null, FriendlyException.Severity.COMMON, RuntimeException("x")))
 
-        assertEquals("Source could not be loaded", published.filterIsInstance<IntroLoadFailedEvent>().single().reason)
+        assertEquals("Source could not be loaded", published.filterIsInstance<IntroFailedEvent>().single().reason)
     }
 
     @Test
@@ -165,11 +216,11 @@ class PlayerManagerTest {
 
         repeat(PlayerManager.MAX_LOAD_ATTEMPTS - 1) {
             handlers.last().loadFailed(transientFailure())
-            assertTrue(published.filterIsInstance<IntroLoadFailedEvent>().isEmpty(), "reported mid-retry")
+            assertTrue(published.filterIsInstance<IntroFailedEvent>().isEmpty(), "reported mid-retry")
         }
         handlers.last().loadFailed(transientFailure())
 
-        assertEquals(1, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(1, published.filterIsInstance<IntroFailedEvent>().size)
     }
 
     /** TrackInfoMapper reads AudioTrackInfo's fields, which mockk can't stub. */
@@ -186,7 +237,7 @@ class PlayerManagerTest {
         handlers.last().trackLoaded(realTrack())
         handlers.last().noMatches()
 
-        assertTrue(published.none { it is IntroPlayedEvent || it is IntroLoadFailedEvent }, published.toString())
+        assertTrue(published.none { it is IntroPlayedEvent || it is IntroFailedEvent }, published.toString())
     }
 
     @Test
@@ -197,7 +248,7 @@ class PlayerManagerTest {
         handlers.last().trackLoaded(mockk(relaxed = true))
         handlers.last().noMatches()
 
-        assertTrue(published.none { it is IntroPlayedEvent || it is IntroLoadFailedEvent })
+        assertTrue(published.none { it is IntroPlayedEvent || it is IntroFailedEvent })
     }
 
     @Test
@@ -246,7 +297,7 @@ class PlayerManagerTest {
         failIntroWithBlock("1_2_1", "url-a")
 
         assertTrue(
-            published.filterIsInstance<IntroLoadFailedEvent>().isEmpty(),
+            published.filterIsInstance<IntroFailedEvent>().isEmpty(),
             "a blocked load says nothing about whether this intro works",
         )
     }
@@ -260,8 +311,9 @@ class PlayerManagerTest {
         pm.loadAndPlayIntro(guild, null, "url-a", 5, 0L, 50, null, "1_2_1")
         handlers.last().loadFailed(blockFailure())
         handlers.last().trackLoaded(realTrack())
+        pm.reportPlaybackSuccess("1_2_1", uninterrupted = true)
 
-        assertTrue(published.filterIsInstance<IntroLoadFailedEvent>().isEmpty())
+        assertTrue(published.filterIsInstance<IntroFailedEvent>().isEmpty())
         assertEquals(1, published.filterIsInstance<IntroPlayedEvent>().size)
     }
 
@@ -272,14 +324,14 @@ class PlayerManagerTest {
         // The first two look like ordinary dead links and are reported as such.
         failIntro("1_2_1", "url-a")
         failIntro("1_2_2", "url-b")
-        assertEquals(2, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(2, published.filterIsInstance<IntroFailedEvent>().size)
 
         // The third makes it a pattern, and everything after it is the
         // outage's fault rather than the intro's.
         failIntro("1_2_3", "url-c")
         failIntro("1_3_1", "url-d")
 
-        assertEquals(2, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(2, published.filterIsInstance<IntroFailedEvent>().size)
     }
 
     @Test
@@ -294,7 +346,7 @@ class PlayerManagerTest {
             FriendlyException("This video is unavailable", FriendlyException.Severity.COMMON, RuntimeException("x")),
         )
 
-        assertEquals(1, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(1, published.filterIsInstance<IntroFailedEvent>().size)
     }
 
     @Test
@@ -305,23 +357,25 @@ class PlayerManagerTest {
 
         repeat(5) { failIntro("1_2_1", "url-a") }
 
-        assertEquals(5, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(5, published.filterIsInstance<IntroFailedEvent>().size)
     }
 
     @Test
-    fun `a successful load puts intro reporting straight back`() {
+    fun `a successful playback puts intro reporting straight back`() {
         val published = captureEvents()
         // The third distinct failure is the one that reveals the pattern, so
         // it counts as the outage's too — only the first two are reported.
         repeat(3) { i -> failIntro("1_2_$i", "url-$i") }
         failIntro("1_3_1", "url-suppressed")
-        assertEquals(2, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(2, published.filterIsInstance<IntroFailedEvent>().size)
 
-        pm.loadAndPlayIntro(guild, null, "url-works", 5, 0L, 50, null, "1_4_1")
-        handlers.last().trackLoaded(realTrack())
+        // Audio actually running is what ends an outage now — a load that
+        // succeeds and then produces nothing was exactly the shape of the
+        // failure, so it can no longer be the thing that clears the window.
+        pm.reportPlaybackSuccess("1_4_1", uninterrupted = true)
 
         failIntro("1_5_1", "url-really-dead")
-        assertEquals(3, published.filterIsInstance<IntroLoadFailedEvent>().size)
+        assertEquals(3, published.filterIsInstance<IntroFailedEvent>().size)
     }
 
     @Test

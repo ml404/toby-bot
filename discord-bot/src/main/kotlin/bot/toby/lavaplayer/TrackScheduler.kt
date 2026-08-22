@@ -5,6 +5,7 @@ import bot.toby.helpers.MusicPlayerHelper.resetMessages
 import bot.toby.util.deriveDeleteDelayFromTrack
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.player.event.AudioEventAdapter
+import com.sedmelluq.discord.lavaplayer.tools.FriendlyException
 import com.sedmelluq.discord.lavaplayer.track.AudioPlaylist
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason
@@ -22,8 +23,12 @@ import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
-class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay: Int = 5) :
-    AudioEventAdapter(), IntroTrackContext {
+class TrackScheduler(
+    val player: AudioPlayer,
+    val guildId: Long,
+    var deleteDelay: Int = 5,
+    private val outcomeReporter: PlaybackOutcomeReporter = PlaybackOutcomeReporter.DEFAULT,
+) : AudioEventAdapter(), IntroTrackContext {
     var queue: BlockingQueue<AudioTrack> = LinkedBlockingQueue(100)
     var isLooping: Boolean = false
     var event: SlashCommandInteractionEvent? = null
@@ -50,6 +55,19 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
      * indistinguishable.
      */
     private val introPlaybackMs = ConcurrentHashMap<AudioTrack, Long>()
+
+    /**
+     * Tracks whose stream died, waiting for the track end that follows.
+     *
+     * The end reason cannot answer "did this play?" on its own. lavaplayer
+     * picks `LOAD_FAILED` only when the stream died *before* any frames
+     * arrived (`failedBeforeLoad` is `trackException != null &&
+     * !hasReceivedFrames`); a track that played half a second and then broke
+     * arrives as `FINISHED`, indistinguishable from one that ran to the end.
+     * [onTrackException] is the only signal that separates them, so it leaves
+     * a note here for [onTrackEnd] to find.
+     */
+    private val failedTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
 
     /** Tracks that an intro interrupted and that are being put back. */
     private val resumingTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
@@ -214,13 +232,29 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         trackRequesters.remove(track)
         // Safe to drop here even though the loudness filter reports later: the
         // factory resolved the id when the chain was built and holds it in its
-        // callback closure.
-        introTrackIds.remove(track)
+        // callback closure. Kept in hand for the outcome report below.
+        val introId = introTrackIds.remove(track)
         introPlaybackMs.remove(track)
         resumingTracks.remove(track)
         val wasIntro = introTracks.remove(track)
         logger.info("${track.info.title} by ${track.info.author} ended")
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
+        // STOPPED counts as a play: it is how every clipped intro ends, at its
+        // own marker.
+        val played = !failedTracks.remove(track)
+        if (played) {
+            outcomeReporter.playbackSucceeded(
+                introId.takeIf { wasIntro },
+                // An interruption is not proof the source is well again. A
+                // track that was already streaming when the trouble started
+                // keeps playing down a connection set up before it, and on a
+                // busy server intro preemption produces a REPLACED every time
+                // somebody joins — which would clear the outage window over and
+                // over on exactly the servers where it matters most.
+                uninterrupted = endReason == AudioTrackEndReason.FINISHED ||
+                    endReason == AudioTrackEndReason.STOPPED,
+            )
+        }
         // An intro just finished and we have a preempted track waiting: restart
         // it (do NOT advance the regular queue so user-queued tracks added during
         // the intro stay queued behind the resumed one). We bypass mayStartNext
@@ -245,7 +279,11 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         }
         if (wasIntro) releaseStaleResumeSlot(endReason)
         if (endReason.mayStartNext) {
-            handleNextTrack(player, track)
+            // LOAD_FAILED also says mayStartNext, so without the second half a
+            // looping queue would restart the clone of a track that had just
+            // died — instantly, forever, with no backoff. That is the fastest
+            // way to turn a transient 400 into a real IP block for the bot.
+            handleNextTrack(player, track, repeatable = played)
         } else if (endReason != AudioTrackEndReason.REPLACED) {
             // Playback has actually stopped and nothing is taking over (REPLACED
             // means another track already started and its onTrackStart will
@@ -264,8 +302,8 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
         SchedulerEvents.publish(PauseStateChangedEvent(guildId, false))
     }
 
-    private fun handleNextTrack(player: AudioPlayer, track: AudioTrack) {
-        if (isLooping) {
+    private fun handleNextTrack(player: AudioPlayer, track: AudioTrack, repeatable: Boolean = true) {
+        if (isLooping && repeatable) {
             // The clone's onTrackStart edits the existing now-playing message in
             // place, so don't tear it down here.
             player.startTrack(track.makeClone(), false)
@@ -331,6 +369,43 @@ class TrackScheduler(val player: AudioPlayer, val guildId: Long, var deleteDelay
                     ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
             }
         }
+    }
+
+    /**
+     * A track that loaded fine died part-way through streaming.
+     *
+     * lavaplayer calls this and then ends the track with `LOAD_FAILED`, whose
+     * `mayStartNext` is true — so unlike [onTrackStuck] there is nothing to do
+     * about the queue here, and stopping the player would only take the resume
+     * slot with it. What was missing was everyone finding out: the callback was
+     * never overridden at all, so a source that resolved and then refused to
+     * hand over audio produced silence and left no trace anywhere the bot
+     * could see. The one in evidence was YouTube answering the player API with
+     * a 400 on a video it had just described happily.
+     *
+     * The channel only hears about it for a track somebody asked for. An intro
+     * plays from the voice-join path, where `event` is null and there is no
+     * conversation to interrupt — its owner is told by DM instead, once the
+     * failures add up.
+     */
+    override fun onTrackException(player: AudioPlayer, track: AudioTrack, exception: FriendlyException) {
+        logger.error(
+            "'${track.info.title}' failed while streaming on guild $guildId at position " +
+                "${track.position}ms: ${exception.message}"
+        )
+        event?.channel
+            ?.sendMessage("Track ${track.info.title} stopped playing: ${exception.message}")
+            ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
+
+        // Noted before onTrackEnd runs: this is the only reliable signal that
+        // the track failed, since the end reason it is about to arrive with may
+        // well be FINISHED.
+        failedTracks.add(track)
+
+        // The identifier rather than the guild or the title: the outage
+        // correlation counts *distinct sources* failing, which is what tells a
+        // single dead video apart from the host refusing everything.
+        outcomeReporter.playbackFailed(introTrackIds[track], track.identifier, exception.message)
     }
 
     /**
