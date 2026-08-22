@@ -4,6 +4,7 @@ import bot.toby.helpers.IntroHelper
 import common.intro.IntroLoudness
 import bot.toby.helpers.UserDtoHelper
 import bot.toby.intro.IntroPlaybackTracker
+import bot.toby.intro.IntroRewardLedger
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
@@ -52,6 +53,7 @@ class VoiceEventHandlerTest {
 
     // JUnit builds a fresh test instance per method, so this tracker (and the
     // handler holding it) starts empty for every test.
+    private val rewardLedger: IntroRewardLedger = mockk(relaxed = true)
     private val introPlaybackTracker = IntroPlaybackTracker()
 
     private val handler = spyk(
@@ -65,6 +67,7 @@ class VoiceEventHandlerTest {
             xpAwardService,
             nowPlayingManager,
             introPlaybackTracker,
+            rewardLedger,
         )
     )
 
@@ -640,9 +643,11 @@ class VoiceEventHandlerTest {
 
         handler.onGuildVoiceUpdate(event)
 
-        verify(exactly = 1) {
-            awardService.award(1L, 7L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
-        }
+        // The join records an expectation; IntroPlayRewardService settles it
+        // when the audio has actually run. Paying here paid a dead link
+        // exactly what it paid a clip everybody heard.
+        verify(exactly = 1) { rewardLedger.expect("7_1_1") }
+        verify(exactly = 0) { awardService.award(any(), any(), any(), "intro-play", any(), any()) }
 
         unmockkObject(MusicPlayerHelper)
         unmockkObject(PlayerManager)
@@ -696,6 +701,7 @@ class VoiceEventHandlerTest {
 
         handler.onGuildVoiceUpdate(event)
 
+        verify(exactly = 0) { rewardLedger.expect(any()) }
         verify(exactly = 0) { awardService.award(any(), any(), any(), "intro-play", any(), any()) }
         verify(exactly = 0) { xpAwardService.award(any(), any(), any(), "intro-play", any(), any()) }
 
@@ -757,6 +763,113 @@ class VoiceEventHandlerTest {
         handler.onGuildVoiceUpdate(event)
 
         verify(exactly = 1) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `it says so when the bot is in no voice channel at all`() {
+        // Nothing connected and nothing opened — the member left again before
+        // the handler read the channel. Silence with no explanation is what
+        // this whole branch exists to stop.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns emptyList()
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every { configService.getConfigByName(any(), "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 0) { audioManager.openAudioConnection(any()) }
+        verify(exactly = 0) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `a channel the bot cannot join does not take the whole join down with it`() {
+        // openAudioConnection throws synchronously for a missing Connect
+        // permission, or a full channel without Move Members. Unwrapped it
+        // aborted onGuildVoiceJoin entirely — voice session, intro and setup
+        // nudge all lost.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { channel.name } returns "Locked"
+        every { channel.idLong } returns 99L
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+        every { audioManager.openAudioConnection(any()) } throws
+            IllegalStateException("Missing permission: VOICE_CONNECT")
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every { configService.getConfigByName(any(), "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        // No throw escapes, and the voice session is still opened.
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 1) { voiceSessionLifecycle.openSession(1L, 7L, any(), any()) }
+        // Nothing is played into a channel the bot never got into.
+        verify(exactly = 0) {
             MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
         }
 
@@ -1017,16 +1130,13 @@ class VoiceEventHandlerTest {
         joinWithIntros(11L, mutableListOf(musicDto))
         val second = joinWithIntros(11L, mutableListOf(musicDto))
 
-        // Exactly one playback and one payout across both joins.
+        // Exactly one playback and one expectation across both joins — the
+        // cooldown is what stops a channel hop paying twice, and the payout
+        // itself is now settled against the expectation once audio has run.
         verify(exactly = 0) {
             second.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
         }
-        verify(exactly = 1) {
-            awardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_CREDIT, "intro-play", any(), any())
-        }
-        verify(exactly = 1) {
-            xpAwardService.award(1L, 11L, VoiceEventHandler.INTRO_PLAY_XP, "intro-play", any(), any(), any())
-        }
+        verify(exactly = 1) { rewardLedger.expect("11_1_1") }
 
         unmockkObject(PlayerManager)
     }

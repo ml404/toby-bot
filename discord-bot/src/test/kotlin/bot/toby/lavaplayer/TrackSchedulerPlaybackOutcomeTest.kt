@@ -45,14 +45,23 @@ class TrackSchedulerPlaybackOutcomeTest {
             if (uninterrupted) outageClearing += introId
         }
 
-        override fun playbackFailed(introId: String?, sourceKey: String, reason: String?) {
+        /** Whether a retry is worth attempting; false imitates an outage. */
+        var retryWorthwhile = true
+
+        override fun playbackFailed(introId: String?, sourceKey: String, reason: String?): Boolean {
             failures += Triple(introId, sourceKey, reason)
+            return retryWorthwhile
         }
     }
 
     @BeforeEach
     fun setUp() {
         reporter = RecordingReporter()
+        // A relaxed player answers playingTrack with a mock and startTrack with
+        // false, which would send queueIntro down the preempt branch and make
+        // every start look like it failed.
+        every { player.playingTrack } returns null
+        every { player.startTrack(any(), any()) } returns true
         scheduler = TrackScheduler(player, guildId = 1L, deleteDelay = 5, outcomeReporter = reporter)
     }
 
@@ -321,6 +330,84 @@ class TrackSchedulerPlaybackOutcomeTest {
         scheduler.onTrackStuck(player, queued, 10_000L)
 
         assertTrue(reporter.failures.single().third!!.contains("10000"), reporter.failures.toString())
+    }
+
+    // --- retrying, and the bookkeeping that has to survive it ---------
+
+    @Test
+    fun `an intro whose stream dies gets one more go`() {
+        // The load path has had a retry ladder for a while; playback had
+        // nothing at all, so the identical hiccup was invisible a second
+        // earlier and fatal a second later.
+        val intro = track()
+        scheduler.queueIntro(intro, 0L, null, 50, null, "1_2_1")
+
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackException(player, intro, streamDied())
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.LOAD_FAILED)
+
+        verify(exactly = 1) { player.startTrack(any(), false) }
+    }
+
+    @Test
+    fun `it gives up after the second death rather than looping on a dead source`() {
+        val intro = track()
+        scheduler.queueIntro(intro, 0L, null, 50, null, "1_2_1")
+
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackException(player, intro, streamDied())
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.LOAD_FAILED)
+        // The clone is the same mock, so this is the retry failing too.
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackException(player, intro, streamDied())
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.LOAD_FAILED)
+
+        verify(exactly = 1) { player.startTrack(any(), false) }
+        assertEquals(2, reporter.failures.size)
+    }
+
+    @Test
+    fun `nothing is retried while the source is refusing us`() {
+        // A retry then is a second request to a host that has already said
+        // no, which is how a rate limit becomes a block.
+        reporter.retryWorthwhile = false
+        val intro = track()
+        scheduler.queueIntro(intro, 0L, null, 50, null, "1_2_1")
+
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackException(player, intro, streamDied())
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.LOAD_FAILED)
+
+        verify(exactly = 0) { player.startTrack(any(), false) }
+    }
+
+    @Test
+    fun `queued music is not restarted, only intros`() {
+        // An intro is seconds long, so starting again is unnoticeable.
+        // Restarting a song that died four minutes in is worse than skipping.
+        val queued = track()
+
+        scheduler.onTrackStart(player, queued)
+        scheduler.onTrackException(player, queued, streamDied())
+        scheduler.onTrackEnd(player, queued, AudioTrackEndReason.LOAD_FAILED)
+
+        verify(exactly = 0) { player.startTrack(any(), false) }
+    }
+
+    @Test
+    fun `a retried intro still reports against its own row`() {
+        // The clone carries the intro id across, or the retry's outcome would
+        // be recorded against nobody.
+        val intro = track()
+        scheduler.queueIntro(intro, 0L, null, 50, null, "1_2_1")
+
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackException(player, intro, streamDied())
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.LOAD_FAILED)
+        scheduler.onTrackStart(player, intro)
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.FINISHED)
+
+        assertEquals(listOf("1_2_1"), reporter.plays)
     }
 
     @Test

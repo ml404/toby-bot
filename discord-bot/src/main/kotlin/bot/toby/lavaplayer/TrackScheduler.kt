@@ -65,9 +65,16 @@ class TrackScheduler(
      * !hasReceivedFrames`); a track that played half a second and then broke
      * arrives as `FINISHED`, indistinguishable from one that ran to the end.
      * [onTrackException] is the only signal that separates them, so it leaves
-     * a note here for [onTrackEnd] to find.
+     * a note here for [onTrackEnd] to find. The value is whether another
+     * attempt is worth making — see [PlaybackOutcomeReporter.playbackFailed].
      */
-    private val failedTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
+    private val failedTracks = ConcurrentHashMap<AudioTrack, Boolean>()
+
+    /**
+     * Intro tracks that are themselves a second attempt, so a stream that dies
+     * twice stops rather than looping on a source that plainly will not serve.
+     */
+    private val retriedIntros: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
 
     /** Tracks that an intro interrupted and that are being put back. */
     private val resumingTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
@@ -130,8 +137,13 @@ class TrackScheduler(
             // earlier intro — fall back to the standard queue-or-start path so
             // we don't clobber the original music with a second intro.
             synchronized(queue) {
-                if (!player.startTrack(introTrack, true)) {
-                    queue.offer(introTrack)
+                if (!player.startTrack(introTrack, true) && !queue.offer(introTrack)) {
+                    // Bounded at 100. Rare, but it was dropped without a word.
+                    logger.warn(
+                        "Queue is full on guild $guildId; dropped the intro " +
+                            "'${introTrack.info.title}' instead of playing it."
+                    )
+                    forget(introTrack)
                 }
             }
             introTracks.add(introTrack)
@@ -241,7 +253,9 @@ class TrackScheduler(
         SchedulerEvents.publish(TrackEndedEvent(guildId, endReason.name))
         // STOPPED counts as a play: it is how every clipped intro ends, at its
         // own marker.
-        val played = !failedTracks.remove(track)
+        val retryWorthwhile = failedTracks.remove(track)
+        val played = retryWorthwhile == null
+        val wasRetry = retriedIntros.remove(track)
         if (played) {
             outcomeReporter.playbackSucceeded(
                 introId.takeIf { wasIntro },
@@ -277,6 +291,16 @@ class TrackScheduler(
             player.startTrack(resume, false)
             return
         }
+        // One second go for an intro whose stream died. The load path has had a
+        // retry ladder for a while; playback had nothing, so an identical
+        // hiccup was invisible a second earlier and fatal a second later. Only
+        // intros: they are seconds long, so starting again is unnoticeable,
+        // where restarting a song that died four minutes in is worse than
+        // skipping it.
+        if (wasIntro && introId != null && retryWorthwhile == true && !wasRetry) {
+            if (retryIntro(player, track, introId)) return
+        }
+
         if (wasIntro) releaseStaleResumeSlot(endReason)
         if (endReason.mayStartNext) {
             // LOAD_FAILED also says mayStartNext, so without the second half a
@@ -300,6 +324,31 @@ class TrackScheduler(
     override fun onPlayerResume(player: AudioPlayer) {
         super.onPlayerResume(player)
         SchedulerEvents.publish(PauseStateChangedEvent(guildId, false))
+    }
+
+    /**
+     * Plays a fresh clone of a failed intro, carrying its bookkeeping across.
+     *
+     * A clone re-resolves its stream from scratch, which is the whole point —
+     * the formats fetch that failed is exactly what gets retried. The clone
+     * carries its own entry in every per-track map, and is marked so that a
+     * second death ends it.
+     *
+     * @return whether the retry started, so the caller can leave the queue alone.
+     */
+    private fun retryIntro(player: AudioPlayer, failed: AudioTrack, introId: String): Boolean {
+        val clone = runCatching { failed.makeClone() }.getOrNull() ?: return false
+        clone.userData = failed.userData
+        introTrackIds[clone] = introId
+        introTracks.add(clone)
+        retriedIntros.add(clone)
+        trackClipBounds[failed]?.let { trackClipBounds[clone] = it }
+        introPlaybackMs[failed]?.let { introPlaybackMs[clone] = it }
+        trackRequesters[failed]?.let { trackRequesters[clone] = it }
+        logger.info { "Intro $introId died mid-stream on guild $guildId; trying once more." }
+        return runCatching { player.startTrack(clone, false) }
+            .onFailure { forget(clone) }
+            .getOrDefault(false)
     }
 
     private fun handleNextTrack(player: AudioPlayer, track: AudioTrack, repeatable: Boolean = true) {
@@ -397,15 +446,16 @@ class TrackScheduler(
             ?.sendMessage("Track ${track.info.title} stopped playing: ${exception.message}")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
 
-        // Noted before onTrackEnd runs: this is the only reliable signal that
-        // the track failed, since the end reason it is about to arrive with may
-        // well be FINISHED.
-        failedTracks.add(track)
-
         // The identifier rather than the guild or the title: the outage
         // correlation counts *distinct sources* failing, which is what tells a
         // single dead video apart from the host refusing everything.
-        outcomeReporter.playbackFailed(introTrackIds[track], track.identifier, exception.message)
+        val retryWorthwhile =
+            outcomeReporter.playbackFailed(introTrackIds[track], track.identifier, exception.message)
+
+        // Noted before onTrackEnd runs: this is the only reliable signal that
+        // the track failed, since the end reason it is about to arrive with may
+        // well be FINISHED.
+        failedTracks[track] = retryWorthwhile
     }
 
     /**
@@ -429,8 +479,7 @@ class TrackScheduler(
         // intro ends — and is indistinguishable from a clean finish, so ten
         // seconds of silence was recorded as a successful play and reset the
         // failure counter behind itself.
-        failedTracks.add(track)
-        outcomeReporter.playbackFailed(
+        failedTracks[track] = outcomeReporter.playbackFailed(
             introTrackIds[track],
             track.identifier,
             "No audio arrived for ${thresholdMs}ms",
@@ -468,14 +517,47 @@ class TrackScheduler(
         return moved
     }
 
+    /**
+     * Empties the queue and forgets everything that was keyed to what was in it.
+     *
+     * The per-track maps are populated when a track is *queued* but were only
+     * ever cleaned when one *ended*, so a bare `queue.clear()` orphaned an
+     * entry for every track that never got to play. They are keyed by
+     * `AudioTrack`, so each orphan pinned a whole track object for as long as
+     * the process lived — and the queue is cleared on every leave, stop and
+     * empty channel.
+     */
+    fun clearQueue() {
+        val dropped = synchronized(queue) {
+            val snapshot = queue.toList()
+            queue.clear()
+            snapshot
+        }
+        dropped.forEach(::forget)
+        if (dropped.isNotEmpty()) {
+            logger.info { "Cleared ${dropped.size} queued track(s) for guild $guildId" }
+            publishQueueChanged()
+        }
+    }
+
+    /** Drops every per-track record for [track]. Safe to call more than once. */
+    private fun forget(track: AudioTrack) {
+        trackClipBounds.remove(track)
+        trackRequesters.remove(track)
+        introTrackIds.remove(track)
+        introPlaybackMs.remove(track)
+        introTracks.remove(track)
+        resumingTracks.remove(track)
+        failedTracks.remove(track)
+        retriedIntros.remove(track)
+    }
+
     fun removeQueueItem(index: Int): AudioTrack? {
         val removed = synchronized(queue) {
             val snapshot = queue.toMutableList()
             if (index < 0 || index >= snapshot.size) return@synchronized null
             val item = snapshot.removeAt(index)
-            trackRequesters.remove(item)
-            trackClipBounds.remove(item)
-            resumingTracks.remove(item)
+            forget(item)
             queue.clear()
             snapshot.forEach { queue.offer(it) }
             item
@@ -501,6 +583,12 @@ class TrackScheduler(
         introTrackIds.clear()
         introPlaybackMs.clear()
         resumingTracks.clear()
+        // Not cleared before, so a stop left a clip bound and a requester
+        // behind for every track it interrupted.
+        trackClipBounds.clear()
+        trackRequesters.clear()
+        failedTracks.clear()
+        retriedIntros.clear()
         player.stopTrack()
         player.setVolumeToPrevious()
         return true

@@ -1,5 +1,7 @@
 import bot.toby.helpers.MusicPlayerHelper
 import bot.toby.lavaplayer.GuildMusicManager
+import bot.toby.intro.IntroFailedEvent
+import bot.toby.lavaplayer.SchedulerEvents
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
@@ -20,6 +22,10 @@ import net.dv8tion.jda.api.requests.restaction.WebhookMessageCreateAction
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import common.media.MediaToken
 import org.junit.jupiter.api.Test
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -290,6 +296,116 @@ class MusicPlayerHelperTest {
                 )
             }
         } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `an intro with no file name is reported rather than swallowed`() {
+        // The row this fix is about: no file name, the URL living in the blob.
+        // `it.fileName!!` threw an NPE before the blob was ever read, and
+        // playIntro's own runCatching swallowed it — the one intro failure
+        // that reached none of the health, outage or notification paths.
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+            every { playerManager.setPreviousVolume(any()) } just Runs
+
+            val musicDto = MusicDto().apply {
+                fileName = null
+                musicBlob = "https://example.com/from-blob.mp3".toByteArray()
+                introVolume = 70
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(musicDto)
+            }
+            every {
+                playerManager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+            } just Runs
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            verify(exactly = 1) {
+                playerManager.loadAndPlayIntro(
+                    any(), any(), eq("https://example.com/from-blob.mp3"), any(), any(), any(), any(), any(),
+                )
+            }
+        } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `an uploaded intro plays from the signed media url`() {
+        // Neither the file name nor the blob is a URL, so the audio lives in
+        // the database and lavaplayer fetches it from the web endpoint. That
+        // endpoint has to stay anonymous for lavaplayer to reach it, and intro
+        // ids are guessable — the signature is what stops it being an open
+        // read of every uploaded MP3 on every server.
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+            every { playerManager.setPreviousVolume(any()) } just Runs
+
+            val uploaded = MusicDto().apply {
+                id = "1_1_1"
+                fileName = "my-tune.mp3"
+                musicBlob = byteArrayOf(0x49, 0x44, 0x33)
+                introVolume = 60
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(uploaded)
+            }
+            val url = slot<String>()
+            every {
+                playerManager.loadAndPlayIntro(any(), any(), capture(url), any(), any(), any(), any(), any())
+            } just Runs
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            assertTrue(url.captured.contains("/music?id=1_1_1"), url.captured)
+            assertTrue(
+                url.captured.contains("${MediaToken.EXPIRY_PARAM}=") &&
+                    url.captured.contains("${MediaToken.SIGNATURE_PARAM}="),
+                "the url must be signed and expiring: ${url.captured}",
+            )
+        } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `a throw between picking and loading reaches the health system`() {
+        mockkObject(PlayerManager.Companion)
+        mockkObject(SchedulerEvents)
+        val published = mutableListOf<Any>()
+        every { SchedulerEvents.publish(capture(published)) } just Runs
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+            every { playerManager.setPreviousVolume(any()) } just Runs
+            every {
+                playerManager.loadAndPlayIntro(any(), any(), any(), any(), any(), any(), any(), any())
+            } throws IllegalStateException("player is gone")
+
+            val intro = MusicDto().apply {
+                id = "1_1_1"
+                fileName = "https://example.com/a.mp3"
+                introVolume = 50
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(intro)
+            }
+
+            val played = MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            assertNull(played)
+            val failure = published.filterIsInstance<IntroFailedEvent>().single()
+            assertEquals("1_1_1", failure.introId)
+        } finally {
+            unmockkObject(SchedulerEvents)
             unmockkObject(PlayerManager.Companion)
         }
     }

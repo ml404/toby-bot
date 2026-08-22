@@ -17,6 +17,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.springframework.context.ApplicationEventPublisher
 import java.util.concurrent.ScheduledExecutorService
@@ -377,6 +378,81 @@ class PlayerManagerTest {
 
         failIntro("1_5_1", "url-really-dead")
         assertEquals(3, published.filterIsInstance<IntroFailedEvent>().size)
+    }
+
+    @Test
+    fun `a stream that died is recorded against the intro and the source`() {
+        // reportPlaybackFailure is what the scheduler calls when a track dies
+        // mid-stream, and nothing exercised it at this level — only through a
+        // fake reporter in the scheduler's own tests.
+        val published = captureEvents()
+
+        val retryWorthwhile = pm.reportPlaybackFailure("1_2_1", "vid-a", "Something broke")
+
+        val failure = published.filterIsInstance<IntroFailedEvent>().single()
+        assertEquals("1_2_1", failure.introId)
+        assertTrue(retryWorthwhile, "a single dead stream is worth one more attempt")
+    }
+
+    @Test
+    fun `a stream that died for nobody's intro still counts against the source`() {
+        val published = captureEvents()
+
+        pm.reportPlaybackFailure(null, "vid-a", "Something broke")
+
+        assertTrue(published.filterIsInstance<IntroFailedEvent>().isEmpty())
+    }
+
+    @Test
+    fun `once the source is refusing us, a retry is not worth making`() {
+        // A retry then is a second request to a host that has already said no,
+        // which is how a rate limit turns into a block.
+        repeat(3) { i -> assertTrue(pm.reportPlaybackFailure(null, "vid-$i", "Something broke") || i == 2) }
+
+        assertFalse(pm.reportPlaybackFailure(null, "vid-later", "Something broke"))
+    }
+
+    @Test
+    fun `a playback failure feeds the same outage correlation as a load failure`() {
+        // Three distinct sources dying mid-stream is the same evidence as
+        // three failing to load, and reads the same to /introstats.
+        assertFalse(pm.isSourceRefusingRequests())
+
+        repeat(3) { i -> pm.reportPlaybackFailure(null, "vid-$i", "Something broke") }
+
+        assertTrue(pm.isSourceRefusingRequests())
+    }
+
+    @Test
+    fun `audio playing puts the report back to healthy`() {
+        repeat(3) { i -> pm.reportPlaybackFailure(null, "vid-$i", "Something broke") }
+        assertTrue(pm.isSourceRefusingRequests())
+
+        pm.reportPlaybackSuccess(null, uninterrupted = true)
+
+        assertFalse(pm.isSourceRefusingRequests())
+    }
+
+    @Test
+    fun `an outage notice with an unreadable id is dropped rather than sent nowhere`() {
+        val published = captureEvents()
+        repeat(3) { i -> failIntro("nonsense-$i", "url-$i") }
+
+        assertTrue(published.filterIsInstance<SourceOutageNoticedEvent>().isEmpty())
+    }
+
+    @Test
+    fun `destroying a guild's player empties its queue as well`() {
+        // A guild leave: without the clear the per-track maps kept an entry —
+        // and a whole AudioTrack — for everything still queued.
+        val guild = mockk<Guild>(relaxed = true) { every { idLong } returns 4242L }
+        val manager = pm.getMusicManager(guild)
+
+        pm.destroyMusicManager(4242L)
+
+        assertEquals(0, manager.scheduler.queue.size)
+        // A fresh manager rather than the destroyed one.
+        assertTrue(pm.getMusicManager(guild) !== manager)
     }
 
     @Test

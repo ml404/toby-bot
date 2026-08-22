@@ -38,4 +38,11 @@ object IntroOwnership {
      */
     fun guildIdOf(introId: String?): Long? =
         introId?.substringBefore('_', missingDelimiterValue = "")?.toLongOrNull()
+
+    /** The member an intro belongs to, read straight off the id. */
+    fun discordIdOf(introId: String?): Long? = introId
+        ?.split('_')
+        ?.takeIf { it.size >= 2 }
+        ?.get(1)
+        ?.toLongOrNull()
 }

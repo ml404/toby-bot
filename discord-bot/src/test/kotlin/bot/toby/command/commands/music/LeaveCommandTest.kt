@@ -67,7 +67,10 @@ internal class LeaveCommandTest : MusicCommandTest {
         // Assert
         verify(exactly = 1) { event.hook.sendMessage("Disconnecting from `\uD83D\uDD0A Channel Name`") }
         verify(exactly = 1) { scheduler.isLooping = false }
-        verify(exactly = 1) { queue.clear() }
+        // clearQueue rather than a bare clear: the per-track maps are keyed by
+        // AudioTrack and were only ever cleaned when a track ended, so
+        // emptying the queue any other way orphaned an entry per queued track.
+        verify(exactly = 1) { scheduler.clearQueue() }
         verify(exactly = 1) { mockAudioPlayer.stopTrack() }
         verify(exactly = 1) { mockAudioPlayer.volume = 20 }
         verify(exactly = 1) { audioManager.closeAudioConnection() }

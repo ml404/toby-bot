@@ -64,6 +64,29 @@ class MusicControlGatewayImplTest {
     }
 
     @Test
+    fun `stop clears the queue, the loop and the pause`() {
+        // The web stop button. It goes through clearQueue rather than a bare
+        // clear so that the per-track maps — keyed by AudioTrack — don't keep
+        // an entry, and a track object, for everything that was queued.
+        val stopped = gateway.stop(guildId)
+
+        assertTrue(stopped)
+        verify(exactly = 1) { trackScheduler.stopTrack(true) }
+        verify(exactly = 1) { trackScheduler.clearQueue() }
+        verify(exactly = 1) { trackScheduler.isLooping = false }
+        verify(exactly = 1) { audioPlayer.isPaused = false }
+        verify(exactly = 1) { trackScheduler.publishQueueChanged() }
+    }
+
+    @Test
+    fun `stop on a guild the bot is not in changes nothing`() {
+        every { jda.getGuildById(999L) } returns null
+
+        assertFalse(gateway.stop(999L))
+        verify(exactly = 0) { trackScheduler.clearQueue() }
+    }
+
+    @Test
     fun `getState returns null when guild not found`() {
         every { jda.getGuildById(999L) } returns null
         assertNull(gateway.getState(999L))
