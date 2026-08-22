@@ -771,6 +771,113 @@ class VoiceEventHandlerTest {
     }
 
     @Test
+    fun `it says so when the bot is in no voice channel at all`() {
+        // Nothing connected and nothing opened — the member left again before
+        // the handler read the channel. Silence with no explanation is what
+        // this whole branch exists to stop.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns emptyList()
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every { configService.getConfigByName(any(), "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 0) { audioManager.openAudioConnection(any()) }
+        verify(exactly = 0) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
+    fun `a channel the bot cannot join does not take the whole join down with it`() {
+        // openAudioConnection throws synchronously for a missing Connect
+        // permission, or a full channel without Move Members. Unwrapped it
+        // aborted onGuildVoiceJoin entirely — voice session, intro and setup
+        // nudge all lost.
+        val guild = mockk<Guild>(relaxed = true)
+        val event = mockk<GuildVoiceUpdateEvent>(relaxed = true)
+        val audioManager = mockk<AudioManager>(relaxed = true)
+        val member = mockk<Member>(relaxed = true)
+        val channel = mockk<AudioChannelUnion>(relaxed = true)
+        val audioPlayerManager = mockk<PlayerManager>(relaxed = true)
+
+        every { event.guild } returns guild
+        every { event.jda.selfUser } returns selfUser
+        every { guild.audioManager } returns audioManager
+        every { event.member } returns member
+        every { event.channelJoined } returns channel
+        every { event.channelLeft } returns null
+        every { channel.members } returns listOf(member)
+        every { channel.name } returns "Locked"
+        every { channel.idLong } returns 99L
+        every { member.user.isBot } returns false
+        every { member.guild } returns guild
+        every { member.isOwner } returns false
+        every { member.idLong } returns 1L
+        every { member.user.idLong } returns 1L
+        every { guild.idLong } returns 7L
+        every { guild.id } returns "7"
+        every { audioManager.isConnected } returns false
+        every { audioManager.connectedChannel } returns null
+        every { audioManager.openAudioConnection(any()) } throws
+            IllegalStateException("Missing permission: VOICE_CONNECT")
+
+        mockkObject(PlayerManager)
+        every { PlayerManager.instance } returns audioPlayerManager
+        mockkObject(MusicPlayerHelper)
+        every { configService.getConfigByName(any(), "7") } returns null
+        every { userDtoHelper.calculateUserDto(1L, 7L, false) } returns mockk(relaxed = true) {
+            every { discordId } returns 1L
+            every { guildId } returns 7L
+            every { musicDtos } returns listOf(mockk<MusicDto>(relaxed = true)).toMutableList()
+        }
+
+        // No throw escapes, and the voice session is still opened.
+        handler.onGuildVoiceUpdate(event)
+
+        verify(exactly = 1) { voiceSessionLifecycle.openSession(1L, 7L, any(), any()) }
+        // Nothing is played into a channel the bot never got into.
+        verify(exactly = 0) {
+            MusicPlayerHelper.playUserIntro(any(), any(), any(), any(), any(), any(), any(), any())
+        }
+
+        unmockkObject(MusicPlayerHelper)
+        unmockkObject(PlayerManager)
+    }
+
+    @Test
     fun `nobody's intro plays into a channel the bot is not in`() {
         // The other half of the same guard: the bot sits in one channel and
         // somebody joins another. It must not play there — and now says so in

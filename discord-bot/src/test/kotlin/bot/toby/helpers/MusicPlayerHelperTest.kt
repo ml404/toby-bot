@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertEquals
+import common.media.MediaToken
 import org.junit.jupiter.api.Test
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -330,6 +331,46 @@ class MusicPlayerHelperTest {
                     any(), any(), eq("https://example.com/from-blob.mp3"), any(), any(), any(), any(), any(),
                 )
             }
+        } finally {
+            unmockkObject(PlayerManager.Companion)
+        }
+    }
+
+    @Test
+    fun `an uploaded intro plays from the signed media url`() {
+        // Neither the file name nor the blob is a URL, so the audio lives in
+        // the database and lavaplayer fetches it from the web endpoint. That
+        // endpoint has to stay anonymous for lavaplayer to reach it, and intro
+        // ids are guessable — the signature is what stops it being an open
+        // read of every uploaded MP3 on every server.
+        mockkObject(PlayerManager.Companion)
+        try {
+            every { PlayerManager.instance } returns playerManager
+            every { audioPlayer.volume } returns 50
+            every { playerManager.setPreviousVolume(any()) } just Runs
+
+            val uploaded = MusicDto().apply {
+                id = "1_1_1"
+                fileName = "my-tune.mp3"
+                musicBlob = byteArrayOf(0x49, 0x44, 0x33)
+                introVolume = 60
+            }
+            val userDto = mockk<UserDto>(relaxed = true) {
+                every { musicDtos } returns mutableListOf(uploaded)
+            }
+            val url = slot<String>()
+            every {
+                playerManager.loadAndPlayIntro(any(), any(), capture(url), any(), any(), any(), any(), any())
+            } just Runs
+
+            MusicPlayerHelper.playUserIntro(userDto, guildMock, null, 5)
+
+            assertTrue(url.captured.contains("/music?id=1_1_1"), url.captured)
+            assertTrue(
+                url.captured.contains("${MediaToken.EXPIRY_PARAM}=") &&
+                    url.captured.contains("${MediaToken.SIGNATURE_PARAM}="),
+                "the url must be signed and expiring: ${url.captured}",
+            )
         } finally {
             unmockkObject(PlayerManager.Companion)
         }
