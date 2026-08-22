@@ -31,8 +31,11 @@ interface PlaybackOutcomeReporter {
      *
      * @param sourceKey identifies the track that failed, so a single dead video
      *   can be told apart from the host refusing everything.
+     * @return whether another attempt is worth making. False while the source
+     *   is refusing us: a retry then is a second request to a host that has
+     *   already said no, which is how a rate limit becomes a block.
      */
-    fun playbackFailed(introId: String?, sourceKey: String, reason: String?)
+    fun playbackFailed(introId: String?, sourceKey: String, reason: String?): Boolean
 
     companion object {
         /**
@@ -44,7 +47,7 @@ interface PlaybackOutcomeReporter {
             override fun playbackSucceeded(introId: String?, uninterrupted: Boolean) =
                 PlayerManager.instance.reportPlaybackSuccess(introId, uninterrupted)
 
-            override fun playbackFailed(introId: String?, sourceKey: String, reason: String?) =
+            override fun playbackFailed(introId: String?, sourceKey: String, reason: String?): Boolean =
                 PlayerManager.instance.reportPlaybackFailure(introId, sourceKey, reason)
         }
     }

@@ -409,10 +409,13 @@ class PlayerManager(
      *
      * @param sourceKey what failed, used to tell "one dead video" apart from
      *   "the host is refusing us" — so it must identify the track, not the guild.
+     * @return whether another attempt is worth making — false during an
+     *   outage, where a retry is a second request to a host already saying no.
      */
-    fun reportPlaybackFailure(introId: String?, sourceKey: String, reason: String?) {
+    fun reportPlaybackFailure(introId: String?, sourceKey: String, reason: String?): Boolean {
         val outage = noteFailure(sourceKey, definite = SourceOutage.looksLikeBlock(reason))
         introId?.let { reportIntroFailure(it, IntroHealth.normaliseReason(reason), outage) }
+        return !outage
     }
 
     /**
@@ -503,7 +506,7 @@ class PlayerManager(
     fun destroyMusicManager(guildId: Long) {
         musicManagers.remove(guildId)?.let { mgr ->
             mgr.audioPlayer.destroy()
-            mgr.scheduler.queue.clear()
+            mgr.scheduler.clearQueue()
         }
     }
 

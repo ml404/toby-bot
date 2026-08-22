@@ -6,6 +6,7 @@ import bot.toby.helpers.UserDtoHelper
 import bot.toby.helpers.UserDtoHelper.Companion.getRequestingUserDto
 import bot.toby.helpers.nonBots
 import bot.toby.intro.IntroPlaybackTracker
+import bot.toby.intro.IntroRewardLedger
 import bot.toby.lavaplayer.PlayerManager
 import bot.toby.managers.NowPlayingManager
 import bot.toby.voice.LastConnectedChannelTracker
@@ -44,6 +45,7 @@ class VoiceEventHandler(
     private val xpAwardService: XpAwardService,
     private val nowPlayingManager: NowPlayingManager,
     private val introPlaybackTracker: IntroPlaybackTracker = IntroPlaybackTracker(),
+    private val rewardLedger: IntroRewardLedger = IntroRewardLedger(),
 ) : ListenerAdapter() {
 
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
@@ -297,26 +299,13 @@ class VoiceEventHandler(
                 ),
             )
             introPlaybackTracker.record(guild.idLong, requestingUserDto.discordId, played?.id)
-            if (played == null) {
-                // Paying out for an intro that made no sound made the reward
-                // the only feedback the member got — and it said the opposite
-                // of the truth. It also let anyone switch every intro off and
-                // still farm the credit on each join.
-                logger.info { "No intro played for ${requestingUserDto.discordId}; not awarding intro-play." }
-                return
-            }
-            awardService.award(
-                discordId = requestingUserDto.discordId,
-                guildId = requestingUserDto.guildId,
-                amount = INTRO_PLAY_CREDIT,
-                reason = "intro-play"
-            )
-            xpAwardService.award(
-                discordId = requestingUserDto.discordId,
-                guildId = requestingUserDto.guildId,
-                amount = INTRO_PLAY_XP,
-                reason = "intro-play"
-            )
+            // The reward is no longer paid here. `playUserIntro` returns as
+            // soon as it has *asked* lavaplayer to load — loading is
+            // asynchronous — so paying at this point paid a dead link exactly
+            // what it paid a clip everybody heard. IntroRewardLedger holds the
+            // expectation and IntroPlayRewardService settles it when the audio
+            // has actually run.
+            played?.id?.let(rewardLedger::expect)
         } else {
             logger.info { "User has no musicDto associated with them, no intro will be played" }
         }
@@ -352,7 +341,7 @@ class VoiceEventHandler(
             val musicManager = PlayerManager.instance.getMusicManager(guild)
             musicManager.scheduler.apply {
                 stopTrack(true)
-                queue.clear()
+                clearQueue()
                 isLooping = false
             }
             musicManager.audioPlayer.isPaused = false
