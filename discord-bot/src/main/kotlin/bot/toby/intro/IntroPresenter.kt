@@ -59,6 +59,10 @@ object IntroPresenter {
         append(" · ${IntroClip.describe(intro.startMs, intro.endMs)}")
     }
 
+    /** What the source said last time it refused, for the surfaces that show it. */
+    private fun failureReason(intro: MusicDto): String =
+        intro.lastFailureReason ?: "source could not be loaded"
+
     /** Whether this intro's source has failed enough times to be called dead. */
     fun isBroken(intro: MusicDto): Boolean = IntroHealth.isUnhealthy(intro.failureCount)
 
@@ -134,12 +138,23 @@ object IntroPresenter {
                         append(" · ${if (isUrlIntro(intro)) "Link" else "Uploaded file"}")
                         if (!intro.enabled) append(" · **skipped on join**")
                         playSummary(intro)?.let { append("\n$it") }
-                        if (isBroken(intro)) {
-                            // The reason is the actionable half — "video
-                            // unavailable" and "region blocked" call for
-                            // different fixes.
-                            append("\n**Not playing** — ")
-                            append(truncate(intro.lastFailureReason ?: "source could not be loaded", REASON_LIMIT))
+                        // The reason is the actionable half — "video
+                        // unavailable" and "region blocked" call for
+                        // different fixes — and it is written on the very
+                        // first failure. Withholding it until the second left
+                        // somebody who had just heard silence looking at a row
+                        // that described itself as perfectly fine.
+                        when {
+                            isBroken(intro) -> {
+                                append("\n**Not playing** — ")
+                                append(truncate(failureReason(intro), REASON_LIMIT))
+                            }
+                            intro.failureCount > 0 -> {
+                                // Not called broken yet: one failure is as
+                                // likely to have been a blip as a dead link.
+                                append("\nDidn't play last time — ")
+                                append(truncate(failureReason(intro), REASON_LIMIT))
+                            }
                         }
                     },
                 )

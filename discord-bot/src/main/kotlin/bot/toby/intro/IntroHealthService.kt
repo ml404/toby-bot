@@ -1,6 +1,8 @@
 package bot.toby.intro
 
+import bot.toby.notify.ChannelMentions
 import bot.toby.notify.NotificationRouter
+import common.notification.ChannelRouteKey
 import common.discord.embed
 import common.intro.IntroHealth
 import common.logging.DiscordLogger
@@ -60,11 +62,27 @@ class IntroHealthService(
             dto.lastFailureReason = reason
         } ?: return
 
-        // Notify on the crossing only. Nagging every join would make the
-        // notification worthless faster than the broken intro does.
-        if (updated.failureCount == IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            notifyOwner(updated, reason)
-        }
+        if (shouldNotify(updated.failureCount)) notifyOwner(updated, reason)
+    }
+
+    /**
+     * The crossing, and then sparingly.
+     *
+     * This used to be an exact `== UNHEALTHY_AFTER_FAILURES`, which gave the
+     * system one attempt, ever, to tell somebody their intro was dead. A DM
+     * that landed while they were away — or never landed, because DMs are
+     * closed — was indistinguishable from never having broken, and the intro
+     * went on failing in silence.
+     *
+     * Repeating every join would be worse than useless, so failures past the
+     * crossing are reported one in [RENOTIFY_EVERY_FAILURES]. Failures only
+     * accrue once per join, and a replay cooldown throttles those, so this is
+     * a handful of separate sessions apart.
+     */
+    private fun shouldNotify(failureCount: Int): Boolean {
+        if (failureCount < IntroHealth.UNHEALTHY_AFTER_FAILURES) return false
+        val past = failureCount - IntroHealth.UNHEALTHY_AFTER_FAILURES
+        return past % RENOTIFY_EVERY_FAILURES == 0
     }
 
     @EventListener
@@ -94,17 +112,56 @@ class IntroHealthService(
         val owner = dto.userDto ?: return
         val router = notificationRouter ?: return
         val name = IntroPresenter.displayName(dto)
-        logger.info { "Intro ${dto.id} ('$name') has failed ${dto.failureCount} times; notifying owner." }
+        logger.info { "Intro ${dto.id} ('$name') has failed ${dto.failureCount} times; notifying." }
         runCatching {
-            router.sendDm(owner.discordId, owner.guildId, NotificationChannelKind.INTRO_BROKEN) {
-                MessageCreateBuilder()
-                    .setEmbeds(brokenEmbed(name, dto, reason))
-                    .setComponents(ActionRow.of(IntroPresenter.webDashboardButton(owner.guildId, "Fix my intro")))
-                    .build()
+            // dispatch rather than sendDm: it refuses at runtime if a surface
+            // the kind declares has no builder, which is the guardrail that
+            // would have caught this one being DM-only in the first place.
+            router.dispatch(NotificationChannelKind.INTRO_BROKEN, owner.discordId, owner.guildId) {
+                dm {
+                    MessageCreateBuilder()
+                        .setEmbeds(brokenEmbed(name, dto, reason))
+                        .setComponents(
+                            ActionRow.of(IntroPresenter.webDashboardButton(owner.guildId, "Fix my intro"))
+                        )
+                        .build()
+                }
+                // Posts only where an admin has set INTRO_ISSUE_CHANNEL — the
+                // route has no system-channel fallback, so a server that has
+                // not opted in stays exactly as it is today. The mention is
+                // allow-listed through the owner's own CHANNEL preference, so
+                // being named in public is theirs to turn off.
+                channel(
+                    route = ChannelRouteKey.INTRO_ISSUE,
+                    mentions = ChannelMentions(
+                        NotificationChannelKind.INTRO_BROKEN,
+                        listOf(owner.discordId),
+                    ),
+                ) {
+                    MessageCreateBuilder()
+                        .setContent("<@${owner.discordId}>")
+                        .setEmbeds(publicEmbed(name, dto, reason))
+                        .build()
+                }
             }
         }.onFailure {
-            logger.error("Failed to DM owner about broken intro ${dto.id}: ${it.message}")
+            logger.error("Failed to report broken intro ${dto.id}: ${it.message}")
         }
+    }
+
+    /**
+     * The room's version. Shorter than the owner's DM and free of the
+     * fix-it instructions, which are theirs to act on — this exists so that
+     * everybody who heard the silence can find out what it was, rather than
+     * assuming the bot is broken.
+     */
+    private fun publicEmbed(name: String, dto: MusicDto, reason: String) = embed(
+        title = "An intro isn't playing",
+        color = BROKEN_COLOR,
+        description = "**$name** has failed ${dto.failureCount} times in a row, so nothing plays " +
+            "when its owner joins voice.\n\n> $reason",
+    ) {
+        setFooter("Admins: unset INTRO_ISSUE_CHANNEL to stop these.")
     }
 
     private fun brokenEmbed(name: String, dto: MusicDto, reason: String) = embed(
@@ -121,5 +178,8 @@ class IntroHealthService(
 
     companion object {
         private val BROKEN_COLOR: Color = Color(237, 66, 69) // Discord red
+
+        /** How often to repeat the warning once an intro is past the threshold. */
+        internal const val RENOTIFY_EVERY_FAILURES = 10
     }
 }

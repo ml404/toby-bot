@@ -180,7 +180,7 @@ class VoiceEventHandler(
         val deleteDelay =
             getConfigValue(DELETE_DELAY.configValue, guild.id, 5)
 
-        checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
+        val joining = checkStateAndConnectToVoiceChannel(event, audioManager, guild, defaultVolume)
 
         if (event.member.user.idLong != event.jda.selfUser.idLong) {
             val now = Instant.now()
@@ -194,9 +194,22 @@ class VoiceEventHandler(
         val introsAllowedHere = introsAllowedIn(guild, event.channelJoined?.idLong)
 
         val requestingUserDto = event.member.getRequestingUserDto(userDtoHelper)
-        if (audioManager.connectedChannel == event.channelJoined && introsAllowedHere) {
-            logger.info { "AudioManager channel and event joined channel are the same" }
-            setupAndPlayUserIntro(event, guild, deleteDelay, requestingUserDto)
+        // Where the bot is, or — on a cold join — where it has just been told
+        // to go. Asking only `connectedChannel` meant the very first person
+        // into an empty channel compared against a connection that had not
+        // finished opening yet, so their intro was skipped every single time,
+        // with no else branch and not one log line to say so.
+        val botChannelId = audioManager.connectedChannel?.idLong ?: joining?.idLong
+        when {
+            !introsAllowedHere -> Unit // already logged, with the reason
+            botChannelId == null ->
+                logger.info { "Not playing an intro: the bot isn't in a voice channel here." }
+            botChannelId != event.channelJoined?.idLong ->
+                logger.info {
+                    "Not playing an intro for ${requestingUserDto.discordId}: the bot is in channel " +
+                        "$botChannelId, not '${event.channelJoined?.name}'."
+                }
+            else -> setupAndPlayUserIntro(event, guild, deleteDelay, requestingUserDto)
         }
         if (introsAllowedHere &&
             requestingUserDto.musicDtos.isEmpty() &&
@@ -219,22 +232,36 @@ class VoiceEventHandler(
         return allowed
     }
 
+    /**
+     * @return the channel this call opened a connection to, or null when it
+     *   did not open one. Needed because [AudioManager.getConnectedChannel]
+     *   cannot answer "where will the bot be": `openAudioConnection` only
+     *   sends the gateway voice-state update and returns — the
+     *   `audioConnection` field that `getConnectedChannel` and `isConnected`
+     *   both read is assigned later, when the voice handshake completes.
+     */
     private fun checkStateAndConnectToVoiceChannel(
         event: GuildVoiceUpdateEvent,
         audioManager: AudioManager,
         guild: Guild,
         defaultVolume: Int
-    ) {
-        if (event.member.user.idLong != event.jda.selfUser.idLong) {
-            val joinedChannelConnectedMembers = event.channelJoined?.members?.nonBots() ?: emptyList()
-            if (joinedChannelConnectedMembers.isNotEmpty() && !audioManager.isConnected) {
-                logger.info { "Joining new channel '${event.channelJoined?.name}'." }
-                PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
-                event.channelJoined?.let { joined ->
-                    audioManager.openAudioConnection(joined)
-                    lastConnectedChannelTracker.set(guild.idLong, joined.idLong)
+    ): AudioChannel? {
+        if (event.member.user.idLong == event.jda.selfUser.idLong) return null
+        val joinedChannelConnectedMembers = event.channelJoined?.members?.nonBots() ?: emptyList()
+        if (joinedChannelConnectedMembers.isEmpty() || audioManager.isConnected) return null
+
+        logger.info { "Joining new channel '${event.channelJoined?.name}'." }
+        PlayerManager.instance.getMusicManager(guild).audioPlayer.volume = defaultVolume
+        return event.channelJoined?.also { joined ->
+            // Throws synchronously for a missing Connect permission or a full
+            // channel, which would otherwise abort the whole join handler and
+            // take the voice session and the intro down with it.
+            runCatching { audioManager.openAudioConnection(joined) }
+                .onFailure {
+                    logger.error("Could not join '${joined.name}': ${it.message}")
+                    return null
                 }
-            }
+            lastConnectedChannelTracker.set(guild.idLong, joined.idLong)
         }
     }
 
@@ -270,6 +297,14 @@ class VoiceEventHandler(
                 ),
             )
             introPlaybackTracker.record(guild.idLong, requestingUserDto.discordId, played?.id)
+            if (played == null) {
+                // Paying out for an intro that made no sound made the reward
+                // the only feedback the member got — and it said the opposite
+                // of the truth. It also let anyone switch every intro off and
+                // still farm the credit on each join.
+                logger.info { "No intro played for ${requestingUserDto.discordId}; not awarding intro-play." }
+                return
+            }
             awardService.award(
                 discordId = requestingUserDto.discordId,
                 guildId = requestingUserDto.guildId,

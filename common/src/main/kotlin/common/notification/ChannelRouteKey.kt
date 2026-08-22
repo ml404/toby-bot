@@ -53,6 +53,16 @@ enum class ChannelRouteKey(
     ),
 
     /**
+     * Optional public report that somebody's intro has stopped playing.
+     * No system-channel fallback: a broken intro is the owner's business
+     * by default, and a server opts the room in by setting the channel.
+     */
+    INTRO_ISSUE(
+        primaryConfigKey = "INTRO_ISSUE_CHANNEL",
+        systemChannelFallback = false,
+    ),
+
+    /**
      * Direct-to-system-channel routing used by web-initiated flows
      * (tip notifications, duel offers) that have no per-event channel
      * context to fall back to.

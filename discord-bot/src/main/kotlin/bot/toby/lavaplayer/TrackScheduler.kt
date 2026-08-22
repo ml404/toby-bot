@@ -424,6 +424,18 @@ class TrackScheduler(
             ?.sendMessage("Track ${track.info.title} got stuck, skipping.")
             ?.queue(invokeDeleteOnMessageResponse(deleteDelay))
 
+        // A stall is a failure of the source, not a play. Without this the
+        // track is stopped, ends STOPPED — which is also how every clipped
+        // intro ends — and is indistinguishable from a clean finish, so ten
+        // seconds of silence was recorded as a successful play and reset the
+        // failure counter behind itself.
+        failedTracks.add(track)
+        outcomeReporter.playbackFailed(
+            introTrackIds[track],
+            track.identifier,
+            "No audio arrived for ${thresholdMs}ms",
+        )
+
         // Read before stopping: stopping is what consumes the resume slot.
         val resumesPreemptedTrack = introTracks.contains(track) && resumeAfterIntro != null
 

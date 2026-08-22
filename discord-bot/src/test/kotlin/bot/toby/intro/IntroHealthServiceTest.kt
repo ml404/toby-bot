@@ -1,6 +1,8 @@
 package bot.toby.intro
 
+import bot.toby.notify.NotificationDispatch
 import bot.toby.notify.NotificationRouter
+import common.notification.ChannelRouteKey
 import common.intro.IntroHealth
 import common.notification.NotificationChannelKind
 import database.dto.music.MusicDto
@@ -33,6 +35,9 @@ class IntroHealthServiceTest {
 
     private lateinit var musicFileService: MusicFileService
     private lateinit var router: NotificationRouter
+
+    /** The plans the service handed the router, with their surface builders. */
+    private val dispatches = mutableListOf<NotificationDispatch>()
     private lateinit var service: IntroHealthService
     private lateinit var dto: MusicDto
 
@@ -48,6 +53,12 @@ class IntroHealthServiceTest {
         )
         every { musicFileService.getMusicFileById(introId) } returns dto
         service = IntroHealthService(musicFileService, router)
+        dispatches.clear()
+        val kind = slot<NotificationChannelKind>()
+        val configure = slot<NotificationDispatch.() -> Unit>()
+        every {
+            router.dispatch(capture(kind), any<Long>(), any<Long>(), capture(configure))
+        } answers { dispatches += NotificationDispatch(kind.captured).apply(configure.captured) }
     }
 
     @AfterEach
@@ -100,7 +111,7 @@ class IntroHealthServiceTest {
     fun `the owner is not told about the first failure`() {
         service.onIntroFailed(IntroFailedEvent(introId, "boom"))
 
-        verify(exactly = 0) { router.sendDm(any(), any(), any(), any()) }
+        assertTrue(dispatches.isEmpty())
     }
 
     @Test
@@ -110,7 +121,7 @@ class IntroHealthServiceTest {
         }
 
         verify(exactly = 1) {
-            router.sendDm(2L, 1L, NotificationChannelKind.INTRO_BROKEN, any())
+            router.dispatch(NotificationChannelKind.INTRO_BROKEN, 2L, 1L, any())
         }
     }
 
@@ -122,19 +133,56 @@ class IntroHealthServiceTest {
             service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
         }
 
-        verify(exactly = 1) { router.sendDm(any(), any(), any(), any()) }
+        assertEquals(1, dispatches.size)
     }
 
     @Test
-    fun `the DM names the intro, its slot and why it stopped`() {
-        val message = slot<() -> MessageCreateData>()
-        every { router.sendDm(any(), any(), any(), capture(message)) } returns Unit
+    fun `it says so again if the intro is still broken much later`() {
+        // The old check was an exact `== UNHEALTHY_AFTER_FAILURES`, which gave
+        // the system one attempt ever. A DM that arrived while somebody was
+        // away — or never arrived, because their DMs are shut — was
+        // indistinguishable from never having broken.
+        repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES + IntroHealthService.RENOTIFY_EVERY_FAILURES) {
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
+        }
 
+        assertEquals(2, dispatches.size)
+    }
+
+    @Test
+    fun `the room is offered the news too, not just the owner`() {
+        // Everyone else in the voice channel heard the same silence and had no
+        // way to find out why. Nothing posts unless an admin has set the
+        // channel — the route has no system-channel fallback.
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
             service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
         }
 
-        val embed = message.captured().embeds.single()
+        val plan = dispatches.single()
+        assertEquals(ChannelRouteKey.INTRO_ISSUE, plan.channelPlan!!.route)
+        assertTrue(plan.dmBuilder != null, "the owner's DM must not be dropped for the public post")
+    }
+
+    @Test
+    fun `the public post names the intro and the reason, not the fix-it steps`() {
+        repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
+        }
+
+        val description = dispatches.single().channelPlan!!.message().embeds.single().description.orEmpty()
+        assertTrue(description.contains("Sandstorm"), description)
+        assertTrue(description.contains("Video unavailable"), description)
+        // Replacing the link is the owner's job, and their DM says so.
+        assertTrue(!description.contains("/setintro"), description)
+    }
+
+    @Test
+    fun `the DM names the intro, its slot and why it stopped`() {
+        repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
+        }
+
+        val embed = dispatches.single().dmBuilder!!().embeds.single()
         val description = embed.description.orEmpty()
         assertTrue(description.contains("Sandstorm"), description)
         assertTrue(description.contains("#1"), description)
@@ -150,7 +198,7 @@ class IntroHealthServiceTest {
         }
 
         assertEquals(IntroHealth.UNHEALTHY_AFTER_FAILURES, dto.failureCount)
-        verify(exactly = 0) { router.sendDm(any(), any(), any(), any()) }
+        assertTrue(dispatches.isEmpty())
     }
 
     // --- loudness -----------------------------------------------------------
@@ -174,7 +222,7 @@ class IntroHealthServiceTest {
         service.onIntroLoudnessMeasured(IntroLoudnessMeasuredEvent(introId, 0.1))
 
         verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
-        verify(exactly = 0) { router.sendDm(any(), any(), any(), any()) }
+        assertTrue(dispatches.isEmpty())
     }
 
     @Test
@@ -189,7 +237,9 @@ class IntroHealthServiceTest {
 
     @Test
     fun `a router failure does not lose the recorded failure`() {
-        every { router.sendDm(any(), any(), any(), any()) } throws IllegalStateException("discord down")
+        every {
+            router.dispatch(any<NotificationChannelKind>(), any<Long>(), any<Long>(), any())
+        } throws IllegalStateException("discord down")
 
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
             service.onIntroFailed(IntroFailedEvent(introId, "boom"))
