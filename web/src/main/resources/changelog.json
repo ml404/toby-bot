@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Pay for intros that played, retry ones that died, stop leaking tracks",
+    "summary": "> Stacked on #760. Until that merges this shows both commits; the one to review here is fff85bf.",
+    "emoji": "🎵",
+    "prNumber": 761
+  },
+  {
+    "date": "August 2026",
     "title": "Stop intros failing silently, and say why when they do",
     "summary": "An audit of every path from voice join to audio, against the goal: *no silent failing, and people should know why an intro didn't play*.",
     "emoji": "🛡️",
