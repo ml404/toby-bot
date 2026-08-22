@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Cover the audio bridge, the clip marker and the untested failure paths",
+    "summary": "Measured with Kover rather than guessed at. The intro and audio classes had 142 uncovered lines; filtering to what *never executed at all* in any test — rather than merely partly-covered branches — turned up several things that run on every single play.",
+    "emoji": "✨",
+    "prNumber": 762
+  },
+  {
+    "date": "August 2026",
     "title": "Pay for intros that played, retry ones that died, stop leaking tracks",
     "summary": "> Stacked on #760. Until that merges this shows both commits; the one to review here is fff85bf.",
     "emoji": "🎵",
