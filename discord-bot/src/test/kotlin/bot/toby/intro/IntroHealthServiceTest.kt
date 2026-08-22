@@ -81,7 +81,7 @@ class IntroHealthServiceTest {
 
     @Test
     fun `a failure is recorded against the row with its reason`() {
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "This video is not available in your country"))
+        service.onIntroFailed(IntroFailedEvent(introId, "This video is not available in your country"))
 
         assertEquals(1, dto.failureCount)
         assertEquals("This video is not available in your country", dto.lastFailureReason)
@@ -91,14 +91,14 @@ class IntroHealthServiceTest {
 
     @Test
     fun `a blank reason is still readable when it reaches the owner`() {
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "   "))
+        service.onIntroFailed(IntroFailedEvent(introId, "   "))
 
         assertEquals("Source could not be loaded", dto.lastFailureReason)
     }
 
     @Test
     fun `the owner is not told about the first failure`() {
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+        service.onIntroFailed(IntroFailedEvent(introId, "boom"))
 
         verify(exactly = 0) { router.sendDm(any(), any(), any(), any()) }
     }
@@ -106,7 +106,7 @@ class IntroHealthServiceTest {
     @Test
     fun `the owner is told when the intro crosses into broken`() {
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "Video unavailable"))
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
         }
 
         verify(exactly = 1) {
@@ -119,7 +119,7 @@ class IntroHealthServiceTest {
         // A broken intro fires on every single voice join. Nagging turns the
         // notification into noise faster than the fault turns into a problem.
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES + 6) {
-            service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "Video unavailable"))
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
         }
 
         verify(exactly = 1) { router.sendDm(any(), any(), any(), any()) }
@@ -131,7 +131,7 @@ class IntroHealthServiceTest {
         every { router.sendDm(any(), any(), any(), capture(message)) } returns Unit
 
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "Video unavailable"))
+            service.onIntroFailed(IntroFailedEvent(introId, "Video unavailable"))
         }
 
         val embed = message.captured().embeds.single()
@@ -146,7 +146,7 @@ class IntroHealthServiceTest {
         dto.userDto = null
 
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+            service.onIntroFailed(IntroFailedEvent(introId, "boom"))
         }
 
         assertEquals(IntroHealth.UNHEALTHY_AFTER_FAILURES, dto.failureCount)
@@ -170,7 +170,7 @@ class IntroHealthServiceTest {
         every { musicFileService.getMusicFileById(introId) } returns null
 
         service.onIntroPlayed(IntroPlayedEvent(introId))
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+        service.onIntroFailed(IntroFailedEvent(introId, "boom"))
         service.onIntroLoudnessMeasured(IntroLoudnessMeasuredEvent(introId, 0.1))
 
         verify(exactly = 0) { musicFileService.updateMusicFile(any()) }
@@ -183,7 +183,7 @@ class IntroHealthServiceTest {
 
         // No throw: these run from event handlers on the load and audio paths.
         service.onIntroPlayed(IntroPlayedEvent(introId))
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+        service.onIntroFailed(IntroFailedEvent(introId, "boom"))
         service.onIntroLoudnessMeasured(IntroLoudnessMeasuredEvent(introId, 0.1))
     }
 
@@ -192,7 +192,7 @@ class IntroHealthServiceTest {
         every { router.sendDm(any(), any(), any(), any()) } throws IllegalStateException("discord down")
 
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+            service.onIntroFailed(IntroFailedEvent(introId, "boom"))
         }
 
         assertEquals(IntroHealth.UNHEALTHY_AFTER_FAILURES, dto.failureCount)
@@ -203,7 +203,7 @@ class IntroHealthServiceTest {
         val unrouted = IntroHealthService(musicFileService, null)
 
         repeat(IntroHealth.UNHEALTHY_AFTER_FAILURES) {
-            unrouted.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+            unrouted.onIntroFailed(IntroFailedEvent(introId, "boom"))
         }
 
         assertEquals(IntroHealth.UNHEALTHY_AFTER_FAILURES, dto.failureCount)
@@ -214,7 +214,7 @@ class IntroHealthServiceTest {
         val before = Instant.now().minusSeconds(1)
 
         service.onIntroPlayed(IntroPlayedEvent(introId))
-        service.onIntroLoadFailed(IntroLoadFailedEvent(introId, "boom"))
+        service.onIntroFailed(IntroFailedEvent(introId, "boom"))
 
         assertTrue(dto.lastPlayedAt!!.isAfter(before))
         assertTrue(dto.lastFailureAt!!.isAfter(before))

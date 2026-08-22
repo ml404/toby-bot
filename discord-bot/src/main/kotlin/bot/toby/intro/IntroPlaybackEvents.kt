@@ -24,23 +24,33 @@ data class IntroLoudnessMeasuredEvent(
 ) : IntroPlaybackEvent
 
 /**
- * An intro's source loaded and started. This is the closest thing to "it
- * played" that the load path can honestly report — a source that starts and
- * then dies mid-stream is a different failure, and one nobody has complained
- * about.
+ * An intro actually played: audio reached the listener and the source did not
+ * die underneath it.
+ *
+ * Published when the track *ends*, not when it is queued. Queue time was as
+ * close as the load path could honestly get, and the distance turned out to
+ * matter: a source that resolves and then fails mid-stream produced silence
+ * and was still recorded as a play. Because a play also clears the failure
+ * counter, every attempt erased the evidence of the last one, so an intro
+ * failing this way could never reach the threshold that DMs its owner.
  */
 data class IntroPlayedEvent(
     override val introId: String,
 ) : IntroPlaybackEvent
 
 /**
- * An intro's source could not be loaded, after lavaplayer exhausted its
- * retries. [reason] is the human-readable message shown back to the owner.
+ * An intro's source failed — either refusing to load after lavaplayer
+ * exhausted its retries, or dying part-way through streaming. [reason] is the
+ * human-readable message shown back to the owner.
+ *
+ * One event for both because the owner's position is identical either way:
+ * their intro made no sound and the link is what they can act on. It was
+ * named for the load half alone while the streaming half went unhandled.
  *
  * No guild/user on the event: the handler loads the row to bump its failure
  * count anyway, and that row already knows whose it is.
  */
-data class IntroLoadFailedEvent(
+data class IntroFailedEvent(
     override val introId: String,
     val reason: String,
 ) : IntroPlaybackEvent
