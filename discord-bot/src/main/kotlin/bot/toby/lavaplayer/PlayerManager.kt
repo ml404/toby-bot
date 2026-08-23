@@ -282,7 +282,12 @@ class PlayerManager(
                 // what let a stream that died on every play keep reporting
                 // itself healthy. Both success signals now come back from
                 // TrackScheduler once audio has actually run.
-                scheduler.event = event
+                // Only ever set, never cleared: an intro played on a voice
+                // join loads with no event, and assigning that null wiped out
+                // the interaction the music already playing was posted from —
+                // so its now-playing message stopped refreshing and nothing
+                // was left able to delete it.
+                event?.let { scheduler.event = it }
                 scheduler.deleteDelay = deleteDelay
                 if (isIntro) {
                     scheduler.queueIntro(track, startPosition, endPosition, volume, requesterId, introId)

@@ -537,4 +537,34 @@ class PlayerManagerTest {
 
         assertTrue(messages.any { it.contains("Nothing found for the link 'url-a'") }, messages.toString())
     }
+    @Test
+    fun `an eventless intro load leaves the scheduler's interaction alone`() {
+        // A voice-join intro loads with no event. Assigning that null over the
+        // interaction the music already playing came from cost the scheduler
+        // the only thing it had to post and tidy up now-playing messages
+        // through, so the one on screen froze where it was and stayed.
+        val scheduler = pm.getMusicManager(guild).scheduler
+        val playing = mockk<SlashCommandInteractionEvent>(relaxed = true)
+        scheduler.event = playing
+
+        pm.loadAndPlayIntro(guild, null, "url", 5, 0L, 50, null, "1_2_1")
+        handlers.last().trackLoaded(mockk(relaxed = true) {
+            every { info } returns AudioTrackInfo("t", "a", 1_000L, "id", false, "http://x")
+        })
+
+        assertEquals(playing, scheduler.event)
+    }
+
+    @Test
+    fun `an intro played from a command takes the interaction over`() {
+        val scheduler = pm.getMusicManager(guild).scheduler
+
+        pm.loadAndPlayIntro(guild, event, "url", 5, 0L, 50, null, "1_2_1")
+        handlers.last().trackLoaded(mockk(relaxed = true) {
+            every { info } returns AudioTrackInfo("t", "a", 1_000L, "id", false, "http://x")
+        })
+
+        assertEquals(event, scheduler.event)
+    }
+
 }

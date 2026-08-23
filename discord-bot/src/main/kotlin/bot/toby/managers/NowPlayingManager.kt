@@ -13,6 +13,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import java.util.concurrent.*
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
@@ -25,8 +26,53 @@ class NowPlayingManager(
     private val scheduledTasks = ConcurrentHashMap<Long, ScheduledFuture<*>>()
     private val lock = ReentrantReadWriteLock()
 
-    fun setNowPlayingMessage(guildId: Long, message: Message) {
+    /**
+     * Who currently owns the guild's now-playing slot, and a source of tokens
+     * that never repeats.
+     *
+     * A now-playing message exists on Discord a round-trip before this class
+     * hears about it, and everything that tidies it up keys off having heard.
+     * A track that dies the moment it starts ends inside that window, so the
+     * teardown found nothing, and the message landed a moment later with
+     * nobody left to remove it: a frozen embed, sitting in the channel for
+     * good. The same window makes two posts collide — a retried intro starts
+     * before the first send has landed, sees no message to edit, and posts a
+     * second one, stranding the first.
+     *
+     * So a post claims the slot before it is sent and hands the claim back
+     * with the message. A claim that no longer matches means the message is
+     * already obsolete and is deleted instead of stored.
+     */
+    private val nowPlayingClaims = ConcurrentHashMap<Long, Long>()
+    private val claimSource = AtomicLong()
+
+    /**
+     * Claims the guild's now-playing slot for a message about to be posted.
+     * Pass the result back to [setNowPlayingMessage] when it lands.
+     */
+    fun claimNowPlayingSlot(guildId: Long): Long = lock.write {
+        claimSource.incrementAndGet().also { nowPlayingClaims[guildId] = it }
+    }
+
+    /**
+     * @param claim the token from [claimNowPlayingSlot], when the caller took
+     *        one out. Null keeps the older unconditional behaviour for callers
+     *        that hold the message already rather than having just sent it.
+     */
+    fun setNowPlayingMessage(guildId: Long, message: Message, claim: Long? = null) {
         lock.write {
+            if (claim != null && nowPlayingClaims[guildId] != claim) {
+                // Superseded or torn down while this was in the air. Nothing
+                // is going to come back for it, so it goes now.
+                logger.info {
+                    "Now playing message ${message.idLong} for guild $guildId arrived after it was " +
+                        "superseded; deleting it rather than leaving it behind"
+                }
+                message.delete().queue({}, { error ->
+                    logger.warn { "Could not delete superseded now playing message ${message.idLong}: ${error.message}" }
+                })
+                return@write
+            }
             logger.info { "Setting now playing message ${message.idLong} for guild $guildId" }
             guildLastNowPlayingMessage[guildId] = message
         }
@@ -46,6 +92,9 @@ class NowPlayingManager(
     fun resetNowPlayingMessage(guildId: Long) {
         lock.write {
             logger.info { "Resetting now playing message and cancelling scheduler for guild $guildId" }
+            // Dropped first, so a message still in the air lands unclaimed and
+            // deletes itself rather than outliving the track it describes.
+            nowPlayingClaims.remove(guildId)
             val message = guildLastNowPlayingMessage.remove(guildId)
             scheduledTasks.remove(guildId)?.cancel(true)
 
@@ -213,6 +262,7 @@ class NowPlayingManager(
 
     fun clear() {
         lock.write {
+            nowPlayingClaims.clear()
             guildLastNowPlayingMessage.clear()
             scheduledTasks.values.forEach { it.cancel(true) }
             scheduledTasks.clear()

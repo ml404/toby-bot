@@ -343,4 +343,64 @@ class NowPlayingManagerTest {
             mockMessage2.editMessageEmbeds(any<MessageEmbed>()).queue()
         }
     }
+    /**
+     * A now-playing message exists on Discord a round-trip before this class
+     * hears about it, and everything that tidies one up keys off having heard.
+     * These cover what happens inside that window — which is exactly where a
+     * track that dies the moment it starts ends.
+     */
+    @Test
+    fun `a message that lands after the teardown deletes itself`() {
+        val guildId = 1L
+        val claim = nowPlayingManager.claimNowPlayingSlot(guildId)
+
+        // The track died before the send came back, so the teardown ran first
+        // and found nothing to remove.
+        nowPlayingManager.resetNowPlayingMessage(guildId)
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1, claim)
+
+        // Left stored, it would sit in the channel for good with a frozen
+        // progress bar and nothing left to come back for it.
+        verify { mockMessage1.delete() }
+        assertNull(nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `two posts racing leave one message, not two`() {
+        val guildId = 1L
+        // A retried intro starts before the first send has landed, sees no
+        // message to edit, and posts its own.
+        val first = nowPlayingManager.claimNowPlayingSlot(guildId)
+        val second = nowPlayingManager.claimNowPlayingSlot(guildId)
+
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1, first)
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage2, second)
+
+        verify { mockMessage1.delete() }
+        verify(exactly = 0) { mockMessage2.delete() }
+        assertEquals(mockMessage2, nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `a claim that is still current stores the message as usual`() {
+        val guildId = 1L
+        val claim = nowPlayingManager.claimNowPlayingSlot(guildId)
+
+        nowPlayingManager.setNowPlayingMessage(guildId, mockMessage1, claim)
+
+        verify(exactly = 0) { mockMessage1.delete() }
+        assertEquals(mockMessage1, nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `one guild's teardown does not strand another guild's message`() {
+        val claim = nowPlayingManager.claimNowPlayingSlot(1L)
+
+        nowPlayingManager.resetNowPlayingMessage(2L)
+        nowPlayingManager.setNowPlayingMessage(1L, mockMessage1, claim)
+
+        verify(exactly = 0) { mockMessage1.delete() }
+        assertEquals(mockMessage1, nowPlayingManager.getLastNowPlayingMessage(1L))
+    }
+
 }
