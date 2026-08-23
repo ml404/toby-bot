@@ -190,11 +190,15 @@ object MusicPlayerHelper {
         stopButton: Button,
         guildId: Long,
     ) {
+        // Claimed before the send, not after it lands: the message exists on
+        // Discord a round-trip before this process hears about it, and a track
+        // that dies at once ends inside that window.
+        val claim = nowPlayingManager.claimNowPlayingSlot(guildId)
         hook.sendMessageEmbeds(embed)
             .setComponents(ActionRow.of(pausePlayButton, stopButton))
             .queue {
                 logger.info("Nowplaying message ${it.idLong} will be stored on guild $guildId")
-                nowPlayingManager.setNowPlayingMessage(guildId, it)
+                nowPlayingManager.setNowPlayingMessage(guildId, it, claim)
             }
     }
 

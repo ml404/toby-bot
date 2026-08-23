@@ -35,6 +35,17 @@ class TrackScheduler(
     private var previousVolume: Int? = null
     private val logger: DiscordLogger = DiscordLogger.createLogger(this::class.java)
     private val trackClipBounds = ConcurrentHashMap<AudioTrack, Pair<Long, Long>>()
+
+    /**
+     * Where each track was asked to start.
+     *
+     * `trackClipBounds` carries a start too, but only for tracks that also
+     * have an end, so an intro trimmed at the front and left to run to its
+     * own finish was recorded nowhere. Reading it back off the track is no
+     * good either: `position` is the offset when it is set and playback
+     * progress a moment later, and the two are indistinguishable.
+     */
+    private val trackStartMs = ConcurrentHashMap<AudioTrack, Long>()
     private val trackRequesters = ConcurrentHashMap<AudioTrack, Long>()
     private val introTracks: MutableSet<AudioTrack> = ConcurrentHashMap.newKeySet()
 
@@ -155,7 +166,14 @@ class TrackScheduler(
         val clone = currentlyPlaying.makeClone()
         clone.position = currentlyPlaying.position
         clone.userData = currentlyPlaying.userData
-        trackClipBounds[currentlyPlaying]?.let { trackClipBounds[clone] = it }
+        trackClipBounds[currentlyPlaying]?.let {
+            trackClipBounds[clone] = it
+            // Absolute, so the same figure still means the same moment in the
+            // track. Without it a clipped song that an intro interrupted came
+            // back with nothing to stop it and ran on to the end.
+            setClipEndMarker(clone, it.second)
+        }
+        trackStartMs[currentlyPlaying]?.let { trackStartMs[clone] = it }
         trackRequesters[currentlyPlaying]?.let { trackRequesters[clone] = it }
         resumeAfterIntro = clone
         resumingTracks.add(clone)
@@ -186,19 +204,33 @@ class TrackScheduler(
     ) {
         track.position = startPosition
         track.userData = volume
+        trackStartMs[track] = startPosition
         requesterId?.let { trackRequesters[track] = it }
         if (endPosition != null && endPosition > startPosition) {
             trackClipBounds[track] = startPosition to endPosition
-            track.setMarker(TrackMarker(endPosition) { state ->
-                // Stop the clipped track on reaching the end marker via the player so
-                // onTrackEnd reliably fires; that handler tears down the now-playing
-                // embed and advances the queue / restores the previous volume.
-                if (state == TrackMarkerHandler.MarkerState.REACHED) {
-                    logger.info("Clip end marker reached at $endPosition ms for ${track.info.title}, stopping track.")
-                    player.stopTrack()
-                }
-            })
+            setClipEndMarker(track, endPosition)
         }
+    }
+
+    /**
+     * Stops [track] at [endPosition], which is what makes a clip a clip.
+     *
+     * Split out of [prepareTrack] because a clone needs it too and cannot
+     * inherit it: `makeClone` copies the track's identity, not the marker
+     * hanging off it, so every clone this class makes starts life as the whole
+     * track with nothing to stop it.
+     *
+     * Stopped through the player rather than the executor so onTrackEnd
+     * reliably fires; that handler tears down the now-playing embed and
+     * advances the queue / restores the previous volume.
+     */
+    private fun setClipEndMarker(track: AudioTrack, endPosition: Long) {
+        track.setMarker(TrackMarker(endPosition) { state ->
+            if (state == TrackMarkerHandler.MarkerState.REACHED) {
+                logger.info("Clip end marker reached at $endPosition ms for ${track.info.title}, stopping track.")
+                player.stopTrack()
+            }
+        })
     }
 
     // Back-compat overload for the pre-clip call sites; currently unused but keeps
@@ -239,14 +271,27 @@ class TrackScheduler(
         publishQueueChanged()
     }
 
+    /**
+     * Teardown keys off [guildId] rather than the interaction's guild. The two
+     * are the same guild when there is an interaction at all, and there isn't
+     * always one: an intro played on a voice join arrives with no event, which
+     * left the message from whatever was playing before with nothing able to
+     * remove it.
+     */
     override fun onTrackEnd(player: AudioPlayer, track: AudioTrack, endReason: AudioTrackEndReason) {
-        trackClipBounds.remove(track)
-        trackRequesters.remove(track)
+        // Read into locals rather than simply dropped: the retry further down
+        // needs every one of these, and it runs well after this point. Copying
+        // them off the ended track by map lookup — which is what this did —
+        // was reading entries these very lines had just removed, so each copy
+        // silently did nothing.
+        val clipBounds = trackClipBounds.remove(track)
+        val requesterId = trackRequesters.remove(track)
+        val startMs = trackStartMs.remove(track)
         // Safe to drop here even though the loudness filter reports later: the
         // factory resolved the id when the chain was built and holds it in its
         // callback closure. Kept in hand for the outcome report below.
         val introId = introTrackIds.remove(track)
-        introPlaybackMs.remove(track)
+        val playbackMs = introPlaybackMs.remove(track)
         resumingTracks.remove(track)
         val wasIntro = introTracks.remove(track)
         logger.info("${track.info.title} by ${track.info.author} ended")
@@ -298,7 +343,15 @@ class TrackScheduler(
         // where restarting a song that died four minutes in is worse than
         // skipping it.
         if (wasIntro && introId != null && retryWorthwhile == true && !wasRetry) {
-            if (retryIntro(player, track, introId)) return
+            val attempt = IntroAttempt(
+                introId = introId,
+                startMs = startMs ?: 0L,
+                endMs = clipBounds?.second,
+                volume = track.userData as? Int ?: player.volume,
+                requesterId = requesterId,
+                playbackMs = playbackMs,
+            )
+            if (retryIntro(player, track, attempt)) return
         }
 
         if (wasIntro) releaseStaleResumeSlot(endReason)
@@ -312,7 +365,7 @@ class TrackScheduler(
             // Playback has actually stopped and nothing is taking over (REPLACED
             // means another track already started and its onTrackStart will
             // refresh the embed in place). Tear down the now-playing message.
-            event?.guild?.idLong.resetMessagesForGuildId()
+            resetMessages(guildId)
         }
     }
 
@@ -326,26 +379,40 @@ class TrackScheduler(
         SchedulerEvents.publish(PauseStateChangedEvent(guildId, false))
     }
 
+    /** What a second attempt at an intro needs, read off the first before it is forgotten. */
+    private data class IntroAttempt(
+        val introId: String,
+        val startMs: Long,
+        val endMs: Long?,
+        val volume: Int,
+        val requesterId: Long?,
+        val playbackMs: Long?,
+    )
+
     /**
-     * Plays a fresh clone of a failed intro, carrying its bookkeeping across.
+     * Plays a fresh clone of a failed intro, set up from scratch.
      *
-     * A clone re-resolves its stream from scratch, which is the whole point —
-     * the formats fetch that failed is exactly what gets retried. The clone
-     * carries its own entry in every per-track map, and is marked so that a
-     * second death ends it.
+     * A clone re-resolves its stream, which is the whole point — the formats
+     * fetch that failed is exactly what gets retried. What it does not inherit
+     * is anything the scheduler did to the original: it arrives at position
+     * zero with no marker on it, so the second attempt has to be prepared like
+     * a first one. Copying the maps across instead — which is what this did —
+     * gave a retried intro no start offset and, worse, no end, so five seconds
+     * of somebody's intro became the whole four-minute track, with its
+     * now-playing message held open for the length of it.
      *
      * @return whether the retry started, so the caller can leave the queue alone.
      */
-    private fun retryIntro(player: AudioPlayer, failed: AudioTrack, introId: String): Boolean {
+    private fun retryIntro(player: AudioPlayer, failed: AudioTrack, attempt: IntroAttempt): Boolean {
         val clone = runCatching { failed.makeClone() }.getOrNull() ?: return false
-        clone.userData = failed.userData
-        introTrackIds[clone] = introId
+        prepareTrack(clone, attempt.startMs, attempt.endMs, attempt.volume, attempt.requesterId)
+        introTrackIds[clone] = attempt.introId
         introTracks.add(clone)
         retriedIntros.add(clone)
-        trackClipBounds[failed]?.let { trackClipBounds[clone] = it }
-        introPlaybackMs[failed]?.let { introPlaybackMs[clone] = it }
-        trackRequesters[failed]?.let { trackRequesters[clone] = it }
-        logger.info { "Intro $introId died mid-stream on guild $guildId; trying once more." }
+        // Carried rather than recomputed: it is what the fade aims at, and the
+        // original worked it out from the same clip the clone has just been given.
+        attempt.playbackMs?.let { introPlaybackMs[clone] = it }
+        logger.info { "Intro ${attempt.introId} died mid-stream on guild $guildId; trying once more." }
         return runCatching { player.startTrack(clone, false) }
             .onFailure { forget(clone) }
             .getOrDefault(false)
@@ -369,7 +436,7 @@ class TrackScheduler(
         } else {
             // Queue exhausted — nothing else will play, so clean up the
             // now-playing message and its scheduled updates.
-            event?.guild?.idLong.resetMessagesForGuildId()
+            resetMessages(guildId)
         }
     }
 
@@ -543,6 +610,7 @@ class TrackScheduler(
     /** Drops every per-track record for [track]. Safe to call more than once. */
     private fun forget(track: AudioTrack) {
         trackClipBounds.remove(track)
+        trackStartMs.remove(track)
         trackRequesters.remove(track)
         introTrackIds.remove(track)
         introPlaybackMs.remove(track)
@@ -586,6 +654,7 @@ class TrackScheduler(
         // Not cleared before, so a stop left a clip bound and a requester
         // behind for every track it interrupted.
         trackClipBounds.clear()
+        trackStartMs.clear()
         trackRequesters.clear()
         failedTracks.clear()
         retriedIntros.clear()
@@ -598,7 +667,4 @@ class TrackScheduler(
         this.previousVolume = previousVolume
     }
 
-    private fun Long?.resetMessagesForGuildId() {
-        this?.let { resetMessages(it) }
-    }
 }
