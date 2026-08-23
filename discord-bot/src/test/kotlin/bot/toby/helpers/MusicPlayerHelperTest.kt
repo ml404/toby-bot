@@ -461,4 +461,85 @@ class MusicPlayerHelperTest {
             MusicPlayerHelper.nowPlayingManager.setNowPlayingMessage(guildId, message)
         }
     }
+    /**
+     * The wiring between posting a now-playing message and recording it.
+     *
+     * [MusicPlayerHelper] and `NowPlayingManager` were each covered on their
+     * own, which left the seam between them untested — and the seam is where
+     * the bug lived. These drive the real callback that JDA would invoke when
+     * the send comes back, rather than standing in for it.
+     */
+    private fun captureNowPlayingSends(): MutableList<java.util.function.Consumer<in Message>> {
+        val sends = mutableListOf<java.util.function.Consumer<in Message>>()
+        val action = mockk<WebhookMessageCreateAction<Message>>()
+        every { replyCallback.hook.sendMessageEmbeds(any<MessageEmbed>()) } returns action
+        every { action.setComponents(any<ActionRow>()) } returns action
+        every { action.queue(capture(sends)) } just Runs
+        every { audioPlayer.volume } returns 50
+        every { audioPlayer.isPaused } returns false
+        MusicPlayerHelper.nowPlayingManager.clear()
+        return sends
+    }
+
+    @Test
+    fun `a now-playing message that lands after the track ended does not stay behind`() {
+        // A track that dies the moment it starts ends inside the send's
+        // round-trip, so the teardown ran while the message was still in the
+        // air. It arrived with nothing left to remove it: a frozen embed, in
+        // the channel for good.
+        val sends = captureNowPlayingSends()
+        val message = mockk<Message>(relaxed = true)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+        MusicPlayerHelper.resetMessages(guildId)
+        sends.single().accept(message)
+
+        verify { message.delete() }
+        assertNull(MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `two now-playing posts racing leave one message, not two`() {
+        // A retried intro starts before the first send has landed, finds no
+        // message to edit, and posts its own.
+        val sends = captureNowPlayingSends()
+        val first = mockk<Message>(relaxed = true)
+        val second = mockk<Message>(relaxed = true)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+        assertEquals(2, sends.size)
+        sends[0].accept(first)
+        sends[1].accept(second)
+
+        verify { first.delete() }
+        verify(exactly = 0) { second.delete() }
+        assertEquals(second, MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `the ordinary case still stores the message it just posted`() {
+        val sends = captureNowPlayingSends()
+        val message = mockk<Message>(relaxed = true)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+        sends.single().accept(message)
+
+        verify(exactly = 0) { message.delete() }
+        assertEquals(message, MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
+    @Test
+    fun `a message in flight for one guild survives another guild's teardown`() {
+        val sends = captureNowPlayingSends()
+        val message = mockk<Message>(relaxed = true)
+
+        MusicPlayerHelper.nowPlaying(replyCallback, playerManager, 5)
+        MusicPlayerHelper.resetMessages(guildId + 1)
+        sends.single().accept(message)
+
+        verify(exactly = 0) { message.delete() }
+        assertEquals(message, MusicPlayerHelper.nowPlayingManager.getLastNowPlayingMessage(guildId))
+    }
+
 }

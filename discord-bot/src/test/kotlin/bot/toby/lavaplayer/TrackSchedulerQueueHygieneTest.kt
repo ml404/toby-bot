@@ -185,4 +185,82 @@ class TrackSchedulerQueueHygieneTest {
 
         assertEquals(0, scheduler.queue.size)
     }
+    /**
+     * Nothing anywhere in the scheduler still points at [track].
+     *
+     * Reflective on purpose. The per-track maps have grown from five to eight,
+     * every one of them keyed by `AudioTrack`, and each has to be added by
+     * hand to `forget` and to `stopTrack`. The accessor-based checks above can
+     * only see the three that happen to be readable, so the map added next —
+     * `trackStartMs` was the last one — is exactly the one nothing would
+     * notice was leaking. This sees all of them, including ones that do not
+     * exist yet.
+     */
+    private fun assertNothingHeldFor(track: AudioTrack) {
+        val held = TrackScheduler::class.java.declaredFields
+            .filter { it.name != "queue" }
+            .onEach { it.isAccessible = true }
+            .mapNotNull { field ->
+                when (val value = field.get(scheduler)) {
+                    is Map<*, *> -> field.name.takeIf { value.containsKey(track) }
+                    is Set<*> -> field.name.takeIf { value.contains(track) }
+                    else -> null
+                }
+            }
+        assertEquals(emptyList<String>(), held, "still holding the track in: $held")
+    }
+
+    @Test
+    fun `clearing the queue leaves nothing at all keyed to what was in it`() {
+        val queued = track()
+        scheduler.queue(queued, startPosition = 2_000L, endPosition = 5_000L, volume = 50, requesterId = 42L)
+
+        scheduler.clearQueue()
+
+        assertNothingHeldFor(queued)
+    }
+
+    @Test
+    fun `stopping leaves nothing at all keyed to what it interrupted`() {
+        every { player.playingTrack } returns null
+        val intro = track("Intro")
+        scheduler.queueIntro(intro, 2_000L, 5_000L, 50, requesterId = 42L, introId = "1_2_1")
+
+        scheduler.stopTrack(isStoppable = true)
+
+        assertNothingHeldFor(intro)
+    }
+
+    @Test
+    fun `removing one item leaves nothing at all keyed to it`() {
+        val queued = track()
+        scheduler.queue(queued, startPosition = 2_000L, endPosition = 5_000L, volume = 50, requesterId = 42L)
+
+        scheduler.removeQueueItem(0)
+
+        assertNothingHeldFor(queued)
+    }
+
+    @Test
+    fun `a track that ends leaves nothing at all keyed to it`() {
+        every { player.playingTrack } returns null
+        val intro = track("Intro")
+        scheduler.queueIntro(intro, 2_000L, 5_000L, 50, requesterId = 42L, introId = "1_2_1")
+
+        scheduler.onTrackEnd(player, intro, com.sedmelluq.discord.lavaplayer.track.AudioTrackEndReason.STOPPED)
+
+        assertNothingHeldFor(intro)
+    }
+
+    @Test
+    fun `an intro too late to queue leaves nothing at all keyed to it`() {
+        every { player.playingTrack } returns null
+        repeat(100) { scheduler.queue(track("Filler $it"), 0L, null, 50, null) }
+        val unlucky = track("Unlucky")
+
+        scheduler.queueIntro(unlucky, 2_000L, 5_000L, 50, requesterId = 7L, introId = "1_2_1")
+
+        assertNothingHeldFor(unlucky)
+    }
+
 }

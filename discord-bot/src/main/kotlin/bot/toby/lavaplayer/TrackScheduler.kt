@@ -147,18 +147,27 @@ class TrackScheduler(
             // No track to preempt, or a resume slot is already occupied by an
             // earlier intro — fall back to the standard queue-or-start path so
             // we don't clobber the original music with a second intro.
-            synchronized(queue) {
-                if (!player.startTrack(introTrack, true) && !queue.offer(introTrack)) {
+            val accepted = synchronized(queue) {
+                if (player.startTrack(introTrack, true) || queue.offer(introTrack)) {
+                    true
+                } else {
                     // Bounded at 100. Rare, but it was dropped without a word.
                     logger.warn(
                         "Queue is full on guild $guildId; dropped the intro " +
                             "'${introTrack.info.title}' instead of playing it."
                     )
                     forget(introTrack)
+                    false
                 }
             }
-            introTracks.add(introTrack)
-            publishQueueChanged()
+            // Conditional: this used to run either way, so a dropped intro was
+            // put straight back into introTracks by the line after the one
+            // that had just forgotten it — and nothing ever ends a track that
+            // never played, so the entry pinned it for the life of the process.
+            if (accepted) {
+                introTracks.add(introTrack)
+                publishQueueChanged()
+            }
             return
         }
         // Snapshot the currently-playing track into a resume slot before the
