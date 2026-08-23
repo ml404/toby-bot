@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Test the parts of purge, the now-playing embed and the player nothing reached",
+    "summary": "Coverage in this area pointed at three places where the tests stopped short of the code that does the work. 34 tests, no production changes.",
+    "emoji": "✨",
+    "prNumber": 765
+  },
+  {
+    "date": "August 2026",
     "title": "Test the seams around the now-playing message, and stop a dropped intro leaking",
     "summary": "Follow-up to #763. The message-lifecycle fixes there were covered a piece at a time — the scheduler on its own, NowPlayingManager on its own — which left the seams between them untested, and the seams are where the bug was.",
     "emoji": "🎵",
