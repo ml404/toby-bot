@@ -1,10 +1,14 @@
 package bot.toby.managers
 
+import bot.toby.lavaplayer.TrackScheduler
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer
 import com.sedmelluq.discord.lavaplayer.track.AudioTrack
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo
 import common.testing.DeterministicScheduler
 import io.mockk.*
+import net.dv8tion.jda.api.entities.Guild
+import net.dv8tion.jda.api.entities.Member
+import org.junit.jupiter.api.Assertions.assertTrue
 import net.dv8tion.jda.api.entities.Message
 import net.dv8tion.jda.api.entities.MessageEmbed
 import org.junit.jupiter.api.AfterEach
@@ -401,6 +405,220 @@ class NowPlayingManagerTest {
 
         verify(exactly = 0) { mockMessage1.delete() }
         assertEquals(mockMessage1, nowPlayingManager.getLastNowPlayingMessage(1L))
+    }
+
+    // --- the embed itself ---------------------------------------------------
+    //
+    // Everything above is about which message is stored and when. None of it
+    // touched what the message actually says, which is the part anybody
+    // looking at the bot sees.
+
+    private fun playing(
+        title: String = "Some Song",
+        author: String = "Some Artist",
+        duration: Long = 200_000L,
+        position: Long = 0L,
+        isStream: Boolean = false,
+        uri: String = "https://example.com/watch",
+        artwork: String? = null,
+    ): AudioTrack = mockk(relaxed = true) {
+        every { info } returns AudioTrackInfo(title, author, duration, "id", isStream, uri, artwork, null)
+        every { this@mockk.position } returns position
+        every { this@mockk.duration } returns duration
+        every { sourceManager } returns null
+    }
+
+    @Test
+    fun `the embed names the track, the artist and the volume`() {
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 42, isPaused = false,
+        )
+
+        assertEquals("Some Song", embed.title)
+        assertTrue(embed.description!!.contains("Some Artist"), embed.description)
+        assertEquals("🔊 42", embed.fields.single { it.name == "Volume" }.value)
+        assertEquals("▶️ No", embed.fields.single { it.name == "Paused" }.value)
+    }
+
+    @Test
+    fun `a paused track says so`() {
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 10, isPaused = true,
+        )
+
+        assertEquals("⏸️ Yes", embed.fields.single { it.name == "Paused" }.value)
+    }
+
+    @Test
+    fun `a live stream gets no progress bar to be wrong about`() {
+        // A stream has no length, so a bar would be a lie and the clock would
+        // count up forever.
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(isStream = true), volume = 50, isPaused = false,
+        )
+
+        assertTrue(embed.description!!.contains("LIVE"), embed.description)
+    }
+
+    @Test
+    fun `progress on a clipped track is measured against the clip, not the file`() {
+        // An intro trimmed to 30s-40s of a four-minute song should read as
+        // five seconds into a ten-second clip, not 35 seconds into 3:20.
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(duration = 200_000L, position = 35_000L),
+            volume = 50, isPaused = false, clipStart = 30_000L, clipEnd = 40_000L,
+        )
+
+        assertTrue(embed.description!!.contains("00:00:05 / 00:00:10"), embed.description)
+    }
+
+    @Test
+    fun `a position before the clip start does not read as negative`() {
+        // The clip start is applied to the track a moment after the embed can
+        // first be rendered, so this window is real.
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(position = 0L), volume = 50, isPaused = false, clipStart = 30_000L, clipEnd = 40_000L,
+        )
+
+        assertTrue(embed.description!!.contains("00:00:00 / 00:00:10"), embed.description)
+    }
+
+    @Test
+    fun `what is queued next is listed, and a long queue says how much more`() {
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue(
+            (1..5).map { playing(title = "Track $it") }
+        )
+        every { scheduler.getRequesterId(any()) } returns null
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 50, isPaused = false, trackScheduler = scheduler,
+        )
+
+        val upNext = embed.fields.single { it.name == "Up next" }.value!!
+        assertTrue(upNext.contains("1. `Track 1`"), upNext)
+        assertTrue(upNext.contains("3. `Track 3`"), upNext)
+        assertTrue(upNext.contains("+ 2 more"), upNext)
+    }
+
+    @Test
+    fun `a queue that fits says nothing about more`() {
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue(listOf(playing(title = "Only")))
+        every { scheduler.getRequesterId(any()) } returns null
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 50, isPaused = false, trackScheduler = scheduler,
+        )
+
+        assertTrue(!embed.fields.single { it.name == "Up next" }.value!!.contains("more"))
+    }
+
+    @Test
+    fun `an empty queue gets no up-next field at all`() {
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue()
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 50, isPaused = false, trackScheduler = scheduler,
+        )
+
+        assertTrue(embed.fields.none { it.name == "Up next" })
+    }
+
+    @Test
+    fun `a queued title too long to fit is cut rather than blowing the field`() {
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        val long = "x".repeat(120)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue(listOf(playing(title = long)))
+        every { scheduler.getRequesterId(any()) } returns null
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 50, isPaused = false, trackScheduler = scheduler,
+        )
+
+        val upNext = embed.fields.single { it.name == "Up next" }.value!!
+        assertTrue(upNext.contains("…"), upNext)
+        assertTrue(upNext.length < long.length, upNext)
+    }
+
+    @Test
+    fun `the footer names whoever asked for the track`() {
+        val track = playing()
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue()
+        every { scheduler.getRequesterId(track) } returns 99L
+        val guild = mockk<Guild>(relaxed = true) {
+            every { getMemberById(99L) } returns mockk<Member>(relaxed = true) {
+                every { effectiveName } returns "Alice"
+            }
+        }
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            track, volume = 50, isPaused = false, trackScheduler = scheduler, guild = guild,
+        )
+
+        assertEquals("Requested by Alice", embed.footer?.text)
+    }
+
+    @Test
+    fun `a requester who has since left the server is simply not named`() {
+        val track = playing()
+        val scheduler = mockk<TrackScheduler>(relaxed = true)
+        every { scheduler.queue } returns java.util.concurrent.LinkedBlockingQueue()
+        every { scheduler.getRequesterId(track) } returns 99L
+        val guild = mockk<Guild>(relaxed = true) { every { getMemberById(any<Long>()) } returns null }
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            track, volume = 50, isPaused = false, trackScheduler = scheduler, guild = guild,
+        )
+
+        assertNull(embed.footer?.text)
+    }
+
+    @Test
+    fun `a track with no requester on record gets no footer`() {
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(), volume = 50, isPaused = false,
+        )
+
+        assertNull(embed.footer?.text)
+    }
+
+    @Test
+    fun `an identifier that is not a link is not offered to JDA as one`() {
+        // Search terms and local paths reach here as the track uri, and JDA
+        // validates anything passed to setTitle or setThumbnail — an unchecked
+        // one throws rather than rendering.
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(uri = "ytsearch:something", artwork = "/tmp/local.png"),
+            volume = 50, isPaused = false,
+        )
+
+        assertNull(embed.url)
+        assertNull(embed.thumbnail)
+    }
+
+    @Test
+    fun `a title longer than Discord allows is cut to fit`() {
+        val embed = nowPlayingManager.buildNowPlayingMessageData(
+            playing(title = "y".repeat(400)), volume = 50, isPaused = false,
+        )
+
+        assertEquals(256, embed.title!!.length)
+    }
+
+    @Test
+    fun `the volume and paused state are read off the player when one is handed over`() {
+        val player = mockk<AudioPlayer>(relaxed = true) {
+            every { volume } returns 77
+            every { isPaused } returns true
+        }
+
+        val embed = nowPlayingManager.buildNowPlayingMessageData(playing(), player)
+
+        assertEquals("🔊 77", embed.fields.single { it.name == "Volume" }.value)
+        assertEquals("⏸️ Yes", embed.fields.single { it.name == "Paused" }.value)
     }
 
 }
