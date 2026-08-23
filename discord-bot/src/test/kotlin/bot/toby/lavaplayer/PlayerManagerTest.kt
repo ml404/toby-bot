@@ -15,6 +15,7 @@ import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -565,6 +566,109 @@ class PlayerManagerTest {
         })
 
         assertEquals(event, scheduler.event)
+    }
+
+    // --- entry points nothing had exercised ---------------------------------
+
+    @Test
+    fun `a playlist is queued whole, at the volume asked for`() {
+        // /play with a playlist link goes down a different callback from a
+        // single track, and that callback had never been run.
+        val scheduler = pm.getMusicManager(guild).scheduler
+        val tracks = (1..3).map { n ->
+            mockk<com.sedmelluq.discord.lavaplayer.track.AudioTrack>(relaxed = true) {
+                every { info } returns AudioTrackInfo("Track $n", "a", 1_000L, "id$n", false, "http://x")
+            }
+        }
+        val playlist = mockk<com.sedmelluq.discord.lavaplayer.track.AudioPlaylist>(relaxed = true) {
+            every { name } returns "A Playlist"
+            every { this@mockk.tracks } returns tracks
+        }
+        every { event.member } returns mockk(relaxed = true) { every { idLong } returns 7L }
+
+        pm.loadAndPlay(guild, event, "url", true, 5, 0L, 33, null)
+        handlers.last().playlistLoaded(playlist)
+
+        assertEquals(3, scheduler.queue.size)
+        assertEquals(7L, scheduler.getRequesterId(tracks.first()))
+        assertEquals(event, scheduler.event)
+    }
+
+    @Test
+    fun `a playlist loaded with no interaction still queues`() {
+        val scheduler = pm.getMusicManager(guild).scheduler
+        val playlist = mockk<com.sedmelluq.discord.lavaplayer.track.AudioPlaylist>(relaxed = true) {
+            every { name } returns "A Playlist"
+            every { tracks } returns listOf(
+                mockk<com.sedmelluq.discord.lavaplayer.track.AudioTrack>(relaxed = true) {
+                    every { info } returns AudioTrackInfo("t", "a", 1_000L, "id", false, "http://x")
+                }
+            )
+        }
+
+        pm.loadAndPlay(guild, null, "url", true, 5, 0L, 50, null)
+        handlers.last().playlistLoaded(playlist)
+
+        assertEquals(1, scheduler.queue.size)
+    }
+
+    @Test
+    fun `leaving a guild destroys its player and empties its queue`() {
+        // Called on guild leave. Without the queue clear, everything keyed to
+        // what was queued outlives the guild the bot is no longer in.
+        val scheduler = pm.getMusicManager(guild).scheduler
+        val track = mockk<com.sedmelluq.discord.lavaplayer.track.AudioTrack>(relaxed = true) {
+            every { info } returns AudioTrackInfo("t", "a", 1_000L, "id", false, "http://x")
+            every { userData } returns 50
+        }
+        scheduler.queue(track, 0L, null, 50, requesterId = 5L)
+        scheduler.queue(track, 0L, null, 50, requesterId = 5L)
+
+        pm.destroyMusicManager(guild.idLong)
+
+        assertEquals(0, scheduler.queue.size)
+        assertNull(scheduler.getRequesterId(track))
+    }
+
+    @Test
+    fun `destroying a guild that was never playing is quiet`() {
+        pm.destroyMusicManager(4242L)
+    }
+
+    @Test
+    fun `a guild asked for twice gets the same music manager`() {
+        // One scheduler per guild is the assumption every per-track map rests
+        // on; a second one would lose every intro in flight.
+        assertEquals(pm.getMusicManager(guild), pm.getMusicManager(guild))
+    }
+
+    @Test
+    fun `the web gateway loads through its own handler, not the slash-command one`() {
+        // The slash-command handler replies into an interaction that a web
+        // request does not have.
+        val handler = mockk<AudioLoadResultHandler>(relaxed = true)
+
+        pm.loadForExternal(guild, "url", handler)
+
+        verify { apm.loadItemOrdered(any<Any>(), "url", handler) }
+    }
+
+    @Test
+    fun `the older seven-argument load still works and clips nothing`() {
+        // Kept for call sites that predate clip support.
+        pm.loadAndPlay(guild, event, "url", true, 5, 0L, 50)
+
+        assertEquals(1, handlers.size)
+    }
+
+    @Test
+    fun `nothing found says so, and does not blame the source when it is fine`() {
+        pm.loadAndPlay(guild, event, "url", true, 5, 0L, 50, null)
+
+        handlers.last().noMatches()
+
+        assertFalse(pm.isSourceRefusingRequests())
+        verify { event.hook.sendMessage(match<String> { it.contains("Nothing found") }) }
     }
 
 }
