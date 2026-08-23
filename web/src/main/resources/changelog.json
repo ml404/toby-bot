@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Test the seams around the now-playing message, and stop a dropped intro leaking",
+    "summary": "Follow-up to #763. The message-lifecycle fixes there were covered a piece at a time — the scheduler on its own, NowPlayingManager on its own — which left the seams between them untested, and the seams are where the bug was.",
+    "emoji": "🎵",
+    "prNumber": 764
+  },
+  {
+    "date": "August 2026",
     "title": "Stop a failed intro leaving its now-playing message behind",
     "summary": "An intro that dies now says so, and saying so is what turned up three separate ways its now-playing message outlives it. All three end the same way: an embed sitting in the channel with a frozen progress bar and nothing left that can remove it.",
     "emoji": "🎵",
