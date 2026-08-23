@@ -186,4 +186,70 @@ class TrackSchedulerRetryClipTest {
         verify(exactly = 1) { MusicPlayerHelper.resetMessages(1L) }
     }
 
+    @Test
+    fun `the clip a preempted track comes back with is the one that stops it`() {
+        // The marker being present is not the point — firing it is. This is
+        // the whole reason the stop goes through the player: onTrackEnd is
+        // what tears down the now-playing message and restores the volume.
+        val playing = track("Song")
+        val resume = track("Song (resumed)")
+        every { playing.makeClone() } returns resume
+        scheduler.queue(playing, 1_000L, 30_000L, 60)
+        every { player.playingTrack } returns playing
+        scheduler.queueIntro(track("Intro"), 0L, 5_000L, 50, null, "1_2_1")
+
+        val marker = slot<TrackMarker>()
+        verify { resume.setMarker(capture(marker)) }
+        marker.captured.handler.handle(TrackMarkerHandler.MarkerState.REACHED)
+
+        verify { player.stopTrack() }
+    }
+
+    @Test
+    fun `an intro handing the music back does not take the now-playing message with it`() {
+        // The resumed track's own onTrackStart edits the message in place, so
+        // tearing it down here would delete it and post a fresh one.
+        val playing = track("Song")
+        val resume = track("Song (resumed)")
+        every { playing.makeClone() } returns resume
+        every { player.playingTrack } returns playing
+        val intro = track("Intro")
+        scheduler.queueIntro(intro, 0L, 5_000L, 50, null, "1_2_1")
+
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED)
+
+        verify { player.startTrack(resume, false) }
+        verify(exactly = 0) { MusicPlayerHelper.resetMessages(any()) }
+    }
+
+    @Test
+    fun `the message goes when the music an intro interrupted finally ends`() {
+        // The end of the whole sequence, which is where the message is
+        // supposed to go — and where it stopped going once a voice-join intro
+        // had wiped out the interaction teardown used to read the guild from.
+        val playing = track("Song")
+        val resume = track("Song (resumed)")
+        every { playing.makeClone() } returns resume
+        every { player.playingTrack } returns playing
+        val intro = track("Intro")
+        scheduler.queueIntro(intro, 0L, 5_000L, 50, null, "1_2_1")
+        scheduler.onTrackEnd(player, intro, AudioTrackEndReason.STOPPED)
+
+        scheduler.onTrackEnd(player, resume, AudioTrackEndReason.FINISHED)
+
+        verify(exactly = 1) { MusicPlayerHelper.resetMessages(1L) }
+    }
+
+    @Test
+    fun `an intro that dies twice tears the message down exactly once`() {
+        // Two deaths, two now-playing renders and two ends — and still one
+        // teardown, not none and not one per attempt.
+        val clone = retryAfterDeath(startMs = 0L, endMs = 8_000L)
+        scheduler.onTrackException(player, clone, streamDied())
+
+        scheduler.onTrackEnd(player, clone, AudioTrackEndReason.LOAD_FAILED)
+
+        verify(exactly = 1) { MusicPlayerHelper.resetMessages(1L) }
+    }
+
 }
