@@ -13,7 +13,23 @@ buildscript {
         ktor_version = '2.3.13'
         mockk_version = '1.13.13'
         lavaplayer_version = '2.2.7'
-        youtube_common_version = '1.18.2'
+        // A commit-pinned snapshot rather than a release, because 1.18.2 is
+        // the newest release and predates both fixes we need. Against 1.18.2
+        // exactly three classes differ, and two of them sit on the path that
+        // was throwing "Invalid status code for player api response: 400":
+        //
+        //   Tv                — the User-Agent moved off the retired Cobalt
+        //                       string onto a PlayStation 4 one. This is the
+        //                       first client registered below, so it does most
+        //                       of the work and is the likeliest thing to have
+        //                       started being refused.
+        //   YoutubeAudioTrack — probes the stream length with a ranged request
+        //                       and reads Content-Range before streaming.
+        //
+        // The version is the upstream commit, so the artifact for it is fixed
+        // rather than a rolling build. Go back to a release as soon as one
+        // ships that contains these — anything above 1.18.2 should.
+        youtube_common_version = 'f45bbb7aebfcbc1c553769e04af6cd43afa8b7c3-SNAPSHOT'
         lavasrc_version = '4.8.2'
     }
     repositories {
