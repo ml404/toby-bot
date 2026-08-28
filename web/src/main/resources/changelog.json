@@ -1,6 +1,13 @@
 [
   {
     "date": "August 2026",
+    "title": "Move the YouTube source onto the snapshot that fixes the player-api 400",
+    "summary": "Intros stopped playing, with the stream dying at NonMusicClient.loadTrackInfoFromInnertube on a 400 from the player API — for a video YouTube had described happily a moment earlier.",
+    "emoji": "✨",
+    "prNumber": 766
+  },
+  {
+    "date": "August 2026",
     "title": "Test the parts of purge, the now-playing embed and the player nothing reached",
     "summary": "Coverage in this area pointed at three places where the tests stopped short of the code that does the work. 34 tests, no production changes.",
     "emoji": "✨",
