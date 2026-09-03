@@ -1,6 +1,62 @@
 [
   {
     "date": "August 2026",
+    "title": "Move the YouTube source onto the snapshot that fixes the player-api 400",
+    "summary": "Intros stopped playing, with the stream dying at NonMusicClient.loadTrackInfoFromInnertube on a 400 from the player API — for a video YouTube had described happily a moment earlier.",
+    "emoji": "✨",
+    "prNumber": 766
+  },
+  {
+    "date": "August 2026",
+    "title": "Test the parts of purge, the now-playing embed and the player nothing reached",
+    "summary": "Coverage in this area pointed at three places where the tests stopped short of the code that does the work. 34 tests, no production changes.",
+    "emoji": "✨",
+    "prNumber": 765
+  },
+  {
+    "date": "August 2026",
+    "title": "Test the seams around the now-playing message, and stop a dropped intro leaking",
+    "summary": "Follow-up to #763. The message-lifecycle fixes there were covered a piece at a time — the scheduler on its own, NowPlayingManager on its own — which left the seams between them untested, and the seams are where the bug was.",
+    "emoji": "🎵",
+    "prNumber": 764
+  },
+  {
+    "date": "August 2026",
+    "title": "Stop a failed intro leaving its now-playing message behind",
+    "summary": "An intro that dies now says so, and saying so is what turned up three separate ways its now-playing message outlives it. All three end the same way: an embed sitting in the channel with a frozen progress bar and nothing left that can remove it.",
+    "emoji": "🎵",
+    "prNumber": 763
+  },
+  {
+    "date": "August 2026",
+    "title": "Cover the audio bridge, the clip marker and the untested failure paths",
+    "summary": "Measured with Kover rather than guessed at. The intro and audio classes had 142 uncovered lines; filtering to what *never executed at all* in any test — rather than merely partly-covered branches — turned up several things that run on every single play.",
+    "emoji": "✨",
+    "prNumber": 762
+  },
+  {
+    "date": "August 2026",
+    "title": "Pay for intros that played, retry ones that died, stop leaking tracks",
+    "summary": "> Stacked on #760. Until that merges this shows both commits; the one to review here is fff85bf.",
+    "emoji": "🎵",
+    "prNumber": 761
+  },
+  {
+    "date": "August 2026",
+    "title": "Stop intros failing silently, and say why when they do",
+    "summary": "An audit of every path from voice join to audio, against the goal: *no silent failing, and people should know why an intro didn't play*.",
+    "emoji": "🛡️",
+    "prNumber": 759
+  },
+  {
+    "date": "August 2026",
+    "title": "Notice when a stream dies, and stop calling a load a play",
+    "summary": "Diagnosed from the production log at 13:55 today. An intro loaded, started, was written to the database as played, and then died half a second later:",
+    "emoji": "🎵",
+    "prNumber": 757
+  },
+  {
+    "date": "August 2026",
     "title": "Make the changelog page readable: clean summaries, group by month",
     "summary": "The changelog page had grown to 86 entries — 80 of them stamped \"May 2026\" — rendered as one flat list with the same date repeated on every row.",
     "emoji": "✨",
