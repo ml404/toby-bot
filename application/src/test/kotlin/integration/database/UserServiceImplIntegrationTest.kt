@@ -8,6 +8,7 @@ import common.configuration.TestCachingConfig
 import database.configuration.TestDatabaseConfig
 import database.dto.music.MusicDto
 import database.service.user.UserService
+import jakarta.persistence.Persistence
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
@@ -193,5 +194,32 @@ class UserServiceImplIntegrationTest {
 
         assertEquals(null, musicDtoFromDb)
 
+    }
+
+    @Test
+    fun listGuildUsers_doesNotLoadIntroAudio() {
+        val userDto = database.dto.user.UserDto(6L, 1L)
+        userDto.musicDtos += MusicDto(userDto, 1, "intro", musicBlob = ByteArray(1024))
+        userService.createNewUser(userDto)
+
+        val listed = userService.listGuildUsers(1L).filterNotNull().single { it.discordId == 6L }
+
+        assertFalse(Persistence.getPersistenceUtil().isLoaded(listed, "musicDtos"), "guild list must not fetch intros")
+    }
+
+    @Test
+    fun updateUser_fromGuildList_keepsIntros() {
+        val userDto = database.dto.user.UserDto(6L, 1L)
+        userDto.musicDtos += MusicDto(userDto, 1, "intro", musicBlob = ByteArray(1024))
+        userService.createNewUser(userDto)
+
+        val listed = userService.listGuildUsers(1L).filterNotNull().single { it.discordId == 6L }
+        listed.tobyCoins = 42L
+        userService.updateUser(listed)
+
+        val reloaded = userService.getUserById(6L, 1L)!!
+        assertEquals(42L, reloaded.tobyCoins)
+        assertEquals(1, reloaded.musicDtos.size, "merging a listed user must not orphan its intros")
+        assertEquals(1024, reloaded.musicDtos[0].musicBlob?.size)
     }
 }

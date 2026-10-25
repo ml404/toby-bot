@@ -981,7 +981,6 @@ class PokerServiceTest {
         override fun deleteUser(userDto: UserDto) { users.remove(userDto.discordId to userDto.guildId) }
         override fun deleteUserById(discordId: Long?, guildId: Long?) { users.remove(discordId!! to guildId!!) }
         override fun clearCache() {}
-        override fun evictUserFromCache(discordId: Long?, guildId: Long?) {}
     }
 
     private class RecordingPokerHandLogPersistence : PokerHandLogPersistence {

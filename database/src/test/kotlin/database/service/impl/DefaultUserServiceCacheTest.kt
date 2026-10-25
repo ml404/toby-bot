@@ -4,6 +4,7 @@ import database.dto.user.UserDto
 import database.persistence.user.UserPersistence
 import database.service.user.UserService
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
@@ -49,6 +50,9 @@ class DefaultUserServiceCacheTest {
 
     @Autowired
     private lateinit var persistence: CountingUserPersistence
+
+    @Autowired
+    private lateinit var cacheManager: CacheManager
 
     @BeforeEach
     fun reset() {
@@ -122,6 +126,17 @@ class DefaultUserServiceCacheTest {
 
         userService.listGuildUsers(OTHER_GUILD_ID)
         assertEquals(3, persistence.listCalls.get(), "OTHER_GUILD_ID list should be evicted")
+    }
+
+    @Test
+    fun `single-user reads and writes leave nothing in the cache`() {
+        val user = UserDto(discordId = USER_ID, guildId = GUILD_ID)
+        userService.createNewUser(user)
+        userService.getUserById(USER_ID, GUILD_ID)
+        userService.updateUser(user)
+
+        val cached = (cacheManager.getCache("users")!!.nativeCache as Map<*, *>)
+        assertTrue(cached.isEmpty(), "user rows carry intro audio and must not be cached: $cached")
     }
 
     companion object {

@@ -110,6 +110,5 @@ class UserServiceLockOrderTest {
             users.remove(discordId!! to guildId!!)
         }
         override fun clearCache() {}
-        override fun evictUserFromCache(discordId: Long?, guildId: Long?) {}
     }
 }

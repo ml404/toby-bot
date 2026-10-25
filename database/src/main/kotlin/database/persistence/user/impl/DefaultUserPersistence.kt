@@ -18,9 +18,21 @@ class DefaultUserPersistence : UserPersistence {
     private lateinit var entityManager: EntityManager
 
 
+    /**
+     * Every caller wants the guild's scalar columns (coins, XP, credit,
+     * opt-outs), never its intros. An empty fetch graph turns the eager
+     * `musicDtos` collection lazy for this query only, so a guild-wide read
+     * no longer drags every member's intro audio into the heap — and into
+     * the 30-minute `users` cache that holds the result.
+     *
+     * The returned users' `musicDtos` is uninitialised: touching it after the
+     * transaction throws. Merging such a user back through [updateUser] is
+     * safe; Hibernate leaves an uninitialised collection untouched.
+     */
     override fun listGuildUsers(guildId: Long?): List<UserDto?> {
         val q: TypedQuery<UserDto> = entityManager.createNamedQuery("UserDto.getGuildAll", UserDto::class.java)
         q.setParameter("guildId", guildId)
+        q.setHint(FETCH_GRAPH_HINT, entityManager.createEntityGraph(UserDto::class.java))
         return q.resultList
     }
 
@@ -83,3 +95,5 @@ class DefaultUserPersistence : UserPersistence {
         return userDto
     }
 }
+
+private const val FETCH_GRAPH_HINT = "jakarta.persistence.fetchgraph"
