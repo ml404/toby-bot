@@ -277,7 +277,7 @@ class ProfileCardRenderer {
             conn.readTimeout = AVATAR_TIMEOUT_MS
             conn.setRequestProperty("User-Agent", "TobyBot-ProfileCard")
             conn.inputStream.use { ImageIO.read(it) }
-        }.getOrNull() ?: return null
+        }.getOrNull()?.let { toAvatarSize(it) } ?: return null
         avatarCache.put(url, fetched)
         return fetched
     }
@@ -341,9 +341,29 @@ class ProfileCardRenderer {
         internal fun isFetchableAvatarUrl(url: String): Boolean =
             runCatching { URI(url).scheme?.lowercase() == "https" }.getOrDefault(false)
 
+        /**
+         * Shrinks a fetched avatar to the size it is drawn at before it goes
+         * into [avatarCache]. Avatars arrive at whatever size the CDN serves,
+         * which can be many times the 160 px drawn here — a 1024 px avatar
+         * decodes to 4 MB, where a 160 px one is 100 KB.
+         */
+        internal fun toAvatarSize(source: BufferedImage): BufferedImage {
+            if (source.width == AVATAR_SIZE && source.height == AVATAR_SIZE) return source
+            val scaled = BufferedImage(AVATAR_SIZE, AVATAR_SIZE, BufferedImage.TYPE_INT_ARGB)
+            val g = scaled.createGraphics()
+            try {
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+                g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+                g.drawImage(source, 0, 0, AVATAR_SIZE, AVATAR_SIZE, null)
+            } finally {
+                g.dispose()
+            }
+            return scaled
+        }
+
         private const val AVATAR_X = 40
         private const val AVATAR_Y = 40
-        private const val AVATAR_SIZE = 160
+        internal const val AVATAR_SIZE = 160
 
         private const val HEADER_X = 230
         private const val HEADER_Y = 90

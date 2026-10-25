@@ -1,0 +1,23 @@
+# JVM flags for the bot, shared by the Procfile (Heroku) and the Dockerfile.
+# Sized for a 512 MB dyno: every pool the JVM can grow is capped so the
+# process total stays under the quota.
+
+# Heap. Serial GC has the smallest overhead on a single small heap. The free
+# ratios let it hand memory back to the OS after a spike (an intro upload, a
+# profile card render) instead of holding the peak forever.
+-Xms128m
+-Xmx224m
+-XX:+UseSerialGC
+-XX:MinHeapFreeRatio=20
+-XX:MaxHeapFreeRatio=40
+
+# Off-heap pools.
+-XX:MaxMetaspaceSize=192m
+-XX:ReservedCodeCacheSize=48m
+-XX:MaxDirectMemorySize=48m
+-Dio.netty.maxDirectMemory=0
+-Dio.netty.allocator.numDirectArenas=2
+-Dio.netty.allocator.numHeapArenas=2
+-Xss256k
+
+-XX:+ExitOnOutOfMemoryError

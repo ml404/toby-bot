@@ -31,9 +31,7 @@ class BotConfig {
             discordToken,
             GatewayIntent.DIRECT_MESSAGES,
             GatewayIntent.MESSAGE_CONTENT,
-            GatewayIntent.GUILD_MESSAGE_TYPING,
             GatewayIntent.GUILD_MEMBERS,
-            GatewayIntent.GUILD_WEBHOOKS,
             GatewayIntent.GUILD_PRESENCES,
             GatewayIntent.GUILD_MESSAGES,
             GatewayIntent.GUILD_MESSAGE_REACTIONS,
@@ -45,7 +43,9 @@ class BotConfig {
             .disableCache(
                 EnumSet.of(
                     CacheFlag.CLIENT_STATUS,
-                    CacheFlag.SCHEDULED_EVENTS
+                    CacheFlag.SCHEDULED_EVENTS,
+                    // Nothing reads stickers; GUILD_EXPRESSIONS is only here for emojis.
+                    CacheFlag.STICKER
                 )
             )
             .enableCache(CacheFlag.VOICE_STATE, CacheFlag.EMOJI, CacheFlag.ACTIVITY)

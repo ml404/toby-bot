@@ -5,9 +5,7 @@ import database.persistence.user.UserPersistence
 import database.service.user.UserService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.cache.annotation.CacheEvict
-import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
-import org.springframework.cache.annotation.Caching
 import org.springframework.stereotype.Service
 
 @Service
@@ -20,15 +18,14 @@ class DefaultUserService : UserService {
         return userService.listGuildUsers(guildId)
     }
 
-    @Caching(
-        put = [CachePut(value = ["users"], key = "#a0.discordId + #a0.guildId")],
-        evict = [CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")]
-    )
+    @CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")
     override fun createNewUser(userDto: UserDto): UserDto {
         return userService.createNewUser(userDto)
     }
 
-    @CachePut(value = ["users"], key = "#a0 + #a1")
+    // Deliberately not cached. A user row eagerly carries every intro's audio
+    // blob, so a per-user cache entry pins up to ~1.8 MB of heap for 30
+    // minutes, and callers re-read the row before writing anyway.
     override fun getUserById(discordId: Long?, guildId: Long?): UserDto? {
         return userService.getUserById(discordId, guildId)
     }
@@ -38,35 +35,22 @@ class DefaultUserService : UserService {
         return userService.getUserByIdForUpdate(discordId, guildId)
     }
 
-    @Caching(
-        put = [CachePut(value = ["users"], key = "#a0.discordId + #a0.guildId")],
-        evict = [CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")]
-    )
+    @CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")
     override fun updateUser(userDto: UserDto): UserDto {
         return userService.updateUser(userDto)
     }
 
-    @Caching(evict = [
-        CacheEvict(value = ["users"], key = "#a0.discordId + #a0.guildId"),
-        CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")
-    ])
+    @CacheEvict(value = ["users"], key = "'list-' + #a0.guildId")
     override fun deleteUser(userDto: UserDto) {
         userService.deleteUser(userDto)
     }
 
-    @Caching(evict = [
-        CacheEvict(value = ["users"], key = "#a0 + #a1"),
-        CacheEvict(value = ["users"], key = "'list-' + #a1")
-    ])
+    @CacheEvict(value = ["users"], key = "'list-' + #a1")
     override fun deleteUserById(discordId: Long?, guildId: Long?) {
         userService.deleteUserById(discordId, guildId)
     }
 
     @CacheEvict(value = ["users"], allEntries = true)
     override fun clearCache() {
-    }
-
-    @CacheEvict(value = ["users"], key = "#a0 + #a1")
-    override fun evictUserFromCache(discordId: Long?, guildId: Long?) {
     }
 }

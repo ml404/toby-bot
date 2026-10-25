@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.time.Instant
 import javax.imageio.ImageIO
@@ -115,6 +116,16 @@ class ProfileCardRendererTest {
         assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("http://cdn.discordapp.com/avatars/1/a.png"))
         assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("file:///etc/passwd"))
         assertFalse(ProfileCardRenderer.isFetchableAvatarUrl("not a url"))
+    }
+
+    @Test
+    fun `fetched avatars are shrunk to their drawn size before caching`() {
+        val large = BufferedImage(1024, 1024, BufferedImage.TYPE_INT_ARGB)
+
+        val scaled = ProfileCardRenderer.toAvatarSize(large)
+
+        assertEquals(ProfileCardRenderer.AVATAR_SIZE, scaled.width)
+        assertEquals(ProfileCardRenderer.AVATAR_SIZE, scaled.height)
     }
 
     @Test
