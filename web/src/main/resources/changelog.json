@@ -1,5 +1,12 @@
 [
   {
+    "date": "October 2026",
+    "title": "Keep intro audio out of the user cache and shrink cached avatars",
+    "summary": "_Requested by Matt · project thread_",
+    "emoji": "♠️",
+    "prNumber": 774
+  },
+  {
     "date": "August 2026",
     "title": "Move the YouTube source onto the snapshot that fixes the player-api 400",
     "summary": "Intros stopped playing, with the stream dying at NonMusicClient.loadTrackInfoFromInnertube on a 400 from the player API — for a video YouTube had described happily a moment earlier.",
