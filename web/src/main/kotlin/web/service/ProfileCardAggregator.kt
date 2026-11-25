@@ -4,6 +4,7 @@ import common.leveling.LevelCurve
 import database.service.guild.AchievementService
 import database.service.guild.TitleService
 import database.service.social.LoginStreakService
+import database.service.social.StreakStatus
 import database.service.user.UserService
 import net.dv8tion.jda.api.entities.Guild
 import net.dv8tion.jda.api.entities.Member
@@ -80,8 +81,7 @@ class ProfileCardAggregator(
         val streakRow = loginStreakService.get(discordId, guildId)
         val today = LocalDate.ofInstant(Instant.now(), ZoneOffset.UTC)
         val lastClaim = streakRow?.lastClaimDate
-        val streakActive = lastClaim != null &&
-            (lastClaim == today || lastClaim == today.minusDays(1))
+        val streakActive = StreakStatus.of(lastClaim, today).isActive
 
         return ProfileCardData(
             avatarUrl = member.effectiveAvatarUrl,

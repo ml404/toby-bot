@@ -28,7 +28,7 @@ import java.time.ZoneOffset
  *
  *   - Iterates every guild in [JDA.guildCache].
  *   - For each guild, asks [LoginStreakService.findActiveStreaksDueForReminder]
- *     for the at-risk cohort (current_streak > 0 AND last_claim_date < today).
+ *     for the at-risk cohort (current_streak > 0 AND last_claim_date = yesterday).
  *   - DMs each at-risk user via [NotificationRouter.sendDm] with
  *     [NotificationChannelKind.STREAK_REMINDER] — the router gates on the
  *     per-(user, STREAK_REMINDER, Surface.DM) opt-in, so test users without

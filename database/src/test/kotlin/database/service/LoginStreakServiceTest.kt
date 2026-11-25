@@ -21,6 +21,7 @@ import java.time.LocalDate
 import database.service.guild.ConfigService
 import database.service.social.LoginStreakService
 import database.service.social.SocialCreditAwardService
+import database.service.social.StreakStatus
 import database.service.user.UserService
 import database.service.activity.VoiceCreditDailyService
 import database.service.leveling.XpAwardService
@@ -170,6 +171,32 @@ class LoginStreakServiceTest {
     }
 
     @Test
+    fun `findActiveStreaksDueForReminder skips lapsed streaks a claim can no longer save`() {
+        // Last claim two days before "today": the stored currentStreak is
+        // stale and the next claim restarts at 1, so reminding would
+        // promise a streak that is already gone.
+        service.claim(discordId = 1L, guildId = guildId, at = day1)
+        val today = LocalDate.ofInstant(day3, java.time.ZoneOffset.UTC)
+
+        assertTrue(service.findActiveStreaksDueForReminder(guildId, today).isEmpty())
+
+        val result = service.claim(discordId = 1L, guildId = guildId, at = day3)
+        assertEquals(1, (result as LoginStreakService.ClaimResult.Granted).currentStreak)
+    }
+
+    @Test
+    fun `a reminded streak is still extended by a claim later the same day`() {
+        service.claim(discordId = 1L, guildId = guildId, at = day1)
+        val reminderAt = Instant.parse("2026-04-11T18:00:00Z")
+        val today = LocalDate.ofInstant(reminderAt, java.time.ZoneOffset.UTC)
+        assertEquals(1, service.findActiveStreaksDueForReminder(guildId, today).size)
+
+        val result = service.claim(discordId = 1L, guildId = guildId, at = reminderAt.plusSeconds(120))
+
+        assertEquals(2, (result as LoginStreakService.ClaimResult.Granted).currentStreak)
+    }
+
+    @Test
     fun `findActiveStreaksDueForReminder filters by guild`() {
         service.claim(discordId = 1L, guildId = guildId, at = day1)
         // Same user, different guild — also at risk in that guild.
@@ -233,7 +260,7 @@ class LoginStreakServiceTest {
             today: LocalDate
         ): List<LoginStreakDto> = rows.values.filter { row ->
             row.guildId == guildId && row.currentStreak > 0 &&
-                (row.lastClaimDate == null || row.lastClaimDate!! < today)
+                row.lastClaimDate == StreakStatus.atRiskClaimDate(today)
         }
     }
 

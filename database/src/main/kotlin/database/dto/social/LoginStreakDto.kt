@@ -16,7 +16,7 @@ import java.time.LocalDate
         query = "select s from LoginStreakDto s " +
                 "where s.guildId = :guildId " +
                 "and s.currentStreak > 0 " +
-                "and (s.lastClaimDate is null or s.lastClaimDate < :today)"
+                "and s.lastClaimDate = :atRiskClaimDate"
     )
 )
 @Entity
