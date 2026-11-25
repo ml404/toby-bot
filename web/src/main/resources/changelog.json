@@ -1,6 +1,13 @@
 [
   {
     "date": "November 2026",
+    "title": "Stop streak reminders going to streaks that have already lapsed",
+    "summary": "_Requested by Matt · project thread_",
+    "emoji": "✨",
+    "prNumber": 779
+  },
+  {
+    "date": "November 2026",
     "title": "Move the YouTube source onto the newest upstream snapshot",
     "summary": "_Requested by Matt · project thread_",
     "emoji": "✨",
