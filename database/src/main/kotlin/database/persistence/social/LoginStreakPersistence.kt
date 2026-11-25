@@ -8,11 +8,13 @@ interface LoginStreakPersistence {
     fun upsert(row: LoginStreakDto): LoginStreakDto
 
     /**
-     * Rows for [guildId] where the user has an active streak
-     * (`current_streak > 0`) AND `last_claim_date < today` (i.e. they
-     * haven't claimed yet today and their streak will reset tomorrow
-     * if they don't). Used by `StreakReminderJob` to DM the at-risk
-     * cohort. Empty when no rows match.
+     * Rows for [guildId] whose streak is [database.service.social.StreakStatus.AT_RISK]
+     * on [today]: `current_streak > 0` and last claimed exactly yesterday,
+     * so the streak is still alive and breaks at the next UTC midnight
+     * unless claimed. Lapsed rows (last claim 2+ days ago) still carry
+     * their stale `current_streak` and are excluded, because claiming
+     * would restart them at 1 rather than save them. Used by
+     * `StreakReminderJob` to DM the at-risk cohort. Empty when no rows match.
      */
     fun findActiveStreaksDueForReminder(guildId: Long, today: LocalDate): List<LoginStreakDto>
 }

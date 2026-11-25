@@ -4,6 +4,7 @@ import common.leveling.LevelCurve
 import database.dto.user.UserDto
 import database.service.guild.AchievementService
 import database.service.social.LoginStreakService
+import database.service.social.StreakStatus
 import database.service.guild.TitleService
 import database.service.user.UserService
 import net.dv8tion.jda.api.JDA
@@ -71,13 +72,8 @@ class ProfileWebService(
         // currentStreak only decays on the next claim, so a row last claimed
         // two-or-more days ago still reads its old count — LAPSED flags that
         // the next claim resets to 1, so the UI can stop pretending it's live.
-        val status = when {
-            lastClaim == today -> StreakStatus.CLAIMED
-            lastClaim == null -> StreakStatus.NEW
-            lastClaim == today.minusDays(1) -> StreakStatus.AT_RISK
-            else -> StreakStatus.LAPSED
-        }
-        val streakActive = status == StreakStatus.CLAIMED || status == StreakStatus.AT_RISK
+        val status = StreakStatus.of(lastClaim, today)
+        val streakActive = status.isActive
         // Streak value the *next* claim would produce: +1 while the streak is
         // alive, otherwise it resets to 1.
         val nextStreak = if (streakActive) currentStreak + 1 else 1
@@ -230,18 +226,6 @@ data class ProfileView(
     val totalXpEarned: Long,
     val achievementCategories: List<ProfileAchievementCategory>,
 )
-
-/**
- * Lifecycle state of a user's daily streak, derived from `lastClaimDate`
- * relative to today (UTC). Drives the profile card's messaging and visuals:
- *   - CLAIMED  — already claimed today; safe.
- *   - AT_RISK  — alive (last claim was yesterday) but unclaimed today, so
- *                it breaks at the next UTC midnight unless claimed.
- *   - LAPSED   — last claim was 2+ days ago; the stored count is stale and
- *                the next claim restarts at 1.
- *   - NEW      — never claimed.
- */
-enum class StreakStatus { CLAIMED, AT_RISK, LAPSED, NEW }
 
 data class ProfileStreakView(
     val currentStreak: Int,

@@ -8,6 +8,7 @@ import database.service.guild.ConfigService
 import database.service.social.LoginStreakService
 import database.service.social.LoginStreakService.ClaimResult
 import database.service.social.SocialCreditAwardService
+import database.service.social.StreakStatus
 import database.service.leveling.XpAwardService
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Service
@@ -24,10 +25,10 @@ import java.time.ZoneOffset
  *     the whole point of the streak is to grant predictable on-claim XP
  *     regardless of how much the user has already earned today.
  *
- * Streak logic:
- *   - last_claim_date == today           → AlreadyClaimed (no event, no reward).
- *   - last_claim_date == today - 1 day   → currentStreak + 1.
- *   - otherwise (including never-claimed) → currentStreak = 1.
+ * Streak logic (see [StreakStatus]):
+ *   - CLAIMED (last_claim_date == today)       → AlreadyClaimed (no event, no reward).
+ *   - AT_RISK (last_claim_date == today - 1)   → currentStreak + 1.
+ *   - LAPSED / NEW                             → currentStreak = 1.
  *
  * Day boundaries use UTC, matching the existing daily-cap ledgers.
  */
@@ -57,8 +58,9 @@ class DefaultLoginStreakService(
     ): ClaimResult {
         val today = LocalDate.ofInstant(at, ZoneOffset.UTC)
         val existing = persistence.get(discordId, guildId)
+        val status = StreakStatus.of(existing?.lastClaimDate, today)
 
-        if (existing?.lastClaimDate == today) {
+        if (existing != null && status == StreakStatus.CLAIMED) {
             return ClaimResult.AlreadyClaimed(
                 currentStreak = existing.currentStreak,
                 longestStreak = existing.longestStreak
@@ -69,8 +71,7 @@ class DefaultLoginStreakService(
         val previousLongest = existing?.longestStreak ?: 0
         val previousTotal = existing?.totalClaims ?: 0L
 
-        val continued = existing?.lastClaimDate == today.minusDays(1)
-        val newStreak = if (continued) previousStreak + 1 else 1
+        val newStreak = if (status.isActive) previousStreak + 1 else 1
         val newLongest = maxOf(previousLongest, newStreak)
         val isNewBest = newStreak > previousLongest
 

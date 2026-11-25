@@ -33,10 +33,11 @@ interface LoginStreakService {
     fun previewReward(guildId: Long, streak: Int): RewardPreview
 
     /**
-     * Users in [guildId] with an active streak (`current_streak > 0`)
-     * that haven't claimed yet on [today]. Used by `StreakReminderJob`
-     * to DM the at-risk cohort just before their streak resets at
-     * midnight UTC.
+     * Users in [guildId] whose streak is [StreakStatus.AT_RISK] on
+     * [today]: still alive (last claimed yesterday) but not yet claimed
+     * today. Lapsed streaks are excluded since a claim can no longer
+     * save them. Used by `StreakReminderJob` to DM the at-risk cohort
+     * before their streak resets at midnight UTC.
      */
     fun findActiveStreaksDueForReminder(
         guildId: Long,

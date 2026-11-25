@@ -2,6 +2,7 @@ package database.persistence.social.impl
 
 import database.dto.social.LoginStreakDto
 import database.persistence.social.LoginStreakPersistence
+import database.service.social.StreakStatus
 import jakarta.persistence.EntityManager
 import jakarta.persistence.PersistenceContext
 import jakarta.persistence.TypedQuery
@@ -34,7 +35,7 @@ class DefaultLoginStreakPersistence : LoginStreakPersistence {
                 LoginStreakDto::class.java
             )
         q.setParameter("guildId", guildId)
-        q.setParameter("today", today)
+        q.setParameter("atRiskClaimDate", StreakStatus.atRiskClaimDate(today))
         return q.resultList
     }
 
