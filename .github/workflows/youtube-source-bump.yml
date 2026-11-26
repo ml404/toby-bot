@@ -1,0 +1,164 @@
+name: youtube-source bump
+
+# YouTube breaks playback every few weeks and lavalink-devs/youtube-source
+# usually fixes it on main long before a release ships, so build.gradle pins
+# `youtube_common_version` to either a release or an upstream commit snapshot
+# ("<sha>-SNAPSHOT"; upstream publishes one for every push to main).
+#
+# Once a week this checks upstream and, when there is something newer that
+# touches the `common` module, opens (or refreshes) a single PR on
+# `deps/youtube-source-bump` that changes only that version line:
+#
+#   - If the newest release is the head of main, pin the release.
+#   - Otherwise pin a snapshot of main's head.
+#
+# The PR is only opened once the artifact is actually on maven.lavalink.dev,
+# because upstream's publish job can fail or lag behind the push.
+#
+# PRs opened with GITHUB_TOKEN don't trigger `pull_request` workflows, so the
+# Gradle build is started explicitly with workflow_dispatch on the bump
+# branch. Its check runs land on the branch's head commit and show on the PR.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+concurrency:
+  group: youtube-source-bump
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: lavalink-devs/youtube-source
+  MAVEN: https://maven.lavalink.dev
+  ARTIFACT_PATH: dev/lavalink/youtube/common
+  BUMP_BRANCH: deps/youtube-source-bump
+  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Work out the target version
+        id: target
+        run: |
+          set -euo pipefail
+
+          current=$(sed -nE "s/^\s*youtube_common_version = '([^']+)'.*/\1/p" build.gradle)
+          if [ -z "$current" ]; then
+            echo "::error::youtube_common_version not found in build.gradle"
+            exit 1
+          fi
+          echo "Current: $current"
+
+          head_sha=$(gh api "repos/$UPSTREAM/commits/main" --jq .sha)
+          release_tag=$(gh api "repos/$UPSTREAM/releases/latest" --jq .tag_name)
+          release_sha=$(gh api "repos/$UPSTREAM/commits/$release_tag" --jq .sha)
+          echo "Upstream main: $head_sha"
+          echo "Latest release: $release_tag ($release_sha)"
+
+          if [ "$release_sha" = "$head_sha" ]; then
+            target="$release_tag"
+            repo=releases
+            probe="$target/common-$target.pom"
+          else
+            target="$head_sha-SNAPSHOT"
+            repo=snapshots
+            # Gradle reads this file to resolve a snapshot, so if it is
+            # there the build can resolve the version.
+            probe="$target/maven-metadata.xml"
+          fi
+          echo "Target: $target"
+
+          if [ "$current" = "$target" ]; then
+            echo "Already on the newest upstream version."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A snapshot pin names its commit; a release pin names its tag.
+          # Either works as the base of a compare.
+          base="${current%-SNAPSHOT}"
+          compare=$(gh api "repos/$UPSTREAM/compare/$base...$head_sha")
+          touched=$(jq -r '[.files[].filename | select(startswith("common/"))] | length' <<<"$compare")
+          if [ "$touched" = "0" ]; then
+            echo "Nothing under common/ changed since $base; not bumping."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          url="$MAVEN/$repo/$ARTIFACT_PATH/$probe"
+          if ! curl -fsSL -o /dev/null "$url"; then
+            echo "::warning::$target is not published yet ($url); trying again next run."
+            echo "bump=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Commit list for the PR body, newest first.
+          jq -r --arg up "$UPSTREAM" \
+            '.commits | reverse | .[] | "- [`\(.sha[0:8])`](https://github.com/\($up)/commit/\(.sha)) \(.commit.message | split("\n")[0])"' \
+            <<<"$compare" > "$RUNNER_TEMP/commits.md"
+
+          {
+            echo "bump=true"
+            echo "current=$current"
+            echo "target=$target"
+            echo "base=$base"
+            echo "head_sha=$head_sha"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or refresh the bump PR
+        if: steps.target.outputs.bump == 'true'
+        env:
+          CURRENT: ${{ steps.target.outputs.current }}
+          TARGET: ${{ steps.target.outputs.target }}
+          BASE: ${{ steps.target.outputs.base }}
+          HEAD_SHA: ${{ steps.target.outputs.head_sha }}
+        run: |
+          set -euo pipefail
+
+          sed -i -E "s/^(\s*youtube_common_version = ')[^']*'/\1${TARGET}'/" build.gradle
+          git diff --exit-code --quiet build.gradle && { echo "::error::build.gradle unchanged"; exit 1; }
+
+          if [[ "$TARGET" == *-SNAPSHOT ]]; then
+            short="${TARGET:0:8} snapshot"
+          else
+            short="$TARGET"
+          fi
+          title="deps: bump youtube-source to $short"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BUMP_BRANCH"
+          git commit -am "$title"
+          git push --force origin "$BUMP_BRANCH"
+
+          {
+            echo "Moves \`dev.lavalink.youtube:common\` from \`$CURRENT\` to \`$TARGET\`."
+            echo
+            echo "Upstream changes ([compare](https://github.com/$UPSTREAM/compare/$BASE...$HEAD_SHA)):"
+            echo
+            cat "$RUNNER_TEMP/commits.md"
+            echo
+            echo "Opened by the weekly \`youtube-source-bump\` workflow. The Gradle build is started on this branch by that workflow."
+          } > "$RUNNER_TEMP/body.md"
+
+          pr=$(gh pr list --head "$BUMP_BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -n "$pr" ]; then
+            gh pr edit "$pr" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr create --base main --head "$BUMP_BRANCH" \
+              --title "$title" --body-file "$RUNNER_TEMP/body.md" \
+              --label dependencies --label Lavaplayer
+          fi
+
+          gh workflow run gradle.yml --ref "$BUMP_BRANCH"
